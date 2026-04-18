@@ -307,7 +307,10 @@ const mtDaily = Array.from(mtRolled, ([dateStr, byType]) => {
 
 ```js
 // Independent date brush for this chart
-const mtDateSel = Mutable([new Date("2025-03-01"), d3.max(mtDaily, d => d.date)]);
+const mtEnd0 = d3.max(mtDaily, d => d.date);
+const mtStart0 = new Date(mtEnd0);
+mtStart0.setMonth(mtStart0.getMonth() - 6);
+const mtDateSel = Mutable([mtStart0, mtEnd0]);
 ```
 
 ```js
