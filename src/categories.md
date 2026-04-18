@@ -79,7 +79,7 @@ Plot.plot({
 
 <span style="color:#1a9641">■ Sports</span> &nbsp; <span style="color:#2c7bb6">■ Non-sports</span>
 
-${period !== "All time" ? html`<p style="font-size:0.82em;color:#888">Filtered view covers the top 15 tracked categories. All-time view covers all categories.</p>` : ""}
+<p style="font-size:0.82em;color:#888">Date-filtered view covers the top 15 tracked categories. All-time view covers all categories.</p>
 
 ## Volume by category over time
 
