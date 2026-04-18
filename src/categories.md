@@ -88,51 +88,46 @@ const sportsSplit = await FileAttachment("data/daily_sports_vs_nonsports.csv").c
 ```
 
 ```js
-// Map tickers to broad display groups
-// Note: no residual "Other sports" — only show what's explicitly tracked.
-// Spreads/totals/etc. map into the same sport bucket as their game line.
+// Map tickers to display groups — Football and Basketball split into pro/college subcategories
 const wideMap = {
-  // Football (pro + college, all market types)
-  KXNFLGAME: "Football", KXNFLSPREAD: "Football", KXNFLTOTAL: "Football",
-  KXNCAAFGAME: "Football", KXNCAAFSPREAD: "Football", KXNCAAFTOTAL: "Football",
-  KXSB: "Football",
-  // Basketball (pro + college, all market types, March Madness, women's)
-  KXNBAGAME: "Basketball", KXNBASPREAD: "Basketball", KXNBATOTAL: "Basketball", KXNBA: "Basketball",
-  KXNCAAMBGAME: "Basketball", KXNCAAMBSPREAD: "Basketball", KXNCAAMBTOTAL: "Basketball",
-  KXMARMAD: "Basketball", KXNCAAWBGAME: "Basketball",
-  // Other sports — each shown explicitly, no residual bucket
+  // NFL (pro football) — dark warm
+  KXNFLGAME: "NFL", KXNFLSPREAD: "NFL", KXNFLTOTAL: "NFL", KXSB: "NFL",
+  // College football — lighter warm
+  KXNCAAFGAME: "College football", KXNCAAFSPREAD: "College football", KXNCAAFTOTAL: "College football",
+  // NBA (pro basketball) — dark blue
+  KXNBAGAME: "NBA", KXNBASPREAD: "NBA", KXNBATOTAL: "NBA", KXNBA: "NBA",
+  // College basketball — lighter blue (includes March Madness)
+  KXNCAAMBGAME: "College basketball", KXNCAAMBSPREAD: "College basketball",
+  KXNCAAMBTOTAL: "College basketball", KXMARMAD: "College basketball", KXNCAAWBGAME: "College basketball",
+  // Other sports
   KXMLBGAME: "Baseball", KXMLBSPREAD: "Baseball",
   KXNHLGAME: "Hockey",
   KXPGATOUR: "Golf",
   KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis", KXWTACHALLENGERMATCH: "Tennis",
   KXEPLGAME: "Soccer", KXUCLGAME: "Soccer", KXLALIGAGAME: "Soccer",
   KXUFCFIGHT: "Combat sports",
-  // Everything else (NHL is explicit above; any untracked sport falls into residual)
-  // Non-sports — crypto
+  // Non-sports
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
-  // Non-sports — politics
   PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
-  // Non-sports — finance/economy
   KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
-  // Non-sports — entertainment (halftime show, ads, Super Bowl props)
   KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
   KXPERFORMSUPERBOWLB: "Entertainment", KXSBGUESTS: "Entertainment",
   KXSBADS: "Entertainment", KXHALFTIMESHOW: "Entertainment",
   KXSBPERFORM: "Entertainment", KXSUPERBOWLHEADLINE: "Entertainment",
   KXSBADAPPEARANCES: "Entertainment", KXSBVIEWER: "Entertainment",
   KXSBMENTION: "Entertainment", KXSBSETLISTS: "Entertainment",
-  // Non-sports — weather
   KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
   KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",
-  // Parlay handled separately via contracts_parlay column
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
 
-// Build wide-category daily totals — no residual, only what's in the map
+// Build wide-category daily totals
 const wideDaily = topDaily.map(row => {
   const sp = sportsSplit.find(s => +s.date === +row.date) || {};
   const groups = {
-    Football: 0, Basketball: 0, Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
+    NFL: 0, "College football": 0,
+    NBA: 0, "College basketball": 0,
+    Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
     Soccer: 0, "Combat sports": 0,
     Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Weather: 0
   };
@@ -144,7 +139,8 @@ const wideDaily = topDaily.map(row => {
   const parlay       = +sp.contracts_parlay    || 0;
   const totSports    = +sp.contracts_sports    || 0;
   const totNonSports = +sp.contracts_nonsports || 0;
-  const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
+  const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
+    groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date,
@@ -155,16 +151,36 @@ const wideDaily = topDaily.map(row => {
   };
 });
 
-// Stacking order: non-sports at bottom, sports on top
+// Stacking order: non-sports bottom → sports → parlay top
+// Football pair (warm): NFL dark, College football light
+// Basketball pair (blue): NBA dark, College basketball light
 const wideOrder = [
   "Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto",
-  "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball", "Basketball", "Football", "Parlay"
+  "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
+  "College football", "NFL",
+  "College basketball", "NBA",
+  "Parlay"
 ];
+
+// Color map — subcategory pairs share hue family
+const wideColors = {
+  "Other non-sports": "#e8eaf0", "Weather": "#b0bec5", "Entertainment": "#90a4ae",
+  "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
+  "Other sports": "#c8e6c9",
+  "Combat sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
+  "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
+  // Football family — warm orange pair
+  "College football": "#ffcc80", "NFL": "#bf360c",
+  // Basketball family — blue pair
+  "College basketball": "#90caf9", "NBA": "#0d47a1",
+  // Parlay — top, prominent
+  "Parlay": "#7b1fa2"
+};
 ```
 
 ```js
-// Mutable date range for this chart — default to full history (heatmap benefits from full context)
-const catDateSel = Mutable([d3.min(topDaily, d => d.date), d3.max(topDaily, d => d.date)]);
+// Mutable date range — default to 2025 onwards (earlier has near-zero sports volume)
+const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date)]);
 ```
 
 ```js
@@ -200,68 +216,43 @@ const catDateSel = Mutable([d3.min(topDaily, d => d.date), d3.max(topDaily, d =>
 
 ```js
 const [chartStart, chartEnd] = catDateSel;
-```
 
-```js
-// Monthly aggregation for heatmap — string "YYYY-MM" keys so Plot.cell (ordinal x) works correctly
-const heatMonthly = (() => {
-  const sLabel = chartStart.toISOString().slice(0, 7);
-  const eLabel = chartEnd.toISOString().slice(0, 7);
-  const rows = [];
-  const monthMap = d3.rollup(
-    wideDaily,
-    rs => {
-      const obj = {};
-      for (const cat of wideOrder) obj[cat] = d3.sum(rs, d => d[cat] || 0);
-      return obj;
-    },
-    d => d.date.toISOString().slice(0, 7)   // "YYYY-MM"
-  );
-  for (const [label, cats] of monthMap) {
-    if (label < sLabel || label > eLabel) continue;
-    for (const [cat, val] of Object.entries(cats)) {
-      if (val > 0) rows.push({ monthLabel: label, category: cat, contracts: val });
-    }
-  }
-  return rows;
-})();
-
-const heatMonthLabels = [...new Set(heatMonthly.map(d => d.monthLabel))].sort();
+const wideTidy = wideDaily
+  .filter(d => d.date >= chartStart && d.date <= chartEnd)
+  .flatMap(row => wideOrder.map(g => ({date: row.date, category: g, contracts: row[g] || 0})));
 ```
 
 ```js
 Plot.plot({
   width,
-  height: wideOrder.length * 22 + 60,
-  marginLeft: 130,
-  x: {
-    domain: heatMonthLabels,
-    label: null,
-    ticks: heatMonthLabels.filter(d => d.endsWith("-01")),
-    tickFormat: d => d.slice(0, 4)
-  },
-  y: {domain: [...wideOrder].reverse(), label: null},
+  height: 420,
   color: {
-    type: "sqrt",
-    scheme: "YlOrRd",
-    label: "Monthly contracts",
     legend: true,
+    domain: wideOrder,
+    range: wideOrder.map(g => wideColors[g])
+  },
+  x: {type: "utc", label: null},
+  y: {
+    label: "Daily contracts",
+    grid: true,
     tickFormat: d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
   },
   marks: [
-    Plot.cell(heatMonthly, {
-      x: "monthLabel",
-      y: "category",
-      fill: "contracts",
-      inset: 0.5,
+    Plot.areaY(wideTidy, {
+      x: "date",
+      y: "contracts",
+      fill: "category",
+      order: wideOrder,
+      curve: "monotone-x",
       tip: true,
-      title: d => `${d.category}\n${d.monthLabel}\n${d.contracts.toLocaleString()} contracts`
-    })
+      title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\n${d.contracts.toLocaleString()} contracts`
+    }),
+    Plot.ruleY([0])
   ]
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Each cell = one calendar month. Color intensity = contract volume (sqrt scale — lighter = low-volume, darker red = peak). X-axis tick labels show January of each year. Hover for exact count. Use the brush above to zoom into a date range.</p>
+<p style="font-size:0.82em;color:#888">Football and basketball are split into pro and college (paired colors — dark/light within each family). Parlay = cross-game multi-leg contracts. Other sports = all sports not individually tracked. Use the brush above to zoom in.</p>
 
 ## Sports market type breakdown
 
