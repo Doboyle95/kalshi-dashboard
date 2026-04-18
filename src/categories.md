@@ -316,7 +316,7 @@ const mtDaily = Array.from(mtRolled, ([dateStr, byType]) => {
 
 ```js
 // Independent date brush for this chart
-const mtDateSel = Mutable([d3.min(mtDaily, d => d.date), d3.max(mtDaily, d => d.date)]);
+const mtDateSel = Mutable([new Date("2025-03-01"), d3.max(mtDaily, d => d.date)]);
 ```
 
 ```js
