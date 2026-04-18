@@ -7,6 +7,7 @@ title: Kalshi Volume
 ```js
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
+const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
 ```
 
 ```js
@@ -177,18 +178,69 @@ const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-spor
 ```
 
 ```js
-const tidySports = sportsView === "Sports only"
-  ? filteredSports.map(d => ({date: d.date, value: d.contracts_sports,    type: "Sports"}))
+// Map specific tickers to broad groups (same as categories page)
+const volWideMap = {
+  KXNFLGAME: "NFL", KXNCAAFGAME: "College football",
+  KXNBAGAME: "NBA", KXNCAAMBGAME: "College basketball", KXNCAAMBSPREAD: "College basketball",
+  KXMLBGAME: "MLB",
+  KXNHLGAME: "NHL",
+  KXPGATOUR: "Golf",
+  KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis",
+  KXBTCD: "Crypto", KXBTC15M: "Crypto",
+  KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
+};
+
+const catCols = Object.keys(topDaily[0]).filter(k => k !== "date");
+
+const volWideDaily = topDaily.map(row => {
+  const sp = sports.find(s => +s.date === +row.date) || {};
+  const groups = {NFL:0, "College football":0, NBA:0, "College basketball":0, MLB:0, NHL:0, Golf:0, Tennis:0, Crypto:0};
+  for (const [cat, v] of Object.entries(row)) {
+    if (cat === "date") continue;
+    const wg = volWideMap[cat];
+    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
+  }
+  const parlay        = +sp.contracts_parlay    || 0;
+  const totSports     = +sp.contracts_sports    || 0;
+  const totNonSports  = +sp.contracts_nonsports || 0;
+  const knownSports   = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] + groups.MLB + groups.NHL + groups.Golf + groups.Tennis;
+  return {
+    date: row.date,
+    ...groups,
+    Parlay: parlay,
+    "Other sports": Math.max(0, totSports - parlay - knownSports),
+    "Other non-sports": Math.max(0, totNonSports - groups.Crypto)
+  };
+});
+
+const sportsOrder    = ["Other sports", "Tennis", "Golf", "NHL", "MLB", "College football", "College basketball", "NBA", "NFL", "Parlay"];
+const nonSportsOrder = ["Other non-sports", "Crypto"];
+```
+
+```js
+// Build tidy data for the selected view
+const tidySports =
+  sportsView === "Sports only"
+    ? filteredDaily.flatMap(d => {
+        const w = volWideDaily.find(r => +r.date === +d.date) || {};
+        return sportsOrder.map(g => ({date: d.date, category: g, contracts: w[g] || 0}));
+      })
   : sportsView === "Non-sports only"
-  ? filteredSports.map(d => ({date: d.date, value: d.contracts_nonsports, type: "Non-sports"}))
+    ? filteredDaily.flatMap(d => {
+        const w = volWideDaily.find(r => +r.date === +d.date) || {};
+        return nonSportsOrder.map(g => ({date: d.date, category: g, contracts: w[g] || 0}));
+      })
   : filteredSports.flatMap(d => [
-      {date: d.date, value: d.contracts_nonsports, type: "Non-sports"},
-      {date: d.date, value: d.contracts_sports,    type: "Sports"}
+      {date: d.date, category: "Non-sports", contracts: d.contracts_nonsports || 0},
+      {date: d.date, category: "Sports",     contracts: d.contracts_sports    || 0}
     ]);
 
-const sportsDomain  = sportsView === "Sports only"    ? ["Sports"]
-  : sportsView === "Non-sports only" ? ["Non-sports"]
+const subOrder =
+  sportsView === "Sports only"    ? sportsOrder
+  : sportsView === "Non-sports only" ? nonSportsOrder
   : ["Non-sports", "Sports"];
+
+const useTableau = sportsView !== "Both (stacked)";
 ```
 
 ```js
@@ -197,14 +249,13 @@ Plot.plot({
   height: 280,
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
-  color: {
-    legend: true,
-    domain: sportsDomain,
-    range: sportsDomain.map(t => t === "Sports" ? "#1a9641" : "#2c7bb6")
-  },
+  color: useTableau
+    ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
+    : {legend: true, domain: ["Non-sports", "Sports"], range: ["#2c7bb6", "#1a9641"]},
   marks: [
     Plot.areaY(tidySports, {
-      x: "date", y: "value", fill: "type",
+      x: "date", y: "contracts", fill: "category",
+      order: subOrder,
       curve: "monotone-x", fillOpacity: 0.85
     }),
     Plot.ruleY([0])
@@ -277,12 +328,12 @@ Plot.plot({
 
 ## Fee rate (% of notional)
 
-_How much Kalshi earns as a share of money flowing through the market. Peaks near 50¢ contracts; falls toward 0 at extreme prices._
+_Average fee Kalshi collects per contract traded. Peaks near 50¢ contracts (where the bell-curve fee is highest); falls toward 0 at extreme prices._
 
 ```js
 const feeRate = filteredDaily
-  .filter(d => d.notional_total > 0)
-  .map(d => ({date: d.date, rate: d.fees_total / d.notional_total * 100}));
+  .filter(d => d.contracts_total > 0)
+  .map(d => ({date: d.date, rate: d.fees_total / d.contracts_total * 100}));
 ```
 
 ```js
@@ -290,13 +341,13 @@ Plot.plot({
   width,
   height: 220,
   x: {type: "utc", label: null},
-  y: {label: "Fee rate (% of notional)", grid: true, tickFormat: d => d.toFixed(1) + "%"},
+  y: {label: "Avg fee per contract (¢)", grid: true, tickFormat: d => d.toFixed(2) + "¢"},
   marks: [
     Plot.lineY(feeRate, {
       x: "date", y: "rate",
       stroke: "#756bb1", strokeWidth: 1.5, curve: "monotone-x",
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nFee rate: ${d.rate.toFixed(2)}% of notional`
+      title: d => `${d.date.toISOString().slice(0,10)}\nAvg fee: ${d.rate.toFixed(3)}¢ per contract`
     }),
     Plot.ruleY([0])
   ]
