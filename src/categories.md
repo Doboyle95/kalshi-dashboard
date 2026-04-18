@@ -18,38 +18,37 @@ const metric = view(Inputs.select(["contracts", "fees", "notional"], {
 const showSports = view(Inputs.select(["All", "Sports only", "Non-sports only"], {
   label: "Filter", value: "All"
 }));
-const period = view(Inputs.select(["All time", "Since 2025", "Since 2026", "Last 90 days"], {
-  label: "Period", value: "Since 2025"
-}));
 ```
 
 ```js
-// For filtered periods, aggregate from daily_top_categories (covers top 15 tickers)
-// For all-time, use the full leaderboard
-const cutoff = period === "Since 2026" ? new Date("2026-01-01")
-  : period === "Since 2025" ? new Date("2025-01-01")
-  : period === "Last 90 days" ? new Date(Date.now() - 90 * 864e5)
-  : new Date("2021-01-01");
+const fromStr = view(Inputs.text({label: "From", placeholder: "YYYY-MM-DD", value: "2025-01-01", width: 130}));
+const toStr   = view(Inputs.text({label: "To",   placeholder: "YYYY-MM-DD (blank = latest)", value: "", width: 130}));
+```
 
+```js
 const catCols = Object.keys(topDaily[0]).filter(k => k !== "date");
+
+const cutoff  = fromStr && !isNaN(new Date(fromStr)) ? new Date(fromStr) : new Date("2021-01-01");
+const cutoffTo = toStr && !isNaN(new Date(toStr)) ? new Date(toStr) : new Date();
+const isAllTime = cutoff <= new Date("2021-07-01") && cutoffTo >= new Date();
 
 // Aggregate contracts from daily data for the selected period (top 15 tickers)
 const dailyAgg = catCols.map(cat => {
   const total = topDaily
-    .filter(d => d.date >= cutoff)
+    .filter(d => d.date >= cutoff && d.date <= cutoffTo)
     .reduce((s, r) => s + (+r[cat] || 0), 0);
   const meta = leaderboard.find(l => l.report_ticker === cat) || {};
   return {
     report_ticker: cat,
     contracts: total,
-    fees: (meta.fees || 0) * (total / (meta.contracts || 1)),  // rough proportional estimate
+    fees: (meta.fees || 0) * (total / (meta.contracts || 1)),
     notional: (meta.notional || 0) * (total / (meta.contracts || 1)),
     is_sports: meta.is_sports ?? "FALSE"
   };
 }).filter(d => d.contracts > 0);
 
-// Use full leaderboard for all-time, aggregated daily data for filtered periods
-const source = period === "All time" ? leaderboard : dailyAgg;
+// Full leaderboard for all-time span; aggregated daily for any date filter
+const source = isAllTime ? leaderboard : dailyAgg;
 
 const filtered = source
   .filter(d => showSports === "All" ? true : showSports === "Sports only" ? d.is_sports === "TRUE" : d.is_sports === "FALSE")
@@ -82,51 +81,109 @@ Plot.plot({
 
 ${period !== "All time" ? html`<p style="font-size:0.82em;color:#888">Filtered view covers the top 15 tracked categories. All-time view covers all categories.</p>` : ""}
 
-## Top categories over time
+## Volume by category over time
 
 ```js
-// Top 5 categories by all-time volume
-const totals = catCols.map(c => ({
-  cat: c,
-  total: topDaily.reduce((s, r) => s + (+r[c] || 0), 0)
-})).sort((a, b) => b.total - a.total);
-
-const top5 = totals.slice(0, 5).map(d => d.cat);
-
-const sinceChart = view(Inputs.select(["All time", "Since 2025", "Since 2026"], {
-  label: "Time period", value: "Since 2025"
-}));
+const sportsSplit = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 ```
 
 ```js
-const chartStart = sinceChart === "Since 2026" ? new Date("2026-01-01")
-  : sinceChart === "Since 2025" ? new Date("2025-01-01")
-  : new Date("2021-01-01");
+// Map specific tickers to broad groups
+const wideMap = {
+  KXNFLGAME: "NFL", KXNCAAFGAME: "College football",
+  KXNBAGAME: "NBA", KXNCAAMBGAME: "College basketball", KXNCAAMBSPREAD: "College basketball",
+  KXMLBGAME: "MLB",
+  KXNHLGAME: "NHL",
+  KXPGATOUR: "Golf",
+  KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis",
+  KXBTCD: "Crypto", KXBTC15M: "Crypto",
+  // Parlay handled separately via contracts_parlay column
+  KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
+};
 
-const top5Tidy = topDaily
-  .filter(d => d.date >= chartStart)
-  .flatMap(row =>
-    top5.map(cat => ({
-      date: row.date,
-      category: cat,
-      contracts: +row[cat] || 0
-    }))
-  )
-  .filter(d => d.contracts > 0);
+// Build wide-category daily totals
+const wideDaily = topDaily.map(row => {
+  const sp = sportsSplit.find(s => +s.date === +row.date) || {};
+  const groups = {NFL:0, "College football":0, NBA:0, "College basketball":0, MLB:0, NHL:0, Golf:0, Tennis:0, Crypto:0};
+  for (const [cat, v] of Object.entries(row)) {
+    if (cat === "date") continue;
+    const wg = wideMap[cat];
+    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
+  }
+  const parlay   = +sp.contracts_parlay    || 0;
+  const totSports = +sp.contracts_sports    || 0;
+  const totNonSports = +sp.contracts_nonsports || 0;
+  const knownSports = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] + groups.MLB + groups.NHL + groups.Golf + groups.Tennis;
+  return {
+    date: row.date,
+    ...groups,
+    Parlay: parlay,
+    "Other sports": Math.max(0, totSports - parlay - knownSports),
+    "Other non-sports": Math.max(0, totNonSports - groups.Crypto)
+  };
+});
+
+// Stacking order: stable non-sports at bottom, spiky sports on top
+const wideOrder = ["Other non-sports", "Crypto", "Other sports", "Tennis", "Golf", "NHL", "MLB", "College football", "College basketball", "NFL", "Parlay"];
+```
+
+```js
+// Mutable date range for this chart
+const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date)]);
+```
+
+```js
+{
+  const h = 60, mt = 4, mb = 22, ml = 8, mr = 8, w = width;
+  const x = d3.scaleUtc().domain(d3.extent(topDaily, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(wideDaily, d => wideOrder.reduce((s, g) => s + (d[g]||0), 0));
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg").attr("width", w).attr("height", h)
+    .style("display","block").style("background","#fafafa")
+    .style("border","1px solid #e8e8e8").style("border-radius","4px").style("margin-bottom","1.5rem");
+
+  // Total volume sparkline
+  svg.append("path").datum(wideDaily)
+    .attr("fill","#1a9641").attr("fill-opacity",0.2)
+    .attr("d", d3.area()
+      .x(d => x(d.date)).y0(h-mb).y1(d => y(wideOrder.reduce((s,g) => s+(d[g]||0),0)))
+      .curve(d3.curveBasis));
+
+  svg.append("g").attr("transform",`translate(0,${h-mb})`)
+    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke","#ccc"))
+    .call(g => g.selectAll("text").style("font-size","10px").attr("fill","#888"));
+
+  const [ds, de] = catDateSel;
+  const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
+    .on("brush end", ({selection}) => { if (selection) catDateSel.value = selection.map(x.invert); });
+  svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
+  display(svg.node());
+}
+```
+
+```js
+const [chartStart, chartEnd] = catDateSel;
+
+const wideTidy = wideDaily
+  .filter(d => d.date >= chartStart && d.date <= chartEnd)
+  .flatMap(row => wideOrder.map(g => ({date: row.date, category: g, contracts: row[g] || 0})));
 ```
 
 ```js
 Plot.plot({
   width,
-  height: 380,
-  color: {legend: true, columns: 2},
+  height: 420,
+  color: {legend: true, columns: 3, scheme: "tableau10"},
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
   marks: [
-    Plot.areaY(top5Tidy, {
+    Plot.areaY(wideTidy, {
       x: "date",
       y: "contracts",
       fill: "category",
+      order: wideOrder,
       curve: "monotone-x",
       fillOpacity: 0.85
     }),

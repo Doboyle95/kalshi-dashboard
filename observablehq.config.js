@@ -9,5 +9,5 @@ export default {
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Calibration", path: "/calibration"},
   ],
-  footer: "Data: Kalshi trade records via InGame. Updated nightly.",
+  footer: "Data: Kalshi trade records via Daniel O'Boyle. Updated nightly.",
 };

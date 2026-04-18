@@ -4,47 +4,47 @@ title: Parlay P&L
 
 # Parlay P&L
 
-Cumulative taker profit/loss on parlay contracts (KXMVE\* and PREPACK\* series). Negative values mean takers (bettors) lost money overall.
+Taker profit/loss on parlay contracts (KXMVE\* and PREPACK\* series). Negative values mean takers (bettors) lost money.
 
 ```js
 const raw = await FileAttachment("data/parlay_pnl_net.csv").csv({typed: true});
 ```
 
 ```js
-// Build cumulative P&L series
-// "Before fees" = taker P&L net of settlement, before Kalshi fees
-// "After fees (net)" = taker P&L after paying Kalshi's fees
+// Build per-day series with cumulative P&L
 let grossRunning = 0, netRunning = 0;
 const pnl = raw
   .filter(d => d.row_label && d.row_label !== "TOTAL")
   .map(d => {
-    const dailyNet = +d.net_pnl_ALL_PARLAYS || 0;
-    const dailyFees = +d.fees_ALL_PARLAYS || 0;
+    const dailyNet   = +d.net_pnl_ALL_PARLAYS || 0;
+    const dailyFees  = +d.fees_ALL_PARLAYS || 0;
     const dailyGross = dailyNet + dailyFees;
+    const stakes     = +d.ALL_PARLAYS || 0;       // notional (USD at stake)
+    const pct        = +d.net_pnl_pct_ALL_PARLAYS || null; // P&L as % of stakes
     grossRunning += dailyGross;
-    netRunning += dailyNet;
+    netRunning   += dailyNet;
     return {
       date: new Date(d.row_label),
       gross_cumul: grossRunning,
-      net_cumul: netRunning
+      net_cumul:   netRunning,
+      daily_net:   dailyNet,
+      daily_gross: dailyGross,
+      daily_fees:  dailyFees,
+      stakes,
+      pct
     };
   })
   .filter(d => !isNaN(d.date.getTime()));
 ```
 
 ```js
-// Tidy for multi-line plot
-const tidy = [
-  ...pnl.map(d => ({date: d.date, value: d.gross_cumul, series: "Before fees (gross)"})),
-  ...pnl.map(d => ({date: d.date, value: d.net_cumul, series: "After fees (net)"}))
-];
-```
-
-```js
-const lastRow = pnl[pnl.length - 1];
+// All-time KPIs (unaffected by date range)
+const lastRow   = pnl[pnl.length - 1];
+const totalNet  = lastRow?.net_cumul  ?? 0;
 const totalGross = lastRow?.gross_cumul ?? 0;
-const totalNet = lastRow?.net_cumul ?? 0;
 const totalFees = totalGross - totalNet;
+const totalStakes = d3.sum(pnl, d => d.stakes);
+const overallPct = totalNet / totalStakes * 100;
 ```
 
 <div style="display:flex;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap">
@@ -53,28 +53,95 @@ const totalFees = totalGross - totalNet;
     <div style="font-size:1.8em;font-weight:700;color:#d7191c">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
   <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Fees paid by takers</div>
+    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time fees paid</div>
     <div style="font-size:1.8em;font-weight:700;color:#756bb1">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+  </div>
+  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
+    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Overall taker ROI</div>
+    <div style="font-size:1.8em;font-weight:700;color:#d7191c">${overallPct.toFixed(1)}%</div>
+    <div style="font-size:0.75em;color:#999">of total notional staked</div>
+  </div>
+  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
+    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Total notional staked</div>
+    <div style="font-size:1.8em;font-weight:700;color:#333">$${(totalStakes/1e6).toFixed(0)}M</div>
   </div>
 </div>
 
 ```js
+// Date range — Mutable updated by brush
+const parlayDateSel = Mutable([d3.min(pnl, d => d.date), d3.max(pnl, d => d.date)]);
+```
+
+```js
+// Brush mini chart (sparkline of daily stakes)
+{
+  const h = 60, mt = 4, mb = 22, ml = 8, mr = 8, w = width;
+
+  const x = d3.scaleUtc().domain(d3.extent(pnl, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(pnl, d => d.stakes);
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg")
+    .attr("width", w).attr("height", h)
+    .style("display", "block")
+    .style("background", "#fafafa")
+    .style("border", "1px solid #e8e8e8")
+    .style("border-radius", "4px")
+    .style("margin-bottom", "1.5rem");
+
+  svg.append("path").datum(pnl)
+    .attr("fill", "#f4a736").attr("fill-opacity", 0.3)
+    .attr("d", d3.area()
+      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.stakes))
+      .curve(d3.curveBasis));
+
+  svg.append("g")
+    .attr("transform", `translate(0,${h - mb})`)
+    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke", "#ccc"))
+    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
+
+  const [defStart, defEnd] = parlayDateSel;
+  const brush = d3.brushX()
+    .extent([[ml, mt], [w - mr, h - mb]])
+    .on("brush end", ({selection}) => {
+      if (selection) parlayDateSel.value = selection.map(x.invert);
+    });
+
+  svg.append("g").call(brush).call(brush.move, [defStart, defEnd].map(x));
+  display(svg.node());
+}
+```
+
+```js
+const [pStart, pEnd] = parlayDateSel;
+const pnlFiltered = pnl.filter(d => d.date >= pStart && d.date <= pEnd);
+
+// Recompute cumulative from filtered window start
+let gr = 0, nr = 0;
+const pnlCumul = pnlFiltered.map(d => {
+  gr += d.daily_gross; nr += d.daily_net;
+  return {...d, gross_cumul_w: gr, net_cumul_w: nr};
+});
+
+const tidyCumul = [
+  ...pnlCumul.map(d => ({date: d.date, value: d.gross_cumul_w, series: "Before fees (gross)"})),
+  ...pnlCumul.map(d => ({date: d.date, value: d.net_cumul_w,   series: "After fees (net)"}))
+];
+```
+
+## Cumulative taker P&L
+
+```js
 Plot.plot({
-  width,
-  height: 400,
+  width, height: 340,
   x: {type: "utc", label: null},
-  y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: d => "$" + (d/1000).toFixed(0) + "k"},
-  color: {
-    legend: true,
-    domain: ["Before fees (gross)", "After fees (net)"],
-    range: ["#f4a736", "#d7191c"]
-  },
+  y: {label: "Cumulative P&L (USD)", grid: true,
+      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {legend: true, domain: ["Before fees (gross)", "After fees (net)"], range: ["#f4a736", "#d7191c"]},
   marks: [
-    Plot.lineY(tidy, {
-      x: "date", y: "value",
-      stroke: "series",
-      strokeWidth: 2,
-      curve: "monotone-x",
+    Plot.lineY(tidyCumul, {
+      x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x",
       tip: true,
       title: d => `${d.series}\n${d.date.toISOString().slice(0,10)}\n$${d.value.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
@@ -83,44 +150,57 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Taker P&L = settlement received minus price paid. "Before fees" excludes Kalshi's trading fee. "After fees" is the taker's true net return. Parlay markets identified by KXMVE* and PREPACK* series prefixes. Data from Kalshi S3 trade files.</p>
+## Daily stakes & return
 
-## Daily P&L
-
-```js
-const dailyTidy = [
-  ...raw.filter(d => d.row_label && d.row_label !== "TOTAL").map(d => ({
-    date: new Date(d.row_label),
-    value: +d.net_pnl_ALL_PARLAYS || 0,
-    series: "After fees (net)"
-  })),
-  ...raw.filter(d => d.row_label && d.row_label !== "TOTAL").map(d => ({
-    date: new Date(d.row_label),
-    value: (+d.net_pnl_ALL_PARLAYS || 0) + (+d.fees_ALL_PARLAYS || 0),
-    series: "Before fees (gross)"
-  }))
-].filter(d => !isNaN(d.date.getTime()));
-```
+_Bar height = daily notional staked by takers. Color = taker return that day (green = takers won, red = takers lost). Darker = more extreme._
 
 ```js
 Plot.plot({
-  width,
-  height: 280,
+  width, height: 300,
   x: {type: "utc", label: null},
-  y: {label: "Daily P&L (USD)", grid: true},
+  y: {label: "Daily notional staked (USD)", grid: true,
+      tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   color: {
-    domain: ["Before fees (gross)", "After fees (net)"],
-    range: ["#f4a736", "#d7191c"]
+    type: "diverging",
+    scheme: "RdYlGn",
+    domain: [-50, 50],
+    label: "Taker return %",
+    legend: true
   },
   marks: [
-    Plot.lineY(dailyTidy, {
-      x: "date", y: "value",
-      stroke: "series",
-      strokeWidth: 1.5,
-      curve: "monotone-x",
-      tip: true
+    Plot.rectY(pnlFiltered.filter(d => d.stakes > 0), {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => d.stakes,
+      fill: d => d.pct != null ? Math.max(-50, Math.min(50, d.pct)) : 0,
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
     Plot.ruleY([0])
   ]
 })
 ```
+
+## Daily taker return (% of stakes)
+
+```js
+Plot.plot({
+  width, height: 260,
+  x: {type: "utc", label: null},
+  y: {label: "Taker return (% of notional)", grid: true, tickFormat: d => d + "%"},
+  marks: [
+    Plot.rectY(pnlFiltered.filter(d => d.pct != null), {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => d.pct,
+      fill: d => d.pct >= 0 ? "#1a9641" : "#d7191c",
+      fillOpacity: 0.75,
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+<p style="font-size:0.82em;color:#888">Taker return = (settlement received − price paid − fees) ÷ notional. "Before fees" excludes Kalshi's trading fee. Parlay markets identified by KXMVE* and PREPACK* series prefixes. A −100% day means all parlays expired worthless; fees push it slightly below −100%.</p>

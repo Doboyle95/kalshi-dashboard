@@ -48,21 +48,27 @@ const kalshiTidy = kalshi.map(d => ({
   fees: d.fees_total
 }));
 
-const competitorTidy = competitor.map(d => ({
-  date: new Date(d.date),
-  platform: d.platform === "Polymarket_US" ? "Polymarket" : d.platform,
-  contracts: +d.contracts || 0,
-  fees: +d.fees || 0
-}));
+const competitorTidy = competitor
+  .filter(d => d.platform !== "Kalshi")
+  .map(d => ({
+    date: new Date(d.date),
+    platform: d.platform === "Polymarket_US" ? "Polymarket" : d.platform,
+    contracts: +d.contracts || 0,
+    fees: +d.fees || 0
+  }));
 
 const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
-// Date range brush — drag handles to zoom all charts
-const dateRange = view((() => {
-  const h = 72, mt = 6, mb = 24, ml = 8, mr = 8;
-  const w = width;
+// Date range — reactive Mutable updated by the brush below
+const dateSelection = Mutable([new Date("2025-01-01"), d3.max(kalshi, d => d.date)]);
+```
+
+```js
+// Brush mini chart — drag handles to set date range
+{
+  const h = 72, mt = 6, mb = 24, ml = 8, mr = 8, w = width;
 
   const x = d3.scaleUtc()
     .domain(d3.extent(kalshi, d => d.date))
@@ -79,56 +85,45 @@ const dateRange = view((() => {
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
-  svg.append("path")
-    .datum(kalshi)
+  svg.append("path").datum(kalshi)
     .attr("fill", "#2c7bb6").attr("fill-opacity", 0.2)
     .attr("d", d3.area()
-      .x(d => x(d.date))
-      .y0(h - mb)
-      .y1(d => y(d.contracts_total))
+      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total))
       .curve(d3.curveBasis));
 
   svg.append("g")
     .attr("transform", `translate(0,${h - mb})`)
-    .call(d3.axisBottom(x)
-      .ticks(d3.timeYear.every(1))
-      .tickFormat(d3.timeFormat("%Y"))
-      .tickSizeOuter(0))
+    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const defaultStart = new Date("2025-01-01");
-  const defaultEnd = d3.max(kalshi, d => d.date);
+  const [defStart, defEnd] = dateSelection;
 
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", ({selection}) => {
-      if (selection) {
-        svg.property("value", selection.map(x.invert));
-        svg.dispatch("input");
-      }
+      if (selection) dateSelection.value = selection.map(x.invert);
     });
 
-  svg.append("g").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.property("value", [defaultStart, defaultEnd]);
-  return svg.node();
-})());
+  svg.append("g").call(brush).call(brush.move, [defStart, defEnd].map(x));
+  display(svg.node());
+}
 ```
 
 ```js
-const [startDate, endDate] = dateRange;
+const [startDate, endDate] = dateSelection;
 const filtered = allPlatforms.filter(d => d.date >= startDate && d.date <= endDate);
 ```
 
 ```js
-// All-time peaks (for scale reference table — not affected by date filter)
+// All-time peaks (for scale reference — not affected by date filter)
 const allTimePeaks = {};
 for (const p of ["Kalshi", "ForecastEx", "Polymarket"]) {
   const vals = allPlatforms.filter(d => d.platform === p && d.contracts > 0).map(d => d.contracts);
   allTimePeaks[p] = vals.length ? Math.max(...vals) : 0;
 }
 
-// Peaks within the selected window (for normalization)
+// Peaks within window (for normalization)
 const windowPeaks = {};
 for (const p of ["Kalshi", "ForecastEx", "Polymarket"]) {
   const vals = filtered.filter(d => d.platform === p && d.contracts > 0).map(d => d.contracts);
@@ -137,10 +132,7 @@ for (const p of ["Kalshi", "ForecastEx", "Polymarket"]) {
 
 const normalized = filtered
   .filter(d => d.contracts > 0)
-  .map(d => ({
-    ...d,
-    pct: d.contracts / windowPeaks[d.platform] * 100
-  }));
+  .map(d => ({...d, pct: d.contracts / windowPeaks[d.platform] * 100}));
 ```
 
 ```js
@@ -158,15 +150,12 @@ Plot.plot({
   y: {label: "% of own peak within window", domain: [0, 108], grid: true},
   marks: [
     Plot.lineY(normalized, {
-      x: "date",
-      y: "pct",
-      stroke: "platform",
-      strokeWidth: 1.5,
-      curve: "monotone-x",
+      x: "date", y: "pct", stroke: "platform",
+      strokeWidth: 1.5, curve: "monotone-x",
       tip: true,
       title: d => {
-        const dateStr = d.date instanceof Date ? d.date.toISOString().slice(0,10) : String(d.date);
-        return `${d.platform}\n${dateStr}\n${(d.contracts/1e6).toFixed(2)}M contracts\n${d.pct.toFixed(1)}% of window peak`;
+        const ds = d.date instanceof Date ? d.date.toISOString().slice(0,10) : String(d.date);
+        return `${d.platform}\n${ds}\n${(d.contracts/1e6).toFixed(2)}M contracts\n${d.pct.toFixed(1)}% of peak`;
       }
     }),
     Plot.ruleY([0])
@@ -180,29 +169,15 @@ Plot.plot({
 
 ```js
 const peakTable = [
-  {
-    Platform: "Kalshi",
-    "All-time peak (contracts/day)": allTimePeaks.Kalshi,
-    "vs. Kalshi": "—"
-  },
-  {
-    Platform: "ForecastEx",
-    "All-time peak (contracts/day)": allTimePeaks.ForecastEx,
-    "vs. Kalshi": allTimePeaks.ForecastEx > 0 ? `${Math.round(allTimePeaks.Kalshi / allTimePeaks.ForecastEx).toLocaleString()}× smaller` : "n/a"
-  },
-  {
-    Platform: "Polymarket US",
-    "All-time peak (contracts/day)": allTimePeaks.Polymarket,
-    "vs. Kalshi": allTimePeaks.Polymarket > 0 ? `${Math.round(allTimePeaks.Kalshi / allTimePeaks.Polymarket).toLocaleString()}× smaller` : "n/a"
-  },
+  {Platform: "Kalshi",       "All-time peak (contracts/day)": allTimePeaks.Kalshi,      "vs. Kalshi": "—"},
+  {Platform: "ForecastEx",   "All-time peak (contracts/day)": allTimePeaks.ForecastEx,   "vs. Kalshi": allTimePeaks.ForecastEx   > 0 ? `${Math.round(allTimePeaks.Kalshi/allTimePeaks.ForecastEx).toLocaleString()}× smaller`   : "n/a"},
+  {Platform: "Polymarket US","All-time peak (contracts/day)": allTimePeaks.Polymarket,   "vs. Kalshi": allTimePeaks.Polymarket   > 0 ? `${Math.round(allTimePeaks.Kalshi/allTimePeaks.Polymarket).toLocaleString()}× smaller`   : "n/a"},
 ];
 
 Inputs.table(peakTable, {
-  format: {
-    "All-time peak (contracts/day)": d => d > 0 ? d.toLocaleString() : "n/a"
-  },
+  format: {"All-time peak (contracts/day)": d => d > 0 ? d.toLocaleString() : "n/a"},
   width: {Platform: 130, "All-time peak (contracts/day)": 200, "vs. Kalshi": 140}
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Kalshi data from trade records via InGame. ForecastEx and Polymarket US data from public sources. Kalshi's contract definition (1¢–99¢, binary) may differ from competitors' unit definitions.</p>
+<p style="font-size:0.82em;color:#888">Kalshi data from trade records via Daniel O'Boyle. ForecastEx and Polymarket US data from public sources. Kalshi's contract unit (1¢–99¢, binary) may differ from competitors' definitions.</p>

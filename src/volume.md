@@ -171,10 +171,24 @@ Plot.plot({
 ## Sports vs. non-sports volume
 
 ```js
-const tidySports = filteredSports.flatMap(d => [
-  {date: d.date, value: d.contracts_nonsports, type: "Non-sports"},
-  {date: d.date, value: d.contracts_sports,    type: "Sports"}
-]);
+const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
+  value: "Both (stacked)"
+}));
+```
+
+```js
+const tidySports = sportsView === "Sports only"
+  ? filteredSports.map(d => ({date: d.date, value: d.contracts_sports,    type: "Sports"}))
+  : sportsView === "Non-sports only"
+  ? filteredSports.map(d => ({date: d.date, value: d.contracts_nonsports, type: "Non-sports"}))
+  : filteredSports.flatMap(d => [
+      {date: d.date, value: d.contracts_nonsports, type: "Non-sports"},
+      {date: d.date, value: d.contracts_sports,    type: "Sports"}
+    ]);
+
+const sportsDomain  = sportsView === "Sports only"    ? ["Sports"]
+  : sportsView === "Non-sports only" ? ["Non-sports"]
+  : ["Non-sports", "Sports"];
 ```
 
 ```js
@@ -185,8 +199,8 @@ Plot.plot({
   y: {label: "Contracts", grid: true},
   color: {
     legend: true,
-    domain: ["Non-sports", "Sports"],
-    range: ["#2c7bb6", "#1a9641"]
+    domain: sportsDomain,
+    range: sportsDomain.map(t => t === "Sports" ? "#1a9641" : "#2c7bb6")
   },
   marks: [
     Plot.areaY(tidySports, {
@@ -255,6 +269,34 @@ Plot.plot({
       stroke: "#756bb1", strokeWidth: 2, curve: "monotone-x",
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+## Fee rate (% of notional)
+
+_How much Kalshi earns as a share of money flowing through the market. Peaks near 50¢ contracts; falls toward 0 at extreme prices._
+
+```js
+const feeRate = filteredDaily
+  .filter(d => d.notional_total > 0)
+  .map(d => ({date: d.date, rate: d.fees_total / d.notional_total * 100}));
+```
+
+```js
+Plot.plot({
+  width,
+  height: 220,
+  x: {type: "utc", label: null},
+  y: {label: "Fee rate (% of notional)", grid: true, tickFormat: d => d.toFixed(1) + "%"},
+  marks: [
+    Plot.lineY(feeRate, {
+      x: "date", y: "rate",
+      stroke: "#756bb1", strokeWidth: 1.5, curve: "monotone-x",
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\nFee rate: ${d.rate.toFixed(2)}% of notional`
     }),
     Plot.ruleY([0])
   ]
