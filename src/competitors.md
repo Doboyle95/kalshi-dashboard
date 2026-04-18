@@ -5,109 +5,92 @@ title: Competitors
 # Platform Comparison
 
 ```js
-const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
+const kalshi     = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
 ```
 
 ```js
 const kalshiTidy = kalshi.map(d => ({
-  date: d.date,
-  platform: "Kalshi",
-  contracts: d.contracts_total,
-  fees: d.fees_total
+  date: d.date, platform: "Kalshi",
+  contracts: d.contracts_total, fees: d.fees_total
 }));
-
 const forecastex = competitor.filter(d => d.platform === "ForecastEx").map(d => ({
-  date: d.date,
-  platform: "ForecastEx",
-  contracts: +d.contracts,
-  fees: +d.fees
+  date: d.date, platform: "ForecastEx",
+  contracts: +d.contracts, fees: +d.fees
 }));
-
 const polymarket = competitor.filter(d => d.platform === "Polymarket US").map(d => ({
-  date: d.date,
-  platform: "Polymarket US",
-  contracts: +d.contracts,
-  fees: +d.fees
+  date: d.date, platform: "Polymarket US",
+  contracts: +d.contracts, fees: +d.fees
 }));
-
 const all = [...kalshiTidy, ...forecastex, ...polymarket];
-
-const platformColors = {
-  "Kalshi":        "#2c7bb6",
-  "Polymarket US": "#e66101",
-  "ForecastEx":    "#1a9641"
-};
+const xDomain = d3.extent(all, d => d.date);
 ```
 
 ```js
-const selectedPlatforms = view(Inputs.checkbox(
-  ["Kalshi", "Polymarket US", "ForecastEx"],
-  {value: ["Kalshi", "Polymarket US", "ForecastEx"], label: "Platforms"}
-));
-```
-
-```js
-const metric = view(Inputs.select(["contracts", "fees"], {label: "Metric", value: "contracts"}));
+const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", label: "Metric"}));
 ```
 
 ```js
 {
-  const data = all.filter(d => selectedPlatforms.includes(d.platform) && d[metric] != null);
+  const fmt = metric === "contracts"
+    ? d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
+    : d => "$"+(d >= 1e6 ? (d/1e6).toFixed(1)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toFixed(0));
 
-  if (data.length === 0) {
-    display(html`<p style="color:#999;font-style:italic">Select at least one platform above.</p>`);
-  } else {
-    const colorDomain = selectedPlatforms;
-    const colorRange  = selectedPlatforms.map(p => platformColors[p]);
+  const panels = [
+    {name: "Kalshi",        color: "#2c7bb6", data: kalshiTidy},
+    {name: "Polymarket US", color: "#e66101", data: polymarket},
+    {name: "ForecastEx",    color: "#1a9641", data: forecastex},
+  ];
 
-    display(Plot.plot({
+  const charts = panels.map(({name, color, data}, i) => {
+    const isLast  = i === panels.length - 1;
+    const peak    = d3.max(data, d => d[metric]) || 0;
+    const peakStr = fmt(peak);
+
+    const chart = Plot.plot({
       width,
-      height: 420,
-      marginRight: 10,
-      x: {type: "utc", label: null},
-      y: {
-        label: metric === "contracts" ? "Daily contracts" : "Daily fees (USD)",
-        grid: true,
-        tickFormat: metric === "contracts"
-          ? d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
-          : d => "$" + (d >= 1e6 ? (d/1e6).toFixed(1)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d)
+      height: 170,
+      marginLeft: 62,
+      marginRight: 20,
+      marginTop: 28,
+      marginBottom: isLast ? 36 : 4,
+      x: {
+        type: "utc", label: null,
+        axis: isLast ? "bottom" : null,
+        domain: xDomain
       },
-      color: {legend: true, domain: colorDomain, range: colorRange},
+      y: {
+        label: null, grid: true,
+        ticks: 3,
+        tickFormat: fmt
+      },
       marks: [
         Plot.areaY(data, {
-          x: "date",
-          y: metric,
-          fill: "platform",
-          fillOpacity: 0.08,
+          x: "date", y: metric,
+          fill: color, fillOpacity: 0.13,
           curve: "monotone-x"
         }),
         Plot.lineY(data, {
-          x: "date",
-          y: metric,
-          stroke: "platform",
-          strokeWidth: 2,
+          x: "date", y: metric,
+          stroke: color, strokeWidth: 2,
           curve: "monotone-x",
           tip: true
         }),
-        Plot.ruleY([0])
+        Plot.ruleY([0], {stroke: "#e0e0e0"})
       ]
-    }));
-  }
+    });
+
+    return html`<div style="position:relative;margin-bottom:${isLast ? 0 : 2}px;border-top:1px solid #e8e8e8">
+      <div style="position:absolute;top:6px;left:64px;right:20px;display:flex;align-items:baseline;gap:8px;pointer-events:none">
+        <span style="font-size:13px;font-weight:700;color:${color}">${name}</span>
+        <span style="font-size:11px;color:#aaa">peak ${peakStr}</span>
+      </div>
+      ${chart}
+    </div>`;
+  });
+
+  display(html`<div style="border:1px solid #e8e8e8;border-radius:6px;overflow:hidden;background:#fff">${charts}</div>`);
 }
 ```
 
-<p style="font-size:0.82em;color:#999">Kalshi = US exchange volume from trade records. Polymarket US = US-legal volume only (separate from global). ForecastEx = full exchange volume. Note: Kalshi is many times larger — deselect it to compare Polymarket US and ForecastEx on their own scale.</p>
-
-## Scale reference
-
-```js
-{
-  const peakTable = [
-    {Platform: "Kalshi",        "Peak daily contracts": kalshiTidy.reduce((m, d) => Math.max(m, d.contracts||0), 0)},
-    {Platform: "Polymarket US", "Peak daily contracts": polymarket.reduce((m, d) => Math.max(m, d.contracts||0), 0)},
-    {Platform: "ForecastEx",    "Peak daily contracts": forecastex.reduce((m, d) => Math.max(m, d.contracts||0), 0)},
-  ];
-  display(Inputs.table(peakTable, {format: {"Peak daily contracts": d => d.toLocaleString()}}));
-}
-```
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Each panel has its own Y-axis — scales are independent. Kalshi = US exchange data from trade records. Polymarket US = US-accessible volume only. ForecastEx = full exchange volume.</p>
