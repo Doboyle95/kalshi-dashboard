@@ -1,11 +1,11 @@
 export default {
-  title: "Kalshi Market Data",
+  title: "US Prediction Markets",
   base: "/kalshi-dashboard/",
   root: "src",
   pages: [
-    {name: "Volume", path: "/"},
+    {name: "Overview", path: "/"},
+    {name: "Kalshi Volume", path: "/volume"},
     {name: "Categories", path: "/categories"},
-    {name: "Competitors", path: "/competitors"},
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Calibration", path: "/calibration"},
   ],
