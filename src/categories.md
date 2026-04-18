@@ -213,3 +213,88 @@ Plot.plot({
   ]
 })
 ```
+
+## Sports market type breakdown
+
+_How sports volume is split between market types: moneylines, spreads, over/unders, parlays, and bracket/prop markets. Uses the same date range as the chart above._
+
+```js
+// Map each tracked sports ticker to a market type
+const marketTypeMap = {
+  // Moneyline / game winner
+  KXNFLGAME: "Moneyline", KXNCAAFGAME: "Moneyline",
+  KXNBAGAME: "Moneyline", KXNCAAMBGAME: "Moneyline", KXNCAAWBGAME: "Moneyline", KXNBA: "Moneyline",
+  KXMLBGAME: "Moneyline", KXNHLGAME: "Moneyline",
+  KXPGATOUR: "Moneyline",
+  KXATPMATCH: "Moneyline", KXATPCHALLENGERMATCH: "Moneyline",
+  KXWTAMATCH: "Moneyline", KXWTACHALLENGERMATCH: "Moneyline",
+  KXEPLGAME: "Moneyline", KXUCLGAME: "Moneyline", KXLALIGAGAME: "Moneyline",
+  KXUFCFIGHT: "Moneyline",
+  // Point spread
+  KXNBASPREAD: "Spread", KXNFLSPREAD: "Spread", KXNCAAFSPREAD: "Spread",
+  KXNCAAMBSPREAD: "Spread", KXMLBSPREAD: "Spread",
+  // Over/Under (totals)
+  KXNBATOTAL: "Over/Under", KXNFLTOTAL: "Over/Under",
+  KXNCAAFTOTAL: "Over/Under", KXNCAAMBTOTAL: "Over/Under",
+  // Tournament bracket
+  KXMARMAD: "Tournament",
+  // Props / specials
+  KXSB: "Props",
+  // Non-sports and parlay — skip (parlay added separately)
+  KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip",
+  KXBTCD: "_skip", KXBTC15M: "_skip",
+  PRES: "_skip", KXFEDCHAIRNOM: "_skip", KXTRUMPMENTION: "_skip",
+  KXFEDDECISION: "_skip", KXINXU: "_skip", ECMOV: "_skip",
+  KXFIRSTSUPERBOWLSONG: "_skip", KXSUPERBOWLAD: "_skip",
+  KXHIGHNY: "_skip", KXHIGHLAX: "_skip", KXHIGHMIA: "_skip",
+  KXHIGHCHI: "_skip", KXHIGHAUS: "_skip"
+};
+
+const marketTypeOrder = ["Moneyline", "Spread", "Over/Under", "Tournament", "Props", "Parlay"];
+const marketTypeColors = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#b07aa1"];
+
+// Daily totals by market type (sports only, using topDaily tickers)
+const marketTypeDaily = topDaily.map(row => {
+  const sp = sportsSplit.find(s => +s.date === +row.date) || {};
+  const mt = {Moneyline: 0, Spread: 0, "Over/Under": 0, Tournament: 0, Props: 0};
+  for (const [cat, v] of Object.entries(row)) {
+    if (cat === "date") continue;
+    const g = marketTypeMap[cat];
+    if (g && g !== "_skip" && mt[g] !== undefined) mt[g] += +v || 0;
+  }
+  return {
+    date: row.date,
+    ...mt,
+    Parlay: +sp.contracts_parlay || 0
+  };
+});
+```
+
+```js
+const marketTypeTidy = marketTypeDaily
+  .filter(d => d.date >= chartStart && d.date <= chartEnd)
+  .flatMap(row => marketTypeOrder.map(g => ({date: row.date, type: g, contracts: row[g] || 0})));
+```
+
+```js
+Plot.plot({
+  width,
+  height: 380,
+  color: {legend: true, domain: marketTypeOrder, range: marketTypeColors},
+  x: {type: "utc", label: null},
+  y: {label: "Contracts", grid: true},
+  marks: [
+    Plot.areaY(marketTypeTidy, {
+      x: "date",
+      y: "contracts",
+      fill: "type",
+      order: marketTypeOrder,
+      curve: "monotone-x",
+      fillOpacity: 0.85,
+      tip: true,
+      title: d => `${d.type}\n${d.date.toISOString().slice(0,10)}\n${d.contracts.toLocaleString()} contracts`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
