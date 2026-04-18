@@ -215,6 +215,33 @@ const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date
 ```
 
 ```js
+const chartScale  = view(Inputs.radio(["Absolute", "Normalized"], {value: "Absolute", label: "Scale"}));
+const chartDetail = view(Inputs.radio(["General", "Detailed"],    {value: "General",  label: "Categories"}));
+```
+
+```js
+// General (5-category) grouping
+const generalMap = {
+  "NFL": "Football", "College football": "Football",
+  "NBA": "Basketball", "College basketball": "Basketball",
+  "Baseball": "Baseball",
+  "Hockey": "Other sports", "Golf": "Other sports", "Tennis": "Other sports",
+  "Soccer": "Other sports", "Combat sports": "Other sports", "Other sports": "Other sports",
+  "Parlay": "Parlay",
+  "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
+  "Entertainment": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
+};
+const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Basketball", "Football", "Parlay"];
+const generalColors = {
+  "Non-sports": "#78909c", "Other sports": "#a5d6a7", "Baseball": "#880e4f",
+  "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2"
+};
+
+const activeOrder    = chartDetail === "Detailed" ? wideOrder    : generalOrder;
+const activeColorMap = chartDetail === "Detailed" ? wideColors   : generalColors;
+```
+
+```js
 const [chartStart, chartEnd] = catDateSel;
 
 // Roll up to monthly totals within the brushed window
@@ -225,16 +252,32 @@ const monthRolled = d3.rollup(
     for (const g of wideOrder) obj[g] = d3.sum(rs, d => d[g] || 0);
     return obj;
   },
-  d => d.date.toISOString().slice(0, 7)   // "YYYY-MM"
+  d => d.date.toISOString().slice(0, 7)
 );
 
-const monthlyTidy = [...monthRolled]
-  .sort(([a], [b]) => a < b ? -1 : 1)
-  .flatMap(([mo, vals]) =>
-    wideOrder.map(g => ({month: mo, category: g, contracts: vals[g] || 0}))
-  );
+const sortedMonths = [...monthRolled].sort(([a], [b]) => a < b ? -1 : 1);
 
-const monthLabels = [...new Set(monthlyTidy.map(d => d.month))].sort();
+// Build tidy rows for active detail level
+const activeTidy = sortedMonths.flatMap(([mo, vals]) => {
+  if (chartDetail === "General") {
+    const gen = Object.fromEntries(generalOrder.map(g => [g, 0]));
+    for (const [det, gname] of Object.entries(generalMap)) gen[gname] += vals[det] || 0;
+    return generalOrder.map(g => ({month: mo, category: g, contracts: gen[g]}));
+  } else {
+    return wideOrder.map(g => ({month: mo, category: g, contracts: vals[g] || 0}));
+  }
+});
+
+// For normalized: compute each row as a fraction of its month's total
+const monthTotals = d3.rollup(activeTidy, rs => d3.sum(rs, r => r.contracts), d => d.month);
+const plotTidy = activeTidy.map(d => ({
+  ...d,
+  value: chartScale === "Normalized"
+    ? d.contracts / (monthTotals.get(d.month) || 1)
+    : d.contracts
+}));
+
+const monthLabels = sortedMonths.map(([mo]) => mo);
 const monthTickFormat = mo => {
   const [y, m] = mo.split("-");
   const abbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1];
@@ -246,11 +289,11 @@ const monthTickFormat = mo => {
 Plot.plot({
   width,
   height: 420,
-  marginBottom: 40,
+  marginBottom: monthLabels.length > 18 ? 50 : 40,
   color: {
     legend: true,
-    domain: wideOrder,
-    range: wideOrder.map(g => wideColors[g])
+    domain: activeOrder,
+    range: activeOrder.map(g => activeColorMap[g])
   },
   x: {
     type: "band",
@@ -260,25 +303,29 @@ Plot.plot({
     tickRotate: monthLabels.length > 18 ? -45 : 0
   },
   y: {
-    label: "Monthly contracts",
+    label: chartScale === "Normalized" ? "Share of monthly contracts" : "Monthly contracts",
     grid: true,
-    tickFormat: d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
+    tickFormat: chartScale === "Normalized"
+      ? d => (d * 100).toFixed(0) + "%"
+      : d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
   },
   marks: [
-    Plot.barY(monthlyTidy, {
+    Plot.barY(plotTidy, {
       x: "month",
-      y: "contracts",
+      y: "value",
       fill: "category",
-      order: wideOrder,
+      order: activeOrder,
       tip: true,
-      title: d => `${d.category}\n${d.month}\n${d.contracts.toLocaleString()} contracts`
+      title: d => chartScale === "Normalized"
+        ? `${d.category}\n${d.month}\n${(d.value * 100).toFixed(1)}% of month`
+        : `${d.category}\n${d.month}\n${d.contracts.toLocaleString()} contracts`
     }),
     Plot.ruleY([0])
   ]
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Monthly totals. Football and basketball split into pro and college (paired colors — dark/light). Parlay = cross-game multi-leg contracts. Other sports = all sports not individually tracked. Use the brush above to change the date window.</p>
+<p style="font-size:0.82em;color:#888">Monthly totals. <em>General</em>: Football, Basketball, Baseball, Other sports, Parlay, Non-sports. <em>Detailed</em>: NFL vs College football (orange pair), NBA vs College basketball (blue pair), plus all other individual categories. <em>Normalized</em> shows each category's share of total monthly volume.</p>
 
 ## Sports market type breakdown
 
