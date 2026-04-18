@@ -59,18 +59,65 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
-const since = view(Inputs.select(["All time", "Since 2025", "Since 2026"], {
-  label: "Time period",
-  value: "Since 2025"
-}));
+// Date range brush — drag handles to zoom all charts
+const dateRange = view((() => {
+  const h = 72, mt = 6, mb = 24, ml = 8, mr = 8;
+  const w = width;
+
+  const x = d3.scaleUtc()
+    .domain(d3.extent(kalshi, d => d.date))
+    .range([ml, w - mr]);
+
+  const yMax = d3.max(kalshi, d => d.contracts_total);
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg")
+    .attr("width", w).attr("height", h)
+    .style("display", "block")
+    .style("background", "#fafafa")
+    .style("border", "1px solid #e8e8e8")
+    .style("border-radius", "4px")
+    .style("margin-bottom", "1.5rem");
+
+  svg.append("path")
+    .datum(kalshi)
+    .attr("fill", "#2c7bb6").attr("fill-opacity", 0.2)
+    .attr("d", d3.area()
+      .x(d => x(d.date))
+      .y0(h - mb)
+      .y1(d => y(d.contracts_total))
+      .curve(d3.curveBasis));
+
+  svg.append("g")
+    .attr("transform", `translate(0,${h - mb})`)
+    .call(d3.axisBottom(x)
+      .ticks(d3.timeYear.every(1))
+      .tickFormat(d3.timeFormat("%Y"))
+      .tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke", "#ccc"))
+    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
+
+  const defaultStart = new Date("2025-01-01");
+  const defaultEnd = d3.max(kalshi, d => d.date);
+
+  const brush = d3.brushX()
+    .extent([[ml, mt], [w - mr, h - mb]])
+    .on("brush end", ({selection}) => {
+      if (selection) {
+        svg.property("value", selection.map(x.invert));
+        svg.dispatch("input");
+      }
+    });
+
+  svg.append("g").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.property("value", [defaultStart, defaultEnd]);
+  return svg.node();
+})());
 ```
 
 ```js
-const startDate = since === "Since 2026" ? new Date("2026-01-01")
-  : since === "Since 2025" ? new Date("2025-01-01")
-  : new Date("2021-01-01");
-
-const filtered = allPlatforms.filter(d => d.date >= startDate);
+const [startDate, endDate] = dateRange;
+const filtered = allPlatforms.filter(d => d.date >= startDate && d.date <= endDate);
 ```
 
 ```js
