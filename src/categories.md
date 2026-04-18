@@ -88,15 +88,21 @@ const sportsSplit = await FileAttachment("data/daily_sports_vs_nonsports.csv").c
 ```
 
 ```js
-// Map specific tickers to broad groups
+// Map tickers to broad display groups (mirrors volume page)
 const wideMap = {
-  KXNFLGAME: "NFL", KXNCAAFGAME: "College football",
-  KXNBAGAME: "NBA", KXNCAAMBGAME: "College basketball", KXNCAAMBSPREAD: "College basketball",
-  KXMLBGAME: "MLB",
-  KXNHLGAME: "NHL",
+  KXNFLGAME: "Football", KXNCAAFGAME: "Football",
+  KXNBAGAME: "Basketball", KXNCAAMBGAME: "Basketball", KXNCAAMBSPREAD: "Basketball",
+  KXMLBGAME: "Baseball",
+  KXNHLGAME: "Other sports",
   KXPGATOUR: "Golf",
   KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis",
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
+  // Non-sports — populated once daily_top_categories.csv is regenerated
+  PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
+  KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
+  KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
+  KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
+  KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",
   // Parlay handled separately via contracts_parlay column
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
@@ -104,27 +110,29 @@ const wideMap = {
 // Build wide-category daily totals
 const wideDaily = topDaily.map(row => {
   const sp = sportsSplit.find(s => +s.date === +row.date) || {};
-  const groups = {NFL:0, "College football":0, NBA:0, "College basketball":0, MLB:0, NHL:0, Golf:0, Tennis:0, Crypto:0};
+  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0,
+                  Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
   for (const [cat, v] of Object.entries(row)) {
     if (cat === "date") continue;
     const wg = wideMap[cat];
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
-  const parlay   = +sp.contracts_parlay    || 0;
-  const totSports = +sp.contracts_sports    || 0;
+  const parlay       = +sp.contracts_parlay    || 0;
+  const totSports    = +sp.contracts_sports    || 0;
   const totNonSports = +sp.contracts_nonsports || 0;
-  const knownSports = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] + groups.MLB + groups.NHL + groups.Golf + groups.Tennis;
+  const knownSports  = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date,
     ...groups,
     Parlay: parlay,
     "Other sports": Math.max(0, totSports - parlay - knownSports),
-    "Other non-sports": Math.max(0, totNonSports - groups.Crypto)
+    "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
 
 // Stacking order: stable non-sports at bottom, spiky sports on top
-const wideOrder = ["Other non-sports", "Crypto", "Other sports", "Tennis", "Golf", "NHL", "MLB", "College football", "College basketball", "NFL", "Parlay"];
+const wideOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto", "Other sports", "Tennis", "Golf", "Baseball", "Basketball", "Football", "Parlay"];
 ```
 
 ```js

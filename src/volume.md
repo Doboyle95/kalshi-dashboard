@@ -179,43 +179,58 @@ const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts
 ```
 
 ```js
-// Map specific tickers to broad groups (same as categories page)
+// Map tickers to broad display groups
+// Sports: consolidated into fewer buckets for readability
+// Non-sports: include politics, finance, entertainment, weather once CSV is regenerated
 const volWideMap = {
-  KXNFLGAME: "NFL", KXNCAAFGAME: "College football",
-  KXNBAGAME: "NBA", KXNCAAMBGAME: "College basketball", KXNCAAMBSPREAD: "College basketball",
-  KXMLBGAME: "MLB",
-  KXNHLGAME: "NHL",
-  KXPGATOUR: "Golf",
-  KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis",
+  // Football (combined)
+  KXNFLGAME: "Football", KXNCAAFGAME: "Football",
+  // Basketball (combined)
+  KXNBAGAME: "Basketball", KXNCAAMBGAME: "Basketball", KXNCAAMBSPREAD: "Basketball",
+  // Other sports
+  KXMLBGAME: "Baseball",
+  KXNHLGAME: "Other sports",
+  KXPGATOUR: "Golf", KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis",
+  // Non-sports — crypto
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
+  // Non-sports — politics
+  PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
+  // Non-sports — finance/economy
+  KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
+  // Non-sports — entertainment
+  KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
+  // Non-sports — weather (group all city tickers)
+  KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
+  KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",
+  // Skip parlay cross-category (captured via sportsSplit parlay column)
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
 
-const catCols = Object.keys(topDaily[0]).filter(k => k !== "date");
-
 const volWideDaily = topDaily.map(row => {
   const sp = sports.find(s => +s.date === +row.date) || {};
-  const groups = {NFL:0, "College football":0, NBA:0, "College basketball":0, MLB:0, NHL:0, Golf:0, Tennis:0, Crypto:0};
+  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0,
+                  Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
   for (const [cat, v] of Object.entries(row)) {
     if (cat === "date") continue;
     const wg = volWideMap[cat];
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
-  const parlay        = +sp.contracts_parlay    || 0;
-  const totSports     = +sp.contracts_sports    || 0;
-  const totNonSports  = +sp.contracts_nonsports || 0;
-  const knownSports   = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] + groups.MLB + groups.NHL + groups.Golf + groups.Tennis;
+  const parlay       = +sp.contracts_parlay    || 0;
+  const totSports    = +sp.contracts_sports    || 0;
+  const totNonSports = +sp.contracts_nonsports || 0;
+  const knownSports  = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date,
     ...groups,
     Parlay: parlay,
     "Other sports": Math.max(0, totSports - parlay - knownSports),
-    "Other non-sports": Math.max(0, totNonSports - groups.Crypto)
+    "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
 
-const sportsOrder    = ["Other sports", "Tennis", "Golf", "NHL", "MLB", "College football", "College basketball", "NBA", "NFL", "Parlay"];
-const nonSportsOrder = ["Other non-sports", "Crypto"];
+const sportsOrder    = ["Other sports", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
+const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
 ```
 
 ```js
@@ -259,6 +274,19 @@ const subOrder =
   : ["Non-sports", "Sports"];
 
 const useTableau = sportsView !== "Both (stacked)";
+
+// 7-day moving average of total across all categories (for subcategory views)
+function rollingMean7(rows, valueKey) {
+  const sorted = [...rows].sort((a, b) => a.date - b.date);
+  // Sum total per date
+  const byDate = d3.rollup(sorted, v => d3.sum(v, d => d[valueKey]), d => +d.date);
+  const dates  = [...byDate.keys()].sort((a,b) => a-b);
+  return dates.map((t, i) => {
+    const slice = dates.slice(Math.max(0, i-6), i+1).map(k => byDate.get(k));
+    return {date: new Date(t), ma: d3.mean(slice)};
+  }).filter(d => dates.indexOf(+d.date) >= 6); // only show where full 7-day window available
+}
+const sportsMA = useTableau ? rollingMean7(tidySports, "value") : [];
 ```
 
 ```js
@@ -276,6 +304,13 @@ Plot.plot({
       order: subOrder,
       curve: "monotone-x", fillOpacity: 0.85
     }),
+    ...(useTableau ? [Plot.lineY(sportsMA, {
+      x: "date", y: "ma",
+      stroke: "#111", strokeWidth: 1.8, strokeDasharray: "4,2",
+      curve: "monotone-x",
+      tip: true,
+      title: d => `7-day avg total: ${d.ma?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+    })] : []),
     Plot.ruleY([0])
   ]
 })
