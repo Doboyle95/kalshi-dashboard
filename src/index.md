@@ -138,12 +138,13 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Fees (USD)", grid: true},
   marks: [
-    Plot.barY(daily, {
-      x: "date", y: "fees_total",
-      interval: "day",
+    Plot.rectY(daily, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => d.fees_total || 0,
       fill: "#756bb1", fillOpacity: 0.8,
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${d.fees_total?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
     Plot.lineY(daily.filter(d => d.ma7_fees != null), {
       x: "date", y: "ma7_fees",
