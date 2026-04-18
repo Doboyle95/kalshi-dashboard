@@ -195,7 +195,7 @@ const volWideMap = {
   KXPGATOUR: "Golf",
   KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis", KXWTACHALLENGERMATCH: "Tennis",
   KXEPLGAME: "Soccer", KXUCLGAME: "Soccer", KXLALIGAGAME: "Soccer",
-  KXUFCFIGHT: "Other sports",
+  // NHL, UFC etc. fall into the residual "Other sports" — not explicitly mapped
   // Non-sports — crypto
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
   // Non-sports — politics
@@ -213,8 +213,7 @@ const volWideMap = {
 
 const volWideDaily = topDaily.map(row => {
   const sp = sports.find(s => +s.date === +row.date) || {};
-  // "Other sports" is explicitly tracked (NHL + UFC) — no residual
-  const groups = {Football:0, Basketball:0, Baseball:0, "Other sports":0, Golf:0, Tennis:0, Soccer:0,
+  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
                   Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
   for (const [cat, v] of Object.entries(row)) {
     if (cat === "date") continue;
@@ -222,12 +221,15 @@ const volWideDaily = topDaily.map(row => {
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
   const parlay       = +sp.contracts_parlay    || 0;
+  const totSports    = +sp.contracts_sports    || 0;
   const totNonSports = +sp.contracts_nonsports || 0;
+  const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date,
     ...groups,
     Parlay: parlay,
+    "Other sports":     Math.max(0, totSports    - parlay - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });

@@ -107,6 +107,7 @@ const wideMap = {
   KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis", KXWTACHALLENGERMATCH: "Tennis",
   KXEPLGAME: "Soccer", KXUCLGAME: "Soccer", KXLALIGAGAME: "Soccer",
   KXUFCFIGHT: "Combat sports",
+  // Everything else (NHL is explicit above; any untracked sport falls into residual)
   // Non-sports — crypto
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
   // Non-sports — politics
@@ -136,13 +137,15 @@ const wideDaily = topDaily.map(row => {
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
   const parlay       = +sp.contracts_parlay    || 0;
+  const totSports    = +sp.contracts_sports    || 0;
   const totNonSports = +sp.contracts_nonsports || 0;
+  const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date,
     ...groups,
     Parlay: parlay,
-    // Only keep non-sports residual (much smaller — just truly misc non-sports)
+    "Other sports":     Math.max(0, totSports    - parlay - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
@@ -150,7 +153,7 @@ const wideDaily = topDaily.map(row => {
 // Stacking order: non-sports at bottom, sports on top
 const wideOrder = [
   "Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto",
-  "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball", "Basketball", "Football", "Parlay"
+  "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball", "Basketball", "Football", "Parlay"
 ];
 ```
 
