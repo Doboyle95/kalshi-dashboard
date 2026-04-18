@@ -202,8 +202,13 @@ const volWideMap = {
   PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
   // Non-sports — finance/economy
   KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
-  // Non-sports — entertainment
+  // Non-sports — entertainment (halftime show, ads, Super Bowl props)
   KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
+  KXPERFORMSUPERBOWLB: "Entertainment", KXSBGUESTS: "Entertainment",
+  KXSBADS: "Entertainment", KXHALFTIMESHOW: "Entertainment",
+  KXSBPERFORM: "Entertainment", KXSUPERBOWLHEADLINE: "Entertainment",
+  KXSBADAPPEARANCES: "Entertainment", KXSBVIEWER: "Entertainment",
+  KXSBMENTION: "Entertainment", KXSBSETLISTS: "Entertainment",
   // Non-sports — weather
   KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
   KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",

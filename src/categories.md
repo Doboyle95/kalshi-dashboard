@@ -114,8 +114,13 @@ const wideMap = {
   PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
   // Non-sports — finance/economy
   KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
-  // Non-sports — entertainment
+  // Non-sports — entertainment (halftime show, ads, Super Bowl props)
   KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
+  KXPERFORMSUPERBOWLB: "Entertainment", KXSBGUESTS: "Entertainment",
+  KXSBADS: "Entertainment", KXHALFTIMESHOW: "Entertainment",
+  KXSBPERFORM: "Entertainment", KXSUPERBOWLHEADLINE: "Entertainment",
+  KXSBADAPPEARANCES: "Entertainment", KXSBVIEWER: "Entertainment",
+  KXSBMENTION: "Entertainment", KXSBSETLISTS: "Entertainment",
   // Non-sports — weather
   KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
   KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",
@@ -254,6 +259,9 @@ const marketTypeMap = {
   PRES: "_skip", KXFEDCHAIRNOM: "_skip", KXTRUMPMENTION: "_skip",
   KXFEDDECISION: "_skip", KXINXU: "_skip", ECMOV: "_skip",
   KXFIRSTSUPERBOWLSONG: "_skip", KXSUPERBOWLAD: "_skip",
+  KXPERFORMSUPERBOWLB: "_skip", KXSBGUESTS: "_skip", KXSBADS: "_skip",
+  KXHALFTIMESHOW: "_skip", KXSBPERFORM: "_skip", KXSUPERBOWLHEADLINE: "_skip",
+  KXSBADAPPEARANCES: "_skip", KXSBVIEWER: "_skip", KXSBMENTION: "_skip", KXSBSETLISTS: "_skip",
   KXHIGHNY: "_skip", KXHIGHLAX: "_skip", KXHIGHMIA: "_skip",
   KXHIGHCHI: "_skip", KXHIGHAUS: "_skip"
 };
