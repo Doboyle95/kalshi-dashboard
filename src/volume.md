@@ -180,17 +180,22 @@ const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts
 
 ```js
 // Map tickers to broad display groups
-// Sports: consolidated into fewer buckets for readability
-// Non-sports: include politics, finance, entertainment, weather once CSV is regenerated
 const volWideMap = {
-  // Football (combined)
-  KXNFLGAME: "Football", KXNCAAFGAME: "Football",
-  // Basketball (combined)
-  KXNBAGAME: "Basketball", KXNCAAMBGAME: "Basketball", KXNCAAMBSPREAD: "Basketball",
+  // Football (pro + college, all market types)
+  KXNFLGAME: "Football", KXNFLSPREAD: "Football", KXNFLTOTAL: "Football",
+  KXNCAAFGAME: "Football", KXNCAAFSPREAD: "Football", KXNCAAFTOTAL: "Football",
+  KXSB: "Football",
+  // Basketball (pro + college, all market types, March Madness, women's)
+  KXNBAGAME: "Basketball", KXNBASPREAD: "Basketball", KXNBATOTAL: "Basketball", KXNBA: "Basketball",
+  KXNCAAMBGAME: "Basketball", KXNCAAMBSPREAD: "Basketball", KXNCAAMBTOTAL: "Basketball",
+  KXMARMAD: "Basketball", KXNCAAWBGAME: "Basketball",
   // Other sports
-  KXMLBGAME: "Baseball",
+  KXMLBGAME: "Baseball", KXMLBSPREAD: "Baseball",
   KXNHLGAME: "Other sports",
-  KXPGATOUR: "Golf", KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis",
+  KXPGATOUR: "Golf",
+  KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis", KXWTACHALLENGERMATCH: "Tennis",
+  KXEPLGAME: "Soccer", KXUCLGAME: "Soccer", KXLALIGAGAME: "Soccer",
+  KXUFCFIGHT: "Other sports",
   // Non-sports — crypto
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
   // Non-sports — politics
@@ -199,7 +204,7 @@ const volWideMap = {
   KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
   // Non-sports — entertainment
   KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
-  // Non-sports — weather (group all city tickers)
+  // Non-sports — weather
   KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
   KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",
   // Skip parlay cross-category (captured via sportsSplit parlay column)
@@ -208,7 +213,7 @@ const volWideMap = {
 
 const volWideDaily = topDaily.map(row => {
   const sp = sports.find(s => +s.date === +row.date) || {};
-  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0,
+  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
                   Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
   for (const [cat, v] of Object.entries(row)) {
     if (cat === "date") continue;
@@ -218,7 +223,7 @@ const volWideDaily = topDaily.map(row => {
   const parlay       = +sp.contracts_parlay    || 0;
   const totSports    = +sp.contracts_sports    || 0;
   const totNonSports = +sp.contracts_nonsports || 0;
-  const knownSports  = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis;
+  const knownSports  = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date,
@@ -229,7 +234,7 @@ const volWideDaily = topDaily.map(row => {
   };
 });
 
-const sportsOrder    = ["Other sports", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
+const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
 const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
 ```
 
