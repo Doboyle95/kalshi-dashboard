@@ -41,9 +41,23 @@ const annualizedFees = totalFees / daily.length * 365;
 ## Daily contracts traded
 
 ```js
+const maxContracts = d3.max(daily, d => d.contracts_total);
+
+// Key milestone events — staggered y to avoid label overlap for nearby dates
+const milestones = [
+  {date: new Date("2024-11-05"), label: "Election Day '24",   tier: 0},
+  {date: new Date("2025-09-07"), label: "NFL season '25",     tier: 1},
+  {date: new Date("2026-01-17"), label: "NFL Divisional",     tier: 1},
+  {date: new Date("2026-01-25"), label: "NFL Championship",   tier: 0},
+  {date: new Date("2026-02-08"), label: "Super Bowl LIX ▲",   tier: 1},
+  {date: new Date("2026-03-19"), label: "March Madness",      tier: 0},
+].map(m => ({...m, y: m.tier === 0 ? maxContracts : maxContracts * 0.78}));
+```
+
+```js
 Plot.plot({
   width,
-  height: 380,
+  height: 400,
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
   marks: [
@@ -61,6 +75,26 @@ Plot.plot({
       curve: "monotone-x",
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: ${d.ma7_contracts?.toLocaleString()}`
+    }),
+    // Milestone vertical rules
+    Plot.ruleX(milestones, {
+      x: "date",
+      stroke: "#aaa",
+      strokeDasharray: "3,3",
+      strokeWidth: 1
+    }),
+    // Milestone labels (rotated, staggered heights)
+    Plot.text(milestones, {
+      x: "date",
+      y: "y",
+      text: "label",
+      textAnchor: "start",
+      lineAnchor: "bottom",
+      rotate: -42,
+      fontSize: 10,
+      fill: "#666",
+      dx: 3,
+      dy: -2
     }),
     Plot.ruleY([0])
   ]
