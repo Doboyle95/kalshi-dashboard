@@ -69,7 +69,7 @@ const overallPct = totalNet / totalStakes * 100;
 
 ```js
 // Date range — Mutable updated by brush
-const parlayDateSel = Mutable([d3.min(pnl, d => d.date), d3.max(pnl, d => d.date)]);
+const parlayDateSel = Mutable([new Date("2023-01-01"), d3.max(pnl, d => d.date)]);
 ```
 
 ```js
@@ -183,18 +183,18 @@ Plot.plot({
 
 ## Daily taker return (% of stakes)
 
-_Days with under $1,000 notional hidden. Returns below −100% reflect fees on top of a total loss (mathematically expected, not an error)._
+_Days with under $25,000 notional hidden (early low-volume days had outsized variance). Returns below −100% reflect fees on top of a total loss (mathematically expected). Axis capped at ±150%; hover bars to see exact values._
 
 ```js
 Plot.plot({
   width, height: 260,
   x: {type: "utc", label: null},
-  y: {label: "Taker return (% of notional)", grid: true, tickFormat: d => d + "%"},
+  y: {label: "Taker return (% of notional)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
   marks: [
-    Plot.rectY(pnlFiltered.filter(d => d.pct != null && d.stakes >= 1000), {
+    Plot.rectY(pnlFiltered.filter(d => d.pct != null && d.stakes >= 25000), {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => d.pct,
+      y: d => Math.max(-110, Math.min(150, d.pct)),
       fill: d => d.pct >= 0 ? "#1a9641" : "#d7191c",
       fillOpacity: 0.75,
       tip: true,
@@ -205,4 +205,4 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Taker return = (settlement received − price paid − fees) ÷ notional. "Before fees" excludes Kalshi's trading fee. Parlay markets identified by KXMVE* and PREPACK* series prefixes. A −100% day means all parlays expired worthless; fees push it slightly below −100%.</p>
+<p style="font-size:0.82em;color:#888">Taker return = (settlement received − price paid − fees) ÷ notional. How it's calculated: a winning contract bought at price <em>p</em>¢ returns (100−p)¢ profit; a losing contract loses the full <em>p</em>¢ paid. Sum across all contracts for the day, subtract Kalshi's fee, divide by total notional. A −100% day means every parlay expired worthless; fees push it to −102% to −107%. A +100%+ day means many low-probability parlays hit — a 5¢ parlay pays back 19× if it wins.</p>

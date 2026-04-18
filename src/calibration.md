@@ -11,10 +11,16 @@ const calib = await FileAttachment("data/calibration_three_way.csv").csv({typed:
 ```
 
 ```js
-const group = view(Inputs.select(["ALL", "NON_PARLAY", "PARLAY"], {
+const group = view(Inputs.select(["ALL", "SPORTS_NON_PARLAY", "NON_SPORTS", "PARLAY", "NON_PARLAY"], {
   label: "Market group",
   value: "ALL",
-  format: g => g === "ALL" ? "All markets" : g === "NON_PARLAY" ? "Non-parlay only" : "Parlay only"
+  format: g => ({
+    "ALL":               "All markets",
+    "SPORTS_NON_PARLAY": "Sports (non-parlay)",
+    "NON_SPORTS":        "Non-sports",
+    "PARLAY":            "Parlay only",
+    "NON_PARLAY":        "All non-parlay (sports + non-sports)"
+  })[g] ?? g
 }));
 ```
 

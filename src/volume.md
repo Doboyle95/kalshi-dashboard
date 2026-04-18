@@ -389,7 +389,7 @@ Plot.plot({
 })
 ```
 
-## Fee rate (% of notional)
+## Fee rate (¢ per contract)
 
 _Average fee Kalshi collects per contract traded. Peaks near 50¢ contracts (where the bell-curve fee is highest); falls toward 0 at extreme prices._
 

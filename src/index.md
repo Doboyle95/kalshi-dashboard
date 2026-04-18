@@ -61,58 +61,14 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
-// Date range brush — drag handles to set date range
-const dateSelection = view((() => {
-  const h = 72, mt = 6, mb = 24, ml = 8, mr = 8, w = width;
-
-  const defaultStart = new Date("2025-01-01");
-  const defaultEnd   = d3.max(kalshi, d => d.date);
-
-  const x = d3.scaleUtc()
-    .domain(d3.extent(kalshi, d => d.date))
-    .range([ml, w - mr]);
-
-  const yMax = d3.max(kalshi, d => d.contracts_total);
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-
-  const svg = d3.create("svg")
-    .attr("width", w).attr("height", h)
-    .style("display", "block")
-    .style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8")
-    .style("border-radius", "4px")
-    .style("margin-bottom", "1.5rem");
-
-  svg.append("path").datum(kalshi)
-    .attr("fill", "#2c7bb6").attr("fill-opacity", 0.2)
-    .attr("d", d3.area()
-      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total))
-      .curve(d3.curveBasis));
-
-  svg.append("g")
-    .attr("transform", `translate(0,${h - mb})`)
-    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke", "#ccc"))
-    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
-
-  const brush = d3.brushX()
-    .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", ({selection}) => {
-      if (selection) {
-        svg.property("value", selection.map(x.invert));
-        svg.dispatch("input");
-      }
-    });
-
-  svg.append("g").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.property("value", [defaultStart, defaultEnd]);
-  return svg.node();
-})());
+const compFromStr = view(Inputs.text({label: "From", placeholder: "YYYY-MM-DD", value: "2025-01-01", width: 130}));
+const compToStr   = view(Inputs.text({label: "To",   placeholder: "YYYY-MM-DD (blank = latest)", value: "", width: 130}));
 ```
 
 ```js
-const [startDate, endDate] = dateSelection;
-const filtered = allPlatforms.filter(d => d.date >= startDate && d.date <= endDate);
+const startDate = compFromStr && !isNaN(new Date(compFromStr)) ? new Date(compFromStr) : new Date("2025-01-01");
+const endDate   = compToStr   && !isNaN(new Date(compToStr))   ? new Date(compToStr)   : new Date();
+const filtered  = allPlatforms.filter(d => d.date >= startDate && d.date <= endDate);
 ```
 
 ```js
@@ -137,7 +93,9 @@ const normalized = filtered
 
 ```js
 const colors = {Kalshi: "#2c7bb6", ForecastEx: "#d7191c", Polymarket: "#f4a736"};
+```
 
+```js
 Plot.plot({
   width,
   height: 420,
