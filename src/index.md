@@ -2,83 +2,90 @@
 title: Volume
 ---
 
-# Kalshi Daily Volume
+# Kalshi Market Data
 
 ```js
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
+const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 ```
 
-```js
-const platforms = ["Kalshi", "ForecastEx", "Polymarket", "Comparison"];
-const platform = view(Inputs.select(platforms, {label: "Platform", value: "Kalshi"}));
-```
-
-```js
-// Filter/display logic per platform selection
-// For now: show Kalshi daily contracts
-const filtered = daily.filter(d => d.contracts_total != null);
-```
+## Daily contracts traded
 
 ```js
 Plot.plot({
-  title: "Daily contracts traded",
   width,
-  height: 400,
-  x: {type: "utc", label: "Date"},
+  height: 380,
+  x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
   marks: [
-    Plot.areaY(filtered, {
-      x: "date",
-      y: "contracts_total",
-      fill: "#2c7bb6",
-      fillOpacity: 0.15,
-      curve: "monotone-x"
+    Plot.areaY(daily, {
+      x: "date", y: "contracts_total",
+      fill: "#2c7bb6", fillOpacity: 0.12, curve: "monotone-x"
     }),
-    Plot.lineY(filtered, {
-      x: "date",
-      y: "contracts_total",
-      stroke: "#2c7bb6",
-      curve: "monotone-x"
+    Plot.lineY(daily, {
+      x: "date", y: "contracts_total",
+      stroke: "#2c7bb6", curve: "monotone-x"
     }),
-    Plot.lineY(filtered.filter(d => d.ma7_contracts != null), {
-      x: "date",
-      y: "ma7_contracts",
-      stroke: "#e15759",
-      strokeWidth: 1.5,
-      strokeDasharray: "4,2",
+    Plot.lineY(daily.filter(d => d.ma7_contracts != null), {
+      x: "date", y: "ma7_contracts",
+      stroke: "#e15759", strokeWidth: 2,
       curve: "monotone-x",
-      tip: true
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: ${d.ma7_contracts?.toLocaleString()}`
     }),
     Plot.ruleY([0])
   ]
 })
 ```
 
-<div class="note">
-Red dashed line = 7-day moving average. Data updated nightly from Kalshi trade records via InGame.
-</div>
+<span style="color:#2c7bb6">— Daily</span> &nbsp; <span style="color:#e15759">— 7-day average</span>
 
-## Sports vs non-sports
-
-```js
-const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
-```
+## Sports vs non-sports share
 
 ```js
 Plot.plot({
   width,
-  height: 300,
-  x: {type: "utc", label: "Date"},
+  height: 280,
+  x: {type: "utc", label: null},
   y: {label: "Sports share (%)", domain: [0, 100], grid: true},
   marks: [
+    Plot.areaY(sports, {
+      x: "date",
+      y: d => d.share_sports * 100,
+      fill: "#1a9641", fillOpacity: 0.15, curve: "monotone-x"
+    }),
     Plot.lineY(sports, {
       x: "date",
-      y: d => d.sports_contracts / (d.sports_contracts + d.nonsports_contracts) * 100,
-      stroke: "#1a9641",
-      curve: "monotone-x",
-      tip: true
+      y: d => d.share_sports * 100,
+      stroke: "#1a9641", curve: "monotone-x",
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\nSports: ${(d.share_sports*100).toFixed(1)}%`
     }),
     Plot.ruleY([50], {stroke: "#ccc", strokeDasharray: "4,2"})
+  ]
+})
+```
+
+## Daily fees
+
+```js
+Plot.plot({
+  width,
+  height: 280,
+  x: {type: "utc", label: null},
+  y: {label: "Fees (USD)", grid: true},
+  marks: [
+    Plot.barY(daily, {
+      x: "date", y: "fees_total",
+      fill: "#756bb1", fillOpacity: 0.8,
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${d.fees_total?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+    }),
+    Plot.lineY(daily.filter(d => d.ma7_fees != null), {
+      x: "date", y: "ma7_fees",
+      stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x"
+    }),
+    Plot.ruleY([0])
   ]
 })
 ```
