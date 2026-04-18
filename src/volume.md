@@ -175,6 +175,7 @@ Plot.plot({
 const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
   value: "Both (stacked)"
 }));
+const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts"}));
 ```
 
 ```js
@@ -219,20 +220,37 @@ const nonSportsOrder = ["Other non-sports", "Crypto"];
 
 ```js
 // Build tidy data for the selected view
+// For subcategory fee views, pro-rate segment fees by each category's contract share
 const tidySports =
   sportsView === "Sports only"
     ? filteredDaily.flatMap(d => {
-        const w = volWideDaily.find(r => +r.date === +d.date) || {};
-        return sportsOrder.map(g => ({date: d.date, category: g, contracts: w[g] || 0}));
+        const w  = volWideDaily.find(r => +r.date === +d.date) || {};
+        const sp = filteredSports.find(r => +r.date === +d.date) || {};
+        const totalContracts = sportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
+        const totalFees = sp.fees_sports || 0;
+        return sportsOrder.map(g => ({
+          date: d.date, category: g,
+          value: sportsMetric === "Fees"
+            ? totalFees * ((w[g] || 0) / totalContracts)
+            : (w[g] || 0)
+        }));
       })
   : sportsView === "Non-sports only"
     ? filteredDaily.flatMap(d => {
-        const w = volWideDaily.find(r => +r.date === +d.date) || {};
-        return nonSportsOrder.map(g => ({date: d.date, category: g, contracts: w[g] || 0}));
+        const w  = volWideDaily.find(r => +r.date === +d.date) || {};
+        const sp = filteredSports.find(r => +r.date === +d.date) || {};
+        const totalContracts = nonSportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
+        const totalFees = sp.fees_nonsports || 0;
+        return nonSportsOrder.map(g => ({
+          date: d.date, category: g,
+          value: sportsMetric === "Fees"
+            ? totalFees * ((w[g] || 0) / totalContracts)
+            : (w[g] || 0)
+        }));
       })
   : filteredSports.flatMap(d => [
-      {date: d.date, category: "Non-sports", contracts: d.contracts_nonsports || 0},
-      {date: d.date, category: "Sports",     contracts: d.contracts_sports    || 0}
+      {date: d.date, category: "Non-sports", value: sportsMetric === "Fees" ? (d.fees_nonsports || 0) : (d.contracts_nonsports || 0)},
+      {date: d.date, category: "Sports",     value: sportsMetric === "Fees" ? (d.fees_sports    || 0) : (d.contracts_sports    || 0)}
     ]);
 
 const subOrder =
@@ -248,13 +266,13 @@ Plot.plot({
   width,
   height: 280,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: sportsMetric === "Fees" ? "Fees (USD)" : "Contracts", grid: true},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
     : {legend: true, domain: ["Non-sports", "Sports"], range: ["#2c7bb6", "#1a9641"]},
   marks: [
     Plot.areaY(tidySports, {
-      x: "date", y: "contracts", fill: "category",
+      x: "date", y: "value", fill: "category",
       order: subOrder,
       curve: "monotone-x", fillOpacity: 0.85
     }),
