@@ -140,6 +140,7 @@ Plot.plot({
   marks: [
     Plot.barY(daily, {
       x: "date", y: "fees_total",
+      interval: "day",
       fill: "#756bb1", fillOpacity: 0.8,
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${d.fees_total?.toLocaleString(undefined, {maximumFractionDigits: 0})}`

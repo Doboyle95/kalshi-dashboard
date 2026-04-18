@@ -1,6 +1,7 @@
 export default {
   title: "Kalshi Market Data",
   base: "/kalshi-dashboard/",
+  root: "src",
   pages: [
     {name: "Volume", path: "/"},
     {name: "Categories", path: "/categories"},
