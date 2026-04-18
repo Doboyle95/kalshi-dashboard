@@ -61,14 +61,12 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
-// Date range — reactive Mutable updated by the brush below
-const dateSelection = Mutable([new Date("2025-01-01"), d3.max(kalshi, d => d.date)]);
-```
-
-```js
-// Brush mini chart — drag handles to set date range
-{
+// Date range brush — drag handles to set date range
+const dateSelection = view((() => {
   const h = 72, mt = 6, mb = 24, ml = 8, mr = 8, w = width;
+
+  const defaultStart = new Date("2025-01-01");
+  const defaultEnd   = d3.max(kalshi, d => d.date);
 
   const x = d3.scaleUtc()
     .domain(d3.extent(kalshi, d => d.date))
@@ -97,17 +95,19 @@ const dateSelection = Mutable([new Date("2025-01-01"), d3.max(kalshi, d => d.dat
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const [defStart, defEnd] = dateSelection;
-
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", ({selection}) => {
-      if (selection) dateSelection.value = selection.map(x.invert);
+      if (selection) {
+        svg.property("value", selection.map(x.invert));
+        svg.dispatch("input");
+      }
     });
 
-  svg.append("g").call(brush).call(brush.move, [defStart, defEnd].map(x));
-  display(svg.node());
-}
+  svg.append("g").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.property("value", [defaultStart, defaultEnd]);
+  return svg.node();
+})());
 ```
 
 ```js
