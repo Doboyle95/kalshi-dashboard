@@ -152,7 +152,7 @@ Plot.plot({
 
 ## Daily stakes & return
 
-_Bar height = daily notional staked by takers. Color = taker return that day (green = takers won, red = takers lost). Darker = more extreme._
+_Bar height = daily notional staked by takers. Color = taker return that day (green = takers won, red = takers lost). Darker = more extreme. Days with under $1,000 notional hidden (early market, statistically meaningless)._
 
 ```js
 Plot.plot({
@@ -168,7 +168,7 @@ Plot.plot({
     legend: true
   },
   marks: [
-    Plot.rectY(pnlFiltered.filter(d => d.stakes > 0), {
+    Plot.rectY(pnlFiltered.filter(d => d.stakes >= 1000), {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.stakes,
@@ -183,13 +183,15 @@ Plot.plot({
 
 ## Daily taker return (% of stakes)
 
+_Days with under $1,000 notional hidden. Returns below −100% reflect fees on top of a total loss (mathematically expected, not an error)._
+
 ```js
 Plot.plot({
   width, height: 260,
   x: {type: "utc", label: null},
   y: {label: "Taker return (% of notional)", grid: true, tickFormat: d => d + "%"},
   marks: [
-    Plot.rectY(pnlFiltered.filter(d => d.pct != null), {
+    Plot.rectY(pnlFiltered.filter(d => d.pct != null && d.stakes >= 1000), {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.pct,
