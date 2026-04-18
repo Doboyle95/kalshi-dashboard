@@ -217,42 +217,68 @@ const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date
 ```js
 const [chartStart, chartEnd] = catDateSel;
 
-const wideTidy = wideDaily
-  .filter(d => d.date >= chartStart && d.date <= chartEnd)
-  .flatMap(row => wideOrder.map(g => ({date: row.date, category: g, contracts: row[g] || 0})));
+// Roll up to monthly totals within the brushed window
+const monthRolled = d3.rollup(
+  wideDaily.filter(d => d.date >= chartStart && d.date <= chartEnd),
+  rs => {
+    const obj = {};
+    for (const g of wideOrder) obj[g] = d3.sum(rs, d => d[g] || 0);
+    return obj;
+  },
+  d => d.date.toISOString().slice(0, 7)   // "YYYY-MM"
+);
+
+const monthlyTidy = [...monthRolled]
+  .sort(([a], [b]) => a < b ? -1 : 1)
+  .flatMap(([mo, vals]) =>
+    wideOrder.map(g => ({month: mo, category: g, contracts: vals[g] || 0}))
+  );
+
+const monthLabels = [...new Set(monthlyTidy.map(d => d.month))].sort();
+const monthTickFormat = mo => {
+  const [y, m] = mo.split("-");
+  const abbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1];
+  return m === "01" ? `${abbr} '${y.slice(2)}` : abbr;
+};
 ```
 
 ```js
 Plot.plot({
   width,
   height: 420,
+  marginBottom: 40,
   color: {
     legend: true,
     domain: wideOrder,
     range: wideOrder.map(g => wideColors[g])
   },
-  x: {type: "utc", label: null},
+  x: {
+    type: "band",
+    domain: monthLabels,
+    label: null,
+    tickFormat: monthTickFormat,
+    tickRotate: monthLabels.length > 18 ? -45 : 0
+  },
   y: {
-    label: "Daily contracts",
+    label: "Monthly contracts",
     grid: true,
     tickFormat: d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
   },
   marks: [
-    Plot.areaY(wideTidy, {
-      x: "date",
+    Plot.barY(monthlyTidy, {
+      x: "month",
       y: "contracts",
       fill: "category",
       order: wideOrder,
-      curve: "monotone-x",
       tip: true,
-      title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\n${d.contracts.toLocaleString()} contracts`
+      title: d => `${d.category}\n${d.month}\n${d.contracts.toLocaleString()} contracts`
     }),
     Plot.ruleY([0])
   ]
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Football and basketball are split into pro and college (paired colors — dark/light within each family). Parlay = cross-game multi-leg contracts. Other sports = all sports not individually tracked. Use the brush above to zoom in.</p>
+<p style="font-size:0.82em;color:#888">Monthly totals. Football and basketball split into pro and college (paired colors — dark/light). Parlay = cross-game multi-leg contracts. Other sports = all sports not individually tracked. Use the brush above to change the date window.</p>
 
 ## Sports market type breakdown
 
