@@ -163,8 +163,8 @@ const wideOrder = [
 ```
 
 ```js
-// Mutable date range for this chart
-const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date)]);
+// Mutable date range for this chart — default to full history (heatmap benefits from full context)
+const catDateSel = Mutable([d3.min(topDaily, d => d.date), d3.max(topDaily, d => d.date)]);
 ```
 
 ```js
@@ -200,115 +200,181 @@ const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date
 
 ```js
 const [chartStart, chartEnd] = catDateSel;
+```
 
-const wideTidy = wideDaily
-  .filter(d => d.date >= chartStart && d.date <= chartEnd)
-  .flatMap(row => wideOrder.map(g => ({date: row.date, category: g, contracts: row[g] || 0})));
+```js
+// Monthly aggregation for heatmap — string "YYYY-MM" keys so Plot.cell (ordinal x) works correctly
+const heatMonthly = (() => {
+  const sLabel = chartStart.toISOString().slice(0, 7);
+  const eLabel = chartEnd.toISOString().slice(0, 7);
+  const rows = [];
+  const monthMap = d3.rollup(
+    wideDaily,
+    rs => {
+      const obj = {};
+      for (const cat of wideOrder) obj[cat] = d3.sum(rs, d => d[cat] || 0);
+      return obj;
+    },
+    d => d.date.toISOString().slice(0, 7)   // "YYYY-MM"
+  );
+  for (const [label, cats] of monthMap) {
+    if (label < sLabel || label > eLabel) continue;
+    for (const [cat, val] of Object.entries(cats)) {
+      if (val > 0) rows.push({ monthLabel: label, category: cat, contracts: val });
+    }
+  }
+  return rows;
+})();
+
+const heatMonthLabels = [...new Set(heatMonthly.map(d => d.monthLabel))].sort();
 ```
 
 ```js
 Plot.plot({
   width,
-  height: 420,
-  color: {legend: true, columns: 3, scheme: "tableau10"},
-  x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  height: wideOrder.length * 22 + 60,
+  marginLeft: 130,
+  x: {
+    domain: heatMonthLabels,
+    label: null,
+    ticks: heatMonthLabels.filter(d => d.endsWith("-01")),
+    tickFormat: d => d.slice(0, 4)
+  },
+  y: {domain: [...wideOrder].reverse(), label: null},
+  color: {
+    type: "sqrt",
+    scheme: "YlOrRd",
+    label: "Monthly contracts",
+    legend: true,
+    tickFormat: d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
+  },
   marks: [
-    Plot.areaY(wideTidy, {
-      x: "date",
-      y: "contracts",
-      fill: "category",
-      order: wideOrder,
-      curve: "monotone-x",
-      fillOpacity: 0.85
-    }),
-    Plot.ruleY([0])
+    Plot.cell(heatMonthly, {
+      x: "monthLabel",
+      y: "category",
+      fill: "contracts",
+      inset: 0.5,
+      tip: true,
+      title: d => `${d.category}\n${d.monthLabel}\n${d.contracts.toLocaleString()} contracts`
+    })
   ]
 })
 ```
 
+<p style="font-size:0.82em;color:#888">Each cell = one calendar month. Color intensity = contract volume (sqrt scale — lighter = low-volume, darker red = peak). X-axis tick labels show January of each year. Hover for exact count. Use the brush above to zoom into a date range.</p>
+
 ## Sports market type breakdown
 
-_How sports volume is split between market types: moneylines, spreads, over/unders, parlays, and bracket/prop markets. Uses the same date range as the chart above._
+_How sports volume is split between market types across all sports tickers. Moneylines = individual game winners. Futures/Award = season champions, conference winners, awards, tournament brackets. Parlay (multi-game) = cross-game combos. Parlay (single-game) = same-game parlays._
 
 ```js
-// Map each tracked sports ticker to a market type
-const marketTypeMap = {
-  // Moneyline / game winner
-  KXNFLGAME: "Moneyline", KXNCAAFGAME: "Moneyline",
-  KXNBAGAME: "Moneyline", KXNCAAMBGAME: "Moneyline", KXNCAAWBGAME: "Moneyline", KXNBA: "Moneyline",
-  KXMLBGAME: "Moneyline", KXNHLGAME: "Moneyline",
-  KXPGATOUR: "Moneyline",
-  KXATPMATCH: "Moneyline", KXATPCHALLENGERMATCH: "Moneyline",
-  KXWTAMATCH: "Moneyline", KXWTACHALLENGERMATCH: "Moneyline",
-  KXEPLGAME: "Moneyline", KXUCLGAME: "Moneyline", KXLALIGAGAME: "Moneyline",
-  KXUFCFIGHT: "Moneyline",
-  // Point spread
-  KXNBASPREAD: "Spread", KXNFLSPREAD: "Spread", KXNCAAFSPREAD: "Spread",
-  KXNCAAMBSPREAD: "Spread", KXMLBSPREAD: "Spread",
-  // Over/Under (totals)
-  KXNBATOTAL: "Over/Under", KXNFLTOTAL: "Over/Under",
-  KXNCAAFTOTAL: "Over/Under", KXNCAAMBTOTAL: "Over/Under",
-  // Tournament bracket
-  KXMARMAD: "Tournament",
-  // Props / specials
-  KXSB: "Props",
-  // Non-sports and parlay — skip (parlay added separately)
-  KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip",
-  KXBTCD: "_skip", KXBTC15M: "_skip",
-  PRES: "_skip", KXFEDCHAIRNOM: "_skip", KXTRUMPMENTION: "_skip",
-  KXFEDDECISION: "_skip", KXINXU: "_skip", ECMOV: "_skip",
-  KXFIRSTSUPERBOWLSONG: "_skip", KXSUPERBOWLAD: "_skip",
-  KXPERFORMSUPERBOWLB: "_skip", KXSBGUESTS: "_skip", KXSBADS: "_skip",
-  KXHALFTIMESHOW: "_skip", KXSBPERFORM: "_skip", KXSUPERBOWLHEADLINE: "_skip",
-  KXSBADAPPEARANCES: "_skip", KXSBVIEWER: "_skip", KXSBMENTION: "_skip", KXSBSETLISTS: "_skip",
-  KXHIGHNY: "_skip", KXHIGHLAX: "_skip", KXHIGHMIA: "_skip",
-  KXHIGHCHI: "_skip", KXHIGHAUS: "_skip"
-};
-
-const marketTypeOrder = ["Moneyline", "Spread", "Over/Under", "Tournament", "Props", "Parlay"];
-const marketTypeColors = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#b07aa1"];
-
-// Daily totals by market type (sports only, using topDaily tickers)
-const marketTypeDaily = topDaily.map(row => {
-  const sp = sportsSplit.find(s => +s.date === +row.date) || {};
-  const mt = {Moneyline: 0, Spread: 0, "Over/Under": 0, Tournament: 0, Props: 0};
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const g = marketTypeMap[cat];
-    if (g && g !== "_skip" && mt[g] !== undefined) mt[g] += +v || 0;
-  }
-  return {
-    date: row.date,
-    ...mt,
-    Parlay: +sp.contracts_parlay || 0
-  };
-});
+const marketTypeRaw = await FileAttachment("data/sports_market_type_daily.csv").csv({typed: true});
 ```
 
 ```js
-const marketTypeTidy = marketTypeDaily
-  .filter(d => d.date >= chartStart && d.date <= chartEnd)
-  .flatMap(row => marketTypeOrder.map(g => ({date: row.date, type: g, contracts: row[g] || 0})));
+// Consolidate minor categories for cleaner display
+const MT_REMAP = {
+  "Parlay (multi-game)": "Parlay (multi-game)",
+  "Parlay (single-game)": "Parlay (SGP)",
+  "Moneyline": "Moneyline",
+  "Spread": "Spread",
+  "Over/Under": "Over/Under",
+  "Futures/Award": "Futures/Award",
+  "Player Prop": "Player Prop",
+  "Game Prop": "Game Prop",
+  "Cricket": "Other",
+  "Esports": "Other",
+  "Motorsport": "Other",
+  "Mention": "Other",
+  "Other": "Other"
+};
+
+const mtOrder = [
+  "Moneyline", "Futures/Award", "Spread", "Over/Under",
+  "Parlay (multi-game)", "Parlay (SGP)", "Player Prop", "Game Prop", "Other"
+];
+const mtColors = [
+  "#4e79a7", "#76b7b2", "#f28e2b", "#e15759",
+  "#b07aa1", "#d4a0c7", "#59a14f", "#8cd17d", "#bab0ac"
+];
+
+// Roll up tidy data to consolidated categories
+// Use ISO string as rollup key (Date objects compare by reference, not value)
+const mtRolled = d3.rollup(
+  marketTypeRaw,
+  rs => d3.sum(rs, r => r.contracts),
+  r => (r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date)),
+  r => MT_REMAP[r.market_type] || "Other"
+);
+
+const mtDaily = Array.from(mtRolled, ([dateStr, byType]) => {
+  const row = {date: new Date(dateStr)};
+  for (const g of mtOrder) row[g] = byType.get(g) || 0;
+  return row;
+}).sort((a, b) => a.date - b.date);
+```
+
+```js
+// Independent date brush for this chart
+const mtDateSel = Mutable([d3.min(mtDaily, d => d.date), d3.max(mtDaily, d => d.date)]);
+```
+
+```js
+{
+  const h = 60, mt = 4, mb = 22, ml = 8, mr = 8, w = width;
+  const x = d3.scaleUtc().domain(d3.extent(mtDaily, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(mtDaily, d => mtOrder.reduce((s, g) => s + (d[g] || 0), 0));
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg").attr("width", w).attr("height", h)
+    .style("display", "block").style("background", "#fafafa")
+    .style("border", "1px solid #e8e8e8").style("border-radius", "4px").style("margin-bottom", "1.5rem");
+
+  // Total sports volume sparkline
+  svg.append("path").datum(mtDaily)
+    .attr("fill", "#4e79a7").attr("fill-opacity", 0.2)
+    .attr("d", d3.area()
+      .x(d => x(d.date)).y0(h - mb).y1(d => y(mtOrder.reduce((s, g) => s + (d[g] || 0), 0)))
+      .curve(d3.curveBasis));
+
+  svg.append("g").attr("transform", `translate(0,${h - mb})`)
+    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke", "#ccc"))
+    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
+
+  const [ds, de] = mtDateSel;
+  const brush = d3.brushX().extent([[ml, mt], [w - mr, h - mb]])
+    .on("brush end", ({selection}) => { if (selection) mtDateSel.value = selection.map(x.invert); });
+  svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
+  display(svg.node());
+}
+```
+
+```js
+const [mtStart, mtEnd] = mtDateSel;
+
+const mtTidy = mtDaily
+  .filter(d => d.date >= mtStart && d.date <= mtEnd)
+  .flatMap(row => mtOrder.map(g => ({date: row.date, type: g, contracts: row[g] || 0})));
 ```
 
 ```js
 Plot.plot({
   width,
   height: 380,
-  color: {legend: true, domain: marketTypeOrder, range: marketTypeColors},
+  color: {legend: true, domain: mtOrder, range: mtColors},
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
   marks: [
-    Plot.areaY(marketTypeTidy, {
+    Plot.areaY(mtTidy, {
       x: "date",
       y: "contracts",
       fill: "type",
-      order: marketTypeOrder,
+      order: mtOrder,
       curve: "monotone-x",
       fillOpacity: 0.85,
       tip: true,
-      title: d => `${d.type}\n${d.date.toISOString().slice(0,10)}\n${d.contracts.toLocaleString()} contracts`
+      title: d => `${d.type}\n${d.date.toISOString().slice(0, 10)}\n${d.contracts.toLocaleString()} contracts`
     }),
     Plot.ruleY([0])
   ]
