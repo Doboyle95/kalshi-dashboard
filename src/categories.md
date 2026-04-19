@@ -677,13 +677,23 @@ const mktCatFilter = view(Inputs.select(
 const mktFiltered = mktSearch
   .filter(d => mktCatFilter === "All" || d.kalshi_category === mktCatFilter);
 
+// Build per-category CSS using :has() so the full row is colored —
+// no JS DOM timing issues; survives table sort/pagination automatically.
+const catCss = Object.entries(CAT_COLORS).map(([cat, color]) =>
+  `.mkt-table tr:has([data-mkt-cat="${cat}"]) { background: ${color}18 !important; }
+.mkt-table tr:has([data-mkt-cat="${cat}"]): hover { background: ${color}33 !important; }`
+).join("\n");
+
 display(html`<style>
   .mkt-table table { font-size: 14px; border-collapse: collapse; width: 100%; }
   .mkt-table td, .mkt-table th { padding: 0.65em 0.8em; }
-  .mkt-table tr { height: 2.7em; transition: background 0.1s; }
+  .mkt-table tr { height: 2.7em; }
+  /* Collapse the hidden category-tag column (2nd column) */
+  .mkt-table th:nth-child(2), .mkt-table td:nth-child(2) { padding: 0 !important; width: 0; max-width: 0; overflow: hidden; }
+  ${catCss}
 </style>`);
 
-// Category legend — swatch rectangles to match row tint
+// Category legend — swatch rectangles matching row tint
 display(html`<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.3em;margin-bottom:0.8rem;font-size:0.8em;color:#555">
   ${Object.entries(CAT_COLORS).map(([cat, color]) =>
     html`<span style="display:inline-flex;align-items:center;gap:5px">
@@ -692,10 +702,14 @@ display(html`<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.3em;margin-bott
   )}
 </div>`);
 
-const tbl = Inputs.table(mktFiltered, {
-  columns: ["rank", "display_name", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
+// Add _c column — an invisible carrier for the data-mkt-cat attribute used by :has() CSS above
+const mktDisplay = mktFiltered.map(d => ({...d, _c: d.kalshi_category || ""}));
+
+const tbl = Inputs.table(mktDisplay, {
+  columns: ["rank", "_c", "display_name", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
   header: {
     rank:          "#",
+    _c:            "",
     display_name:  "Market",
     contracts:     "Volume",
     fees_total:    "Kalshi fees",
@@ -704,42 +718,20 @@ const tbl = Inputs.table(mktFiltered, {
     top_short:     "Highest-vol. outcome"
   },
   format: {
-    rank:       d => d,
+    rank: d => d,
+    _c: cat => {
+      const el = document.createElement("span");
+      el.setAttribute("data-mkt-cat", cat);
+      return el;
+    },
     contracts:  d => "$" + fmtC(d),
     fees_total: d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
   },
-  width: {rank: 36, resolved: 32},
+  width: {rank: 36, _c: 0, resolved: 32},
   sort: "rank",
   reverse: false,
   rows: 50
 });
 tbl.classList.add("mkt-table");
-
-// Color entire rows by category — lookup via rank cell to survive user sorting
-{
-  const rankToColor = new Map(mktFiltered.map(d => [d.rank, CAT_COLORS[d.kalshi_category] || null]));
-  function paintRows() {
-    const tbody = tbl.querySelector("tbody");
-    if (!tbody) return;
-    [...tbody.querySelectorAll("tr")].forEach(tr => {
-      const rank  = parseInt(tr.querySelector("td")?.textContent ?? "");
-      const color = rankToColor.get(rank);
-      if (color) {
-        tr.style.background = color + "18";
-        tr.onmouseenter = () => { tr.style.background = color + "30"; };
-        tr.onmouseleave = () => { tr.style.background = color + "18"; };
-      }
-    });
-  }
-  paintRows();
-  // Re-paint when table re-sorts or paginates (childList mutation)
-  const obs = new MutationObserver(() => {
-    obs.disconnect();
-    paintRows();
-    obs.observe(tbl, {childList: true, subtree: true});
-  });
-  obs.observe(tbl, {childList: true, subtree: true});
-}
-
 display(tbl);
 ```
