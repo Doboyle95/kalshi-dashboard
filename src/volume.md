@@ -357,32 +357,43 @@ Plot.plot({
 ## Cumulative fee revenue
 
 ```js
-let running = 0;
-const cumFees = filteredDaily.map(d => {
-  running += d.fees_total || 0;
-  return {date: d.date, cumul: running};
-});
+let sCum = 0, nsCum = 0;
+const cumFeesSplit = filteredSports
+  .slice()
+  .sort((a, b) => a.date - b.date)
+  .flatMap(d => {
+    sCum  += d.fees_sports    || 0;
+    nsCum += d.fees_nonsports || 0;
+    return [
+      {date: d.date, category: "Sports",     cumul: sCum},
+      {date: d.date, category: "Non-sports", cumul: nsCum}
+    ];
+  });
 ```
 
 ```js
 Plot.plot({
   width,
-  height: 240,
+  height: 260,
   x: {type: "utc", label: null},
   y: {
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
+  color: {
+    legend: true,
+    domain: ["Non-sports", "Sports"],
+    range: ["#2c7bb6", "#1a9641"]
+  },
   marks: [
-    Plot.areaY(cumFees, {
+    Plot.areaY(cumFeesSplit, {
       x: "date", y: "cumul",
-      fill: "#756bb1", fillOpacity: 0.15, curve: "monotone-x"
-    }),
-    Plot.lineY(cumFees, {
-      x: "date", y: "cumul",
-      stroke: "#756bb1", strokeWidth: 2, curve: "monotone-x",
+      fill: "category",
+      order: ["Non-sports", "Sports"],
+      fillOpacity: 0.85,
+      curve: "monotone-x",
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
     Plot.ruleY([0])
   ]
