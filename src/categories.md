@@ -7,6 +7,7 @@ title: Categories
 ```js
 const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
+const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
 ```
 
 ## All-time leaderboard
@@ -446,4 +447,47 @@ Plot.plot({
     Plot.ruleY([0])
   ]
 })
+```
+
+---
+
+## All-time individual market leaderboard
+
+Ranked by total contracts across all outcomes. Each row is one market (e.g. "Super Bowl 2026 winner"), not an individual yes/no contract.
+
+```js
+const mktSearch = view(Inputs.search(mktLeaderboard, {placeholder: "Search markets..."}));
+```
+
+```js
+const mktCatFilter = view(Inputs.select(
+  ["All", ...new Set(mktLeaderboard.map(d => d.kalshi_category).filter(Boolean).sort())],
+  {label: "Category", value: "All"}
+));
+```
+
+```js
+const mktFiltered = mktSearch.filter(d =>
+  mktCatFilter === "All" || d.kalshi_category === mktCatFilter
+);
+
+const fmtC = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B"
+               : n >= 1e6 ? (n/1e6).toFixed(1)+"M"
+               : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
+               : String(n);
+
+display(Inputs.table(mktFiltered, {
+  columns: ["market_key", "kalshi_category", "contracts", "n_outcomes", "top_outcome"],
+  header: {
+    market_key: "Market",
+    kalshi_category: "Category",
+    contracts: "All-time contracts",
+    n_outcomes: "# outcomes",
+    top_outcome: "Leading outcome"
+  },
+  format: {contracts: d => fmtC(d)},
+  sort: "contracts",
+  reverse: true,
+  rows: 25
+}));
 ```
