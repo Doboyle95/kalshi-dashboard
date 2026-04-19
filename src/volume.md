@@ -39,17 +39,13 @@ const annualizedFees = totalFees / daily.length * 365;
 </div>
 
 ```js
-// Date range brush — mini overview chart with draggable handles
-// Drag the shaded region or its edges to zoom all charts below
-const dateRange = view((() => {
-  const h = 72, mt = 6, mb = 24, ml = 8, mr = 8;
+// Reusable mini-brush factory. Returns an SVG node whose .value = [startDate, endDate].
+// Each chart calls view(makeDateBrush(...)) independently.
+function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#2c7bb6") {
+  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
-
-  const x = d3.scaleUtc()
-    .domain(d3.extent(daily, d => d.date))
-    .range([ml, w - mr]);
-
-  const yMax = d3.max(daily, d => d.contracts_total);
+  const x = d3.scaleUtc().domain(d3.extent(daily, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(daily, yAcc) || 1;
   const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
 
   const svg = d3.create("svg")
@@ -60,160 +56,59 @@ const dateRange = view((() => {
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
-  // Full-history area sparkline
   svg.append("path")
     .datum(daily)
-    .attr("fill", "#2c7bb6").attr("fill-opacity", 0.2)
+    .attr("fill", color).attr("fill-opacity", 0.2)
     .attr("d", d3.area()
-      .x(d => x(d.date))
-      .y0(h - mb)
-      .y1(d => y(d.contracts_total))
+      .x(d => x(d.date)).y0(h - mb).y1(d => y(yAcc(d)))
       .curve(d3.curveBasis));
 
-  // X axis (years only)
   svg.append("g")
     .attr("transform", `translate(0,${h - mb})`)
-    .call(d3.axisBottom(x)
-      .ticks(d3.timeYear.every(1))
-      .tickFormat(d3.timeFormat("%Y"))
-      .tickSizeOuter(0))
+    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  // Brush
-  const defaultStart = new Date("2025-01-01");
   const defaultEnd = d3.max(daily, d => d.date);
-
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", (event) => {
+    .on("brush end", event => {
       if (!event.sourceEvent) return;
-      if (event.selection) {
-        svg.property("value", event.selection.map(x.invert));
-        svg.dispatch("input");
-      }
+      if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
     });
 
-  svg.append("g")
-    .attr("class", "brush")
-    .call(brush)
-    .call(brush.move, [defaultStart, defaultEnd].map(x));
-
-  // Style the brush handles
-  svg.selectAll(".handle")
-    .style("fill", "#2c7bb6")
-    .style("fill-opacity", 0.8);
-
+  svg.append("g").attr("class", "brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
   svg.property("value", [defaultStart, defaultEnd]);
   return svg.node();
-})());
+}
 ```
 
 ```js
-const [startDate, endDate] = dateRange;
-const filteredDaily = daily.filter(d => d.date >= startDate && d.date <= endDate);
-const filteredSports = sports.filter(d => d.date >= startDate && d.date <= endDate);
-```
-
-## Daily contracts traded
-
-```js
-const maxContracts = d3.max(filteredDaily, d => d.contracts_total);
-
-const allMilestones = [
-  {date: new Date("2024-11-05"), label: "Election Day '24", tier: 0},
-  {date: new Date("2025-09-07"), label: "NFL season '25",   tier: 1},
-  {date: new Date("2026-01-17"), label: "NFL Divisional",   tier: 1},
-  {date: new Date("2026-01-25"), label: "NFL Championship", tier: 0},
-  {date: new Date("2026-02-08"), label: "Super Bowl LIX",   tier: 1},
-  {date: new Date("2026-03-19"), label: "March Madness",    tier: 0},
-];
-
-const milestones = allMilestones
-  .filter(m => m.date >= startDate && m.date <= endDate)
-  .map(m => ({...m, y: m.tier === 0 ? maxContracts : maxContracts * 0.78}));
-```
-
-```js
-Plot.plot({
-  width,
-  height: 380,
-  x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
-  marks: [
-    Plot.rectY(filteredDaily, {
-      x1: d => d.date,
-      x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => d.contracts_total || 0,
-      fill: "#2c7bb6", fillOpacity: 0.6,
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\n${(d.contracts_total||0).toLocaleString()} contracts`
-    }),
-    Plot.lineY(filteredDaily.filter(d => d.ma7_contracts != null), {
-      x: "date", y: "ma7_contracts",
-      stroke: "#e15759", strokeWidth: 2, curve: "monotone-x",
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: ${d.ma7_contracts?.toLocaleString()}`
-    }),
-    Plot.ruleX(milestones, {
-      x: "date", stroke: "#555", strokeDasharray: "3,3", strokeWidth: 1
-    }),
-    Plot.text(milestones, {
-      x: "date", y: "y", text: "label",
-      textAnchor: "start", lineAnchor: "bottom",
-      rotate: -42, fontSize: 10, fill: "#555", dx: 3, dy: -2
-    }),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-<span style="color:#2c7bb6">■ Daily</span> &nbsp; <span style="color:#e15759">— 7-day average</span>
-
-## Sports vs. non-sports volume
-
-```js
-const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
-  value: "Both (stacked)"
-}));
-const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts"}));
-```
-
-```js
-// Map tickers to broad display groups
+// Shared wide-category mapping (no date dependency)
 const volWideMap = {
-  // Football (pro + college, all market types)
   KXNFLGAME: "Football", KXNFLSPREAD: "Football", KXNFLTOTAL: "Football",
   KXNCAAFGAME: "Football", KXNCAAFSPREAD: "Football", KXNCAAFTOTAL: "Football",
   KXSB: "Football",
-  // Basketball (pro + college, all market types, March Madness, women's)
   KXNBAGAME: "Basketball", KXNBASPREAD: "Basketball", KXNBATOTAL: "Basketball", KXNBA: "Basketball",
   KXNCAAMBGAME: "Basketball", KXNCAAMBSPREAD: "Basketball", KXNCAAMBTOTAL: "Basketball",
   KXMARMAD: "Basketball", KXNCAAWBGAME: "Basketball",
-  // Other sports
   KXMLBGAME: "Baseball", KXMLBSPREAD: "Baseball",
   KXNHLGAME: "Other sports",
   KXPGATOUR: "Golf",
   KXATPMATCH: "Tennis", KXATPCHALLENGERMATCH: "Tennis", KXWTAMATCH: "Tennis", KXWTACHALLENGERMATCH: "Tennis",
   KXEPLGAME: "Soccer", KXUCLGAME: "Soccer", KXLALIGAGAME: "Soccer",
-  // NHL, UFC etc. fall into the residual "Other sports" — not explicitly mapped
-  // Non-sports — crypto
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
-  // Non-sports — politics
   PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
-  // Non-sports — finance/economy
   KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
-  // Non-sports — entertainment (halftime show, ads, Super Bowl props)
   KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
   KXPERFORMSUPERBOWLB: "Entertainment", KXSBGUESTS: "Entertainment",
   KXSBADS: "Entertainment", KXHALFTIMESHOW: "Entertainment",
   KXSBPERFORM: "Entertainment", KXSUPERBOWLHEADLINE: "Entertainment",
   KXSBADAPPEARANCES: "Entertainment", KXSBVIEWER: "Entertainment",
   KXSBMENTION: "Entertainment", KXSBSETLISTS: "Entertainment",
-  // Non-sports — weather
   KXHIGHNY: "Weather", KXHIGHLAX: "Weather", KXHIGHMIA: "Weather",
   KXHIGHCHI: "Weather", KXHIGHAUS: "Weather",
-  // Skip parlay cross-category (captured via sportsSplit parlay column)
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
 
@@ -232,49 +127,116 @@ const volWideDaily = topDaily.map(row => {
   const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
-    date: row.date,
-    ...groups,
-    Parlay: parlay,
+    date: row.date, ...groups, Parlay: parlay,
     "Other sports":     Math.max(0, totSports    - parlay - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
+```
 
-const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
-const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
+## Daily contracts traded
+
+```js
+const dr1 = view(makeDateBrush(new Date("2025-01-01")));
 ```
 
 ```js
-// Build tidy data for the selected view
-// For subcategory fee views, pro-rate segment fees by each category's contract share
+const [s1, e1] = dr1;
+const fd1 = daily.filter(d => d.date >= s1 && d.date <= e1);
+
+const maxContracts = d3.max(fd1, d => d.contracts_total);
+const allMilestones = [
+  {date: new Date("2024-11-05"), label: "Election Day '24", tier: 0},
+  {date: new Date("2025-09-07"), label: "NFL season '25",   tier: 1},
+  {date: new Date("2026-01-17"), label: "NFL Divisional",   tier: 1},
+  {date: new Date("2026-01-25"), label: "NFL Championship", tier: 0},
+  {date: new Date("2026-02-08"), label: "Super Bowl LIX",   tier: 1},
+  {date: new Date("2026-03-19"), label: "March Madness",    tier: 0},
+];
+const milestones = allMilestones
+  .filter(m => m.date >= s1 && m.date <= e1)
+  .map(m => ({...m, y: m.tier === 0 ? maxContracts : maxContracts * 0.78}));
+```
+
+```js
+Plot.plot({
+  width,
+  height: 380,
+  x: {type: "utc", label: null},
+  y: {label: "Contracts", grid: true},
+  marks: [
+    Plot.rectY(fd1, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => d.contracts_total || 0,
+      fill: "#2c7bb6", fillOpacity: 0.6,
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\n${(d.contracts_total||0).toLocaleString()} contracts`
+    }),
+    Plot.lineY(fd1.filter(d => d.ma7_contracts != null), {
+      x: "date", y: "ma7_contracts",
+      stroke: "#e15759", strokeWidth: 2, curve: "monotone-x",
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: ${d.ma7_contracts?.toLocaleString()}`
+    }),
+    Plot.ruleX(milestones, {x: "date", stroke: "#555", strokeDasharray: "3,3", strokeWidth: 1}),
+    Plot.text(milestones, {
+      x: "date", y: "y", text: "label",
+      textAnchor: "start", lineAnchor: "bottom",
+      rotate: -42, fontSize: 10, fill: "#555", dx: 3, dy: -2
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+<span style="color:#2c7bb6">&#9632; Daily</span> &nbsp; <span style="color:#e15759">&#8212; 7-day average</span>
+
+## Sports vs. non-sports volume
+
+```js
+const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
+  value: "Both (stacked)"
+}));
+const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts"}));
+```
+
+```js
+const dr2 = view(makeDateBrush(new Date("2025-01-01")));
+```
+
+```js
+const [s2, e2] = dr2;
+const fd2 = daily.filter(d => d.date >= s2 && d.date <= e2);
+const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2);
+
+const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
+const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
+
 const tidySports =
   sportsView === "Sports only"
-    ? filteredDaily.flatMap(d => {
+    ? fd2.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
-        const sp = filteredSports.find(r => +r.date === +d.date) || {};
-        const totalContracts = sportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
-        const totalFees = sp.fees_sports || 0;
+        const sp = fs2.find(r => +r.date === +d.date) || {};
+        const totalContracts2 = sportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
+        const totalFees2 = sp.fees_sports || 0;
         return sportsOrder.map(g => ({
           date: d.date, category: g,
-          value: sportsMetric === "Fees"
-            ? totalFees * ((w[g] || 0) / totalContracts)
-            : (w[g] || 0)
+          value: sportsMetric === "Fees" ? totalFees2 * ((w[g] || 0) / totalContracts2) : (w[g] || 0)
         }));
       })
   : sportsView === "Non-sports only"
-    ? filteredDaily.flatMap(d => {
+    ? fd2.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
-        const sp = filteredSports.find(r => +r.date === +d.date) || {};
-        const totalContracts = nonSportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
-        const totalFees = sp.fees_nonsports || 0;
+        const sp = fs2.find(r => +r.date === +d.date) || {};
+        const totalContracts2 = nonSportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
+        const totalFees2 = sp.fees_nonsports || 0;
         return nonSportsOrder.map(g => ({
           date: d.date, category: g,
-          value: sportsMetric === "Fees"
-            ? totalFees * ((w[g] || 0) / totalContracts)
-            : (w[g] || 0)
+          value: sportsMetric === "Fees" ? totalFees2 * ((w[g] || 0) / totalContracts2) : (w[g] || 0)
         }));
       })
-  : filteredSports.flatMap(d => [
+  : fs2.flatMap(d => [
       {date: d.date, category: "Non-sports", value: sportsMetric === "Fees" ? (d.fees_nonsports || 0) : (d.contracts_nonsports || 0)},
       {date: d.date, category: "Sports",     value: sportsMetric === "Fees" ? (d.fees_sports    || 0) : (d.contracts_sports    || 0)}
     ]);
@@ -286,16 +248,14 @@ const subOrder =
 
 const useTableau = sportsView !== "Both (stacked)";
 
-// 7-day moving average of total across all categories (for subcategory views)
 function rollingMean7(rows, valueKey) {
   const sorted = [...rows].sort((a, b) => a.date - b.date);
-  // Sum total per date
   const byDate = d3.rollup(sorted, v => d3.sum(v, d => d[valueKey]), d => +d.date);
   const dates  = [...byDate.keys()].sort((a,b) => a-b);
   return dates.map((t, i) => {
     const slice = dates.slice(Math.max(0, i-6), i+1).map(k => byDate.get(k));
     return {date: new Date(t), ma: d3.mean(slice)};
-  }).filter(d => dates.indexOf(+d.date) >= 6); // only show where full 7-day window available
+  }).filter(d => dates.indexOf(+d.date) >= 6);
 }
 const sportsMA = useTableau ? rollingMean7(tidySports, "value") : [];
 ```
@@ -312,8 +272,7 @@ Plot.plot({
   marks: [
     Plot.areaY(tidySports, {
       x: "date", y: "value", fill: "category",
-      order: subOrder,
-      curve: "monotone-x", fillOpacity: 0.85
+      order: subOrder, curve: "monotone-x", fillOpacity: 0.85
     }),
     ...(useTableau ? [Plot.lineY(sportsMA, {
       x: "date", y: "ma",
@@ -330,13 +289,22 @@ Plot.plot({
 ## Daily fee revenue
 
 ```js
+const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total || 0, "#756bb1"));
+```
+
+```js
+const [s3, e3] = dr3;
+const fd3 = daily.filter(d => d.date >= s3 && d.date <= e3);
+```
+
+```js
 Plot.plot({
   width,
   height: 260,
   x: {type: "utc", label: null},
   y: {label: "Fees (USD)", grid: true},
   marks: [
-    Plot.rectY(filteredDaily, {
+    Plot.rectY(fd3, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.fees_total || 0,
@@ -344,7 +312,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
-    Plot.lineY(filteredDaily.filter(d => d.ma7_fees != null), {
+    Plot.lineY(fd3.filter(d => d.ma7_fees != null), {
       x: "date", y: "ma7_fees",
       stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x",
       tip: true,
@@ -358,18 +326,21 @@ Plot.plot({
 ## Cumulative fee revenue
 
 ```js
+const dr4 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "#1a9641"));
+```
+
+```js
+const [s4, e4] = dr4;
+const fs4 = sports.filter(d => d.date >= s4 && d.date <= e4).slice().sort((a, b) => a.date - b.date);
 let sCum = 0, nsCum = 0;
-const cumFeesSplit = filteredSports
-  .slice()
-  .sort((a, b) => a.date - b.date)
-  .flatMap(d => {
-    sCum  += d.fees_sports    || 0;
-    nsCum += d.fees_nonsports || 0;
-    return [
-      {date: d.date, category: "Sports",     cumul: sCum},
-      {date: d.date, category: "Non-sports", cumul: nsCum}
-    ];
-  });
+const cumFeesSplit = fs4.flatMap(d => {
+  sCum  += d.fees_sports    || 0;
+  nsCum += d.fees_nonsports || 0;
+  return [
+    {date: d.date, category: "Sports",     cumul: sCum},
+    {date: d.date, category: "Non-sports", cumul: nsCum}
+  ];
+});
 ```
 
 ```js
@@ -381,18 +352,12 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {
-    legend: true,
-    domain: ["Non-sports", "Sports"],
-    range: ["#2c7bb6", "#1a9641"]
-  },
+  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["#2c7bb6", "#1a9641"]},
   marks: [
     Plot.areaY(cumFeesSplit, {
-      x: "date", y: "cumul",
-      fill: "category",
+      x: "date", y: "cumul", fill: "category",
       order: ["Non-sports", "Sports"],
-      fillOpacity: 0.85,
-      curve: "monotone-x",
+      fillOpacity: 0.85, curve: "monotone-x",
       tip: true,
       title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
@@ -401,13 +366,18 @@ Plot.plot({
 })
 ```
 
-## Fee rate (¢ per contract)
+## Fee rate (&#162; per contract)
 
-_Average fee Kalshi collects per contract traded. Peaks near 50¢ contracts (where the bell-curve fee is highest); falls toward 0 at extreme prices._
+_Average fee Kalshi collects per contract traded. Peaks near 50&#162; contracts (where the bell-curve fee is highest); falls toward 0 at extreme prices._
 
 ```js
-const feeRate = filteredDaily
-  .filter(d => d.contracts_total > 0)
+const dr5 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#756bb1"));
+```
+
+```js
+const [s5, e5] = dr5;
+const feeRate = daily
+  .filter(d => d.date >= s5 && d.date <= e5 && d.contracts_total > 0)
   .map(d => ({date: d.date, rate: d.fees_total / d.contracts_total * 100}));
 ```
 
@@ -416,13 +386,13 @@ Plot.plot({
   width,
   height: 220,
   x: {type: "utc", label: null},
-  y: {label: "Avg fee per contract (¢)", grid: true, tickFormat: d => d.toFixed(2) + "¢"},
+  y: {label: "Avg fee per contract (&#162;)", grid: true, tickFormat: d => d.toFixed(2) + "&#162;"},
   marks: [
     Plot.lineY(feeRate, {
       x: "date", y: "rate",
       stroke: "#756bb1", strokeWidth: 1.5, curve: "monotone-x",
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nAvg fee: ${d.rate.toFixed(3)}¢ per contract`
+      title: d => `${d.date.toISOString().slice(0,10)}\nAvg fee: ${d.rate.toFixed(3)} cents per contract`
     }),
     Plot.ruleY([0])
   ]
