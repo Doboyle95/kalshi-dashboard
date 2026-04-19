@@ -5,6 +5,7 @@ export default {
   pages: [
     {name: "Overview", path: "/"},
     {name: "Kalshi Volume", path: "/volume"},
+    {name: "Fee Revenue", path: "/fees"},
     {name: "Categories", path: "/categories"},
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Calibration", path: "/calibration"},

@@ -13,23 +13,13 @@ const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({type
 ```js
 // All-time KPIs (not filtered by date range)
 const totalContracts = d3.sum(daily, d => d.contracts_total);
-const totalFees = d3.sum(daily, d => d.fees_total);
 const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, daily[0]);
-const annualizedFees = totalFees / daily.length * 365;
 ```
 
 <div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
   <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time contracts</div>
     <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${(totalContracts/1e9).toFixed(1)}B</div>
-  </div>
-  <div style="background:#f9f6ff;border-left:4px solid #756bb1;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time fee revenue</div>
-    <div style="font-size:1.6em;font-weight:700;color:#756bb1">$${(totalFees/1e6).toFixed(0)}M</div>
-  </div>
-  <div style="background:#f9f6ff;border-left:4px solid #3f007d;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Annualized run rate</div>
-    <div style="font-size:1.6em;font-weight:700;color:#3f007d">$${(annualizedFees/1e6).toFixed(0)}M/yr</div>
   </div>
   <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak single day</div>
@@ -286,115 +276,3 @@ Plot.plot({
 })
 ```
 
-## Daily fee revenue
-
-```js
-const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total || 0, "#756bb1"));
-```
-
-```js
-const [s3, e3] = dr3;
-const fd3 = daily.filter(d => d.date >= s3 && d.date <= e3);
-```
-
-```js
-Plot.plot({
-  width,
-  height: 260,
-  x: {type: "utc", label: null},
-  y: {label: "Fees (USD)", grid: true},
-  marks: [
-    Plot.rectY(fd3, {
-      x1: d => d.date,
-      x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => d.fees_total || 0,
-      fill: "#756bb1", fillOpacity: 0.8,
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`
-    }),
-    Plot.lineY(fd3.filter(d => d.ma7_fees != null), {
-      x: "date", y: "ma7_fees",
-      stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x",
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: $${d.ma7_fees?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
-    }),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-## Cumulative fee revenue
-
-```js
-const dr4 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "#1a9641"));
-```
-
-```js
-const [s4, e4] = dr4;
-const fs4 = sports.filter(d => d.date >= s4 && d.date <= e4).slice().sort((a, b) => a.date - b.date);
-let sCum = 0, nsCum = 0;
-const cumFeesSplit = fs4.flatMap(d => {
-  sCum  += d.fees_sports    || 0;
-  nsCum += d.fees_nonsports || 0;
-  return [
-    {date: d.date, category: "Sports",     cumul: sCum},
-    {date: d.date, category: "Non-sports", cumul: nsCum}
-  ];
-});
-```
-
-```js
-Plot.plot({
-  width,
-  height: 260,
-  x: {type: "utc", label: null},
-  y: {
-    label: "Cumulative fees (USD)", grid: true,
-    tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
-  },
-  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["#2c7bb6", "#1a9641"]},
-  marks: [
-    Plot.areaY(cumFeesSplit, {
-      x: "date", y: "cumul", fill: "category",
-      order: ["Non-sports", "Sports"],
-      fillOpacity: 0.85, curve: "monotone-x",
-      tip: true,
-      title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
-    }),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-## Fee rate (&#162; per contract)
-
-_Average fee Kalshi collects per contract traded. Peaks near 50&#162; contracts (where the bell-curve fee is highest); falls toward 0 at extreme prices._
-
-```js
-const dr5 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#756bb1"));
-```
-
-```js
-const [s5, e5] = dr5;
-const feeRate = daily
-  .filter(d => d.date >= s5 && d.date <= e5 && d.contracts_total > 0)
-  .map(d => ({date: d.date, rate: d.fees_total / d.contracts_total * 100}));
-```
-
-```js
-Plot.plot({
-  width,
-  height: 220,
-  x: {type: "utc", label: null},
-  y: {label: "Avg fee per contract (&#162;)", grid: true, tickFormat: d => d.toFixed(2) + "&#162;"},
-  marks: [
-    Plot.lineY(feeRate, {
-      x: "date", y: "rate",
-      stroke: "#756bb1", strokeWidth: 1.5, curve: "monotone-x",
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nAvg fee: ${d.rate.toFixed(3)} cents per contract`
-    }),
-    Plot.ruleY([0])
-  ]
-})
-```
