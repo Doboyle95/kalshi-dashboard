@@ -27,8 +27,9 @@ const platforms = [
   },
   {
     name: "Crypto.com/Nadex", color: "#9c27b0",
+    // $0.02 flat fee per contract (exchange fee for $1 event contracts; settlement fees waived)
     data: competitor.filter(d => d.platform === "Crypto.com/Nadex")
-      .map(d => ({date: d.date, contracts: +d.contracts, fees: null}))
+      .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
   }
 ];
 
@@ -97,4 +98,4 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale difference is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees not available.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale difference is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived).</p>
