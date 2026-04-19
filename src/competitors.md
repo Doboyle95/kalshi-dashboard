@@ -57,14 +57,14 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
   display(Plot.plot({
     width,
     height: 420,
-    marginRight: 90,
+    marginRight: 16,
     x: {type: "utc", label: null},
     y: {
       label: metric === "contracts" ? "Daily contracts" : "Daily fees (USD)",
       grid: true,
       tickFormat: fmt
     },
-    color: {domain: colorDomain, range: colorRange},
+    color: {legend: true, domain: colorDomain, range: colorRange},
     marks: [
       // Kalshi area fill — makes its dominance visually clear
       Plot.areaY(platforms[0].data, {
@@ -82,16 +82,6 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
           tip: true
         })
       ),
-      // Direct labels at right edge of each line
-      Plot.text(lastLabels, {
-        x: "date", y: metric,
-        text: d => d.platform,
-        fill: d => d.color,
-        fontWeight: "600",
-        fontSize: 12,
-        dx: 6,
-        textAnchor: "start"
-      }),
       Plot.ruleY([0])
     ]
   }));

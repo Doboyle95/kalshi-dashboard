@@ -4,7 +4,7 @@ title: Overview
 
 # US Prediction Market Dashboard
 
-_Comparing regulated prediction markets in the United States. Kalshi is the dominant market leader; ForecastEx and Polymarket US operate at significantly smaller scale. Data updated nightly._
+_Comparing regulated prediction markets in the United States. Kalshi is the dominant market leader; ForecastEx, Polymarket US, and Crypto.com/Nadex operate at significantly smaller scale. Data updated nightly._
 
 ```js
 const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
@@ -63,50 +63,42 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```js
 {
   const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k";
-  const pColors = {Kalshi: "#2c7bb6", ForecastEx: "#1a9641", "Polymarket US": "#e66101"};
-
-  const byPlatform = {
-    Kalshi:          kalshiTidy,
-    "Polymarket US": competitorTidy.filter(d => d.platform === "Polymarket US"),
-    ForecastEx:      competitorTidy.filter(d => d.platform === "ForecastEx"),
+  const pColors = {
+    Kalshi: "#2c7bb6", "Polymarket US": "#e66101",
+    ForecastEx: "#1a9641", "Crypto.com/Nadex": "#9c27b0"
   };
 
-  const lastLabels = Object.entries(byPlatform).map(([name, data]) => {
-    const last = data.filter(d => d.contracts > 0).at(-1);
-    return last ? {...last, platform: name} : null;
-  }).filter(Boolean);
+  const byPlatform = {
+    Kalshi:             kalshiTidy,
+    "Polymarket US":    competitorTidy.filter(d => d.platform === "Polymarket US"),
+    ForecastEx:         competitorTidy.filter(d => d.platform === "ForecastEx"),
+    "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
+  };
 
   display(Plot.plot({
     width,
     height: 420,
-    marginRight: 100,
+    marginRight: 16,
     x: {type: "utc", label: null},
     y: {label: "Daily contracts", grid: true, tickFormat: fmt},
-    color: {domain: Object.keys(pColors), range: Object.values(pColors)},
+    color: {legend: true, domain: Object.keys(pColors), range: Object.values(pColors)},
     marks: [
       Plot.areaY(kalshiTidy, {
         x: "date", y: "contracts",
         fill: pColors.Kalshi, fillOpacity: 0.08, curve: "monotone-x"
       }),
       ...Object.entries(byPlatform).map(([name, data]) =>
-        Plot.lineY(data, {
+        Plot.lineY(data.filter(d => d.contracts > 0), {
           x: "date", y: "contracts",
           stroke: pColors[name],
           strokeWidth: name === "Kalshi" ? 2.5 : 1.75,
           curve: "monotone-x", tip: true
         })
       ),
-      Plot.text(lastLabels, {
-        x: "date", y: "contracts",
-        text: d => d.platform,
-        fill: d => pColors[d.platform],
-        fontWeight: "600", fontSize: 12,
-        dx: 6, textAnchor: "start"
-      }),
       Plot.ruleY([0])
     ]
   }));
 }
 ```
 
-<p style="font-size:0.82em;color:#888">Shared Y-axis — the scale gap is real. Kalshi data from trade records. ForecastEx and Polymarket US from public sources.</p>
+<p style="font-size:0.82em;color:#888">Shared Y-axis — the scale gap is real. Kalshi data from trade records. Competitors from public sources. Crypto.com/Nadex from CFTC daily bulletins (starts Dec 2024).</p>

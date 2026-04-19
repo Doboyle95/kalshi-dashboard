@@ -456,25 +456,131 @@ Plot.plot({
 Ranked by total contracts across all outcomes. Each row is one market (e.g. "Super Bowl 2026 winner"), not an individual yes/no contract.
 
 ```js
-// Fallback names for market_keys with no Kalshi title
-const MKT_NAME_OVERRIDES = {
-  "POPVOTEMOV-24-R-B":      "Popular vote margin (R, alt)",
-  "POPVOTEMOVSMALL-24-R":   "Popular vote margin small (R)",
-  "KXGOVSHUT":              "Government shutdown",
-  "KXGOVTSHUTDOWN":         "Government shutdown (alt)",
-  "KXCITRINI":              "Citrini macro event",
-  "POPVOTEMOVSMALLER-24-R": "Popular vote margin smaller (R)",
-  "PRESPARTYFULL-24-REC":   "Presidential party full recount",
-  "KXALIENS":               "Alien disclosure",
-  "KXBTCMAXY-25-DEC31":     "Bitcoin max price 2025",
-  "ECMOV-24-R-B35":         "Electoral college margin (R, B35)",
-  "ECMOV-24-R-B65":         "Electoral college margin (R, B65)",
-  "POWER-24-RH-RS":         "Power 2024 (RH/RS)",
-  "KXBTCMINY-25-2-DEC31":   "Bitcoin min price 2025",
-  "POPVOTEMOV-24-D":        "Popular vote margin (D)",
+// ── Category colors ──────────────────────────────────────────────────────────
+const CAT_COLORS = {
+  "Sports":                 "#2196f3",
+  "Politics":               "#9c27b0",
+  "Economics":              "#607d8b",
+  "Elections":              "#e53935",
+  "Entertainment":          "#e91e63",
+  "Crypto":                 "#f7931a",
+  "Science and Technology": "#00bcd4",
+  "Companies":              "#4caf50",
 };
 
-// Shared winner-display logic
+// ── Team maps for game-ticker parsing ────────────────────────────────────────
+const NFL_TEAMS = {
+  // 3-letter first so longest-match wins
+  ARI:"Cardinals", ATL:"Falcons", BAL:"Ravens", BUF:"Bills", CAR:"Panthers",
+  CHI:"Bears", CIN:"Bengals", CLE:"Browns", DAL:"Cowboys", DEN:"Broncos",
+  DET:"Lions", HOU:"Texans", IND:"Colts", JAC:"Jaguars", JAX:"Jaguars",
+  LAC:"Chargers", MIN:"Vikings", NOR:"Saints", NYG:"Giants", NYJ:"Jets",
+  PHI:"Eagles", PIT:"Steelers", SEA:"Seahawks", TEN:"Titans", WAS:"Commanders",
+  // 2-letter
+  GB:"Packers", KC:"Chiefs", LA:"Rams", LV:"Raiders", MIA:"Dolphins",
+  NE:"Patriots", NO:"Saints", SF:"49ers", TB:"Buccaneers",
+};
+const NBA_TEAMS = {
+  ATL:"Hawks", BKN:"Nets", BOS:"Celtics", CHA:"Hornets", CHI:"Bulls",
+  CLE:"Cavaliers", DAL:"Mavericks", DEN:"Nuggets", DET:"Pistons",
+  GSW:"Warriors", HOU:"Rockets", IND:"Pacers", LAC:"Clippers", LAL:"Lakers",
+  MEM:"Grizzlies", MIA:"Heat", MIL:"Bucks", MIN:"Wolves", NOP:"Pelicans",
+  NYK:"Knicks", OKC:"Thunder", ORL:"Magic", PHI:"76ers", PHX:"Suns",
+  POR:"Blazers", SAC:"Kings", SAS:"Spurs", TOR:"Raptors", UTA:"Jazz",
+  WAS:"Wizards",
+};
+const CFB_TEAMS = {
+  // 4-letter first
+  ARIZ:"Arizona", ARMY:"Army", CCAR:"Coastal Carolina", CLEM:"Clemson",
+  COLO:"Colorado", CONN:"UConn", DUKE:"Duke", IOWA:"Iowa", MISS:"Ole Miss",
+  MIZZ:"Missouri", MSST:"Miss. State", NAVY:"Navy", NCST:"NC State",
+  OHIO:"Ohio", OKLA:"Oklahoma", OKST:"Oklahoma St.", ORST:"Oregon St.",
+  RICE:"Rice", RUTG:"Rutgers", SCAR:"South Carolina", STAN:"Stanford",
+  TENN:"Tennessee", TLSA:"Tulsa", TULN:"Tulane", TXAM:"Texas A&M",
+  TXST:"Texas St.", UTAH:"Utah", UTSA:"UTSA", WAKE:"Wake Forest",
+  WASH:"Washington",
+  // 3-letter
+  ALA:"Alabama", ARK:"Arkansas", ASU:"Arizona St.", AUB:"Auburn", BYU:"BYU",
+  CAL:"California", CIN:"Cincinnati", CMU:"Central Mich.", ECU:"East Carolina",
+  FIU:"FIU", FLA:"Florida", FSU:"Florida St.",
+  HAW:"Hawai'i", HOU:"Houston", IND:"Indiana", ISU:"Iowa St.", JMU:"James Madison",
+  LOU:"Louisville", LSU:"LSU", MEM:"Memphis", MIA:"Miami (FL)", MICH:"Michigan",
+  MSU:"Michigan St.", NEB:"Nebraska",
+  ORE:"Oregon", PSU:"Penn State", PUR:"Purdue", SMU:"SMU", SYR:"Syracuse",
+  TCU:"TCU", TEX:"Texas", TTU:"Texas Tech", UGA:"Georgia", UNC:"UNC",
+  USC:"USC", USM:"Southern Miss", UVA:"Virginia", VAN:"Vanderbilt",
+  WKU:"Western Ky.", WVU:"W. Virginia",
+  // 2-letter
+  GT:"Georgia Tech", ND:"Notre Dame", NW:"Northwestern", VT:"Virginia Tech",
+};
+const CBB_TEAMS = {
+  ...CFB_TEAMS,
+  // Basketball-specific overrides / additions
+  GONZ:"Gonzaga", VILL:"Villanova", VCU:"VCU", UCLA:"UCLA",
+  ILL:"Illinois", WIS:"Wisconsin", KU:"Kansas", UK:"Kentucky",
+  SJU:"St. John's", USU:"Utah St.", KENN:"Kennesaw St.", HOF:"Hofstra",
+  FUR:"Furman", HOW:"Howard", MOH:"Monmouth", PV:"Prairie View",
+  WRST:"Wright St.", PARK:"Park", PENN:"Penn",
+  HP:"High Point", SCU:"Santa Clara",
+};
+
+function parseGame(code, teamMap) {
+  const keys = Object.keys(teamMap).sort((a, b) => b.length - a.length);
+  function go(s, acc) {
+    if (acc.length === 2 && s.length === 0) return acc;
+    if (acc.length >= 2) return null;
+    for (const k of keys) {
+      if (s.startsWith(k)) { const r = go(s.slice(k.length), [...acc, k]); if (r) return r; }
+    }
+    return null;
+  }
+  const t = go(code, []);
+  return t ? `${teamMap[t[0]]} vs. ${teamMap[t[1]]}` : null;
+}
+
+function parseTicker(mk) {
+  if (/^KXFEDCHAIRNOM/.test(mk))  return "Next Fed Chair";
+  if (/^KXFEDDECISION-\d{2}([A-Z]{3})$/.test(mk)) {
+    const mon = mk.replace(/^KXFEDDECISION-\d{2}/, "");
+    const yy  = mk.match(/\d{2}/)[0];
+    return `Fed rate decision (${mon[0]+mon.slice(1).toLowerCase()} '${yy})`;
+  }
+  if (/^KXNFLNFCCHAMP/.test(mk))     return `NFC Championship`;
+  if (/^KXNFLAFCCHAMP/.test(mk))     return `AFC Championship`;
+  if (/^KXFIRSTSUPERBOWLSONG/.test(mk)) return "SB halftime: first song";
+  if (/^KXSUPERBOWLAD/.test(mk))     return "Super Bowl ad";
+  if (/^KXKHAMENEIOUT/.test(mk))     return "Khamenei out of power";
+  if (/^KXBOXING/.test(mk))          return "Boxing match";
+  const nflM   = mk.match(/^KXNFLGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (nflM)   return parseGame(nflM[1],   NFL_TEAMS) ?? mk;
+  const ncaafM = mk.match(/^KXNCAAFGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (ncaafM) return parseGame(ncaafM[1], CFB_TEAMS) ?? mk;
+  const cbbM   = mk.match(/^KXNCAAMBGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (cbbM)   return parseGame(cbbM[1],   CBB_TEAMS) ?? mk;
+  const nbaM   = mk.match(/^KXNBAGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (nbaM)   return parseGame(nbaM[1],   NBA_TEAMS) ?? mk;
+  return null;
+}
+
+// ── Specific overrides (markets with no Kalshi title at all) ─────────────────
+const MKT_NAME_OVERRIDES = {
+  "POPVOTEMOV-24-R-B":      "Popular vote margin (R)",
+  "POPVOTEMOVSMALL-24-R":   "Popular vote margin (R, small)",
+  "POPVOTEMOVSMALLER-24-R": "Popular vote margin (R, smaller)",
+  "POPVOTEMOV-24-D":        "Popular vote margin (D)",
+  "ECMOV-24-R-B35":         "Electoral college margin >35 (R)",
+  "ECMOV-24-R-B65":         "Electoral college margin >65 (R)",
+  "PRESPARTYFULL-24-REC":   "Presidential party (full recount)",
+  "POWER-24-RH-RS":         "Republican House + Senate 2024",
+  "KXGOVSHUT":              "Government shutdown",
+  "KXGOVTSHUTDOWN":         "Government shutdown",
+  "KXCITRINI":              "Citrini macro call",
+  "KXALIENS":               "Alien/UAP disclosure",
+  "KXBTCMAXY-25-DEC31":     "Bitcoin max price 2025",
+  "KXBTCMINY-25-2-DEC31":   "Bitcoin min price 2025",
+};
+
+// ── Shared winner-display logic ───────────────────────────────────────────────
 function fmtWinner(d) {
   const w  = (d.winner        ?? "").trim();
   const wt = (d.winner_ticker ?? "").trim();
@@ -500,10 +606,12 @@ function fmtWinner(d) {
 
 function bestName(d) {
   const mk = (d.market_key ?? "").trim();
-  return (d.market_name || "").trim()
-      || (d["i.market_name"] || "").trim()
-      || MKT_NAME_OVERRIDES[mk]
-      || mk;
+  const mn = (d.market_name || "").trim();
+  // Skip market_name if it's just echoing the ticker key (Kalshi leaves it blank)
+  if (mn && mn !== mk) return mn;
+  const imn = (d["i.market_name"] || "").trim();
+  if (imn && imn !== mk) return imn;
+  return MKT_NAME_OVERRIDES[mk] || parseTicker(mk) || mk;
 }
 
 const fmtC = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B"
@@ -571,28 +679,44 @@ const mktFiltered = mktSearch
 
 display(html`<style>
   .mkt-table table { font-size: 14px; border-collapse: collapse; }
-  .mkt-table td, .mkt-table th { padding: 0.55em 0.7em; }
-  .mkt-table tr { height: 2.4em; }
+  .mkt-table td, .mkt-table th { padding: 0.65em 0.8em; }
+  .mkt-table tr { height: 2.7em; }
 </style>`);
 
-const tbl = Inputs.table(mktFiltered, {
-  columns: ["rank", "display_name", "kalshi_category", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
+// Color-dot legend
+display(html`<div style="display:flex;flex-wrap:wrap;gap:0.6em 1.4em;margin-bottom:0.8rem;font-size:0.8em;color:#555">
+  ${Object.entries(CAT_COLORS).map(([cat, color]) =>
+    html`<span style="display:flex;align-items:center;gap:5px">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color}"></span>${cat}
+    </span>`
+  )}
+</div>`);
+
+const mktDisplay = mktFiltered.map(d => ({...d, _cat: d.kalshi_category || ""}));
+
+const tbl = Inputs.table(mktDisplay, {
+  columns: ["rank", "_cat", "display_name", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
   header: {
-    rank:            "#",
-    display_name:    "Market",
-    kalshi_category: "Category",
-    contracts:       "Volume",
-    fees_total:      "Kalshi fees",
-    resolved:        "✓",
-    winner_display:  "Winner",
-    top_short:       "Top outcome"
+    rank:          "#",
+    _cat:          "",
+    display_name:  "Market",
+    contracts:     "Volume",
+    fees_total:    "Kalshi fees",
+    resolved:      "✓",
+    winner_display:"Winner",
+    top_short:     "Top outcome"
   },
   format: {
-    rank:      d => d,
-    contracts: d => "$" + fmtC(d),
+    rank: d => d,
+    _cat: cat => {
+      const el = document.createElement("span");
+      el.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[cat]||"#ccc"}`;
+      return el;
+    },
+    contracts:  d => "$" + fmtC(d),
     fees_total: d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
   },
-  width: {rank: 36, resolved: 32},
+  width: {rank: 36, _cat: 24, resolved: 32},
   sort: "rank",
   reverse: false,
   rows: 50
