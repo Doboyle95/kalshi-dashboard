@@ -595,7 +595,7 @@ function fmtWinner(d) {
     "PRESPARTYFULL-24-R":   "Trump",
     "SENATEAZ-24-D":        "Gallego",
     "GOVPARTYNJ-25-D":      "Democratic",
-    "KXMAYORNYCPARTY-25-D": "Dem. nominee",
+    "KXMAYORNYCPARTY-25-D": "Mamdani",
   };
   if (WINNER_OVERRIDES[wt]) return WINNER_OVERRIDES[wt];
   if (w && !w.startsWith("::")) return w;
@@ -678,49 +678,68 @@ const mktFiltered = mktSearch
   .filter(d => mktCatFilter === "All" || d.kalshi_category === mktCatFilter);
 
 display(html`<style>
-  .mkt-table table { font-size: 14px; border-collapse: collapse; }
+  .mkt-table table { font-size: 14px; border-collapse: collapse; width: 100%; }
   .mkt-table td, .mkt-table th { padding: 0.65em 0.8em; }
-  .mkt-table tr { height: 2.7em; }
+  .mkt-table tr { height: 2.7em; transition: background 0.1s; }
 </style>`);
 
-// Color-dot legend
-display(html`<div style="display:flex;flex-wrap:wrap;gap:0.6em 1.4em;margin-bottom:0.8rem;font-size:0.8em;color:#555">
+// Category legend — swatch rectangles to match row tint
+display(html`<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.3em;margin-bottom:0.8rem;font-size:0.8em;color:#555">
   ${Object.entries(CAT_COLORS).map(([cat, color]) =>
-    html`<span style="display:flex;align-items:center;gap:5px">
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color}"></span>${cat}
+    html`<span style="display:inline-flex;align-items:center;gap:5px">
+      <span style="display:inline-block;width:14px;height:9px;border-radius:2px;background:${color};opacity:0.55"></span>${cat}
     </span>`
   )}
 </div>`);
 
-const mktDisplay = mktFiltered.map(d => ({...d, _cat: d.kalshi_category || ""}));
-
-const tbl = Inputs.table(mktDisplay, {
-  columns: ["rank", "_cat", "display_name", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
+const tbl = Inputs.table(mktFiltered, {
+  columns: ["rank", "display_name", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
   header: {
     rank:          "#",
-    _cat:          "",
     display_name:  "Market",
     contracts:     "Volume",
     fees_total:    "Kalshi fees",
     resolved:      "✓",
     winner_display:"Winner",
-    top_short:     "Top outcome"
+    top_short:     "Highest-vol. outcome"
   },
   format: {
-    rank: d => d,
-    _cat: cat => {
-      const el = document.createElement("span");
-      el.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[cat]||"#ccc"}`;
-      return el;
-    },
+    rank:       d => d,
     contracts:  d => "$" + fmtC(d),
     fees_total: d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
   },
-  width: {rank: 36, _cat: 24, resolved: 32},
+  width: {rank: 36, resolved: 32},
   sort: "rank",
   reverse: false,
   rows: 50
 });
 tbl.classList.add("mkt-table");
+
+// Color entire rows by category — lookup via rank cell to survive user sorting
+{
+  const rankToColor = new Map(mktFiltered.map(d => [d.rank, CAT_COLORS[d.kalshi_category] || null]));
+  function paintRows() {
+    const tbody = tbl.querySelector("tbody");
+    if (!tbody) return;
+    [...tbody.querySelectorAll("tr")].forEach(tr => {
+      const rank  = parseInt(tr.querySelector("td")?.textContent ?? "");
+      const color = rankToColor.get(rank);
+      if (color) {
+        tr.style.background = color + "18";
+        tr.onmouseenter = () => { tr.style.background = color + "30"; };
+        tr.onmouseleave = () => { tr.style.background = color + "18"; };
+      }
+    });
+  }
+  paintRows();
+  // Re-paint when table re-sorts or paginates (childList mutation)
+  const obs = new MutationObserver(() => {
+    obs.disconnect();
+    paintRows();
+    obs.observe(tbl, {childList: true, subtree: true});
+  });
+  obs.observe(tbl, {childList: true, subtree: true});
+}
+
 display(tbl);
 ```
