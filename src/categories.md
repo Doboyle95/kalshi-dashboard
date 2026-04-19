@@ -458,14 +458,14 @@ Ranked by total contracts across all outcomes. Each row is one market (e.g. "Sup
 ```js
 // ── Category colors ──────────────────────────────────────────────────────────
 const CAT_COLORS = {
-  "Sports":                 "#2196f3",
-  "Politics":               "#9c27b0",
-  "Economics":              "#607d8b",
-  "Elections":              "#e53935",
-  "Entertainment":          "#e91e63",
-  "Crypto":                 "#f7931a",
-  "Science and Technology": "#00bcd4",
-  "Companies":              "#4caf50",
+  "Sports":                 "#1565c0",  // blue
+  "Politics":               "#6a1b9a",  // violet
+  "Economics":              "#4e342e",  // brown
+  "Elections":              "#b71c1c",  // red
+  "Entertainment":          "#880e4f",  // magenta
+  "Crypto":                 "#e65100",  // orange
+  "Science and Technology": "#00695c",  // teal
+  "Companies":              "#1b5e20",  // green
 };
 
 // ── Team maps for game-ticker parsing ────────────────────────────────────────
@@ -522,6 +522,17 @@ const CBB_TEAMS = {
   FUR:"Furman", HOW:"Howard", MOH:"Monmouth", PV:"Prairie View",
   WRST:"Wright St.", PARK:"Park", PENN:"Penn",
   HP:"High Point", SCU:"Santa Clara",
+};
+
+// Combined team lookup for winner extraction
+const ALL_TEAMS = {...NFL_TEAMS, ...NBA_TEAMS, ...CBB_TEAMS};
+
+// PGA Tour player code → last name
+const GOLF_PLAYERS = {
+  SSCH:"Scheffler", RMCI:"McIlroy",  JROS:"Rose",      TFLE:"Fleetwood",
+  CMOR:"Morikawa",  CGOT:"Gotterup", JSPA:"Spaun",     RMAC:"MacIntyre",
+  ABHA:"Bhatia",    KBRA:"Bradley",  SBUR:"Burns",      JHAT:"Hatton",
+  JTHA:"Thomas",    XSCI:"Scheffler",LWEN:"Wiesberger", RPAL:"Palmer",
 };
 
 function parseGame(code, teamMap) {
@@ -582,8 +593,10 @@ const MKT_NAME_OVERRIDES = {
 
 // ── Shared winner-display logic ───────────────────────────────────────────────
 function fmtWinner(d) {
-  const w  = (d.winner        ?? "").trim();
-  const wt = (d.winner_ticker ?? "").trim();
+  // Strip market-rule text (e.g. "If UConn wins the...") — not a name
+  const rawW = (d.winner ?? "").trim();
+  const w    = rawW.length > 50 ? "" : rawW;
+  const wt   = (d.winner_ticker ?? "").trim();
   const WINNER_OVERRIDES = {
     "PRES-2024-DJT":        "Trump",
     "POPVOTE-24-R":         "Trump",
@@ -598,9 +611,15 @@ function fmtWinner(d) {
     "KXMAYORNYCPARTY-25-D": "Mamdani",
   };
   if (WINNER_OVERRIDES[wt]) return WINNER_OVERRIDES[wt];
+  // Fix Kalshi metadata error: "Hike 0bps" = no rate change = hold
+  if (/hike\s*0\s*bps/i.test(w)) return "Hold";
   if (w && !w.startsWith("::")) return w;
   if (w.startsWith("::")) { const a = w.replace(/^::\s*/, "").trim(); return a || "—"; }
-  if (wt) { const mk = (d.market_key ?? "").trim(); return mk ? wt.replace(mk + "-", "") : wt.split("-").pop(); }
+  if (wt) {
+    const mk    = (d.market_key ?? "").trim();
+    const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
+    return ALL_TEAMS[short] ?? GOLF_PLAYERS[short] ?? short;
+  }
   return "—";
 }
 
@@ -643,7 +662,7 @@ function fmtStrike(top_outcome, market_key) {
   if (/^H(\d+)$/.test(short)) return `-${short.slice(1)}×25 bps`;  // H1 = one cut, etc.
   if (/^[0-9]+(\.[0-9]+)?$/.test(short)) return short + "%";       // bare number → add %
   if (/^B[0-9]/.test(short)) return short.slice(1) + "%";          // B1.4 → 1.4%
-  return short;
+  return GOLF_PLAYERS[short] ?? ALL_TEAMS[short] ?? short;
 }
 
 // Sort all-time by contracts and assign rank
@@ -657,8 +676,7 @@ const mktRanked = [...mktLeaderboard]
       rank:           i + 1,
       display_name:   bestName(d),
       winner_display: fmtWinner(d),
-      top_short:      fmtStrike(top, mk),
-      resolved:       fmtWinner(d) !== "—" ? "✓" : ""
+      top_short:      fmtStrike(top, mk)
     };
   });
 ```
@@ -706,8 +724,8 @@ const mktFiltered = mktSearch
 // Build per-category CSS using :has() so the full row is colored —
 // no JS DOM timing issues; survives table sort/pagination automatically.
 const catCss = Object.entries(CAT_COLORS).map(([cat, color]) =>
-  `.mkt-table tr:has([data-mkt-cat="${cat}"]) { background: ${color}18 !important; }
-.mkt-table tr:has([data-mkt-cat="${cat}"]): hover { background: ${color}33 !important; }`
+  `.mkt-table tr:has([data-mkt-cat="${cat}"]) { background: ${color}38 !important; }
+.mkt-table tr:has([data-mkt-cat="${cat}"]): hover { background: ${color}55 !important; }`
 ).join("\n");
 
 display(html`<style>
@@ -732,14 +750,13 @@ display(html`<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.3em;margin-bott
 const mktDisplay = mktFiltered.map(d => ({...d, _c: d.kalshi_category || ""}));
 
 const tbl = Inputs.table(mktDisplay, {
-  columns: ["rank", "_c", "display_name", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
+  columns: ["rank", "_c", "display_name", "contracts", "fees_total", "winner_display", "top_short"],
   header: {
     rank:          "#",
     _c:            "",
     display_name:  "Market",
     contracts:     "Volume",
     fees_total:    "Kalshi fees",
-    resolved:      "✓",
     winner_display:"Winner",
     top_short:     "Highest-vol. strike"
   },
@@ -753,7 +770,7 @@ const tbl = Inputs.table(mktDisplay, {
     contracts:  d => "$" + fmtC(d),
     fees_total: d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
   },
-  width: {rank: 36, _c: 0, resolved: 32},
+  width: {rank: 36, _c: 0},
   sort: "rank",
   reverse: false,
   rows: 50
