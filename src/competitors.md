@@ -24,6 +24,11 @@ const platforms = [
     name: "ForecastEx", color: "#1a9641",
     data: competitor.filter(d => d.platform === "ForecastEx")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
+  },
+  {
+    name: "Crypto.com/Nadex", color: "#9c27b0",
+    data: competitor.filter(d => d.platform === "Crypto.com/Nadex")
+      .map(d => ({date: d.date, contracts: +d.contracts, fees: null}))
   }
 ];
 
@@ -66,9 +71,9 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
         fill: platforms[0].color, fillOpacity: 0.08,
         curve: "monotone-x"
       }),
-      // All three lines
+      // All platform lines — skip nulls (e.g. Crypto.com has no fees data)
       ...platforms.map(p =>
-        Plot.lineY(p.data, {
+        Plot.lineY(p.data.filter(d => d[metric] != null), {
           x: "date", y: metric,
           stroke: p.color,
           strokeWidth: p.name === "Kalshi" ? 2.5 : 1.75,
@@ -92,4 +97,4 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale difference is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale difference is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees not available.</p>
