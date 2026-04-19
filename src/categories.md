@@ -619,19 +619,45 @@ const fmtC = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B"
                : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
                : String(n);
 
-// Sort all-time by contracts and assign rank; strip market_key prefix from top_outcome
+// Human-readable overrides for top-outcome (keyed on full ticker for precision)
+const TOP_OUTCOME_NAMES = {
+  "PRES-2024-KH":                     "Harris",
+  "POPVOTE-24-D":                     "Harris",
+  "KXPGATOUR-MAST26-SSCH":            "Scheffler",
+  "KXMARMAD-26-CONN":                 "UConn",
+  "KXFEDCHAIRNOM-29-JS":              "Shelton",
+  "KXMAYORNYCPARTY-25-AC":            "Cuomo",
+  "KXNFLNFCCHAMP-25-LA":              "LAR",
+  "KXFIRSTSUPERBOWLSONG-26FEB09-TIT": "Tití Me Preguntó",
+  "KXBOXING-25DEC19JPAUAJOS-JPAU":    "Jake Paul",
+  "KXBOXING-25SEP13CALVTCRA-TCRA":    "Terrazas",
+};
+
+function fmtStrike(top_outcome, market_key) {
+  if (!top_outcome) return "—";
+  if (TOP_OUTCOME_NAMES[top_outcome]) return TOP_OUTCOME_NAMES[top_outcome];
+  const short = market_key
+    ? top_outcome.replace(market_key + "-", "")
+    : top_outcome.split("-").pop();
+  if (short === "H0") return "Hold";                     // Fed rate hold
+  if (/^H(\d+)$/.test(short)) return `-${short.slice(1)}×25 bps`;  // H1 = one cut, etc.
+  if (/^[0-9]+(\.[0-9]+)?$/.test(short)) return short + "%";       // bare number → add %
+  if (/^B[0-9]/.test(short)) return short.slice(1) + "%";          // B1.4 → 1.4%
+  return short;
+}
+
+// Sort all-time by contracts and assign rank
 const mktRanked = [...mktLeaderboard]
   .sort((a, b) => b.contracts - a.contracts)
   .map((d, i) => {
     const mk  = (d.market_key  ?? "").trim();
     const top = (d.top_outcome ?? "").trim();
-    const top_short = top ? (mk ? top.replace(mk + "-", "") : top.split("-").pop()) : "—";
     return {
       ...d,
       rank:           i + 1,
       display_name:   bestName(d),
       winner_display: fmtWinner(d),
-      top_short,
+      top_short:      fmtStrike(top, mk),
       resolved:       fmtWinner(d) !== "—" ? "✓" : ""
     };
   });
@@ -715,7 +741,7 @@ const tbl = Inputs.table(mktDisplay, {
     fees_total:    "Kalshi fees",
     resolved:      "✓",
     winner_display:"Winner",
-    top_short:     "Highest-vol. outcome"
+    top_short:     "Highest-vol. strike"
   },
   format: {
     rank: d => d,
