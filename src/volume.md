@@ -86,9 +86,10 @@ const dateRange = view((() => {
 
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", ({selection}) => {
-      if (selection) {
-        svg.property("value", selection.map(x.invert));
+    .on("brush end", (event) => {
+      if (!event.sourceEvent) return;
+      if (event.selection) {
+        svg.property("value", event.selection.map(x.invert));
         svg.dispatch("input");
       }
     });
