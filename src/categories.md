@@ -456,6 +456,24 @@ Plot.plot({
 Ranked by total contracts across all outcomes. Each row is one market (e.g. "Super Bowl 2026 winner"), not an individual yes/no contract.
 
 ```js
+// Fallback names for market_keys with no Kalshi title
+const MKT_NAME_OVERRIDES = {
+  "POPVOTEMOV-24-R-B":      "Popular vote margin (R, alt)",
+  "POPVOTEMOVSMALL-24-R":   "Popular vote margin small (R)",
+  "KXGOVSHUT":              "Government shutdown",
+  "KXGOVTSHUTDOWN":         "Government shutdown (alt)",
+  "KXCITRINI":              "Citrini macro event",
+  "POPVOTEMOVSMALLER-24-R": "Popular vote margin smaller (R)",
+  "PRESPARTYFULL-24-REC":   "Presidential party full recount",
+  "KXALIENS":               "Alien disclosure",
+  "KXBTCMAXY-25-DEC31":     "Bitcoin max price 2025",
+  "ECMOV-24-R-B35":         "Electoral college margin (R, B35)",
+  "ECMOV-24-R-B65":         "Electoral college margin (R, B65)",
+  "POWER-24-RH-RS":         "Power 2024 (RH/RS)",
+  "KXBTCMINY-25-2-DEC31":   "Bitcoin min price 2025",
+  "POPVOTEMOV-24-D":        "Popular vote margin (D)",
+};
+
 // Shared winner-display logic
 function fmtWinner(d) {
   const w  = (d.winner        ?? "").trim();
@@ -480,6 +498,14 @@ function fmtWinner(d) {
   return "—";
 }
 
+function bestName(d) {
+  const mk = (d.market_key ?? "").trim();
+  return (d.market_name || "").trim()
+      || (d["i.market_name"] || "").trim()
+      || MKT_NAME_OVERRIDES[mk]
+      || mk;
+}
+
 const fmtC = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B"
                : n >= 1e6 ? (n/1e6).toFixed(1)+"M"
                : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
@@ -492,15 +518,13 @@ const mktRanked = [...mktLeaderboard]
     const mk  = (d.market_key  ?? "").trim();
     const top = (d.top_outcome ?? "").trim();
     const top_short = top ? (mk ? top.replace(mk + "-", "") : top.split("-").pop()) : "—";
-    const fees = +d.fees_total || 0;
-    const fee_per_contract = d.contracts > 0 ? (fees / d.contracts * 100) : 0; // in cents
     return {
       ...d,
-      rank:            i + 1,
-      winner_display:  fmtWinner(d),
+      rank:           i + 1,
+      display_name:   bestName(d),
+      winner_display: fmtWinner(d),
       top_short,
-      fee_per_contract,
-      resolved:        fmtWinner(d) !== "—" ? "✓" : ""
+      resolved:       fmtWinner(d) !== "—" ? "✓" : ""
     };
   });
 ```
@@ -512,16 +536,16 @@ Plot.plot({
   width,
   height: mktTop20.length * 24 + 40,
   marginLeft: 240,
-  x: {label: "Contracts", grid: true, tickFormat: d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"},
+  x: {label: "Volume ($)", grid: true, tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   y: {label: null},
   marks: [
     Plot.barX(mktTop20, {
       x: "contracts",
-      y: d => `#${d.rank} ${d.market_name || d.market_key}`,
+      y: d => `#${d.rank} ${d.display_name}`,
       fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#2c7bb6",
       sort: {y: "-x"},
       tip: true,
-      title: d => `${d.market_name || d.market_key}\n${(d.contracts/1e6).toFixed(1)}M contracts\nFees: $${fmtC(+d.fees_total||0)}\nWinner: ${d.winner_display}`
+      title: d => `${d.display_name}\n$${fmtC(d.contracts)} volume\nFees: $${fmtC(+d.fees_total||0)}\nWinner: ${d.winner_display}`
     }),
     Plot.ruleX([0])
   ]
@@ -545,28 +569,34 @@ const mktCatFilter = view(Inputs.select(
 const mktFiltered = mktSearch
   .filter(d => mktCatFilter === "All" || d.kalshi_category === mktCatFilter);
 
-display(Inputs.table(mktFiltered, {
-  columns: ["rank", "market_name", "kalshi_category", "contracts", "fees_total", "fee_per_contract", "resolved", "winner_display", "top_short"],
+display(html`<style>
+  .mkt-table table { font-size: 14px; border-collapse: collapse; }
+  .mkt-table td, .mkt-table th { padding: 0.55em 0.7em; }
+  .mkt-table tr { height: 2.4em; }
+</style>`);
+
+const tbl = Inputs.table(mktFiltered, {
+  columns: ["rank", "display_name", "kalshi_category", "contracts", "fees_total", "resolved", "winner_display", "top_short"],
   header: {
-    rank:             "#",
-    market_name:      "Market",
-    kalshi_category:  "Category",
-    contracts:        "Contracts",
-    fees_total:       "Total fees",
-    fee_per_contract: "¢/contract",
-    resolved:         "Res.",
-    winner_display:   "Winner",
-    top_short:        "Top outcome"
+    rank:            "#",
+    display_name:    "Market",
+    kalshi_category: "Category",
+    contracts:       "Volume",
+    fees_total:      "Kalshi fees",
+    resolved:        "✓",
+    winner_display:  "Winner",
+    top_short:       "Top outcome"
   },
   format: {
-    rank:             d => d,
-    contracts:        d => fmtC(d),
-    fees_total:       d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
-    fee_per_contract: d => d > 0 ? d.toFixed(2) + "¢" : "—",
-    market_name:      d => d || "—"
+    rank:      d => d,
+    contracts: d => "$" + fmtC(d),
+    fees_total: d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
   },
+  width: {rank: 36, resolved: 32},
   sort: "rank",
   reverse: false,
   rows: 50
-}));
+});
+tbl.classList.add("mkt-table");
+display(tbl);
 ```
