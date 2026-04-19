@@ -104,8 +104,9 @@ const parlayDateSel = Mutable([new Date("2023-01-01"), d3.max(pnl, d => d.date)]
   const [defStart, defEnd] = parlayDateSel;
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", ({selection}) => {
-      if (selection) parlayDateSel.value = selection.map(x.invert);
+    .on("brush end", (event) => {
+      if (!event.sourceEvent) return;
+      if (event.selection) parlayDateSel.value = event.selection.map(x.invert);
     });
 
   svg.append("g").call(brush).call(brush.move, [defStart, defEnd].map(x));

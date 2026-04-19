@@ -208,7 +208,7 @@ const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date
 
   const [ds, de] = catDateSel;
   const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
-    .on("brush end", ({selection}) => { if (selection) catDateSel.value = selection.map(x.invert); });
+    .on("brush end", (event) => { if (!event.sourceEvent) return; if (event.selection) catDateSel.value = event.selection.map(x.invert); });
   svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
   display(svg.node());
 }
@@ -411,7 +411,7 @@ const mtDateSel = Mutable([mtStart0, mtEnd0]);
 
   const [ds, de] = mtDateSel;
   const brush = d3.brushX().extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", ({selection}) => { if (selection) mtDateSel.value = selection.map(x.invert); });
+    .on("brush end", (event) => { if (!event.sourceEvent) return; if (event.selection) mtDateSel.value = event.selection.map(x.invert); });
   svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
   display(svg.node());
 }

@@ -61,81 +61,52 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
-const compFromStr = view(Inputs.text({label: "From", placeholder: "YYYY-MM-DD", value: "2025-01-01", width: 130}));
-const compToStr   = view(Inputs.text({label: "To",   placeholder: "YYYY-MM-DD (blank = latest)", value: "", width: 130}));
-```
+{
+  const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k";
+  const pColors = {Kalshi: "#2c7bb6", ForecastEx: "#1a9641", Polymarket: "#e66101"};
 
-```js
-const startDate = compFromStr && !isNaN(new Date(compFromStr)) ? new Date(compFromStr) : new Date("2025-01-01");
-const endDate   = compToStr   && !isNaN(new Date(compToStr))   ? new Date(compToStr)   : new Date();
-const filtered  = allPlatforms.filter(d => d.date >= startDate && d.date <= endDate);
-```
+  const byPlatform = {
+    Kalshi:      kalshiTidy,
+    Polymarket:  competitorTidy.filter(d => d.platform === "Polymarket"),
+    ForecastEx:  competitorTidy.filter(d => d.platform === "ForecastEx"),
+  };
 
-```js
-// All-time peaks (for scale reference — not affected by date filter)
-const allTimePeaks = {};
-for (const p of ["Kalshi", "ForecastEx", "Polymarket"]) {
-  const vals = allPlatforms.filter(d => d.platform === p && d.contracts > 0).map(d => d.contracts);
-  allTimePeaks[p] = vals.length ? Math.max(...vals) : 0;
+  const lastLabels = Object.entries(byPlatform).map(([name, data]) => {
+    const last = data.filter(d => d.contracts > 0).at(-1);
+    return last ? {...last, platform: name} : null;
+  }).filter(Boolean);
+
+  display(Plot.plot({
+    width,
+    height: 420,
+    marginRight: 100,
+    x: {type: "utc", label: null},
+    y: {label: "Daily contracts", grid: true, tickFormat: fmt},
+    color: {domain: Object.keys(pColors), range: Object.values(pColors)},
+    marks: [
+      Plot.areaY(kalshiTidy, {
+        x: "date", y: "contracts",
+        fill: pColors.Kalshi, fillOpacity: 0.08, curve: "monotone-x"
+      }),
+      ...Object.entries(byPlatform).map(([name, data]) =>
+        Plot.lineY(data, {
+          x: "date", y: "contracts",
+          stroke: pColors[name],
+          strokeWidth: name === "Kalshi" ? 2.5 : 1.75,
+          curve: "monotone-x", tip: true
+        })
+      ),
+      Plot.text(lastLabels, {
+        x: "date", y: "contracts",
+        text: d => d.platform,
+        fill: d => pColors[d.platform],
+        fontWeight: "600", fontSize: 12,
+        dx: 6, textAnchor: "start"
+      }),
+      Plot.ruleY([0])
+    ]
+  }));
 }
-
-// Peaks within window (for normalization)
-const windowPeaks = {};
-for (const p of ["Kalshi", "ForecastEx", "Polymarket"]) {
-  const vals = filtered.filter(d => d.platform === p && d.contracts > 0).map(d => d.contracts);
-  windowPeaks[p] = vals.length ? Math.max(...vals) : 1;
-}
-
-const normalized = filtered
-  .filter(d => d.contracts > 0)
-  .map(d => ({...d, pct: d.contracts / windowPeaks[d.platform] * 100}));
 ```
 
-```js
-const colors = {Kalshi: "#2c7bb6", ForecastEx: "#d7191c", Polymarket: "#f4a736"};
-```
-
-```js
-Plot.plot({
-  width,
-  height: 420,
-  color: {
-    legend: true,
-    domain: ["Kalshi", "ForecastEx", "Polymarket"],
-    range: [colors.Kalshi, colors.ForecastEx, colors.Polymarket]
-  },
-  x: {type: "utc", label: null},
-  y: {label: "% of own peak within window", domain: [0, 108], grid: true},
-  marks: [
-    Plot.lineY(normalized, {
-      x: "date", y: "pct", stroke: "platform",
-      strokeWidth: 1.5, curve: "monotone-x",
-      tip: true,
-      title: d => {
-        const ds = d.date instanceof Date ? d.date.toISOString().slice(0,10) : String(d.date);
-        return `${d.platform}\n${ds}\n${(d.contracts/1e6).toFixed(2)}M contracts\n${d.pct.toFixed(1)}% of peak`;
-      }
-    }),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-<p style="font-size:0.82em;color:#888">Each platform normalized to 100% at its own peak within the selected window. Absolute scale varies dramatically — see table below.</p>
-
-## Scale reference
-
-```js
-const peakTable = [
-  {Platform: "Kalshi",       "All-time peak (contracts/day)": allTimePeaks.Kalshi,      "vs. Kalshi": "—"},
-  {Platform: "ForecastEx",   "All-time peak (contracts/day)": allTimePeaks.ForecastEx,   "vs. Kalshi": allTimePeaks.ForecastEx   > 0 ? `${Math.round(allTimePeaks.Kalshi/allTimePeaks.ForecastEx).toLocaleString()}× smaller`   : "n/a"},
-  {Platform: "Polymarket US","All-time peak (contracts/day)": allTimePeaks.Polymarket,   "vs. Kalshi": allTimePeaks.Polymarket   > 0 ? `${Math.round(allTimePeaks.Kalshi/allTimePeaks.Polymarket).toLocaleString()}× smaller`   : "n/a"},
-];
-
-Inputs.table(peakTable, {
-  format: {"All-time peak (contracts/day)": d => d > 0 ? d.toLocaleString() : "n/a"},
-  width: {Platform: 130, "All-time peak (contracts/day)": 200, "vs. Kalshi": 140}
-})
-```
-
-<p style="font-size:0.82em;color:#888">Kalshi data from trade records via Daniel O'Boyle. ForecastEx and Polymarket US data from public sources. Kalshi's contract unit (1¢–99¢, binary) may differ from competitors' definitions.</p>
+<p style="font-size:0.82em;color:#888">Shared Y-axis — the scale gap is real. Kalshi data from trade records. ForecastEx and Polymarket US from public sources.</p>
