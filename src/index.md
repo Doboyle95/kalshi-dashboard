@@ -52,7 +52,7 @@ const competitorTidy = competitor
   .filter(d => d.platform !== "Kalshi")
   .map(d => ({
     date: new Date(d.date),
-    platform: d.platform === "Polymarket_US" ? "Polymarket" : d.platform,
+    platform: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform,
     contracts: +d.contracts || 0,
     fees: +d.fees || 0
   }));
@@ -63,12 +63,12 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```js
 {
   const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k";
-  const pColors = {Kalshi: "#2c7bb6", ForecastEx: "#1a9641", Polymarket: "#e66101"};
+  const pColors = {Kalshi: "#2c7bb6", ForecastEx: "#1a9641", "Polymarket US": "#e66101"};
 
   const byPlatform = {
-    Kalshi:      kalshiTidy,
-    Polymarket:  competitorTidy.filter(d => d.platform === "Polymarket"),
-    ForecastEx:  competitorTidy.filter(d => d.platform === "ForecastEx"),
+    Kalshi:          kalshiTidy,
+    "Polymarket US": competitorTidy.filter(d => d.platform === "Polymarket US"),
+    ForecastEx:      competitorTidy.filter(d => d.platform === "ForecastEx"),
   };
 
   const lastLabels = Object.entries(byPlatform).map(([name, data]) => {

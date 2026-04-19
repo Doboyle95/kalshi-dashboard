@@ -17,7 +17,7 @@ const platforms = [
   },
   {
     name: "Polymarket US", color: "#e66101",
-    data: competitor.filter(d => d.platform === "Polymarket US")
+    data: competitor.filter(d => d.platform === "Polymarket_US")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
   },
   {
