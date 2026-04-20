@@ -110,16 +110,21 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.fees_total || 0,
-      fill: "#756bb1", fillOpacity: 0.8,
-      tip: true,
-      title: d => `${fmtDate(d.date)}\nFees: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      fill: "#756bb1", fillOpacity: 0.8
     }),
     Plot.lineY(fd1.filter(d => d.ma7_fees != null), {
       x: "date", y: "ma7_fees",
-      stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x",
-      tip: true,
-      title: d => `${fmtDate(d.date)}\n7-day avg: $${d.ma7_fees?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x"
     }),
+    Plot.ruleX(fd1, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(fd1, Plot.pointerX({
+      x: "date",
+      title: d => [
+        fmtDate(d.date),
+        `Daily: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`,
+        d.ma7_fees != null ? `7-day avg: $${d.ma7_fees.toLocaleString(undefined, {maximumFractionDigits: 0})}` : null
+      ].filter(Boolean).join("\n")
+    })),
     Plot.ruleY([0])
   ]
 })

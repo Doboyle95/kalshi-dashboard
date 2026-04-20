@@ -135,6 +135,9 @@ const tidyCumul = [
   ...pnlCumul.map(d => ({date: d.date, value: d.gross_cumul_w, series: "Before fees (gross)"})),
   ...pnlCumul.map(d => ({date: d.date, value: d.net_cumul_w,   series: "After fees (net)"}))
 ];
+
+// Pivot for single combined tooltip
+const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: d.net_cumul_w}));
 ```
 
 ## Cumulative taker P&L
@@ -148,10 +151,13 @@ Plot.plot({
   color: {legend: true, domain: ["Before fees (gross)", "After fees (net)"], range: ["#f4a736", "#d7191c"]},
   marks: [
     Plot.lineY(tidyCumul, {
-      x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x",
-      tip: true,
-      title: d => `${d.series}\n${fmtDate(d.date)}\n$${d.value.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"
     }),
+    Plot.ruleX(cumPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(cumPivot, Plot.pointerX({
+      x: "date",
+      title: d => `${fmtDate(d.date)}\nBefore fees: $${d.gross.toLocaleString(undefined,{maximumFractionDigits:0})}\nAfter fees: $${d.net.toLocaleString(undefined,{maximumFractionDigits:0})}`
+    })),
     Plot.ruleY([0], {stroke: "#ccc"})
   ]
 })

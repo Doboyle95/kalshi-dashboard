@@ -81,6 +81,15 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
     "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
   };
 
+  // Per-date pivot for single combined tooltip
+  const tipPivot = Array.from(
+    d3.rollup(
+      allPlatforms.filter(d => d.contracts > 0),
+      rs => { const o = {date: rs[0].date}; for (const r of rs) o[r.platform] = r.contracts; return o; },
+      d => +d.date
+    )
+  ).map(([, v]) => v).sort((a, b) => a.date - b.date);
+
   display(Plot.plot({
     width,
     height: 420,
@@ -98,9 +107,14 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
           x: "date", y: "contracts",
           stroke: pColors[name],
           strokeWidth: name === "Kalshi" ? 2.5 : 1.75,
-          curve: "monotone-x", tip: true
+          curve: "monotone-x"
         })
       ),
+      Plot.ruleX(tipPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+      Plot.tip(tipPivot, Plot.pointerX({
+        x: "date",
+        title: d => [fmtDate(d.date), ...Object.keys(pColors).map(p => d[p] != null ? `${p}: ${fmt(d[p])}` : null).filter(Boolean)].join("\n")
+      })),
       Plot.ruleY([0])
     ]
   }));

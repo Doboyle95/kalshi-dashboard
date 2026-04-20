@@ -164,16 +164,21 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#2c7bb6", fillOpacity: 0.6,
-      tip: true,
-      title: d => `${fmtDate(d.date)}\n${(d.contracts_total||0).toLocaleString()} contracts`
+      fill: "#2c7bb6", fillOpacity: 0.6
     }),
     Plot.lineY(fd1.filter(d => d.ma7_contracts != null), {
       x: "date", y: "ma7_contracts",
-      stroke: "#e15759", strokeWidth: 2, curve: "monotone-x",
-      tip: true,
-      title: d => `${fmtDate(d.date)}\n7-day avg: ${d.ma7_contracts?.toLocaleString()}`
+      stroke: "#e15759", strokeWidth: 2, curve: "monotone-x"
     }),
+    Plot.ruleX(fd1, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(fd1, Plot.pointerX({
+      x: "date",
+      title: d => [
+        fmtDate(d.date),
+        `Daily: ${(d.contracts_total||0).toLocaleString()} contracts`,
+        d.ma7_contracts != null ? `7-day avg: ${d.ma7_contracts.toLocaleString()}` : null
+      ].filter(Boolean).join("\n")
+    })),
     Plot.ruleX(milestones, {x: "date", stroke: "#555", strokeDasharray: "3,3", strokeWidth: 1}),
     Plot.text(milestones, {
       x: "date", y: "y", text: "label",

@@ -10,6 +10,10 @@ const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed:
 ```
 
 ```js
+const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+```
+
+```js
 const platforms = [
   {
     name: "Kalshi", color: "#2c7bb6",
@@ -54,6 +58,15 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
   const colorDomain = platforms.map(p => p.name);
   const colorRange  = platforms.map(p => p.color);
 
+  // Per-date pivot for single combined tooltip (recomputed when metric changes)
+  const tipPivot = Array.from(
+    d3.rollup(
+      all.filter(d => d[metric] != null),
+      rs => { const o = {date: rs[0].date}; for (const r of rs) o[r.platform] = r[metric]; return o; },
+      d => +d.date
+    )
+  ).map(([, v]) => v).sort((a, b) => a.date - b.date);
+
   display(Plot.plot({
     width,
     height: 420,
@@ -78,10 +91,14 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
           x: "date", y: metric,
           stroke: p.color,
           strokeWidth: p.name === "Kalshi" ? 2.5 : 1.75,
-          curve: "monotone-x",
-          tip: true
+          curve: "monotone-x"
         })
       ),
+      Plot.ruleX(tipPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+      Plot.tip(tipPivot, Plot.pointerX({
+        x: "date",
+        title: d => [fmtDate(d.date), ...colorDomain.map(p => d[p] != null ? `${p}: ${fmt(d[p])}` : null).filter(Boolean)].join("\n")
+      })),
       Plot.ruleY([0])
     ]
   }));
