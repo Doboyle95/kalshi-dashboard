@@ -53,7 +53,9 @@ Plot.plot({
       fillOpacity: 0.7,
       tip: true,
       title: d => `${d.price_bin}¢ contracts\nActual: ${(+d.actual_win_rate_wt*100).toFixed(1)}%\nImplied: ${(+d.implied_prob*100).toFixed(1)}%\nError: ${(+d.calib_error*100).toFixed(2)}%\nTrades: ${(+d.n_trades).toLocaleString()}`
-    })
+    }),
+    Plot.ruleX(data, Plot.pointerX({x: d => +d.implied_prob, stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.ruleY(data, Plot.pointerX({y: d => +d.actual_win_rate_wt, stroke: "currentColor", strokeOpacity: 0.25}))
   ]
 })
 ```
@@ -78,7 +80,8 @@ Plot.plot({
       fillOpacity: 0.75,
       tip: true,
       title: d => `${d.price_bin}¢\nError: ${(+d.calib_error*100).toFixed(2)}%\nActual: ${(+d.actual_win_rate_wt*100).toFixed(1)}%`
-    })
+    }),
+    Plot.ruleX(data, Plot.pointerX({x: d => +d.price_bin, stroke: "currentColor", strokeOpacity: 0.25}))
   ]
 })
 ```

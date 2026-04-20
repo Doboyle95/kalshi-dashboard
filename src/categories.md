@@ -444,6 +444,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.type}\n${d.date.toISOString().slice(0, 10)}\n${d.contracts.toLocaleString()} contracts`
     }),
+    Plot.ruleX(mtTidy, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })

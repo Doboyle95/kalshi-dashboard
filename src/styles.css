@@ -1,0 +1,215 @@
+@import url("observablehq:default.css");
+
+/* ============================================================
+   Design tokens
+   ============================================================
+   Built on top of Observable Framework theme variables. Light
+   (`air`) and dark (`near-midnight`) themes swap automatically
+   via prefers-color-scheme; the Framework provides
+   --theme-foreground / --theme-background / etc. Our tokens
+   reference those so the design system follows suit.
+   ============================================================ */
+
+:root {
+  /* Platform accents (consistent across site) */
+  --accent-kalshi:       #2563eb;
+  --accent-polymarket:   #e66101;
+  --accent-forecastex:   #1a9641;
+  --accent-nadex:        #9c27b0;
+
+  /* Semantic accents */
+  --accent-primary:      var(--accent-kalshi);
+  --accent-secondary:    #756bb1;
+  --accent-tertiary:     #3f007d;
+  --accent-warning:      #e15759;
+  --accent-positive:     #1a9641;
+  --accent-negative:     #d7191c;
+
+  /* Sports category accents (match categories.md CAT_COLORS) */
+  --cat-football:        #bf360c;
+  --cat-basketball:      #0d47a1;
+  --cat-other-sport:     #1a7a3a;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+
+  /* Typography */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --text-caption:    0.72rem;
+  --text-label:      0.78rem;
+  --text-body:       0.92rem;
+  --text-lead:       1.05rem;
+  --text-h3:         1.25rem;
+  --text-h2:         1.6rem;
+  --text-h1:         2rem;
+  --text-metric:     2rem;
+  --text-metric-sm:  1.45rem;
+
+  /* Component-level tokens (follow theme) */
+  --card-bg:         var(--theme-background);
+  --card-border:     color-mix(in srgb, var(--theme-foreground) 10%, transparent);
+  --card-shadow:     var(--shadow-sm);
+  --divider:         color-mix(in srgb, var(--theme-foreground) 8%, transparent);
+  --text-muted:      var(--theme-foreground-muted);
+  --text-faint:      var(--theme-foreground-faint);
+}
+
+/* Dark-mode-only adjustments */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.25);
+    /* Slightly brighter accents for dark backgrounds */
+    --accent-kalshi:     #60a5fa;
+    --accent-polymarket: #fb923c;
+    --accent-forecastex: #4ade80;
+    --accent-nadex:      #c084fc;
+  }
+}
+
+/* ============================================================
+   Base typography
+   ============================================================ */
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11"; /* Inter stylistic alts */
+}
+
+h1, h2, h3 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+h1 { font-size: var(--text-h1); font-weight: 700; }
+h2 { font-size: var(--text-h2); font-weight: 650; margin-top: var(--space-6); }
+h3 { font-size: var(--text-h3); font-weight: 600; margin-top: var(--space-5); }
+
+/* Tabular numerals everywhere numbers matter */
+.kpi-grid,
+.kpi-card,
+table,
+.tabnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   KPI card component
+   ============================================================
+   Replaces per-page inline styles. Usage:
+     <div class="kpi-grid">
+       <div class="kpi-card" data-accent="kalshi">
+         <div class="kpi-label">Kalshi all-time contracts</div>
+         <div class="kpi-value">65.9B</div>
+         <div class="kpi-meta">optional subtext</div>
+       </div>
+     </div>
+   ============================================================ */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin: var(--space-4) 0 var(--space-6);
+}
+
+.kpi-card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--card-shadow);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: var(--space-3); bottom: var(--space-3);
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent-primary);
+}
+
+.kpi-card[data-accent="kalshi"]     { --kpi-accent: var(--accent-kalshi); }
+.kpi-card[data-accent="polymarket"] { --kpi-accent: var(--accent-polymarket); }
+.kpi-card[data-accent="forecastex"] { --kpi-accent: var(--accent-forecastex); }
+.kpi-card[data-accent="nadex"]      { --kpi-accent: var(--accent-nadex); }
+.kpi-card[data-accent="secondary"]  { --kpi-accent: var(--accent-secondary); }
+.kpi-card[data-accent="tertiary"]   { --kpi-accent: var(--accent-tertiary); }
+.kpi-card[data-accent="warning"]    { --kpi-accent: var(--accent-warning); }
+.kpi-card[data-accent="positive"]   { --kpi-accent: var(--accent-positive); }
+.kpi-card[data-accent="negative"]   { --kpi-accent: var(--accent-negative); }
+.kpi-card[data-accent]::before      { background: var(--kpi-accent, var(--accent-primary)); }
+.kpi-card[data-accent] .kpi-value   { color: var(--kpi-accent, var(--theme-foreground)); }
+
+.kpi-label {
+  font-size: var(--text-label);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
+}
+
+.kpi-value {
+  font-size: var(--text-metric);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--theme-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-value-sm {
+  font-size: var(--text-metric-sm);
+}
+
+.kpi-meta {
+  font-size: var(--text-caption);
+  color: var(--text-faint);
+  margin-top: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Form controls (dropdowns, radios) used with Observable Inputs
+   ============================================================ */
+
+/* Rounded, subtle inputs — don't fight Observable's defaults */
+form input[type="text"],
+form input[type="date"],
+form select {
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   Utility
+   ============================================================ */
+
+.muted   { color: var(--text-muted); }
+.faint   { color: var(--text-faint); }
+.caption { font-size: var(--text-caption); color: var(--text-muted); }

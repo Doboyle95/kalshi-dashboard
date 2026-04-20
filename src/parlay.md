@@ -50,25 +50,26 @@ const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
                   : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
                   : (n ?? 0).toString();
 const fmtUSD = n => "$" + fmtCount(n);
+const fmtDate = d => d ? d3.timeFormat("%b %-d, %Y")(d) : "";
 ```
 
-<div style="display:flex;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap">
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Cumulative taker P&L (net)</div>
-    <div style="font-size:1.8em;font-weight:700;color:#d7191c">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+<div class="kpi-grid">
+  <div class="kpi-card" data-accent="negative">
+    <div class="kpi-label">Cumulative taker P&L (net)</div>
+    <div class="kpi-value">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time fees paid</div>
-    <div style="font-size:1.8em;font-weight:700;color:#756bb1">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+  <div class="kpi-card" data-accent="secondary">
+    <div class="kpi-label">All-time fees paid</div>
+    <div class="kpi-value">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Overall taker ROI</div>
-    <div style="font-size:1.8em;font-weight:700;color:#d7191c">${overallPct.toFixed(1)}%</div>
-    <div style="font-size:0.75em;color:#999">of total notional staked</div>
+  <div class="kpi-card" data-accent="negative">
+    <div class="kpi-label">Overall taker ROI</div>
+    <div class="kpi-value">${overallPct.toFixed(1)}%</div>
+    <div class="kpi-meta">of total notional staked</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Total notional staked</div>
-    <div style="font-size:1.8em;font-weight:700;color:#333">${fmtUSD(totalStakes)}</div>
+  <div class="kpi-card" data-accent="tertiary">
+    <div class="kpi-label">Total notional staked</div>
+    <div class="kpi-value">${fmtUSD(totalStakes)}</div>
   </div>
 </div>
 
@@ -151,6 +152,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.series}\n${d.date.toISOString().slice(0,10)}\n$${d.value.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
+    Plot.ruleX(tidyCumul, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0], {stroke: "#ccc"})
   ]
 })
@@ -182,6 +184,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
+    Plot.ruleX(pnlFiltered.filter(d => d.stakes >= 1000), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
@@ -206,6 +209,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
+    Plot.ruleX(pnlFiltered.filter(d => d.pct != null && d.stakes >= 25000), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })

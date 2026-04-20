@@ -18,17 +18,18 @@ const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
                   : n >= 1e6 ? (n/1e6).toFixed(1)+"M"
                   : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
                   : (n ?? 0).toString();
+const fmtDate = d => d ? d3.timeFormat("%b %-d, %Y")(d) : "";
 ```
 
-<div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time contracts</div>
-    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${fmtCount(totalContracts)}</div>
+<div class="kpi-grid">
+  <div class="kpi-card" data-accent="kalshi">
+    <div class="kpi-label">All-time contracts</div>
+    <div class="kpi-value">${fmtCount(totalContracts)}</div>
   </div>
-  <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak single day</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtCount(peakDay?.contracts_total || 0)}</div>
-    <div style="font-size:0.72em;color:#999">${peakDay?.date?.toISOString().slice(0,10)}</div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Peak single day</div>
+    <div class="kpi-value">${fmtCount(peakDay?.contracts_total || 0)}</div>
+    <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
   </div>
 </div>
 
@@ -179,6 +180,7 @@ Plot.plot({
       textAnchor: "start", lineAnchor: "bottom",
       rotate: -42, fontSize: 10, fill: "#555", dx: 3, dy: -2
     }),
+    Plot.ruleX(fd1, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
@@ -275,6 +277,7 @@ Plot.plot({
       tip: true,
       title: d => `7-day avg total: ${d.ma?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
     })] : []),
+    Plot.ruleX(tidySports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })

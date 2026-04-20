@@ -82,6 +82,7 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
           tip: true
         })
       ),
+      Plot.ruleX(all, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
       Plot.ruleY([0])
     ]
   }));

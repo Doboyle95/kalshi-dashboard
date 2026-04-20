@@ -2,6 +2,9 @@ export default {
   title: "US Prediction Markets",
   base: "/kalshi-dashboard/",
   root: "src",
+  theme: ["air", "near-midnight"],
+  style: "styles.css",
+  head: '<link rel="preconnect" href="https://rsms.me/">\n<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
   pages: [
     {name: "Overview", path: "/"},
     {name: "Kalshi Volume", path: "/volume"},

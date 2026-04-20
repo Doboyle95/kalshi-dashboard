@@ -21,25 +21,26 @@ const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
                   : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
                   : (n ?? 0).toString();
 const fmtUSD = n => "$" + fmtCount(n);
+const fmtDate = d => d ? d3.timeFormat("%b %-d, %Y")(d) : "";
 ```
 
-<div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f9f6ff;border-left:4px solid #756bb1;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time fee revenue</div>
-    <div style="font-size:1.6em;font-weight:700;color:#756bb1">${fmtUSD(totalFees)}</div>
+<div class="kpi-grid">
+  <div class="kpi-card" data-accent="secondary">
+    <div class="kpi-label">All-time fee revenue</div>
+    <div class="kpi-value">${fmtUSD(totalFees)}</div>
   </div>
-  <div style="background:#f9f6ff;border-left:4px solid #3f007d;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Annualized run rate</div>
-    <div style="font-size:1.6em;font-weight:700;color:#3f007d">${fmtUSD(annualizedFees)}/yr</div>
+  <div class="kpi-card" data-accent="tertiary">
+    <div class="kpi-label">Annualized run rate</div>
+    <div class="kpi-value">${fmtUSD(annualizedFees)}<span class="kpi-value-sm">/yr</span></div>
   </div>
-  <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak fee day</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtUSD(peakFeeDay?.fees_total || 0)}</div>
-    <div style="font-size:0.72em;color:#999">${peakFeeDay?.date?.toISOString().slice(0,10)}</div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Peak fee day</div>
+    <div class="kpi-value">${fmtUSD(peakFeeDay?.fees_total || 0)}</div>
+    <div class="kpi-meta">${fmtDate(peakFeeDay?.date)}</div>
   </div>
-  <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Avg fee per contract</div>
-    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${avgFeeRate.toFixed(3)}¢</div>
+  <div class="kpi-card" data-accent="kalshi">
+    <div class="kpi-label">Avg fee per contract</div>
+    <div class="kpi-value">${avgFeeRate.toFixed(3)}¢</div>
   </div>
 </div>
 
@@ -119,6 +120,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: $${d.ma7_fees?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
+    Plot.ruleX(fd1, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
@@ -164,6 +166,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
+    Plot.ruleX(cumFeesSplit, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
@@ -197,6 +200,7 @@ Plot.plot({
       tip: true,
       title: d => `${d.date.toISOString().slice(0,10)}\nAvg fee: ${d.rate.toFixed(3)}¢ per contract`
     }),
+    Plot.ruleX(feeRate, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
