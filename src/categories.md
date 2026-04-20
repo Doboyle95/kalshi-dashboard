@@ -11,6 +11,11 @@ const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({
 import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 ```
 
+```js
+const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+```
+
 ## All-time leaderboard
 
 ```js
@@ -425,6 +430,15 @@ const [mtStart, mtEnd] = mtDateSel;
 const mtTidy = mtDaily
   .filter(d => d.date >= mtStart && d.date <= mtEnd)
   .flatMap(row => mtOrder.map(g => ({date: row.date, type: g, contracts: row[g] || 0})));
+
+// Per-date pivot for single combined tooltip
+const mtTipData = Array.from(
+  d3.rollup(mtTidy, rs => {
+    const o = {date: rs[0].date};
+    for (const r of rs) o[r.type] = r.contracts || 0;
+    return o;
+  }, d => d.date.getTime())
+).map(([, v]) => v).sort((a, b) => a.date - b.date);
 ```
 
 ```js
@@ -441,11 +455,13 @@ Plot.plot({
       fill: "type",
       order: mtOrder,
       curve: "monotone-x",
-      fillOpacity: 0.85,
-      tip: true,
-      title: d => `${d.type}\n${d.date.toISOString().slice(0, 10)}\n${d.contracts.toLocaleString()} contracts`
+      fillOpacity: 0.85
     }),
-    Plot.ruleX(mtTidy, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.ruleX(mtTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.tip(mtTipData, Plot.pointerX({
+      x: "date",
+      title: d => [fmtDate(d.date), ...mtOrder.map(t => d[t] > 0 ? `${t}: ${fmtCount(d[t])}` : null).filter(Boolean)].join("\n")
+    })),
     Plot.ruleY([0])
   ]
 })

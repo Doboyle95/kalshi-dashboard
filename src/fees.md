@@ -12,6 +12,7 @@ const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({t
 ```js
 const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
 const fmtUSD   = n => "$" + fmtCount(n);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
 ```
 
 ```js
@@ -35,7 +36,7 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
   <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak fee day</div>
     <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtUSD(peakFeeDay?.fees_total||0)}</div>
-    <div style="font-size:0.72em;color:#999">${peakFeeDay?.date?.toISOString().slice(0,10)}</div>
+    <div style="font-size:0.72em;color:#999">${fmtDate(peakFeeDay?.date)}</div>
   </div>
   <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Avg fee per contract</div>
@@ -111,13 +112,13 @@ Plot.plot({
       y: d => d.fees_total || 0,
       fill: "#756bb1", fillOpacity: 0.8,
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nFees: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      title: d => `${fmtDate(d.date)}\nFees: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
     Plot.lineY(fd1.filter(d => d.ma7_fees != null), {
       x: "date", y: "ma7_fees",
       stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x",
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\n7-day avg: $${d.ma7_fees?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      title: d => `${fmtDate(d.date)}\n7-day avg: $${d.ma7_fees?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
     }),
     Plot.ruleY([0])
   ]
@@ -147,6 +148,17 @@ const cumFeesSplit = fs2.flatMap(d => {
 ```
 
 ```js
+// Per-date pivot for single combined tooltip
+const cumFeesTipData = Array.from(
+  d3.rollup(cumFeesSplit, rs => {
+    const o = {date: rs[0].date};
+    for (const r of rs) o[r.category] = r.cumul || 0;
+    return o;
+  }, d => d.date.getTime())
+).map(([, v]) => v).sort((a, b) => a.date - b.date);
+```
+
+```js
 Plot.plot({
   width,
   height: 280,
@@ -160,10 +172,13 @@ Plot.plot({
     Plot.areaY(cumFeesSplit, {
       x: "date", y: "cumul", fill: "category",
       order: ["Non-sports", "Sports"],
-      fillOpacity: 0.85, curve: "monotone-x",
-      tip: true,
-      title: d => `${d.category}\n${d.date.toISOString().slice(0,10)}\nCumulative: $${d.cumul.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      fillOpacity: 0.85, curve: "monotone-x"
     }),
+    Plot.ruleX(cumFeesTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(cumFeesTipData, Plot.pointerX({
+      x: "date",
+      title: d => `${fmtDate(d.date)}\nSports: $${(d.Sports||0).toLocaleString(undefined,{maximumFractionDigits:0})}\nNon-sports: $${(d["Non-sports"]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`
+    })),
     Plot.ruleY([0])
   ]
 })
@@ -195,7 +210,7 @@ Plot.plot({
       x: "date", y: "rate",
       stroke: "#756bb1", strokeWidth: 1.5, curve: "monotone-x",
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nAvg fee: ${d.rate.toFixed(3)}¢ per contract`
+      title: d => `${fmtDate(d.date)}\nAvg fee: ${d.rate.toFixed(3)}¢ per contract`
     }),
     Plot.ruleY([0])
   ]

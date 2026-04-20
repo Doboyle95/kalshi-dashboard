@@ -9,6 +9,7 @@ Taker profit/loss on parlay contracts (KXMVE\* and PREPACK\* series). Negative v
 ```js
 const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
 const fmtUSD   = n => "$" + fmtCount(n);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
 ```
 
 ```js
@@ -149,7 +150,7 @@ Plot.plot({
     Plot.lineY(tidyCumul, {
       x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x",
       tip: true,
-      title: d => `${d.series}\n${d.date.toISOString().slice(0,10)}\n$${d.value.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${d.series}\n${fmtDate(d.date)}\n$${d.value.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
     Plot.ruleY([0], {stroke: "#ccc"})
   ]
@@ -180,7 +181,7 @@ Plot.plot({
       y: d => d.stakes,
       fill: d => d.pct != null ? Math.max(-50, Math.min(50, d.pct)) : 0,
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${fmtDate(d.date)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
     Plot.ruleY([0])
   ]
@@ -204,7 +205,7 @@ Plot.plot({
       fill: d => d.pct >= 0 ? "#1a9641" : "#d7191c",
       fillOpacity: 0.75,
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${fmtDate(d.date)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
     Plot.ruleY([0])
   ]
