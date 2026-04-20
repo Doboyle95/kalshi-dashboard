@@ -67,8 +67,12 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
+const yScale = view(Inputs.radio(["Linear", "Log"], {label: "Y-axis", value: "Linear"}));
+```
+
+```js
 {
-  const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k";
+  const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toString();
   const pColors = {
     Kalshi: "#2c7bb6", "Polymarket US": "#e66101",
     ForecastEx: "#1a9641", "Crypto.com/Nadex": "#9c27b0"
@@ -81,18 +85,25 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
     "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
   };
 
+  const isLog = yScale === "Log";
+
   display(Plot.plot({
     width,
     height: 420,
     marginRight: 16,
     x: {type: "utc", label: null},
-    y: {label: "Daily contracts", grid: true, tickFormat: fmt},
+    y: isLog
+      ? {type: "log", label: "Daily contracts (log)", grid: true, tickFormat: fmt, domain: [100, 1e9]}
+      : {label: "Daily contracts", grid: true, tickFormat: fmt},
     color: {legend: true, domain: Object.keys(pColors), range: Object.values(pColors)},
     marks: [
-      Plot.areaY(kalshiTidy, {
-        x: "date", y: "contracts",
-        fill: pColors.Kalshi, fillOpacity: 0.08, curve: "monotone-x"
-      }),
+      // Area fill only on linear — looks odd on log
+      ...(isLog ? [] : [
+        Plot.areaY(kalshiTidy, {
+          x: "date", y: "contracts",
+          fill: pColors.Kalshi, fillOpacity: 0.08, curve: "monotone-x"
+        })
+      ]),
       ...Object.entries(byPlatform).map(([name, data]) =>
         Plot.lineY(data.filter(d => d.contracts > 0), {
           x: "date", y: "contracts",
@@ -102,10 +113,10 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
         })
       ),
       Plot.ruleX(kalshiTidy, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
-      Plot.ruleY([0])
+      ...(isLog ? [] : [Plot.ruleY([0])])
     ]
   }));
 }
 ```
 
-<p style="font-size:0.82em;color:#888">Shared Y-axis — the scale gap is real. Kalshi data from trade records. Competitors from public sources. Crypto.com/Nadex from CFTC daily bulletins (starts Dec 2024).</p>
+<p style="font-size:0.82em;color:#888">Shared Y-axis — the scale gap is real. Switch to log scale to see competitor detail. Kalshi data from trade records. Competitors from public sources. Crypto.com/Nadex from CFTC daily bulletins (starts Dec 2024).</p>

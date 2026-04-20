@@ -986,8 +986,28 @@ display(html`<style>
   .mkt-table table { font-size: 14px; border-collapse: collapse; width: 100%; }
   .mkt-table td, .mkt-table th { padding: 0.65em 0.8em; }
   .mkt-table tr { height: 2.7em; }
-  /* Collapse the hidden category-tag column (2nd column) */
-  .mkt-table th:nth-child(2), .mkt-table td:nth-child(2) { padding: 0 !important; width: 0; max-width: 0; overflow: hidden; }
+  /* Sortable headers — Observable Inputs.table sorts on click; surface the affordance.
+     Column layout: 1=checkbox, 2=rank, 3=_c(hidden), 4=market, 5=volume, 6=fees, 7=winner, 8=strike */
+  .mkt-table thead th:nth-child(n+2):not(:nth-child(3)) {
+    cursor: pointer;
+    user-select: none;
+    position: sticky; top: 0;
+    background: var(--theme-background, #fff);
+    z-index: 1;
+  }
+  .mkt-table thead th:nth-child(n+4):hover { color: var(--accent-kalshi, #2563eb); }
+  .mkt-table thead th:nth-child(n+4)::after {
+    content: " \2195";
+    opacity: 0.35;
+    font-size: 0.85em;
+  }
+  .mkt-table thead th:nth-child(n+4)[aria-sort="ascending"]::after  { content: " \2191"; opacity: 1; color: var(--accent-kalshi, #2563eb); }
+  .mkt-table thead th:nth-child(n+4)[aria-sort="descending"]::after { content: " \2193"; opacity: 1; color: var(--accent-kalshi, #2563eb); }
+  /* Inputs.table already renders its own ▴/▾ in a leading <span> on the active column;
+     hide it so it doesn't double up with our arrows. */
+  .mkt-table thead th > span:first-child { display: none; }
+  /* Collapse the hidden category-tag column (_c is 3rd child: checkbox, rank, _c, ...) */
+  .mkt-table th:nth-child(3), .mkt-table td:nth-child(3) { padding: 0 !important; width: 0; max-width: 0; overflow: hidden; }
   ${catCss}
 </style>`);
 
@@ -1000,8 +1020,15 @@ display(html`<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.3em;margin-bott
   )}
 </div>`);
 
-// Add _c column — an invisible carrier for the data-mkt-cat attribute used by :has() CSS above
-const mktDisplay = mktFiltered.map(d => ({...d, _c: d.display_cat || d.kalshi_category || ""}));
+// Add _c column — an invisible carrier for the data-mkt-cat attribute used by :has() CSS above.
+// Coerce fees_total to a real number (null for missing) so column-sort is numeric, not string.
+const mktDisplay = mktFiltered.map(d => {
+  const fees = d.fees_total;
+  const feesNum = (fees == null || fees === "" || isNaN(+fees)) ? null : +fees;
+  return {...d, _c: d.display_cat || d.kalshi_category || "", fees_total: feesNum};
+});
+
+display(html`<div style="font-size:0.82em;color:var(--text-faint,#888);margin:0.3rem 0 0.6rem">Tip: click any column header to sort. Click again to reverse.</div>`);
 
 const tbl = Inputs.table(mktDisplay, {
   columns: ["rank", "_c", "display_name", "contracts", "fees_total", "winner_display", "top_short"],
@@ -1022,9 +1049,14 @@ const tbl = Inputs.table(mktDisplay, {
       return el;
     },
     contracts:  d => "$" + fmtC(d),
-    fees_total: d => (d == null || d === "" || isNaN(+d) || +d === 0) ? "—" : "$" + fmtC(+d),
+    fees_total: d => (d == null || d === 0) ? "—" : "$" + fmtC(+d),
   },
-  width: {rank: 36, _c: 0},
+  align: {
+    rank: "right",
+    contracts: "right",
+    fees_total: "right"
+  },
+  width: {rank: 50, _c: 0},
   sort: "rank",
   reverse: false,
   rows: 50

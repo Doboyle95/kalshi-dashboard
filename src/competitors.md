@@ -90,3 +90,63 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
 ```
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale difference is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived).</p>
+
+## Market share over time
+
+_Weekly contract share across the four US regulated venues. Gaps where a platform had no reported volume are treated as 0._
+
+```js
+// Build weekly totals per platform for the shared date range so 100% stacks
+// look clean (daily values are too noisy for a share chart).
+const weekKey = d => d3.utcMonday.floor(d);
+const byWeek = d3.rollup(
+  all.filter(d => d.contracts != null && d.contracts >= 0),
+  v => d3.sum(v, d => d.contracts || 0),
+  d => +weekKey(d.date),
+  d => d.platform
+);
+
+const shareStart = d3.min(competitor, d => d.date) || new Date("2024-12-01");
+const shareData = [];
+for (const [ts, byP] of byWeek) {
+  const week = new Date(+ts);
+  if (week < shareStart) continue;
+  const total = d3.sum([...byP.values()]);
+  if (!total) continue;
+  for (const p of platforms) {
+    shareData.push({
+      date: week,
+      platform: p.name,
+      contracts: byP.get(p.name) || 0,
+      share: (byP.get(p.name) || 0) / total
+    });
+  }
+}
+```
+
+```js
+Plot.plot({
+  width,
+  height: 320,
+  marginRight: 16,
+  x: {type: "utc", label: null},
+  y: {label: "Share of weekly contracts", grid: true, tickFormat: "%", domain: [0, 1]},
+  color: {legend: true, domain: platforms.map(p => p.name), range: platforms.map(p => p.color)},
+  marks: [
+    Plot.areaY(shareData, {
+      x: "date",
+      y: "share",
+      fill: "platform",
+      order: platforms.map(p => p.name),
+      curve: "monotone-x",
+      fillOpacity: 0.9,
+      tip: true,
+      title: d => `${d.platform}\n${d3.timeFormat("%b %-d, %Y")(d.date)}\n${(d.share * 100).toFixed(1)}% · ${(d.contracts || 0).toLocaleString()} contracts`
+    }),
+    Plot.ruleX(shareData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.3})),
+    Plot.ruleY([0, 1])
+  ]
+})
+```
+
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Weekly aggregation (Monday-start). Chart begins when the first competitor reports non-zero volume. Values sum to 100% within each week.</p>
