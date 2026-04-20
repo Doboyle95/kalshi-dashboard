@@ -71,7 +71,7 @@
   --text-faint:      var(--theme-foreground-faint);
 }
 
-/* Dark-mode-only adjustments */
+/* Dark-mode palette shared between system-dark and explicit dark override */
 @media (prefers-color-scheme: dark) {
   :root {
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
@@ -82,6 +82,105 @@
     --accent-forecastex: #4ade80;
     --accent-nadex:      #c084fc;
   }
+}
+
+/* ============================================================
+   Explicit theme override
+   ============================================================
+   An optional `data-theme` attribute on <html> lets users opt
+   out of the prefers-color-scheme default. Values: "light",
+   "dark", or unset (= follow system). We re-import Observable's
+   abstract theme definitions so every --theme-* variable flips
+   correctly, then re-apply our dark-mode accent palette.
+   ============================================================ */
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --theme-foreground: #1b1e23;
+  --theme-foreground-focus: #3b5fc0;
+  --theme-background-a: #ffffff;
+  --theme-background-b: color-mix(in srgb, var(--theme-foreground) 4%, var(--theme-background-a));
+  --theme-background: var(--theme-background-a);
+  --theme-background-alt: var(--theme-background-b);
+  --theme-foreground-alt: color-mix(in srgb, var(--theme-foreground) 90%, var(--theme-background-a));
+  --theme-foreground-muted: color-mix(in srgb, var(--theme-foreground) 60%, var(--theme-background-a));
+  --theme-foreground-faint: color-mix(in srgb, var(--theme-foreground) 50%, var(--theme-background-a));
+  --theme-foreground-fainter: color-mix(in srgb, var(--theme-foreground) 30%, var(--theme-background-a));
+  --theme-foreground-faintest: color-mix(in srgb, var(--theme-foreground) 14%, var(--theme-background-a));
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --accent-kalshi:       #2563eb;
+  --accent-polymarket:   #e66101;
+  --accent-forecastex:   #1a9641;
+  --accent-nadex:        #9c27b0;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-foreground: #dfdfd6;
+  --theme-foreground-focus: oklch(0.712564 0.257662 265.758);
+  --theme-background-b: #161616;
+  --theme-background-a: color-mix(in srgb, var(--theme-foreground) 4%, var(--theme-background-b));
+  --theme-background: var(--theme-background-a);
+  --theme-background-alt: var(--theme-background-b);
+  --theme-foreground-alt: color-mix(in srgb, var(--theme-foreground) 90%, var(--theme-background-b));
+  --theme-foreground-muted: color-mix(in srgb, var(--theme-foreground) 60%, var(--theme-background-b));
+  --theme-foreground-faint: color-mix(in srgb, var(--theme-foreground) 50%, var(--theme-background-b));
+  --theme-foreground-fainter: color-mix(in srgb, var(--theme-foreground) 30%, var(--theme-background-b));
+  --theme-foreground-faintest: color-mix(in srgb, var(--theme-foreground) 14%, var(--theme-background-b));
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --accent-kalshi:       #60a5fa;
+  --accent-polymarket:   #fb923c;
+  --accent-forecastex:   #4ade80;
+  --accent-nadex:        #c084fc;
+}
+
+/* ============================================================
+   Theme toggle button
+   ============================================================ */
+
+.theme-toggle {
+  position: fixed;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-sans);
+}
+
+.theme-toggle button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.theme-toggle button:hover {
+  color: var(--theme-foreground);
+  background: color-mix(in srgb, var(--theme-foreground) 6%, transparent);
+}
+
+.theme-toggle button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent-kalshi) 14%, transparent);
+  color: var(--accent-kalshi);
 }
 
 /* ============================================================
@@ -193,6 +292,27 @@ table,
   color: var(--text-faint);
   margin-top: var(--space-2);
   font-variant-numeric: tabular-nums;
+}
+
+/* Trend indicator — Δ vs a prior window, shown under the value */
+.kpi-trend {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  margin-top: var(--space-2);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.kpi-trend[data-dir="up"]   { color: var(--accent-positive); }
+.kpi-trend[data-dir="down"] { color: var(--accent-negative); }
+.kpi-trend[data-dir="flat"] { color: var(--text-faint); }
+
+.kpi-trend .kpi-trend-label {
+  color: var(--text-faint);
+  font-weight: 400;
 }
 
 /* ============================================================

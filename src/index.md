@@ -22,25 +22,71 @@ const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
                   : (n ?? 0).toString();
 const fmtUSD = n => "$" + fmtCount(n);
 const fmtDate = d => d ? d3.timeFormat("%b %-d, %Y")(d) : "";
+
+// --- Trend calcs: last 30d vs prior 30d --------------------------
+const sortedKalshi = [...kalshi].sort((a, b) => a.date - b.date);
+const last30 = sortedKalshi.slice(-30);
+const prior30 = sortedKalshi.slice(-60, -30);
+const sum = (arr, key) => d3.sum(arr, d => d[key] || 0);
+
+function pctDelta(curr, prev) {
+  if (!prev) return null;
+  return (curr - prev) / prev;
+}
+const deltaContracts30d = pctDelta(sum(last30, "contracts_total"), sum(prior30, "contracts_total"));
+const deltaFees30d = pctDelta(sum(last30, "fees_total"), sum(prior30, "fees_total"));
+
+// Annualized run rate: latest 7d MA vs 30-days-prior 7d MA
+const latestMA = sortedKalshi.slice(-1)[0]?.ma7_fees;
+const priorMA = sortedKalshi.slice(-31, -30)[0]?.ma7_fees;
+const deltaRunRate30d = (latestMA && priorMA) ? pctDelta(latestMA, priorMA) : null;
+
+const daysSincePeak = peakDay?.date
+  ? Math.round((sortedKalshi.slice(-1)[0].date - peakDay.date) / 86400000)
+  : null;
+
+const fmtPct = v => (v == null) ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+function trendDir(v) {
+  if (v == null) return "flat";
+  if (v >  0.005) return "up";
+  if (v < -0.005) return "down";
+  return "flat";
+}
+function trendArrow(v) {
+  const d = trendDir(v);
+  return d === "up" ? "↑" : d === "down" ? "↓" : "•";
+}
 ```
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Kalshi all-time contracts</div>
     <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-trend" data-dir="${trendDir(deltaContracts30d)}">
+      ${trendArrow(deltaContracts30d)} ${fmtPct(deltaContracts30d)}
+      <span class="kpi-trend-label">last 30d vs prior 30d</span>
+    </div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Kalshi all-time fee revenue</div>
     <div class="kpi-value">${fmtUSD(totalFees)}</div>
+    <div class="kpi-trend" data-dir="${trendDir(deltaFees30d)}">
+      ${trendArrow(deltaFees30d)} ${fmtPct(deltaFees30d)}
+      <span class="kpi-trend-label">last 30d vs prior 30d</span>
+    </div>
   </div>
   <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Kalshi annualized run rate</div>
     <div class="kpi-value">${fmtUSD(annualizedFees)}<span class="kpi-value-sm">/yr</span></div>
+    <div class="kpi-trend" data-dir="${trendDir(deltaRunRate30d)}">
+      ${trendArrow(deltaRunRate30d)} ${fmtPct(deltaRunRate30d)}
+      <span class="kpi-trend-label">7d MA, vs 30d ago</span>
+    </div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Kalshi peak single day</div>
     <div class="kpi-value">${fmtCount(peakDay?.contracts_total || 0)}</div>
-    <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
+    <div class="kpi-meta">${fmtDate(peakDay?.date)}${daysSincePeak != null ? ` · ${daysSincePeak} day${daysSincePeak === 1 ? "" : "s"} ago` : ""}</div>
   </div>
 </div>
 
@@ -109,7 +155,9 @@ const yScale = view(Inputs.radio(["Linear", "Log"], {label: "Y-axis", value: "Li
           x: "date", y: "contracts",
           stroke: pColors[name],
           strokeWidth: name === "Kalshi" ? 2.5 : 1.75,
-          curve: "monotone-x", tip: true
+          curve: "monotone-x",
+          channels: {Platform: {value: () => name}},
+          tip: {format: {x: fmtDate, y: fmt, stroke: null}}
         })
       ),
       Plot.ruleX(kalshiTidy, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
