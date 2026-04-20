@@ -714,7 +714,10 @@ const MKT_NAME_OVERRIDES = {
   "POPVOTEMOV-24-D":        "Popular vote margin (D)",
   "ECMOV-24-R-B35":         "Electoral college margin >35 (R)",
   "ECMOV-24-R-B65":         "Electoral college margin >65 (R)",
-  "PRESPARTYFULL-24-REC":   "Presidential party (full recount)",
+  // "Who wins Popular Vote + Electoral College?" — combined-outcome market.
+  // -REC is the Republican-EC branch; outcome -RPV = Republican also wins PV.
+  "PRESPARTYFULL-24-REC":   "Popular vote winner (if R wins EC)",
+  "PRESPARTYFULL-24":       "Popular vote + Electoral College winner",
   "POWER-24-RH-RS":         "Republican House + Senate 2024",
   "KXGOVSHUT":              "Government shutdown",
   "KXGOVTSHUTDOWN":         "Government shutdown",
@@ -852,7 +855,10 @@ const TOP_OUTCOME_NAMES = {
   "KXFEDCHAIRNOM-29-KW":              "Warsh",
   "KXLAYOFFSYINFO-26-494000":         "≥ 494,000 layoffs",
   "KXPERFORMSUPERBOWLB-26-CAR":       "Cardi B",
-  "PRESPARTYFULL-24-REC-RPV":         "Republican (no recount)",
+  "PRESPARTYFULL-24-REC-RPV":         "Republican",
+  "PRESPARTYFULL-24-REC-DPV":         "Democratic",
+  "PRESPARTYFULL-24-DEC-RPV":         "Republican",
+  "PRESPARTYFULL-24-DEC-DPV":         "Democratic",
   "POWER-24-RH-RS-RP":                "Republican",
 };
 

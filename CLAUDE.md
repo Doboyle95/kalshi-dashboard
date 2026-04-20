@@ -135,14 +135,15 @@ See `TICKER-RULES.md` for the full conversion reference. High-level flow:
   ticker stays in the underlying data and the visible columns are
   human-readable.
 
-## Known uncertainties (flagged to repo owner)
+## Confirmed ticker meanings (previously uncertain)
 
-These are currently rendered as best-guesses; confirm with owner before
-hard-coding further overrides:
-
-- `KXMASTERS-25`: currently rendered as "2025 Masters Tournament" (McIlroy
-  won). May actually be a pre-tournament prop market, not the outright winner.
-- `PRESPARTYFULL-24-REC-RPV`: rendered "Republican (no recount)". The meaning
-  of `RPV` is inferred — owner to confirm.
-- `KXPERFORMSUPERBOWLB-26-CAR`: rendered "Cardi B". Original ticker suffix
-  `CAR` is ambiguous (could be Carrie Underwood, etc.).
+- `KXMASTERS-25`: 2025 Masters Tournament, McIlroy won.
+- `KXPERFORMSUPERBOWLB-26-CAR`: Cardi B.
+- `PRESPARTYFULL-24-REC-RPV`: "Who wins Popular Vote + Electoral
+  College?" combined market. `-REC` = Republican Electoral College
+  branch, `-RPV` = Republican Popular Vote outcome. The strike names
+  (`-RPV` / `-DPV`) are rendered as "Republican" / "Democratic" per
+  Kalshi's popular-vote phrasing.
+- `KXSUPERBOWLAD-SB2026`: winner is "Various" (multiple brands ran AI
+  ads including Google). Both the market-level and winner-ticker-level
+  overrides resolve to "Various".
