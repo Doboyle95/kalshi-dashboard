@@ -460,15 +460,16 @@ Ranked by total contracts across all outcomes. Each row is one market (e.g. "Sup
 ```js
 // ── Category colors ──────────────────────────────────────────────────────────
 // Sports is split into Football / Basketball / Other sport for legibility.
+// Sports = warm family (reds → oranges → gold) so you can instantly tell sports vs non-sports.
+// Non-sports = cool family (blues → purples → teal).
 const CAT_COLORS = {
-  "Football":        "#bf360c",  // deep orange
-  "Basketball":      "#0d47a1",  // deep blue
-  "Other sport":     "#1a7a3a",  // green
-  "Politics":        "#b71c1c",  // red (covers Elections too)
-  "Economics":       "#4e342e",  // brown
-  "Entertainment":   "#880e4f",  // magenta
-  "Crypto":          "#e65100",  // orange
-  "Other non-sport": "#607d8b",  // blue-grey (catches Science & Tech, Companies, etc.)
+  "Football":        "#c0392b",  // deep red     ─┐
+  "Basketball":      "#e67e22",  // orange        │ warm = sports
+  "Other sport":     "#f0b429",  // amber/gold   ─┘
+  "Politics":        "#1565c0",  // deep blue    ─┐
+  "Economics":       "#0891b2",  // teal-blue     │ cool = non-sports
+  "Entertainment":   "#6d28d9",  // purple        │
+  "Other non-sport": "#047857",  // dark green   ─┘
 };
 
 // ── Team maps for game-ticker parsing ────────────────────────────────────────
@@ -914,8 +915,8 @@ function getSportDisplayCategory(d) {
   const cat = (d.kalshi_category || "").trim();
   // Merge Elections into Politics — they're the same concept on Kalshi
   if (cat === "Elections") return "Politics";
-  // Fold niche categories into Other non-sport
-  if (cat === "Science and Technology" || cat === "Companies") return "Other non-sport";
+  // Fold Crypto and niche categories into Other non-sport
+  if (cat === "Crypto" || cat === "Science and Technology" || cat === "Companies") return "Other non-sport";
   // Anything not in CAT_COLORS falls through to Other non-sport too
   if (cat !== "Sports" && !CAT_COLORS[cat]) return "Other non-sport";
   if (cat !== "Sports") return cat;
@@ -943,12 +944,12 @@ const mktRanked = [...mktLeaderboard]
 ```
 
 ```js
-// Top-20 bar chart
+// Top-20 bar chart — use fill:"display_cat" so Plot's color scale drives the legend
 const mktTop20 = mktRanked.slice(0, 20);
 const mktCatDomain = Object.keys(CAT_COLORS).filter(c => mktTop20.some(d => d.display_cat === c));
 Plot.plot({
   width,
-  height: mktTop20.length * 24 + 40,
+  height: mktTop20.length * 24 + 60,  // extra space for the color legend
   marginLeft: 240,
   color: {
     legend: true,
@@ -961,7 +962,7 @@ Plot.plot({
     Plot.barX(mktTop20, {
       x: "contracts",
       y: d => `#${d.rank} ${d.display_name}`,
-      fill: d => CAT_COLORS[d.display_cat] ?? "#777",
+      fill: "display_cat",  // use the named color scale so legend renders
       sort: {y: "-x"},
       tip: true,
       title: d => `${d.display_name}\n$${fmtC(d.contracts)} volume\nFees: $${fmtC(+d.fees_total||0)}\nWinner: ${d.winner_display}`
