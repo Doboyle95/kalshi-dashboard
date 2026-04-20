@@ -348,10 +348,11 @@ table,
 }
 
 .mkt-legend-chip[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--accent-kalshi) 12%, transparent);
+  /* color/background/border come from inline styles (per-category color);
+     only add non-color affordances here */
   color: var(--theme-foreground);
-  border-color: var(--accent-kalshi);
   font-weight: 600;
+  box-shadow: 0 0 0 2px currentColor;
 }
 
 .mkt-legend-sw {

@@ -1048,11 +1048,12 @@ display(html`<style>
   function render() {
     legend.replaceChildren(...chips.map(([cat, color]) => {
       const active = (cat === "All" ? mktCatFilter === "All" : mktCatFilter === cat);
-      const sw = color
-        ? html`<span class="mkt-legend-sw" style="background:${color}"></span>`
-        : html`<span class="mkt-legend-sw mkt-legend-sw-all"></span>`;
-      return html`<button type="button" class="mkt-legend-chip" aria-pressed="${active}" data-cat="${cat}">
-        ${sw}<span>${cat}</span>
+      const chipStyle = color
+        ? `border-color:${color};background:${color}${active ? "40" : "1a"};font-weight:${active ? "600" : "400"};color:inherit;`
+        : "";
+      return html`<button type="button" class="mkt-legend-chip" style="${chipStyle}" aria-pressed="${active}" data-cat="${cat}">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color || "linear-gradient(135deg,#c0392b,#1565c0,#047857)"};flex-shrink:0"></span>
+        <span>${cat}</span>
       </button>`;
     }));
     legend.querySelectorAll("button").forEach(b => {
