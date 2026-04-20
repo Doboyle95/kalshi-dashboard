@@ -12,6 +12,11 @@ const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed:
 ```
 
 ```js
+const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
+const fmtUSD   = n => "$" + fmtCount(n);
+```
+
+```js
 const totalContracts = d3.sum(kalshi, d => d.contracts_total);
 const totalFees = d3.sum(kalshi, d => d.fees_total);
 const peakDay = kalshi.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, kalshi[0]);
@@ -21,19 +26,19 @@ const annualizedFees = totalFees / kalshi.length * 365;
 <div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
   <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Kalshi all-time contracts</div>
-    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${(totalContracts/1e9).toFixed(1)}B</div>
+    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${fmtCount(totalContracts)}</div>
   </div>
   <div style="background:#f9f6ff;border-left:4px solid #756bb1;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Kalshi all-time fee revenue</div>
-    <div style="font-size:1.6em;font-weight:700;color:#756bb1">$${(totalFees/1e6).toFixed(0)}M</div>
+    <div style="font-size:1.6em;font-weight:700;color:#756bb1">${fmtUSD(totalFees)}</div>
   </div>
   <div style="background:#f9f6ff;border-left:4px solid #3f007d;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Kalshi annualized run rate</div>
-    <div style="font-size:1.6em;font-weight:700;color:#3f007d">$${(annualizedFees/1e6).toFixed(0)}M/yr</div>
+    <div style="font-size:1.6em;font-weight:700;color:#3f007d">${fmtUSD(annualizedFees)}/yr</div>
   </div>
   <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Kalshi peak single day</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e15759">${(peakDay?.contracts_total/1e6).toFixed(0)}M contracts</div>
+    <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtCount(peakDay?.contracts_total)} contracts</div>
     <div style="font-size:0.72em;color:#999">${peakDay?.date?.toISOString().slice(0,10)}</div>
   </div>
 </div>
