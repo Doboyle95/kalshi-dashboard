@@ -26,6 +26,55 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
   </div>
 </div>
 
+```js
+function makeBrush(data, color) {
+  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
+  const w = width;
+  const x = d3.scaleUtc().domain(d3.extent(data, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(data, d => d.contracts_total) || 1;
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg")
+    .attr("width", w).attr("height", h)
+    .style("display", "block").style("background", "#fafafa")
+    .style("border", "1px solid #e8e8e8").style("border-radius", "4px")
+    .style("margin-bottom", "1.5rem");
+
+  svg.append("path").datum(data)
+    .attr("fill", color).attr("fill-opacity", 0.2)
+    .attr("d", d3.area().x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total)).curve(d3.curveBasis));
+
+  svg.append("g").attr("transform", `translate(0,${h - mb})`)
+    .call(d3.axisBottom(x).ticks(d3.timeMonth.every(1)).tickFormat(d3.timeFormat("%b %y")).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke", "#ccc"))
+    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
+
+  const start = d3.min(data, d => d.date);
+  const end   = d3.max(data, d => d.date);
+  const brush = d3.brushX()
+    .extent([[ml, mt], [w - mr, h - mb]])
+    .on("brush end", event => {
+      if (!event.sourceEvent) return;
+      if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
+    });
+
+  svg.append("g").call(brush).call(brush.move, [start, end].map(x));
+  svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
+  svg.property("value", [start, end]);
+  return svg.node();
+}
+```
+
+```js
+const brush = view(makeBrush(split, "#e66101"));
+```
+
+```js
+const [s, e] = brush;
+const splitF    = split.filter(d => d.date >= s && d.date <= e);
+const catDailyF = catDaily.filter(d => d.date >= s && d.date <= e);
+```
+
 ## Daily volume
 
 ```js
@@ -35,7 +84,7 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
   marks: [
-    Plot.rectY(split, {
+    Plot.rectY(splitF, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
@@ -53,7 +102,7 @@ Plot.plot({
 ## Sports vs. non-sports
 
 ```js
-const tidySplit = split.flatMap(d => [
+const tidySplit = splitF.flatMap(d => [
   {date: d.date, category: "Sports",     value: d.contracts_sports    || 0},
   {date: d.date, category: "Non-sports", value: d.contracts_nonsports || 0}
 ]);
@@ -82,7 +131,7 @@ Plot.plot({
 ```js
 const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => d.category);
 const topCats = [...catTotals.entries()].sort((a,b) => b[1] - a[1]).slice(0, 9).map(d => d[0]);
-const catDisplayed = catDaily.filter(d => topCats.includes(d.category));
+const catFiltered = catDailyF.filter(d => topCats.includes(d.category));
 ```
 
 ```js
@@ -93,7 +142,7 @@ Plot.plot({
   y: {label: "Contracts", grid: true},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
-    Plot.areaY(catDisplayed, {
+    Plot.areaY(catFiltered, {
       x: "date", y: "contracts", fill: "category",
       order: topCats.slice().reverse(),
       curve: "monotone-x", fillOpacity: 0.85,
@@ -132,4 +181,3 @@ Plot.plot({
   ]
 })
 ```
-
