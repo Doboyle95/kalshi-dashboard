@@ -45,6 +45,11 @@ const totalGross = lastRow?.gross_cumul ?? 0;
 const totalFees = totalGross - totalNet;
 const totalStakes = d3.sum(pnl, d => d.stakes);
 const overallPct = totalNet / totalStakes * 100;
+const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
+                  : n >= 1e6 ? (n/1e6).toFixed(1)+"M"
+                  : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
+                  : (n ?? 0).toString();
+const fmtUSD = n => "$" + fmtCount(n);
 ```
 
 <div style="display:flex;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap">
@@ -63,7 +68,7 @@ const overallPct = totalNet / totalStakes * 100;
   </div>
   <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
     <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Total notional staked</div>
-    <div style="font-size:1.8em;font-weight:700;color:#333">$${(totalStakes/1e6).toFixed(0)}M</div>
+    <div style="font-size:1.8em;font-weight:700;color:#333">${fmtUSD(totalStakes)}</div>
   </div>
 </div>
 
