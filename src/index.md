@@ -9,6 +9,7 @@ _Comparing regulated prediction markets in the United States. Kalshi is the domi
 ```js
 const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
+import {hashGet, hashInput} from "./components/hash-state.js";
 ```
 
 ```js
@@ -113,7 +114,7 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
-const yScale = view(Inputs.radio(["Linear", "Log"], {label: "Y-axis", value: "Linear"}));
+const yScale = view(hashInput("y", Inputs.radio(["Linear", "Log"], {label: "Y-axis", value: hashGet("y", "Linear")})));
 ```
 
 ```js

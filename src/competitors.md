@@ -7,6 +7,7 @@ title: Competitors
 ```js
 const kalshi     = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
+import {hashGet, hashInput} from "./components/hash-state.js";
 ```
 
 ```js
@@ -42,7 +43,7 @@ const lastLabels = platforms.map(p => {
 ```
 
 ```js
-const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", label: "Metric"}));
+const metric = view(hashInput("metric", Inputs.radio(["contracts", "fees"], {value: hashGet("metric", "contracts"), label: "Metric"})));
 ```
 
 ```js

@@ -316,6 +316,57 @@ table,
 }
 
 /* ============================================================
+   Clickable category legend (categories.md market leaderboard)
+   ============================================================ */
+
+.mkt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0.2rem 0 0.8rem;
+}
+
+.mkt-legend-chip {
+  appearance: none;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 3px 10px 3px 6px;
+  font-size: 0.78rem;
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.mkt-legend-chip:hover {
+  color: var(--theme-foreground);
+  border-color: color-mix(in srgb, var(--theme-foreground) 25%, transparent);
+}
+
+.mkt-legend-chip[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent-kalshi) 12%, transparent);
+  color: var(--theme-foreground);
+  border-color: var(--accent-kalshi);
+  font-weight: 600;
+}
+
+.mkt-legend-sw {
+  display: inline-block;
+  width: 14px;
+  height: 9px;
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+.mkt-legend-sw-all {
+  background: linear-gradient(90deg, #bf360c, #0d47a1, #1a7a3a, #7b1fa2);
+}
+
+/* ============================================================
    Form controls (dropdowns, radios) used with Observable Inputs
    ============================================================ */
 

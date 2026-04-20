@@ -8,6 +8,7 @@ title: Kalshi Volume
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
+import {hashGet, hashInput} from "./components/hash-state.js";
 ```
 
 ```js
@@ -191,10 +192,10 @@ Plot.plot({
 ## Sports vs. non-sports volume
 
 ```js
-const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
-  value: "Both (stacked)"
-}));
-const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts"}));
+const sportsView = view(hashInput("view", Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
+  value: hashGet("view", "Both (stacked)")
+})));
+const sportsMetric = view(hashInput("metric", Inputs.radio(["Contracts", "Fees"], {value: hashGet("metric", "Contracts")})));
 ```
 
 ```js

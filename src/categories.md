@@ -8,22 +8,23 @@ title: Categories
 const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
 const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
+import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 ```
 
 ## All-time leaderboard
 
 ```js
-const metric = view(Inputs.select(["contracts", "fees", "notional"], {
-  label: "Metric", value: "contracts"
-}));
-const showSports = view(Inputs.select(["All", "Sports only", "Non-sports only"], {
-  label: "Filter", value: "All"
-}));
+const metric = view(hashInput("metric", Inputs.select(["contracts", "fees", "notional"], {
+  label: "Metric", value: hashGet("metric", "contracts")
+})));
+const showSports = view(hashInput("sports", Inputs.select(["All", "Sports only", "Non-sports only"], {
+  label: "Filter", value: hashGet("sports", "All")
+})));
 ```
 
 ```js
-const fromStr = view(Inputs.text({label: "From", placeholder: "YYYY-MM-DD", value: "2025-01-01", width: 130}));
-const toStr   = view(Inputs.text({label: "To",   placeholder: "YYYY-MM-DD (blank = latest)", value: "", width: 130}));
+const fromStr = view(hashInput("from", Inputs.text({label: "From", placeholder: "YYYY-MM-DD", value: hashGet("from", "2025-01-01"), width: 130})));
+const toStr   = view(hashInput("to",   Inputs.text({label: "To",   placeholder: "YYYY-MM-DD (blank = latest)", value: hashGet("to", ""), width: 130})));
 ```
 
 ```js
@@ -216,8 +217,8 @@ const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date
 ```
 
 ```js
-const chartScale  = view(Inputs.radio(["Absolute", "Normalized"], {value: "Absolute", label: "Scale"}));
-const chartDetail = view(Inputs.radio(["General", "Detailed"],    {value: "General",  label: "Categories"}));
+const chartScale  = view(hashInput("scale",  Inputs.radio(["Absolute", "Normalized"], {value: hashGet("scale",  "Absolute"), label: "Scale"})));
+const chartDetail = view(hashInput("detail", Inputs.radio(["General", "Detailed"],    {value: hashGet("detail", "General"),  label: "Categories"})));
 ```
 
 ```js
@@ -965,10 +966,12 @@ const mktSearch = view(Inputs.search(mktRanked, {placeholder: "Search markets...
 ```
 
 ```js
-const mktCatFilter = view(Inputs.select(
+// Expose the underlying input so the clickable legend below can drive it.
+const mktCatInput = hashInput("mkt_cat", Inputs.select(
   ["All", ...Object.keys(CAT_COLORS)],
-  {label: "Category", value: "All"}
+  {label: "Category", value: hashGet("mkt_cat", "All")}
 ));
+const mktCatFilter = view(mktCatInput);
 ```
 
 ```js
@@ -1011,14 +1014,33 @@ display(html`<style>
   ${catCss}
 </style>`);
 
-// Category legend — swatch rectangles matching row tint
-display(html`<div style="display:flex;flex-wrap:wrap;gap:0.5em 1.3em;margin-bottom:0.8rem;font-size:0.8em;color:#555">
-  ${Object.entries(CAT_COLORS).map(([cat, color]) =>
-    html`<span style="display:inline-flex;align-items:center;gap:5px">
-      <span style="display:inline-block;width:14px;height:9px;border-radius:2px;background:${color};opacity:0.55"></span>${cat}
-    </span>`
-  )}
-</div>`);
+// Category legend — swatch rectangles matching row tint, click to cross-filter.
+{
+  const legend = html`<div class="mkt-legend" role="tablist" aria-label="Filter by category"></div>`;
+  const chips = [["All", null], ...Object.entries(CAT_COLORS)];
+  function render() {
+    legend.replaceChildren(...chips.map(([cat, color]) => {
+      const active = (cat === "All" ? mktCatFilter === "All" : mktCatFilter === cat);
+      const sw = color
+        ? html`<span class="mkt-legend-sw" style="background:${color}"></span>`
+        : html`<span class="mkt-legend-sw mkt-legend-sw-all"></span>`;
+      return html`<button type="button" class="mkt-legend-chip" aria-pressed="${active}" data-cat="${cat}">
+        ${sw}<span>${cat}</span>
+      </button>`;
+    }));
+    legend.querySelectorAll("button").forEach(b => {
+      b.addEventListener("click", () => {
+        const v = b.dataset.cat;
+        if (mktCatInput.value !== v) {
+          mktCatInput.value = v;
+          mktCatInput.dispatchEvent(new Event("input", {bubbles: true}));
+        }
+      });
+    });
+  }
+  render();
+  display(legend);
+}
 
 // Add _c column — an invisible carrier for the data-mkt-cat attribute used by :has() CSS above.
 // Coerce fees_total to a real number (null for missing) so column-sort is numeric, not string.
