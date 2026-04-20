@@ -464,9 +464,8 @@ const CAT_COLORS = {
   "Football":               "#bf360c",  // deep orange
   "Basketball":             "#0d47a1",  // deep blue
   "Other sport":            "#1a7a3a",  // green
-  "Politics":               "#6a1b9a",  // violet
+  "Politics":               "#b71c1c",  // red (covers Elections too)
   "Economics":              "#4e342e",  // brown
-  "Elections":              "#b71c1c",  // red
   "Entertainment":          "#880e4f",  // magenta
   "Crypto":                 "#e65100",  // orange
   "Science and Technology": "#00695c",  // teal
@@ -914,6 +913,8 @@ function fmtStrike(top_outcome, market_key) {
 // Sports is split into Football / Basketball / Other sport for legibility.
 function getSportDisplayCategory(d) {
   const cat = (d.kalshi_category || "").trim();
+  // Merge Elections into Politics — they're the same concept on Kalshi
+  if (cat === "Elections") return "Politics";
   if (cat !== "Sports") return cat;
   const mk = (d.market_key || "").trim();
   if (/^KXNFL|^KXSB-|^KXNCAAF/.test(mk)) return "Football";
@@ -941,10 +942,16 @@ const mktRanked = [...mktLeaderboard]
 ```js
 // Top-20 bar chart
 const mktTop20 = mktRanked.slice(0, 20);
+const mktCatDomain = Object.keys(CAT_COLORS).filter(c => mktTop20.some(d => d.display_cat === c));
 Plot.plot({
   width,
   height: mktTop20.length * 24 + 40,
   marginLeft: 240,
+  color: {
+    legend: true,
+    domain: mktCatDomain,
+    range: mktCatDomain.map(c => CAT_COLORS[c])
+  },
   x: {label: "Volume ($)", grid: true, tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   y: {label: null},
   marks: [
