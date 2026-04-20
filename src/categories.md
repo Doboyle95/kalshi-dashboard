@@ -461,15 +461,14 @@ Ranked by total contracts across all outcomes. Each row is one market (e.g. "Sup
 // ── Category colors ──────────────────────────────────────────────────────────
 // Sports is split into Football / Basketball / Other sport for legibility.
 const CAT_COLORS = {
-  "Football":               "#bf360c",  // deep orange
-  "Basketball":             "#0d47a1",  // deep blue
-  "Other sport":            "#1a7a3a",  // green
-  "Politics":               "#b71c1c",  // red (covers Elections too)
-  "Economics":              "#4e342e",  // brown
-  "Entertainment":          "#880e4f",  // magenta
-  "Crypto":                 "#e65100",  // orange
-  "Science and Technology": "#00695c",  // teal
-  "Companies":              "#1b5e20",  // green
+  "Football":        "#bf360c",  // deep orange
+  "Basketball":      "#0d47a1",  // deep blue
+  "Other sport":     "#1a7a3a",  // green
+  "Politics":        "#b71c1c",  // red (covers Elections too)
+  "Economics":       "#4e342e",  // brown
+  "Entertainment":   "#880e4f",  // magenta
+  "Crypto":          "#e65100",  // orange
+  "Other non-sport": "#607d8b",  // blue-grey (catches Science & Tech, Companies, etc.)
 };
 
 // ── Team maps for game-ticker parsing ────────────────────────────────────────
@@ -915,6 +914,10 @@ function getSportDisplayCategory(d) {
   const cat = (d.kalshi_category || "").trim();
   // Merge Elections into Politics — they're the same concept on Kalshi
   if (cat === "Elections") return "Politics";
+  // Fold niche categories into Other non-sport
+  if (cat === "Science and Technology" || cat === "Companies") return "Other non-sport";
+  // Anything not in CAT_COLORS falls through to Other non-sport too
+  if (cat !== "Sports" && !CAT_COLORS[cat]) return "Other non-sport";
   if (cat !== "Sports") return cat;
   const mk = (d.market_key || "").trim();
   if (/^KXNFL|^KXSB-|^KXNCAAF/.test(mk)) return "Football";

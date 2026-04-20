@@ -10,6 +10,11 @@ const split     = await FileAttachment("data/nadex_sports_split_daily.csv").csv(
 ```
 
 ```js
+const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+```
+
+```js
 const totalContracts = d3.sum(split, d => d.contracts_total);
 const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, split[0]);
 ```
@@ -17,12 +22,12 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
   <div style="background:#f4f8ff;border-left:4px solid #9c27b0;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Contracts (since Dec 2024)</div>
-    <div style="font-size:1.6em;font-weight:700;color:#9c27b0">${(totalContracts/1e6).toFixed(0)}M</div>
+    <div style="font-size:1.6em;font-weight:700;color:#9c27b0">${fmtCount(totalContracts)}</div>
   </div>
   <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak single day</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e15759">${(peakDay?.contracts_total/1e3).toFixed(0)}k</div>
-    <div style="font-size:0.72em;color:#999">${peakDay?.date?.toISOString().slice(0,10)}</div>
+    <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtCount(peakDay?.contracts_total)}</div>
+    <div style="font-size:0.72em;color:#999">${fmtDate(peakDay?.date)}</div>
   </div>
 </div>
 
@@ -90,7 +95,7 @@ Plot.plot({
       y: d => d.contracts_total || 0,
       fill: "#9c27b0", fillOpacity: 0.6,
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\n${(d.contracts_total||0).toLocaleString()} contracts`
+      title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)} contracts`
     }),
     Plot.ruleY([0])
   ]
@@ -121,6 +126,11 @@ Plot.plot({
       order: ["Non-sports", "Sports"],
       curve: "monotone-x", fillOpacity: 0.85
     }),
+    Plot.ruleX(splitF, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(splitF, Plot.pointerX({
+      x: "date",
+      title: d => `${fmtDate(d.date)}\nSports: ${fmtCount(d.contracts_sports||0)}\nNon-sports: ${fmtCount(d.contracts_nonsports||0)}`
+    })),
     Plot.ruleY([0])
   ]
 })
@@ -135,6 +145,17 @@ const catFiltered = catDailyF.filter(d => topCats.includes(d.category));
 ```
 
 ```js
+// Per-date pivot for single combined tooltip (avoids overlapping bubbles)
+const catTipData = Array.from(
+  d3.rollup(catFiltered, rs => {
+    const o = {date: rs[0].date};
+    for (const r of rs) o[r.category] = r.contracts || 0;
+    return o;
+  }, d => d.date.getTime())
+).map(([, v]) => v).sort((a, b) => a.date - b.date);
+```
+
+```js
 Plot.plot({
   width,
   height: 280,
@@ -145,10 +166,13 @@ Plot.plot({
     Plot.areaY(catFiltered, {
       x: "date", y: "contracts", fill: "category",
       order: topCats.slice().reverse(),
-      curve: "monotone-x", fillOpacity: 0.85,
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)} · ${d.category}\n${(d.contracts||0).toLocaleString()} contracts`
+      curve: "monotone-x", fillOpacity: 0.85
     }),
+    Plot.ruleX(catTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(catTipData, Plot.pointerX({
+      x: "date",
+      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtCount(d[c])}` : null).filter(Boolean)].join("\n")
+    })),
     Plot.ruleY([0])
   ]
 })
@@ -175,7 +199,7 @@ Plot.plot({
       sort: {y: "x", reverse: true},
       fill: "#9c27b0", fillOpacity: 0.7,
       tip: true,
-      title: d => `${d.category}: ${d.contracts.toLocaleString()}`
+      title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),
     Plot.ruleX([0])
   ]
