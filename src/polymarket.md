@@ -81,16 +81,8 @@ Plot.plot({
 
 ```js
 const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => d.category);
-// Rename "Other" to "Other/Tournament" for clarity
-const topCats = [...catTotals.entries()]
-  .sort((a,b) => b[1] - a[1])
-  .slice(0, 9)
-  .map(d => d[0] === "Other" ? "Other/Tournament" : d[0]);
-
-const catDisplayed = catDaily.map(d => ({
-  ...d,
-  category: d.category === "Other" ? "Other/Tournament" : d.category
-})).filter(d => topCats.includes(d.category));
+const topCats = [...catTotals.entries()].sort((a,b) => b[1] - a[1]).slice(0, 9).map(d => d[0]);
+const catDisplayed = catDaily.filter(d => topCats.includes(d.category));
 ```
 
 ```js
@@ -118,10 +110,7 @@ Plot.plot({
 ```js
 const catBar = [...catTotals.entries()]
   .sort((a,b) => b[1] - a[1])
-  .map(([category, contracts]) => ({
-    category: category === "Other" ? "Other/Tournament" : category,
-    contracts
-  }));
+  .map(([category, contracts]) => ({category, contracts}));
 ```
 
 ```js
@@ -144,4 +133,3 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">"Other/Tournament" = tournament spread and total-score contracts (e.g. point spreads on March Madness games) where the contract type prefix is retained in the symbol. These are almost entirely college basketball during tournament season.</p>
