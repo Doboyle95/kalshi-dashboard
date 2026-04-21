@@ -2,6 +2,7 @@ export default {
   title: "US Prediction Markets",
   base: "/kalshi-dashboard/",
   root: "src",
+  head: '<link rel="stylesheet" href="_file/styles.css">',
   pages: [
     {name: "Overview", path: "/"},
     {name: "Kalshi Volume", path: "/volume"},
