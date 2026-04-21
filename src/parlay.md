@@ -53,23 +53,23 @@ const totalStakes = d3.sum(pnl, d => d.stakes);
 const overallPct = totalNet / totalStakes * 100;
 ```
 
-<div style="display:flex;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap">
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Cumulative taker P&L (net)</div>
-    <div style="font-size:1.8em;font-weight:700;color:#d7191c">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Cumulative taker P&L (net)</div>
+    <div class="kpi-value">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time fees paid</div>
-    <div style="font-size:1.8em;font-weight:700;color:#756bb1">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+  <div class="kpi-card">
+    <div class="kpi-label">All-time fees paid</div>
+    <div class="kpi-value">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Overall taker ROI</div>
-    <div style="font-size:1.8em;font-weight:700;color:#d7191c">${overallPct.toFixed(1)}%</div>
-    <div style="font-size:0.75em;color:#999">of total notional staked</div>
+  <div class="kpi-card">
+    <div class="kpi-label">Overall taker ROI</div>
+    <div class="kpi-value">${overallPct.toFixed(1)}%</div>
+    <div class="kpi-meta">of total notional staked</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:1rem 1.5rem;min-width:160px">
-    <div style="font-size:0.8em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Total notional staked</div>
-    <div style="font-size:1.8em;font-weight:700;color:#333">${fmtUSD(totalStakes)}</div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total notional staked</div>
+    <div class="kpi-value">${fmtUSD(totalStakes)}</div>
   </div>
 </div>
 
@@ -90,8 +90,8 @@ const parlayDateSel = Mutable([new Date("2023-01-01"), d3.max(pnl, d => d.date)]
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
     .style("display", "block")
-    .style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8")
+    .style("background", "var(--theme-background-alt)")
+    .style("border", "1px solid var(--card-border)")
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
@@ -144,6 +144,7 @@ const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: 
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width, height: 340,
   x: {type: "utc", label: null},
   y: {label: "Cumulative P&L (USD)", grid: true,
@@ -169,6 +170,7 @@ _Bar height = daily notional staked by takers. Color = taker return that day (gr
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width, height: 300,
   x: {type: "utc", label: null},
   y: {label: "Daily notional staked (USD)", grid: true,
@@ -200,6 +202,7 @@ _Days with under $25,000 notional hidden (early low-volume days had outsized var
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width, height: 260,
   x: {type: "utc", label: null},
   y: {label: "Taker return (% of notional)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},

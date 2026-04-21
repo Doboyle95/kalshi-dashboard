@@ -24,23 +24,23 @@ const totalContracts = d3.sum(daily, d => d.contracts_total);
 const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
 ```
 
-<div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f9f6ff;border-left:4px solid #756bb1;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time fee revenue</div>
-    <div style="font-size:1.6em;font-weight:700;color:#756bb1">${fmtUSD(totalFees)}</div>
+<div class="kpi-grid">
+  <div class="kpi-card" data-accent="secondary">
+    <div class="kpi-label">All-time fee revenue</div>
+    <div class="kpi-value">${fmtUSD(totalFees)}</div>
   </div>
-  <div style="background:#f9f6ff;border-left:4px solid #3f007d;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Annualized run rate</div>
-    <div style="font-size:1.6em;font-weight:700;color:#3f007d">${fmtUSD(annualizedFees)}/yr</div>
+  <div class="kpi-card" data-accent="tertiary">
+    <div class="kpi-label">Annualized run rate</div>
+    <div class="kpi-value">${fmtUSD(annualizedFees)}/yr</div>
   </div>
-  <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak fee day</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtUSD(peakFeeDay?.fees_total||0)}</div>
-    <div style="font-size:0.72em;color:#999">${fmtDate(peakFeeDay?.date)}</div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Peak fee day</div>
+    <div class="kpi-value">${fmtUSD(peakFeeDay?.fees_total||0)}</div>
+    <div class="kpi-meta">${fmtDate(peakFeeDay?.date)}</div>
   </div>
-  <div style="background:#f4f8ff;border-left:4px solid #00C2A8;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Avg fee per contract</div>
-    <div style="font-size:1.6em;font-weight:700;color:#00C2A8">${avgFeeRate.toFixed(3)}¢</div>
+  <div class="kpi-card" data-accent="kalshi">
+    <div class="kpi-label">Avg fee per contract</div>
+    <div class="kpi-value">${avgFeeRate.toFixed(3)}¢</div>
   </div>
 </div>
 
@@ -55,8 +55,8 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "#75
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
     .style("display", "block")
-    .style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8")
+    .style("background", "var(--theme-background-alt)")
+    .style("border", "1px solid var(--card-border)")
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
@@ -101,6 +101,7 @@ const fd1 = daily.filter(d => d.date >= s1 && d.date <= e1);
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
   x: {type: "utc", label: null},
@@ -165,6 +166,7 @@ const cumFeesTipData = Array.from(
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
   x: {type: "utc", label: null},
@@ -206,6 +208,7 @@ const feeRate = daily
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 240,
   x: {type: "utc", label: null},

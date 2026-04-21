@@ -53,8 +53,8 @@ function makeDateBrush(defaultStart) {
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
     .style("display", "block")
-    .style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8")
+    .style("background", "var(--theme-background-alt)")
+    .style("border", "1px solid var(--card-border)")
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
@@ -113,6 +113,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
   ).map(([, v]) => v).sort((a, b) => a.date - b.date);
 
   display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
     width,
     height: 380,
     marginRight: 16,
@@ -180,6 +181,7 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
   ).map(([, v]) => v).sort((a, b) => a.date - b.date).filter(d => d.total > 0);
 
   display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
     width,
     height: 300,
     x: {type: "utc", label: null},

@@ -19,15 +19,15 @@ const totalContracts = d3.sum(split, d => d.contracts_total);
 const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, split[0]);
 ```
 
-<div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f4f8ff;border-left:4px solid #9c27b0;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Contracts (since Dec 2024)</div>
-    <div style="font-size:1.6em;font-weight:700;color:#9c27b0">${fmtCount(totalContracts)}</div>
+<div class="kpi-grid">
+  <div class="kpi-card" data-accent="nadex">
+    <div class="kpi-label">Contracts (since Dec 2024)</div>
+    <div class="kpi-value">${fmtCount(totalContracts)}</div>
   </div>
-  <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
-    <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak single day</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtCount(peakDay?.contracts_total)}</div>
-    <div style="font-size:0.72em;color:#999">${fmtDate(peakDay?.date)}</div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Peak single day</div>
+    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
   </div>
 </div>
 
@@ -41,8 +41,8 @@ function makeBrush(data, color) {
 
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
-    .style("display", "block").style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8").style("border-radius", "4px")
+    .style("display", "block").style("background", "var(--theme-background-alt)")
+    .style("border", "1px solid var(--card-border)").style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
   svg.append("path").datum(data)
@@ -84,6 +84,7 @@ const catDailyF = catDaily.filter(d => d.date >= s && d.date <= e);
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
   x: {type: "utc", label: null},
@@ -115,6 +116,7 @@ const tidySplit = splitF.flatMap(d => [
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 240,
   x: {type: "utc", label: null},
@@ -157,6 +159,7 @@ const catTipData = Array.from(
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
   x: {type: "utc", label: null},
@@ -188,6 +191,7 @@ const catBar = [...catTotals.entries()]
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: catBar.length * 28 + 40,
   marginLeft: 160,
