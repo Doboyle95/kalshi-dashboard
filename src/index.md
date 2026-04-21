@@ -71,7 +71,49 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
 ```
 
 ```js
+const indexBrush = view((() => {
+  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
+  const w = width;
+  const x = d3.scaleUtc().domain(d3.extent(kalshi, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(kalshi, d => d.contracts_total) || 1;
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg")
+    .attr("width", w).attr("height", h)
+    .style("display", "block")
+    .style("background", "var(--theme-background-alt)")
+    .style("border", "1px solid var(--card-border)")
+    .style("border-radius", "4px")
+    .style("margin-bottom", "1.5rem");
+
+  svg.append("path").datum(kalshi)
+    .attr("fill", "#00C2A8").attr("fill-opacity", 0.2)
+    .attr("d", d3.area().x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total)).curve(d3.curveBasis));
+
+  svg.append("g").attr("transform", `translate(0,${h - mb})`)
+    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke", "#ccc"))
+    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
+
+  const defaultStart = new Date("2025-01-01");
+  const defaultEnd   = d3.max(kalshi, d => d.date);
+  const brush = d3.brushX()
+    .extent([[ml, mt], [w - mr, h - mb]])
+    .on("brush end", event => {
+      if (!event.sourceEvent) return;
+      if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
+    });
+
+  svg.append("g").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.selectAll(".handle").style("fill", "#00C2A8").style("fill-opacity", 0.8);
+  svg.property("value", [defaultStart, defaultEnd]);
+  return svg.node();
+})());
+```
+
+```js
 {
+  const [s, e] = indexBrush;
   const fmt = d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
   const pColors = {
     Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
@@ -88,7 +130,7 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
   // Per-date pivot for single combined tooltip
   const tipPivot = Array.from(
     d3.rollup(
-      allPlatforms.filter(d => d.contracts > 0),
+      allPlatforms.filter(d => d.contracts > 0 && d.date >= s && d.date <= e),
       rs => { const o = {date: rs[0].date}; for (const r of rs) o[r.platform] = r.contracts; return o; },
       d => +d.date
     )
@@ -99,16 +141,16 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
     width,
     height: 420,
     marginRight: 16,
-    x: {type: "utc", label: null},
+    x: {type: "utc", label: null, domain: [s, e]},
     y: {type: indexLogScale === "Log" ? "log" : "linear", label: "Daily volume ($)", grid: true, tickFormat: fmt},
     color: {legend: true, domain: Object.keys(pColors), range: Object.values(pColors)},
     marks: [
-      Plot.areaY(kalshiTidy, {
+      Plot.areaY(kalshiTidy.filter(d => d.date >= s && d.date <= e), {
         x: "date", y: "contracts",
         fill: pColors.Kalshi, fillOpacity: 0.08, curve: "monotone-x"
       }),
       ...Object.entries(byPlatform).map(([name, data]) =>
-        Plot.lineY(data.filter(d => d.contracts > 0), {
+        Plot.lineY(data.filter(d => d.contracts > 0 && d.date >= s && d.date <= e), {
           x: "date", y: "contracts",
           stroke: pColors[name],
           strokeWidth: name === "Kalshi" ? 2.5 : 1.75,
