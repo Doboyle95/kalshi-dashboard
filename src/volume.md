@@ -148,8 +148,9 @@ const maxContracts = d3.max(fd1, d => d.contracts_total);
 const allMilestones = [
   {date: new Date("2024-11-05"), label: "Election Day '24",  tier: 0},
   {date: new Date("2025-01-23"), label: "Sports launch",      tier: 1},
-  {date: new Date("2025-03-20"), label: "March Madness '25", tier: 0},
-  {date: new Date("2025-09-27"), label: "Parlays launch",     tier: 1},
+  {date: new Date("2025-03-20"), label: "March Madness '25", tier: 2},
+  {date: new Date("2025-09-07"), label: "NFL season '25",     tier: 1},
+  {date: new Date("2025-09-27"), label: "Parlays launch",     tier: 2},
   {date: new Date("2026-02-08"), label: "Super Bowl LX",      tier: 1},
   {date: new Date("2026-03-19"), label: "March Madness '26", tier: 2},
 ];
