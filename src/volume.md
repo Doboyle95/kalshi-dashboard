@@ -146,16 +146,16 @@ const fd1 = daily.filter(d => d.date >= s1 && d.date <= e1);
 
 const maxContracts = d3.max(fd1, d => d.contracts_total);
 const allMilestones = [
-  {date: new Date("2024-11-05"), label: "Election Day '24", tier: 0},
-  {date: new Date("2025-09-07"), label: "NFL season '25",   tier: 1},
-  {date: new Date("2026-01-17"), label: "NFL Divisional",   tier: 1},
-  {date: new Date("2026-01-25"), label: "NFL Championship", tier: 0},
-  {date: new Date("2026-02-08"), label: "Super Bowl LIX",   tier: 1},
-  {date: new Date("2026-03-19"), label: "March Madness",    tier: 0},
+  {date: new Date("2024-11-05"), label: "Election Day '24",  tier: 0},
+  {date: new Date("2025-01-23"), label: "Sports launch",      tier: 1},
+  {date: new Date("2025-03-20"), label: "March Madness '25", tier: 0},
+  {date: new Date("2025-09-27"), label: "Parlays launch",     tier: 1},
+  {date: new Date("2026-02-08"), label: "Super Bowl LX",      tier: 1},
+  {date: new Date("2026-03-19"), label: "March Madness '26", tier: 2},
 ];
 const milestones = allMilestones
   .filter(m => m.date >= s1 && m.date <= e1)
-  .map(m => ({...m, y: m.tier === 0 ? maxContracts : maxContracts * 0.78}));
+  .map(m => ({...m, y: m.tier === 0 ? maxContracts : m.tier === 1 ? maxContracts * 0.75 : maxContracts * 0.48}));
 ```
 
 ```js
