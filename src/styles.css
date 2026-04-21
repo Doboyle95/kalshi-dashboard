@@ -390,10 +390,53 @@ form select {
 /* ============================================================
    Mobile navigation
    ============================================================
-   Observable Framework collapses the sidebar below ~768px.
-   We enlarge tap targets, strengthen the active state, and
-   add visual rhythm so the list scans easily on a small screen.
+   Observable Framework collapses the sidebar below ~1008px
+   (calc(912px + 6rem)). Below that breakpoint the sidebar
+   toggle is a near-invisible full-height strip on the left
+   edge. We replace it with a visible pill button so users
+   know the nav exists.
    ============================================================ */
+
+/* Visible "Menu" pill button — applies up to the desktop breakpoint */
+@media (max-width: calc(912px + 5.98rem)) {
+  #observablehq-sidebar-toggle {
+    /* Replace the full-height invisible strip with a real button */
+    height: 2.5rem !important;
+    width: auto !important;
+    top: 0.6rem !important;
+    left: 0.6rem !important;
+    padding: 0 0.85rem 0 0.6rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    z-index: 10;
+    color: var(--theme-foreground);
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: var(--font-sans);
+  }
+
+  /* Swap the panel-arrow icon for a standard hamburger (≡) */
+  #observablehq-sidebar-toggle::before {
+    flex-shrink: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='1' y='2.5' width='14' height='1.5' rx='0.75' fill='black'/%3E%3Crect x='1' y='7.25' width='14' height='1.5' rx='0.75' fill='black'/%3E%3Crect x='1' y='12' width='14' height='1.5' rx='0.75' fill='black'/%3E%3C/svg%3E") no-repeat center;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='1' y='2.5' width='14' height='1.5' rx='0.75' fill='black'/%3E%3Crect x='1' y='7.25' width='14' height='1.5' rx='0.75' fill='black'/%3E%3Crect x='1' y='12' width='14' height='1.5' rx='0.75' fill='black'/%3E%3C/svg%3E") no-repeat center;
+  }
+
+  /* "Menu" label via ::after — supported on appearance:none inputs */
+  #observablehq-sidebar-toggle::after {
+    content: "Menu";
+  }
+
+  #observablehq-sidebar-toggle:hover {
+    background: color-mix(in srgb, var(--theme-foreground) 6%, var(--card-bg));
+  }
+}
 
 @media (max-width: 767px) {
   /* Larger, finger-friendly tap targets */

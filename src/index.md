@@ -12,8 +12,9 @@ const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed:
 ```
 
 ```js
-const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
-const fmtUSD   = n => "$" + fmtCount(n);
+const fmtCount    = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
+const fmtUSD      = n => "$" + fmtCount(n);
+const fmtUSDWhole = n => "$" + (n >= 1e9 ? (n/1e9).toFixed(1)+"B" : Math.round(n/1e6)+"M");
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -35,7 +36,7 @@ const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
   </div>
   <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Kalshi annualized revenue run rate</div>
-    <div class="kpi-value">${fmtUSD(annualizedFees)}/yr</div>
+    <div class="kpi-value">${fmtUSDWhole(annualizedFees)}/yr</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Kalshi peak single day volume</div>
