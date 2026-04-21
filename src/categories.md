@@ -13,7 +13,7 @@ import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 
 ```js
 const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
-const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
 ## All-time leaderboard
@@ -68,7 +68,7 @@ Plot.plot({
   width,
   height: filtered.length * 22 + 40,
   marginLeft: 220,
-  x: {label: metric === "contracts" ? "Contracts" : metric === "fees" ? "Fees (USD)" : "Notional (USD)", grid: true},
+  x: {label: metric === "contracts" ? "Volume ($)" : metric === "fees" ? "Fees ($)" : "Notional ($)", grid: true},
   y: {label: null},
   marks: [
     Plot.barX(filtered, {
@@ -77,7 +77,7 @@ Plot.plot({
       fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#00C2A8",
       sort: {y: "-x"},
       tip: true,
-      title: d => `${d.report_ticker}\n${metric}: ${d[metric]?.toLocaleString?.() ?? d[metric]}\nSports: ${d.is_sports}`
+      title: d => `${d.report_ticker}\n$${fmtCount(d[metric])}\nSports: ${d.is_sports}`
     }),
     Plot.ruleX([0])
   ]
@@ -310,11 +310,11 @@ Plot.plot({
     tickRotate: monthLabels.length > 18 ? -45 : 0
   },
   y: {
-    label: chartScale === "Normalized" ? "Share of monthly contracts" : "Monthly contracts",
+    label: chartScale === "Normalized" ? "Share of monthly volume" : "Monthly volume ($)",
     grid: true,
     tickFormat: chartScale === "Normalized"
       ? d => (d * 100).toFixed(0) + "%"
-      : d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
+      : d => "$"+(d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
   },
   marks: [
     Plot.barY(plotTidy, {
@@ -325,7 +325,7 @@ Plot.plot({
       tip: true,
       title: d => chartScale === "Normalized"
         ? `${d.category}\n${d.month}\n${(d.value * 100).toFixed(1)}% of month`
-        : `${d.category}\n${d.month}\n${d.contracts.toLocaleString()} contracts`
+        : `${d.category}\n${d.month}\n$${fmtCount(d.contracts)}`
     }),
     Plot.ruleY([0])
   ]
@@ -447,7 +447,7 @@ Plot.plot({
   height: 380,
   color: {legend: true, domain: mtOrder, range: mtColors},
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: "Volume ($)", grid: true},
   marks: [
     Plot.areaY(mtTidy, {
       x: "date",
@@ -460,7 +460,7 @@ Plot.plot({
     Plot.ruleX(mtTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(mtTipData, Plot.pointerX({
       x: "date",
-      title: d => [fmtDate(d.date), ...mtOrder.map(t => d[t] > 0 ? `${t}: ${fmtCount(d[t])}` : null).filter(Boolean)].join("\n")
+      title: d => [fmtDate(d.date), ...mtOrder.map(t => d[t] > 0 ? `${t}: $${fmtCount(d[t])}` : null).filter(Boolean)].join("\n")
     })),
     Plot.ruleY([0])
   ]

@@ -10,7 +10,7 @@ const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed:
 ```
 
 ```js
-const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
 ```js
@@ -87,7 +87,7 @@ function makeDateBrush(defaultStart) {
 ```
 
 ```js
-const metric       = view(Inputs.radio(["contracts", "fees"], {value: "contracts", label: "Metric"}));
+const metric       = view(Inputs.radio(["contracts", "fees"], {value: "contracts", label: "Metric", format: x => x === "contracts" ? "Volume" : "Fees"}));
 const compLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
 ```
 
@@ -99,7 +99,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 {
   const [s, e] = dr_abs;
   const fmt = metric === "contracts"
-    ? d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
+    ? d => "$"+(d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
     : d => "$"+(d >= 1e6 ? (d/1e6).toFixed(1)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toFixed(0));
 
   const filteredAll = all.filter(d => d.date >= s && d.date <= e);
@@ -120,7 +120,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
     x: {type: "utc", label: null},
     y: {
       type: compLogScale === "Log" ? "log" : "linear",
-      label: metric === "contracts" ? "Daily contracts" : "Daily fees (USD)",
+      label: metric === "contracts" ? "Daily volume ($)" : "Daily fees ($)",
       grid: true,
       tickFormat: fmt
     },

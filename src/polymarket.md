@@ -11,7 +11,8 @@ const split     = await FileAttachment("data/polymarket_sports_split_daily.csv")
 
 ```js
 const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
-const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+const fmtUSD   = n => "$" + fmtCount(n);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
 ```js
@@ -21,12 +22,12 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="polymarket">
-    <div class="kpi-label">Contracts (since Oct 2025)</div>
-    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-label">Volume (since Oct 2025)</div>
+    <div class="kpi-value">${fmtUSD(totalContracts)}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-value">${fmtUSD(peakDay?.contracts_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
   </div>
 </div>
@@ -88,7 +89,7 @@ Plot.plot({
   width,
   height: 300,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: "Volume ($)", grid: true},
   marks: [
     Plot.rectY(splitF, {
       x1: d => d.date,
@@ -96,7 +97,7 @@ Plot.plot({
       y: d => d.contracts_total || 0,
       fill: "#3B7DD8", fillOpacity: 0.6,
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)} contracts`
+      title: d => `${fmtDate(d.date)}\n${fmtUSD(d.contracts_total||0)}`
     }),
     Plot.ruleY([0])
   ]
@@ -120,7 +121,7 @@ Plot.plot({
   width,
   height: 240,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: "Volume ($)", grid: true},
   color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
   marks: [
     Plot.areaY(tidySplit, {
@@ -131,7 +132,7 @@ Plot.plot({
     Plot.ruleX(splitF, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(splitF, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nSports: ${fmtCount(d.contracts_sports||0)}\nNon-sports: ${fmtCount(d.contracts_nonsports||0)}`
+      title: d => `${fmtDate(d.date)}\nSports: ${fmtUSD(d.contracts_sports||0)}\nNon-sports: ${fmtUSD(d.contracts_nonsports||0)}`
     })),
     Plot.ruleY([0])
   ]
@@ -163,7 +164,7 @@ Plot.plot({
   width,
   height: 300,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: "Volume ($)", grid: true},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
     Plot.areaY(catFiltered, {
@@ -174,7 +175,7 @@ Plot.plot({
     Plot.ruleX(catTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(catTipData, Plot.pointerX({
       x: "date",
-      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtCount(d[c])}` : null).filter(Boolean)].join("\n")
+      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtUSD(d[c])}` : null).filter(Boolean)].join("\n")
     })),
     Plot.ruleY([0])
   ]
@@ -203,7 +204,7 @@ Plot.plot({
       sort: {y: "x", reverse: true},
       fill: "#3B7DD8", fillOpacity: 0.7,
       tip: true,
-      title: d => `${d.category}: ${fmtCount(d.contracts)}`
+      title: d => `${d.category}: ${fmtUSD(d.contracts)}`
     }),
     Plot.ruleX([0])
   ]

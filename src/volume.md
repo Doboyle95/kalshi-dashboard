@@ -6,7 +6,8 @@ title: Kalshi Volume
 
 ```js
 const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
-const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) ?? "";
+const fmtUSD   = n => "$" + fmtCount(n);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
 ```js
@@ -23,12 +24,12 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">All-time contracts</div>
-    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-label">All-time volume</div>
+    <div class="kpi-value">${fmtUSD(totalContracts)}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-value">${fmtUSD(peakDay?.contracts_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
   </div>
 </div>
@@ -129,7 +130,7 @@ const volWideDaily = topDaily.map(row => {
 });
 ```
 
-## Daily contracts traded
+## Daily volume
 
 ```js
 const dr1 = view(makeDateBrush(new Date("2025-01-01")));
@@ -163,7 +164,7 @@ Plot.plot({
   width,
   height: 380,
   x: {type: "utc", label: null},
-  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Contracts", grid: true},
+  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Volume ($)", grid: true},
   marks: [
     Plot.rectY(fd1, {
       x1: d => d.date,
@@ -180,8 +181,8 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Daily: ${(d.contracts_total||0).toLocaleString()} contracts`,
-        d.ma7_contracts != null ? `7-day avg: ${d.ma7_contracts.toLocaleString()}` : null
+        `Daily: ${fmtUSD(d.contracts_total||0)}`,
+        d.ma7_contracts != null ? `7-day avg: ${fmtUSD(Math.round(d.ma7_contracts))}` : null
       ].filter(Boolean).join("\n")
     })),
     Plot.ruleX(milestones, {x: "date", stroke: "#555", strokeDasharray: "3,3", strokeWidth: 1}),
@@ -203,7 +204,7 @@ Plot.plot({
 const sportsView = view(Inputs.radio(["Both (stacked)", "Sports only", "Non-sports only"], {
   value: "Both (stacked)"
 }));
-const sportsMetric = view(Inputs.radio(["Contracts", "Fees"], {value: "Contracts"}));
+const sportsMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume"}));
 ```
 
 ```js
@@ -271,7 +272,7 @@ Plot.plot({
   width,
   height: 280,
   x: {type: "utc", label: null},
-  y: {label: sportsMetric === "Fees" ? "Fees (USD)" : "Contracts", grid: true},
+  y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume ($)", grid: true},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
     : {legend: true, domain: ["Non-sports", "Sports"], range: ["#00C2A8", "#1a9641"]},
@@ -285,7 +286,7 @@ Plot.plot({
       stroke: "#111", strokeWidth: 1.8, strokeDasharray: "4,2",
       curve: "monotone-x",
       tip: true,
-      title: d => `7-day avg total: ${d.ma?.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      title: d => `7-day avg: $${Math.round(d.ma||0).toLocaleString()}`
     })] : []),
     Plot.ruleY([0])
   ]
