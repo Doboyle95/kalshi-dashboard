@@ -38,9 +38,9 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
     <div style="font-size:1.6em;font-weight:700;color:#e15759">${fmtUSD(peakFeeDay?.fees_total||0)}</div>
     <div style="font-size:0.72em;color:#999">${fmtDate(peakFeeDay?.date)}</div>
   </div>
-  <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
+  <div style="background:#f4f8ff;border-left:4px solid #00C2A8;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Avg fee per contract</div>
-    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${avgFeeRate.toFixed(3)}¢</div>
+    <div style="font-size:1.6em;font-weight:700;color:#00C2A8">${avgFeeRate.toFixed(3)}¢</div>
   </div>
 </div>
 
@@ -172,7 +172,7 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["#2c7bb6", "#1a9641"]},
+  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["#00C2A8", "#1a9641"]},
   marks: [
     Plot.areaY(cumFeesSplit, {
       x: "date", y: "cumul", fill: "category",

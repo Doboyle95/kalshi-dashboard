@@ -20,9 +20,9 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 ```
 
 <div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f4f8ff;border-left:4px solid #e66101;padding:0.8rem 1.2rem;flex:1;min-width:150px">
+  <div style="background:#f4f8ff;border-left:4px solid #3B7DD8;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Contracts (since Oct 2025)</div>
-    <div style="font-size:1.6em;font-weight:700;color:#e66101">${fmtCount(totalContracts)}</div>
+    <div style="font-size:1.6em;font-weight:700;color:#3B7DD8">${fmtCount(totalContracts)}</div>
   </div>
   <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak single day</div>
@@ -71,7 +71,7 @@ function makeBrush(data, color) {
 ```
 
 ```js
-const brush = view(makeBrush(split, "#e66101"));
+const brush = view(makeBrush(split, "#3B7DD8"));
 ```
 
 ```js
@@ -93,7 +93,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#e66101", fillOpacity: 0.6,
+      fill: "#3B7DD8", fillOpacity: 0.6,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)} contracts`
     }),
@@ -119,7 +119,7 @@ Plot.plot({
   height: 240,
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#2c7bb6"]},
+  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
@@ -197,7 +197,7 @@ Plot.plot({
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#e66101", fillOpacity: 0.7,
+      fill: "#3B7DD8", fillOpacity: 0.7,
       tip: true,
       title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),

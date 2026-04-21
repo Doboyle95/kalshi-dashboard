@@ -16,16 +16,16 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numer
 ```js
 const platforms = [
   {
-    name: "Kalshi", color: "#2c7bb6",
+    name: "Kalshi", color: "#00C2A8",
     data: kalshi.map(d => ({date: d.date, contracts: d.contracts_total, fees: d.fees_total}))
   },
   {
-    name: "Polymarket US", color: "#e66101",
+    name: "Polymarket US", color: "#3B7DD8",
     data: competitor.filter(d => d.platform === "Polymarket_US")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
   },
   {
-    name: "ForecastEx", color: "#1a9641",
+    name: "ForecastEx", color: "#E53535",
     data: competitor.filter(d => d.platform === "ForecastEx")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
   },
@@ -60,7 +60,7 @@ function makeDateBrush(defaultStart) {
 
   svg.append("path")
     .datum(kalshi)
-    .attr("fill", "#2c7bb6").attr("fill-opacity", 0.2)
+    .attr("fill", "#00C2A8").attr("fill-opacity", 0.2)
     .attr("d", d3.area()
       .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total))
       .curve(d3.curveBasis));
@@ -80,7 +80,7 @@ function makeDateBrush(defaultStart) {
     });
 
   svg.append("g").attr("class", "brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill", "#2c7bb6").style("fill-opacity", 0.8);
+  svg.selectAll(".handle").style("fill", "#00C2A8").style("fill-opacity", 0.8);
   svg.property("value", [defaultStart, defaultEnd]);
   return svg.node();
 }

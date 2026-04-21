@@ -25,9 +25,9 @@ const annualizedFees = totalFees / kalshi.length * 365;
 ```
 
 <div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
+  <div style="background:#f4f8ff;border-left:4px solid #00C2A8;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Kalshi all-time contracts</div>
-    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${fmtCount(totalContracts)}</div>
+    <div style="font-size:1.6em;font-weight:700;color:#00C2A8">${fmtCount(totalContracts)}</div>
   </div>
   <div style="background:#f9f6ff;border-left:4px solid #756bb1;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Kalshi all-time fee revenue</div>
@@ -74,8 +74,8 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
 {
   const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k";
   const pColors = {
-    Kalshi: "#2c7bb6", "Polymarket US": "#e66101",
-    ForecastEx: "#1a9641", "Crypto.com/Nadex": "#9c27b0"
+    Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
+    ForecastEx: "#E53535", "Crypto.com/Nadex": "#9c27b0"
   };
 
   const byPlatform = {

@@ -22,9 +22,9 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 ```
 
 <div style="display:flex;gap:1.5rem;margin-bottom:2rem;flex-wrap:wrap">
-  <div style="background:#f4f8ff;border-left:4px solid #2c7bb6;padding:0.8rem 1.2rem;flex:1;min-width:150px">
+  <div style="background:#f4f8ff;border-left:4px solid #00C2A8;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">All-time contracts</div>
-    <div style="font-size:1.6em;font-weight:700;color:#2c7bb6">${fmtCount(totalContracts)}</div>
+    <div style="font-size:1.6em;font-weight:700;color:#00C2A8">${fmtCount(totalContracts)}</div>
   </div>
   <div style="background:#fff8f0;border-left:4px solid #e15759;padding:0.8rem 1.2rem;flex:1;min-width:150px">
     <div style="font-size:0.75em;color:#666;text-transform:uppercase;letter-spacing:0.05em">Peak single day</div>
@@ -36,7 +36,7 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 ```js
 // Reusable mini-brush factory. Returns an SVG node whose .value = [startDate, endDate].
 // Each chart calls view(makeDateBrush(...)) independently.
-function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#2c7bb6") {
+function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00C2A8") {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(daily, d => d.date)).range([ml, w - mr]);
@@ -168,7 +168,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#2c7bb6", fillOpacity: 0.6
+      fill: "#00C2A8", fillOpacity: 0.6
     }),
     Plot.lineY(fd1.filter(d => d.ma7_contracts != null), {
       x: "date", y: "ma7_contracts",
@@ -194,7 +194,7 @@ Plot.plot({
 })
 ```
 
-<span style="color:#2c7bb6">&#9632; Daily</span> &nbsp; <span style="color:#e15759">&#8212; 7-day average</span>
+<span style="color:#00C2A8">&#9632; Daily</span> &nbsp; <span style="color:#e15759">&#8212; 7-day average</span>
 
 ## Sports vs. non-sports volume
 
@@ -272,7 +272,7 @@ Plot.plot({
   y: {label: sportsMetric === "Fees" ? "Fees (USD)" : "Contracts", grid: true},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
-    : {legend: true, domain: ["Non-sports", "Sports"], range: ["#2c7bb6", "#1a9641"]},
+    : {legend: true, domain: ["Non-sports", "Sports"], range: ["#00C2A8", "#1a9641"]},
   marks: [
     Plot.areaY(tidySports, {
       x: "date", y: "value", fill: "category",

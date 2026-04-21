@@ -74,7 +74,7 @@ Plot.plot({
     Plot.barX(filtered, {
       x: metric,
       y: "report_ticker",
-      fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#2c7bb6",
+      fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#00C2A8",
       sort: {y: "-x"},
       tip: true,
       title: d => `${d.report_ticker}\n${metric}: ${d[metric]?.toLocaleString?.() ?? d[metric]}\nSports: ${d.is_sports}`
@@ -84,7 +84,7 @@ Plot.plot({
 })
 ```
 
-<span style="color:#1a9641">■ Sports</span> &nbsp; <span style="color:#2c7bb6">■ Non-sports</span>
+<span style="color:#1a9641">■ Sports</span> &nbsp; <span style="color:#00C2A8">■ Non-sports</span>
 
 <p style="font-size:0.82em;color:#888">Date-filtered view covers the top 15 tracked categories. All-time view covers all categories.</p>
 

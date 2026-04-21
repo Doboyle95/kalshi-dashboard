@@ -119,7 +119,7 @@ Plot.plot({
   height: 240,
   x: {type: "utc", label: null},
   y: {label: "Contracts", grid: true},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#2c7bb6"]},
+  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
