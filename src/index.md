@@ -21,7 +21,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 const totalContracts = d3.sum(kalshi, d => d.contracts_total);
 const totalFees = d3.sum(kalshi, d => d.fees_total);
 const peakDay = kalshi.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, kalshi[0]);
-const annualizedFees = totalFees / kalshi.length * 365;
+const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
 ```
 
 <div class="kpi-grid">
@@ -34,7 +34,7 @@ const annualizedFees = totalFees / kalshi.length * 365;
     <div class="kpi-value">${fmtUSD(totalFees)}</div>
   </div>
   <div class="kpi-card" data-accent="tertiary">
-    <div class="kpi-label">Kalshi annualized run rate</div>
+    <div class="kpi-label">Kalshi annualized fee revenue run rate</div>
     <div class="kpi-value">${fmtUSD(annualizedFees)}/yr</div>
   </div>
   <div class="kpi-card" data-accent="warning">
