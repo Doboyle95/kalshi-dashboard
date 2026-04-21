@@ -67,6 +67,10 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
 
 ```js
+const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
+```
+
+```js
 {
   const fmt = d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k";
   const pColors = {
@@ -95,7 +99,7 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
     height: 420,
     marginRight: 16,
     x: {type: "utc", label: null},
-    y: {label: "Daily contracts", grid: true, tickFormat: fmt},
+    y: {type: indexLogScale === "Log" ? "log" : "linear", label: "Daily contracts", grid: true, tickFormat: fmt},
     color: {legend: true, domain: Object.keys(pColors), range: Object.values(pColors)},
     marks: [
       Plot.areaY(kalshiTidy, {
@@ -115,7 +119,7 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
         x: "date",
         title: d => [fmtDate(d.date), ...Object.keys(pColors).map(p => d[p] != null ? `${p}: ${fmt(d[p])}` : null).filter(Boolean)].join("\n")
       })),
-      Plot.ruleY([0])
+      ...(indexLogScale === "Log" ? [] : [Plot.ruleY([0])])
     ]
   }));
 }

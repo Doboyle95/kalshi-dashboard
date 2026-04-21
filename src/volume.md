@@ -136,6 +136,10 @@ const dr1 = view(makeDateBrush(new Date("2025-01-01")));
 ```
 
 ```js
+const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear"}));
+```
+
+```js
 const [s1, e1] = dr1;
 const fd1 = daily.filter(d => d.date >= s1 && d.date <= e1);
 
@@ -158,7 +162,7 @@ Plot.plot({
   width,
   height: 380,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Contracts", grid: true},
   marks: [
     Plot.rectY(fd1, {
       x1: d => d.date,
@@ -185,7 +189,7 @@ Plot.plot({
       textAnchor: "start", lineAnchor: "bottom",
       rotate: -42, fontSize: 10, fill: "#555", dx: 3, dy: -2
     }),
-    Plot.ruleY([0])
+    ...(yScaleType === "Log" ? [] : [Plot.ruleY([0])])
   ]
 })
 ```

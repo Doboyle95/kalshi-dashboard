@@ -31,37 +31,82 @@ const platforms = [
   },
   {
     name: "Crypto.com/Nadex", color: "#9c27b0",
-    // $0.02 flat fee per contract (exchange fee for $1 event contracts; settlement fees waived)
     data: competitor.filter(d => d.platform === "Crypto.com/Nadex")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
   }
 ];
 
-// Tidy combined dataset and last-point labels
+const colorDomain = platforms.map(p => p.name);
+const colorRange  = platforms.map(p => p.color);
 const all = platforms.flatMap(p => p.data.map(d => ({...d, platform: p.name})));
-const lastLabels = platforms.map(p => {
-  const last = p.data.filter(d => d[metric] != null).at(-1);
-  return last ? {...last, platform: p.name, color: p.color} : null;
-}).filter(Boolean);
 ```
 
 ```js
-const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", label: "Metric"}));
+// Date brush — uses Kalshi daily as background sparkline
+function makeDateBrush(defaultStart) {
+  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
+  const w = width;
+  const x = d3.scaleUtc().domain(d3.extent(kalshi, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(kalshi, d => d.contracts_total) || 1;
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+
+  const svg = d3.create("svg")
+    .attr("width", w).attr("height", h)
+    .style("display", "block")
+    .style("background", "#fafafa")
+    .style("border", "1px solid #e8e8e8")
+    .style("border-radius", "4px")
+    .style("margin-bottom", "1.5rem");
+
+  svg.append("path")
+    .datum(kalshi)
+    .attr("fill", "#2c7bb6").attr("fill-opacity", 0.2)
+    .attr("d", d3.area()
+      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total))
+      .curve(d3.curveBasis));
+
+  svg.append("g")
+    .attr("transform", `translate(0,${h - mb})`)
+    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke", "#ccc"))
+    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
+
+  const defaultEnd = d3.max(kalshi, d => d.date);
+  const brush = d3.brushX()
+    .extent([[ml, mt], [w - mr, h - mb]])
+    .on("brush end", event => {
+      if (!event.sourceEvent) return;
+      if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
+    });
+
+  svg.append("g").attr("class", "brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.selectAll(".handle").style("fill", "#2c7bb6").style("fill-opacity", 0.8);
+  svg.property("value", [defaultStart, defaultEnd]);
+  return svg.node();
+}
+```
+
+```js
+const metric       = view(Inputs.radio(["contracts", "fees"], {value: "contracts", label: "Metric"}));
+const compLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
+```
+
+```js
+const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 ```
 
 ```js
 {
+  const [s, e] = dr_abs;
   const fmt = metric === "contracts"
     ? d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"
     : d => "$"+(d >= 1e6 ? (d/1e6).toFixed(1)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toFixed(0));
 
-  const colorDomain = platforms.map(p => p.name);
-  const colorRange  = platforms.map(p => p.color);
+  const filteredAll = all.filter(d => d.date >= s && d.date <= e);
 
-  // Per-date pivot for single combined tooltip (recomputed when metric changes)
   const tipPivot = Array.from(
     d3.rollup(
-      all.filter(d => d[metric] != null),
+      filteredAll.filter(d => d[metric] != null),
       rs => { const o = {date: rs[0].date}; for (const r of rs) o[r.platform] = r[metric]; return o; },
       d => +d.date
     )
@@ -69,25 +114,24 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
 
   display(Plot.plot({
     width,
-    height: 420,
+    height: 380,
     marginRight: 16,
     x: {type: "utc", label: null},
     y: {
+      type: compLogScale === "Log" ? "log" : "linear",
       label: metric === "contracts" ? "Daily contracts" : "Daily fees (USD)",
       grid: true,
       tickFormat: fmt
     },
     color: {legend: true, domain: colorDomain, range: colorRange},
     marks: [
-      // Kalshi area fill — makes its dominance visually clear
-      Plot.areaY(platforms[0].data, {
+      Plot.areaY(platforms[0].data.filter(d => d.date >= s && d.date <= e), {
         x: "date", y: metric,
         fill: platforms[0].color, fillOpacity: 0.08,
         curve: "monotone-x"
       }),
-      // All platform lines — skip nulls (e.g. Crypto.com has no fees data)
       ...platforms.map(p =>
-        Plot.lineY(p.data.filter(d => d[metric] != null), {
+        Plot.lineY(p.data.filter(d => d.date >= s && d.date <= e && d[metric] != null), {
           x: "date", y: metric,
           stroke: p.color,
           strokeWidth: p.name === "Kalshi" ? 2.5 : 1.75,
@@ -99,10 +143,71 @@ const metric = view(Inputs.radio(["contracts", "fees"], {value: "contracts", lab
         x: "date",
         title: d => [fmtDate(d.date), ...colorDomain.map(p => d[p] != null ? `${p}: ${fmt(d[p])}` : null).filter(Boolean)].join("\n")
       })),
-      Plot.ruleY([0])
+      ...(compLogScale === "Log" ? [] : [Plot.ruleY([0])])
     ]
   }));
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale difference is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived).</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived).</p>
+
+## Market share
+
+```js
+const dr_share = view(makeDateBrush(new Date("2025-01-01")));
+```
+
+```js
+{
+  const [s, e] = dr_share;
+
+  const shareTidy = platforms.flatMap(p =>
+    p.data
+      .filter(d => d.date >= s && d.date <= e && d.contracts != null && d.contracts > 0)
+      .map(d => ({date: d.date, platform: p.name, contracts: d.contracts}))
+  );
+
+  const shareByDate = Array.from(
+    d3.rollup(
+      shareTidy,
+      rs => {
+        const o = {date: rs[0].date, total: d3.sum(rs, r => r.contracts)};
+        for (const r of rs) o[r.platform] = r.contracts;
+        return o;
+      },
+      d => +d.date
+    )
+  ).map(([, v]) => v).sort((a, b) => a.date - b.date).filter(d => d.total > 0);
+
+  display(Plot.plot({
+    width,
+    height: 300,
+    x: {type: "utc", label: null},
+    y: {label: "Market share", grid: true, tickFormat: d => (d * 100).toFixed(0) + "%"},
+    color: {legend: true, domain: colorDomain, range: colorRange},
+    marks: [
+      Plot.areaY(shareTidy, {
+        x: "date",
+        y: "contracts",
+        fill: "platform",
+        offset: "expand",
+        order: ["Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
+        curve: "monotone-x",
+        fillOpacity: 0.85
+      }),
+      Plot.ruleX(shareByDate, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+      Plot.tip(shareByDate, Plot.pointerX({
+        x: "date",
+        title: d => [
+          fmtDate(d.date),
+          ...colorDomain
+            .filter(p => d[p] != null)
+            .map(p => `${p}: ${((d[p] / d.total) * 100).toFixed(1)}%`)
+        ].join("\n")
+      }))
+    ]
+  }));
+}
+```
+
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Share of total reported US prediction market contracts. Kalshi dominates; growing slivers at the bottom show ForecastEx and Polymarket US gaining ground.</p>
