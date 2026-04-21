@@ -34,7 +34,7 @@ const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
     <div class="kpi-value">${fmtUSD(totalFees)}</div>
   </div>
   <div class="kpi-card" data-accent="tertiary">
-    <div class="kpi-label">Kalshi annualized fee revenue run rate</div>
+    <div class="kpi-label">Kalshi annualized revenue run rate</div>
     <div class="kpi-value">${fmtUSD(annualizedFees)}/yr</div>
   </div>
   <div class="kpi-card" data-accent="warning">
