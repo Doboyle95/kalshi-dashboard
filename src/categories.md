@@ -57,7 +57,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
     if (cat === "Other Sports" || cat === "Other Non-sports") {
       mtype = "Other";
     } else if (cat === "Parlay") {
-      mtype = ticker.includes("SINGLE") ? "Same-game" : "Multi-game";
+      mtype = ticker.includes("SINGLEGAME") ? "Same-game" : "Multi-game";
     } else if (cat === "Crypto") {
       mtype = /15M$/.test(ticker) ? "15-minute" : /D$/.test(ticker) ? "Daily" : "Other";
     } else if (cat === "Politics") {
