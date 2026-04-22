@@ -56,11 +56,11 @@ const overallPct = totalNet / totalStakes * 100;
 <div class="kpi-grid">
   <div class="kpi-card">
     <div class="kpi-label">Cumulative taker P&L (net)</div>
-    <div class="kpi-value">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+    <div class="kpi-value">${fmtUSD(totalNet)}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">All-time fees paid</div>
-    <div class="kpi-value">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
+    <div class="kpi-value">${fmtUSD(totalFees)}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Overall taker ROI</div>
