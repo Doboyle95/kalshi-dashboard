@@ -104,6 +104,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
   marks: [
@@ -169,6 +170,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {
     label: "Cumulative fees (USD)", grid: true,
@@ -211,6 +213,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 240,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Avg fee per contract (&#162;)", grid: true, tickFormat: d => d.toFixed(2) + "&#162;"},
   marks: [

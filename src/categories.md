@@ -717,6 +717,7 @@ const mtTipData = Array.from(
 Plot.plot({
   width,
   height: 380,
+  marginLeft: 55,
   color: {legend: true, domain: mtOrder, range: mtColors},
   x: {type: "utc", label: null},
   y: {label: "Volume ($)", grid: true},

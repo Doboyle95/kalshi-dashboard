@@ -88,6 +88,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Volume ($)", grid: true},
   marks: [
@@ -120,6 +121,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 240,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Volume ($)", grid: true},
   color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
@@ -163,6 +165,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Volume ($)", grid: true},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},

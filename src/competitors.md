@@ -116,6 +116,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
     style: {fontFamily: "var(--font-sans)"},
     width,
     height: 380,
+    marginLeft: 55,
     marginRight: 16,
     x: {type: "utc", label: null},
     y: {
@@ -184,6 +185,7 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
     style: {fontFamily: "var(--font-sans)"},
     width,
     height: 300,
+    marginLeft: 55,
     x: {type: "utc", label: null},
     y: {label: "Market share", grid: true, tickFormat: d => (d * 100).toFixed(0) + "%"},
     color: {legend: true, domain: colorDomain, range: colorRange},

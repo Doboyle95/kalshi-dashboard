@@ -146,6 +146,7 @@ const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: 
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 340,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Cumulative P&L (USD)", grid: true,
       tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
@@ -172,6 +173,7 @@ _Bar height = daily notional staked by takers. Color = taker return that day (gr
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Daily notional staked (USD)", grid: true,
       tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
@@ -204,6 +206,7 @@ _Days with under $25,000 notional hidden (early low-volume days had outsized var
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 260,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Taker return (% of notional)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
   marks: [

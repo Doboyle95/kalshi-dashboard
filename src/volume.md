@@ -164,6 +164,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 380,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {type: yScaleType === "Log" ? "log" : "linear", label: "Volume ($)", grid: true},
   marks: [
@@ -272,6 +273,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
+  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume ($)", grid: true},
   color: useTableau

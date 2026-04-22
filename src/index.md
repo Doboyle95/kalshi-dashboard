@@ -141,6 +141,7 @@ const indexBrush = view((() => {
     style: {fontFamily: "var(--font-sans)"},
     width,
     height: 420,
+    marginLeft: 55,
     marginRight: 16,
     x: {type: "utc", label: null, domain: [s, e]},
     y: {type: indexLogScale === "Log" ? "log" : "linear", label: "Daily volume ($)", grid: true, tickFormat: fmt},
