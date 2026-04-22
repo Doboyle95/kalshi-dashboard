@@ -19,6 +19,52 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ## Volume map
 
 ```js
+const tmMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", label: "Metric"}));
+const tmPeriod = view(Inputs.select(
+  ["All time", "2025", "2026", "Since sports launch (Jan 23)", "Last 90 days"],
+  {label: "Period", value: "All time"}
+));
+```
+
+```js
+const tmData = (() => {
+  const latest = d3.max(topDaily, d => d.date);
+  const ranges = {
+    "All time": null,
+    "2025": [new Date("2025-01-01"), new Date("2025-12-31")],
+    "2026": [new Date("2026-01-01"), latest],
+    "Since sports launch (Jan 23)": [new Date("2025-01-23"), latest],
+    "Last 90 days": [new Date(latest.getTime() - 90 * 864e5), latest],
+  };
+  const range = ranges[tmPeriod];
+
+  if (!range) {
+    // All time — use full leaderboard directly
+    return leaderboard.map(d => ({
+      report_ticker: d.report_ticker,
+      is_sports: d.is_sports,
+      value: tmMetric === "Volume" ? +d.contracts : +d.fees
+    }));
+  }
+
+  // Date-filtered — aggregate topDaily (top ~15 tickers) and estimate fees proportionally
+  const [s, e] = range;
+  const cols = Object.keys(topDaily[0]).filter(k => k !== "date");
+  return cols.map(cat => {
+    const total = topDaily
+      .filter(d => d.date >= s && d.date <= e)
+      .reduce((acc, r) => acc + (+r[cat] || 0), 0);
+    if (!total) return null;
+    const meta = leaderboard.find(l => l.report_ticker === cat) || {};
+    const value = tmMetric === "Volume"
+      ? total
+      : (+meta.fees || 0) * (total / (+meta.contracts || 1));
+    return {report_ticker: cat, is_sports: meta.is_sports ?? "FALSE", value};
+  }).filter(d => d && d.value > 0);
+})();
+```
+
+```js
 {
   const W = width;
   const H = Math.round(W * 0.58);
@@ -74,8 +120,8 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 
   // ── Build nested totals ───────────────────────────────────────────────────
   const nest = {};
-  for (const row of leaderboard) {
-    const v = +row.contracts || 0;
+  for (const row of tmData) {
+    const v = row.value || 0;
     if (!v) continue;
     const {grp, cat, mtype} = classify(row.report_ticker, row.is_sports);
     if (!nest[grp])             nest[grp] = {};
@@ -156,7 +202,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
     .attr("stroke","rgba(255,255,255,0.18)")
     .attr("stroke-width", 0.5);
   leafSel.append("title")
-    .text(d => `${d.parent.parent.data.name} › ${d.parent.data.name} › ${d.data.name}\n$${fmtCount(d.value)}`);
+    .text(d => `${d.parent.parent.data.name} › ${d.parent.data.name} › ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
 
   // ── Category labels + volume (depth 2) ───────────────────────────────────
   const cats2 = root.descendants().filter(d => d.depth === 2);
@@ -240,7 +286,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 }
 ```
 
-<p style="font-size:0.82em;color:#888;margin-top:0.5rem">Area = all-time volume. Warm colors (reds/oranges/pinks) = Sports &nbsp;·&nbsp; Blues = Non-sports. Thin lines within each block = market type subdivision (Game, Spread, Total, etc.). Hover for details.</p>
+<p style="font-size:0.82em;color:#888;margin-top:0.5rem">Area = all-time volume (or fees). Warm colors = Sports &nbsp;·&nbsp; Blues = Non-sports. Thin lines = market type subdivision. Hover for details. Date-filtered view covers the top ~15 tracked tickers only; fees are estimated proportionally from all-time rates.</p>
 
 ## All-time leaderboard
 
