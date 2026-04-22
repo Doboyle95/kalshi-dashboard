@@ -16,6 +16,191 @@ const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toF
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
+## Volume map
+
+```js
+{
+  const W = width;
+  const H = Math.round(W * 0.58);
+
+  // ── Classify each ticker into group / category / market-type ─────────────
+  function classify(ticker, isSports) {
+    const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+
+    let cat;
+    if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
+    else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
+    else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
+    else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
+    else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
+             ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
+    else if (ticker.startsWith("KXMLB"))                                           cat = "Baseball";
+    else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
+    else if (ticker.startsWith("KXPGA"))                                           cat = "Golf";
+    else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
+    else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
+             ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
+             ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXIPL") ||
+             ticker.startsWith("KXEUROLEAGUE") || ticker.startsWith("KXT20"))     cat = "Soccer";
+    else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING"))        cat = "Combat Sports";
+    else if (ticker.startsWith("KXBTC")  || ticker.startsWith("KXETH")  ||
+             ticker.startsWith("KXSOL"))                                           cat = "Crypto";
+    else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
+             ticker.startsWith("KXTRUMP") || ticker.startsWith("POPVOTE") ||
+             ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV"))          cat = "Politics";
+    else if (ticker.startsWith("KXFED")  || ticker.startsWith("KXINXU") ||
+             ticker.startsWith("ECMOV"))                                           cat = "Finance";
+    else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
+    else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+
+    let mtype;
+    if      (cat === "Parlay")                             mtype = "Parlay";
+    else if (/GAME$/.test(ticker) || ticker === "KXSB")   mtype = "Game";
+    else if (/MATCH$|FIGHT$/.test(ticker))                 mtype = "Match/Fight";
+    else if (/SPREAD$/.test(ticker))                       mtype = "Spread";
+    else if (/TOTAL$/.test(ticker))                        mtype = "Total";
+    else if (/TOUR$|SERIES$|CHAMP$|MAD$/.test(ticker))    mtype = "Futures";
+    else                                                   mtype = "Other";
+
+    return {grp, cat, mtype};
+  }
+
+  // ── Build nested totals ───────────────────────────────────────────────────
+  const nest = {};
+  for (const row of leaderboard) {
+    const v = +row.contracts || 0;
+    if (!v) continue;
+    const {grp, cat, mtype} = classify(row.report_ticker, row.is_sports);
+    if (!nest[grp])             nest[grp] = {};
+    if (!nest[grp][cat])        nest[grp][cat] = {};
+    if (!nest[grp][cat][mtype]) nest[grp][cat][mtype] = 0;
+    nest[grp][cat][mtype] += v;
+  }
+
+  const hierData = {
+    name: "root",
+    children: ["Sports", "Non-sports"].filter(g => nest[g]).map(grp => ({
+      name: grp,
+      children: Object.entries(nest[grp])
+        .sort((a, b) => d3.sum(Object.values(b[1])) - d3.sum(Object.values(a[1])))
+        .map(([cat, mtypes]) => ({
+          name: cat,
+          children: Object.entries(mtypes)
+            .sort((a, b) => b[1] - a[1])
+            .map(([mtype, value]) => ({name: mtype, value}))
+        }))
+    }))
+  };
+
+  // ── Treemap layout ────────────────────────────────────────────────────────
+  const root = d3.hierarchy(hierData)
+    .sum(d => d.value || 0)
+    .sort((a, b) => b.value - a.value);
+
+  d3.treemap()
+    .size([W, H])
+    .paddingInner(d => d.depth === 0 ? 14 : d.depth === 1 ? 3 : 1)
+    .paddingTop(d => d.depth === 1 ? 18 : 0)
+    .tile(d3.treemapBinary)
+    (root);
+
+  // ── Color palette: warm (sports) vs cool (non-sports) ────────────────────
+  // Sports: red → orange → amber → olive → teal-green → brown spectrum
+  // Non-sports: blues, purples, teals — clearly cool/opposite family
+  const CAT_COLOR = {
+    "NFL":                "#C62828",  // deep red
+    "Combat Sports":      "#8B1A1A",  // dark brick red
+    "College Football":   "#E64A19",  // burnt orange
+    "Tennis":             "#E53935",  // vivid red
+    "NBA":                "#F57F17",  // amber
+    "Soccer":             "#F9A825",  // golden amber
+    "Golf":               "#FBC02D",  // warm yellow
+    "Parlay":             "#FDD835",  // bright yellow
+    "Baseball":           "#F06292",  // medium pink
+    "College Basketball": "#D81B60",  // deep pink
+    "Hockey":             "#4E342E",  // dark brown
+    "Other Sports":       "#8D6E63",  // warm tan
+    "Crypto":             "#0D47A1",  // dark navy
+    "Politics":           "#1A237E",  // very dark indigo
+    "Finance":            "#1E88E5",  // bright medium blue
+    "Weather":            "#4FC3F7",  // light sky blue
+    "Entertainment":      "#0097A7",  // teal-blue
+    "Other Non-sports":   "#7986CB",  // medium indigo-blue
+  };
+
+  const getFill = cat => CAT_COLOR[cat] || "#888";
+
+  // ── SVG ───────────────────────────────────────────────────────────────────
+  const svg = d3.create("svg")
+    .attr("width", W).attr("height", H)
+    .style("display","block")
+    .style("font-family","var(--font-sans)");
+
+  // ── Render leaf tiles (market-type level) ─────────────────────────────────
+  const leaves = root.leaves();
+  const leafSel = svg.selectAll("rect.leaf")
+    .data(leaves)
+    .join("rect")
+    .attr("class","leaf")
+    .attr("x", d => d.x0).attr("y", d => d.y0)
+    .attr("width",  d => Math.max(0, d.x1 - d.x0))
+    .attr("height", d => Math.max(0, d.y1 - d.y0))
+    .attr("fill", d => getFill(d.parent.data.name))
+    .attr("stroke","rgba(255,255,255,0.18)")
+    .attr("stroke-width", 0.5);
+  leafSel.append("title")
+    .text(d => `${d.parent.parent.data.name} › ${d.parent.data.name} › ${d.data.name}\n$${fmtCount(d.value)}`);
+
+  // ── Category labels + volume (depth 2) ───────────────────────────────────
+  const cats2 = root.descendants().filter(d => d.depth === 2);
+
+  svg.selectAll("text.cname")
+    .data(cats2)
+    .join("text")
+    .attr("class","cname")
+    .attr("x", d => (d.x0 + d.x1) / 2)
+    .attr("y", d => (d.y0 + d.y1) / 2 - ((d.x1-d.x0) > 60 && (d.y1-d.y0) > 36 ? 7 : 0))
+    .attr("text-anchor","middle")
+    .attr("dominant-baseline","middle")
+    .attr("fill","rgba(255,255,255,0.95)")
+    .attr("font-size", d => Math.max(7, Math.min(14, Math.sqrt((d.x1-d.x0)*(d.y1-d.y0)) / 9)) + "px")
+    .attr("font-weight","600")
+    .attr("paint-order","stroke")
+    .attr("stroke","rgba(0,0,0,0.4)")
+    .attr("stroke-width", 3)
+    .text(d => (d.x1-d.x0) > 40 && (d.y1-d.y0) > 18 ? d.data.name : "");
+
+  svg.selectAll("text.cvol")
+    .data(cats2)
+    .join("text")
+    .attr("class","cvol")
+    .attr("x", d => (d.x0 + d.x1) / 2)
+    .attr("y", d => (d.y0 + d.y1) / 2 + 9)
+    .attr("text-anchor","middle")
+    .attr("dominant-baseline","middle")
+    .attr("fill","rgba(255,255,255,0.65)")
+    .attr("font-size","10px")
+    .text(d => (d.x1-d.x0) > 60 && (d.y1-d.y0) > 36 ? `$${fmtCount(d.value)}` : "");
+
+  // ── Group labels (Sports / Non-sports) ────────────────────────────────────
+  svg.selectAll("text.grp")
+    .data(root.children || [])
+    .join("text")
+    .attr("class","grp")
+    .attr("x", d => d.x0 + 7)
+    .attr("y", d => d.y0 + 13)
+    .attr("fill","rgba(255,255,255,0.88)")
+    .attr("font-size","11px")
+    .attr("font-weight","700")
+    .attr("letter-spacing","0.06em")
+    .text(d => d.data.name.toUpperCase());
+
+  display(svg.node());
+}
+```
+
+<p style="font-size:0.82em;color:#888;margin-top:0.5rem">Area = all-time volume. Warm colors (reds/oranges/pinks) = Sports &nbsp;·&nbsp; Blues = Non-sports. Thin lines within each block = market type subdivision (Game, Spread, Total, etc.). Hover for details.</p>
+
 ## All-time leaderboard
 
 ```js
