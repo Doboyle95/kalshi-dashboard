@@ -54,13 +54,18 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
     else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
 
     let mtype;
-    if      (cat === "Parlay")                             mtype = "Parlay";
-    else if (/GAME$/.test(ticker) || ticker === "KXSB")   mtype = "Game";
-    else if (/MATCH$|FIGHT$/.test(ticker))                 mtype = "Match/Fight";
-    else if (/SPREAD$/.test(ticker))                       mtype = "Spread";
-    else if (/TOTAL$/.test(ticker))                        mtype = "Total";
-    else if (/TOUR$|SERIES$|CHAMP$|MAD$/.test(ticker))    mtype = "Futures";
-    else                                                   mtype = "Other";
+    if (cat === "Parlay") {
+      mtype = ticker.includes("SINGLE") ? "Same-game" : "Multi-game";
+    } else if (cat === "Crypto") {
+      mtype = /15M$/.test(ticker) ? "15-minute" : /D$/.test(ticker) ? "Daily" : "Other";
+    } else if (cat === "Politics") {
+      mtype = (ticker === "PRES" || /POPVOTE|MAYOR|GOV|SENATE|HOUSE/.test(ticker)) ? "Election" : "Other";
+    } else if (/GAME$/.test(ticker) || ticker === "KXSB") mtype = "Game";
+    else if (/MATCH$|FIGHT$/.test(ticker))                mtype = "Match/Fight";
+    else if (/SPREAD$/.test(ticker))                      mtype = "Spread";
+    else if (/TOTAL$/.test(ticker))                       mtype = "Total";
+    else if (/TOUR$|SERIES$|CHAMP$|MAD$/.test(ticker))   mtype = "Futures";
+    else                                                  mtype = "Other";
 
     return {grp, cat, mtype};
   }
@@ -154,12 +159,19 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
   // ── Category labels + volume (depth 2) ───────────────────────────────────
   const cats2 = root.descendants().filter(d => d.depth === 2);
 
+  // Category labels — shifted toward top so market-type labels have room below
+  const hasVisibleChildren = d => d.children && d.children.some(c => (c.x1-c.x0) > 45 && (c.y1-c.y0) > 18);
+
   svg.selectAll("text.cname")
     .data(cats2)
     .join("text")
     .attr("class","cname")
     .attr("x", d => (d.x0 + d.x1) / 2)
-    .attr("y", d => (d.y0 + d.y1) / 2 - ((d.x1-d.x0) > 60 && (d.y1-d.y0) > 36 ? 7 : 0))
+    .attr("y", d => {
+      const mid = (d.y0 + d.y1) / 2;
+      // nudge up when subdivisions will be labelled, to avoid collision
+      return hasVisibleChildren(d) && (d.y1-d.y0) > 40 ? d.y0 + 14 : mid;
+    })
     .attr("text-anchor","middle")
     .attr("dominant-baseline","middle")
     .attr("fill","rgba(255,255,255,0.95)")
@@ -175,12 +187,39 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
     .join("text")
     .attr("class","cvol")
     .attr("x", d => (d.x0 + d.x1) / 2)
-    .attr("y", d => (d.y0 + d.y1) / 2 + 9)
+    .attr("y", d => {
+      const nudged = hasVisibleChildren(d) && (d.y1-d.y0) > 40;
+      return nudged ? d.y0 + 26 : (d.y0 + d.y1) / 2 + 9;
+    })
     .attr("text-anchor","middle")
     .attr("dominant-baseline","middle")
     .attr("fill","rgba(255,255,255,0.65)")
     .attr("font-size","10px")
     .text(d => (d.x1-d.x0) > 60 && (d.y1-d.y0) > 36 ? `$${fmtCount(d.value)}` : "");
+
+  // ── Market-type labels on large enough leaf tiles ─────────────────────────
+  const SKIP_LABEL = new Set(["Other", "Parlay", "Match/Fight"]);
+  svg.selectAll("text.mtype")
+    .data(leaves)
+    .join("text")
+    .attr("class","mtype")
+    .attr("x", d => (d.x0 + d.x1) / 2)
+    .attr("y", d => d.y1 - 5)
+    .attr("text-anchor","middle")
+    .attr("dominant-baseline","auto")
+    .attr("fill","rgba(255,255,255,0.75)")
+    .attr("font-size","9px")
+    .attr("font-style","italic")
+    .attr("paint-order","stroke")
+    .attr("stroke","rgba(0,0,0,0.3)")
+    .attr("stroke-width", 2)
+    .text(d => {
+      const w = d.x1 - d.x0, h = d.y1 - d.y0;
+      const label = d.data.name;
+      if (w < 45 || h < 18) return "";
+      if (SKIP_LABEL.has(label)) return "";
+      return label;
+    });
 
   // ── Group labels (Sports / Non-sports) ────────────────────────────────────
   svg.selectAll("text.grp")
