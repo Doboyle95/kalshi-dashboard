@@ -595,6 +595,7 @@ if (tmActiveCategory) {
     .attr("stroke","rgba(0,0,0,0.4)")
     .attr("stroke-width", 3)
     .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 0.98 : 0.45)
+    .attr("pointer-events", "none")
     .text(d => (d.x1-d.x0) > (isZoomed ? 58 : 40) && (d.y1-d.y0) > (isZoomed ? 26 : 18) ? d.data.name : "");
 
   svg.selectAll("text.cvol")
@@ -611,6 +612,7 @@ if (tmActiveCategory) {
     .attr("fill","rgba(255,255,255,0.65)")
     .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 1 : 0.45)
     .attr("font-size","10px")
+    .attr("pointer-events", "none")
     .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? `$${fmtCount(d.value)}` : "");
 
   // ── Market-type labels on large enough leaf tiles ─────────────────────────
@@ -633,6 +635,7 @@ if (tmActiveCategory) {
     .attr("stroke","rgba(0,0,0,0.3)")
     .attr("stroke-width", 2)
     .attr("fill-opacity", d => !activeCategory || isZoomed || d.parent.data.name === activeCategory ? 1 : 0.32)
+    .attr("pointer-events", "none")
     .text(d => {
       const w = d.x1 - d.x0, h = d.y1 - d.y0;
       const label = d.data.name;
@@ -652,6 +655,7 @@ if (tmActiveCategory) {
     .attr("font-size","11px")
     .attr("font-weight","700")
     .attr("letter-spacing","0.06em")
+    .attr("pointer-events", "none")
     .text(d => d.data.name.toUpperCase());
 
   svg.selectAll("rect.category-hit")
