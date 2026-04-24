@@ -526,7 +526,7 @@ if (tmActiveCategory) {
       .attr("height", H)
       .attr("fill", "transparent")
       .style("cursor", "zoom-out")
-      .on("click", () => { tmSelectedCategory.value = null; });
+      .on("click", () => { setSelectedCategory(null); });
   }
 
   // ── Render leaf tiles (market-type level) ─────────────────────────────────
@@ -548,7 +548,7 @@ if (tmActiveCategory) {
     .attr("stroke-width", d => d.parent.data.name === tmActiveCategory ? 1.05 : pinnedSet.has(d.parent.data.name) ? 0.85 : 0.5)
     .style("cursor", isZoomed ? "zoom-out" : "default")
     .on("click", () => {
-      if (isZoomed) tmSelectedCategory.value = null;
+      if (isZoomed) setSelectedCategory(null);
     });
   leafSel.append("title")
     .text(d => `${d.parent.parent.data.name} › ${d.parent.data.name} › ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
@@ -671,7 +671,7 @@ if (tmActiveCategory) {
     .on("mouseenter", (_, d) => { tmHoveredCategory.value = isZoomed ? null : d.data.name; })
     .on("mouseleave", () => { tmHoveredCategory.value = null; })
     .on("click", (_, d) => {
-      if (isZoomed) tmSelectedCategory.value = null;
+      if (isZoomed) setSelectedCategory(null);
       else setSelectedCategory(d.data.name);
     });
 
