@@ -2,9 +2,12 @@
 title: Overview
 ---
 
-# US Prediction Market Dashboard
-
-_Comparing regulated prediction markets in the United States. Kalshi is the dominant market leader; ForecastEx, Polymarket US, and Crypto.com/Nadex operate at significantly smaller scale. Data updated nightly._
+<div class="page-hero">
+  <div class="page-eyebrow">Market Structure</div>
+  <h1>US Prediction Market Dashboard</h1>
+  <p class="page-lead">Comparing regulated prediction markets in the United States. Kalshi is the dominant market leader, while ForecastEx, Polymarket US, and Crypto.com/Nadex operate at materially smaller scale.</p>
+  <div class="page-meta">Data updated nightly from Kalshi trade records plus public competitor sources.</div>
+</div>
 
 ```js
 const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
@@ -47,6 +50,8 @@ const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
 
 ## Platform comparison
 
+<p class="section-intro">This view is meant to set the overall scale of the market. Use the date brush to isolate specific eras, and switch between linear and log to compare absolute size versus relative growth.</p>
+
 ```js
 const kalshiTidy = kalshi.map(d => ({
   date: d.date,
@@ -70,6 +75,8 @@ const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```js
 const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
 ```
+
+<div class="instruction-line"><strong>How to read this:</strong> Drag the brush to zoom into a regime, hover for a full platform readout on a given date, and use <em>Log</em> when you want smaller platforms to be more legible.</div>
 
 ```js
 const indexBrush = view((() => {
@@ -111,6 +118,8 @@ const indexBrush = view((() => {
   return svg.node();
 })());
 ```
+
+<div class="plot-shell">
 
 ```js
 {
@@ -170,4 +179,6 @@ const indexBrush = view((() => {
 }
 ```
 
-<p style="font-size:0.82em;color:#888">Shared Y-axis — the scale gap is real. Kalshi data from trade records. Competitors from public sources. Crypto.com/Nadex from CFTC daily bulletins (starts Dec 2024).</p>
+</div>
+
+<div class="chart-note"><strong>Note:</strong> The shared Y-axis is intentional. Kalshi data comes from trade records; competitor series come from public sources. Crypto.com/Nadex begins in December 2024 from CFTC daily bulletins.</div>

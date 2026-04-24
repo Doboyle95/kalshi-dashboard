@@ -2,7 +2,12 @@
 title: Categories
 ---
 
-# Kalshi Categories
+<div class="page-hero">
+  <div class="page-eyebrow">Kalshi</div>
+  <h1>Kalshi Categories</h1>
+  <p class="page-lead">Explore how Kalshi volume is distributed across sports, non-sports, and the subtypes inside each category. This page is built to be navigated, not just scanned.</p>
+  <div class="page-meta">Click into categories to focus the rest of the page, pin comparisons, and use annotated event mode when you want more historical context.</div>
+</div>
 
 ```js
 const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
@@ -16,7 +21,158 @@ const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
+```js
+const TM_CATEGORY_ORDER = [
+  "NFL", "College Football", "NBA", "College Basketball", "Baseball",
+  "Hockey", "Golf", "Tennis", "Soccer", "Combat Sports", "Parlay",
+  "Crypto", "Politics", "Finance", "Entertainment", "Weather",
+  "Other Sports", "Other Non-sports"
+];
+
+const TM_CATEGORY_COLORS = {
+  "NFL": "#C62828",
+  "Combat Sports": "#8B1A1A",
+  "College Football": "#E64A19",
+  "Tennis": "#E53935",
+  "NBA": "#F57F17",
+  "Soccer": "#F9A825",
+  "Golf": "#FBC02D",
+  "Parlay": "#FDD835",
+  "Baseball": "#F06292",
+  "College Basketball": "#D81B60",
+  "Hockey": "#4E342E",
+  "Other Sports": "#8D6E63",
+  "Crypto": "#0D47A1",
+  "Politics": "#1A237E",
+  "Finance": "#1E88E5",
+  "Weather": "#4FC3F7",
+  "Entertainment": "#0097A7",
+  "Other Non-sports": "#7986CB"
+};
+
+const TM_TO_WIDE_CATEGORY = {
+  "College Football": "College football",
+  "College Basketball": "College basketball",
+  "Combat Sports": "Combat sports",
+  "Other Sports": "Other sports",
+  "Other Non-sports": "Other non-sports"
+};
+
+const CATEGORY_EVENTS = [
+  {date: new Date("2024-11-05"), label: "Election Day '24"},
+  {date: new Date("2025-01-23"), label: "Sports launch"},
+  {date: new Date("2025-09-27"), label: "Parlays launch"},
+  {date: new Date("2026-02-08"), label: "Super Bowl LX"},
+  {date: new Date("2026-03-19"), label: "March Madness '26"}
+];
+
+const topDailyCols = Object.keys(topDaily[0]).filter(k => k !== "date");
+
+function normalizeTreemapCategory(cat) {
+  return TM_TO_WIDE_CATEGORY[cat] || cat;
+}
+
+function classifyTreemapTicker(ticker, isSports) {
+  const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+
+  let cat;
+  if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
+  else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
+  else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
+  else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
+  else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
+           ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
+  else if (ticker.startsWith("KXMLB"))                                           cat = "Baseball";
+  else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
+  else if (ticker.startsWith("KXPGA"))                                           cat = "Golf";
+  else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
+  else if (ticker.startsWith("KXEPL") || ticker.startsWith("KXUCL") ||
+           ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
+           ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXIPL") ||
+           ticker.startsWith("KXEUROLEAGUE") || ticker.startsWith("KXT20"))     cat = "Soccer";
+  else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING"))         cat = "Combat Sports";
+  else if (ticker.startsWith("KXBTC") || ticker.startsWith("KXETH") ||
+           ticker.startsWith("KXSOL"))                                           cat = "Crypto";
+  else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
+           ticker.startsWith("KXTRUMP") || ticker.startsWith("POPVOTE") ||
+           ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV"))          cat = "Politics";
+  else if (ticker.startsWith("KXFED") || ticker.startsWith("KXINXU") ||
+           ticker.startsWith("ECMOV"))                                           cat = "Finance";
+  else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
+  else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+
+  let mtype;
+  if (cat === "Other Sports" || cat === "Other Non-sports") {
+    mtype = "Other";
+  } else if (cat === "Parlay") {
+    mtype = ticker.includes("SINGLEGAME") ? "Same-game" : "Multi-game";
+  } else if (cat === "Crypto") {
+    mtype = /15M$/.test(ticker) ? "15-minute" : /D$/.test(ticker) ? "Daily" : "Other";
+  } else if (cat === "Politics") {
+    mtype = (ticker === "PRES" || /POPVOTE|MAYOR|GOV|SENATE|HOUSE/.test(ticker)) ? "Election" : "Other";
+  } else if (/GAME$/.test(ticker) || ticker === "KXSB") {
+    mtype = "Game";
+  } else if (/MATCH$|FIGHT$/.test(ticker)) {
+    mtype = "Match/Fight";
+  } else if (/SPREAD$/.test(ticker)) {
+    mtype = "Spread";
+  } else if (/TOTAL$/.test(ticker)) {
+    mtype = "Total";
+  } else if (/TOUR$|SERIES$|CHAMP$|MAD$/.test(ticker)) {
+    mtype = "Futures";
+  } else {
+    mtype = "Other";
+  }
+
+  return {grp, cat, wideCat: normalizeTreemapCategory(cat), mtype};
+}
+
+function getTmRange(period) {
+  const latest = d3.max(topDaily, d => d.date);
+  const ranges = {
+    "All time": [d3.min(topDaily, d => d.date), latest],
+    "2025": [new Date("2025-01-01"), new Date("2025-12-31")],
+    "2026": [new Date("2026-01-01"), latest],
+    "Since sports launch (Jan 23)": [new Date("2025-01-23"), latest],
+    "Last 90 days": [new Date(latest.getTime() - 90 * 864e5), latest]
+  };
+  return ranges[period];
+}
+
+const tmTrackedMeta = topDailyCols.map(report_ticker => {
+  const meta = leaderboard.find(l => l.report_ticker === report_ticker) || {};
+  return {
+    report_ticker,
+    fees: +meta.fees || 0,
+    contracts: +meta.contracts || 0,
+    is_sports: meta.is_sports ?? "FALSE",
+    ...classifyTreemapTicker(report_ticker, meta.is_sports ?? "FALSE")
+  };
+});
+
+const tmSelectedCategory = Mutable(null);
+const tmHoveredCategory = Mutable(null);
+const tmPinnedCategories = Mutable([]);
+
+function setSelectedCategory(category) {
+  tmSelectedCategory.value = tmSelectedCategory.value === category ? null : category;
+}
+
+function togglePinnedCategory(category) {
+  const existing = tmPinnedCategories.value || [];
+  tmPinnedCategories.value = existing.includes(category)
+    ? existing.filter(d => d !== category)
+    : [...existing.filter(Boolean), category].slice(-3);
+}
+
+function eventRowsForRange(start, end) {
+  return CATEGORY_EVENTS.filter(d => d.date >= start && d.date <= end);
+}
+```
+
 ## Volume map
+
+<p class="section-intro">Start here. The treemap gives the fastest read on which categories matter most in the selected period. Click a tile to zoom into the largest individual markets inside that category.</p>
 
 ```js
 const tmMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", label: "Metric"}));
@@ -28,15 +184,7 @@ const tmPeriod = view(Inputs.select(
 
 ```js
 const tmData = (() => {
-  const latest = d3.max(topDaily, d => d.date);
-  const ranges = {
-    "All time": null,
-    "2025": [new Date("2025-01-01"), new Date("2025-12-31")],
-    "2026": [new Date("2026-01-01"), latest],
-    "Since sports launch (Jan 23)": [new Date("2025-01-23"), latest],
-    "Last 90 days": [new Date(latest.getTime() - 90 * 864e5), latest],
-  };
-  const range = ranges[tmPeriod];
+  const range = getTmRange(tmPeriod);
 
   if (!range) {
     // All time — use full leaderboard directly
@@ -49,8 +197,7 @@ const tmData = (() => {
 
   // Date-filtered — aggregate topDaily (top ~15 tickers) and estimate fees proportionally
   const [s, e] = range;
-  const cols = Object.keys(topDaily[0]).filter(k => k !== "date");
-  return cols.map(cat => {
+  return topDailyCols.map(cat => {
     const total = topDaily
       .filter(d => d.date >= s && d.date <= e)
       .reduce((acc, r) => acc + (+r[cat] || 0), 0);
@@ -62,6 +209,141 @@ const tmData = (() => {
     return {report_ticker: cat, is_sports: meta.is_sports ?? "FALSE", value};
   }).filter(d => d && d.value > 0);
 })();
+```
+
+```js
+const tmCategoryTotals = Array.from(
+  d3.rollup(
+    tmData,
+    rows => d3.sum(rows, d => d.value || 0),
+    d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat
+  ),
+  ([category, value]) => ({category, value})
+).sort((a, b) => b.value - a.value);
+
+const tmActiveCategory = tmCategoryTotals.some(d => d.category === tmSelectedCategory)
+  ? tmSelectedCategory
+  : null;
+
+const tmActiveGroup = tmActiveCategory
+  ? tmTrackedMeta.find(d => d.cat === tmActiveCategory)?.grp
+  : null;
+
+const tmIsPinnedActive = tmActiveCategory ? tmPinnedCategories.includes(tmActiveCategory) : false;
+
+const tmActiveReportTickers = new Set(
+  tmData
+    .filter(d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+    .map(d => d.report_ticker)
+);
+
+function marketMetricValue(row) {
+  return tmMetric === "Fees"
+    ? (+row.fees_total || +row["i.fees_total"] || 0)
+    : (+row.contracts || 0);
+}
+
+function marketShortName(row) {
+  const raw = row.market_name || row["i.market_name"] || row.market_key || row.report_ticker;
+  const ticker = row.report_ticker ? String(row.report_ticker) : "";
+  return String(raw)
+    .replace(ticker ? new RegExp(`^${ticker}[-_ ]*`, "i") : /^$/, "")
+    .replace(/^KX[A-Z0-9]+[-_ ]*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function reportTickerLabel(ticker) {
+  const clean = String(ticker || "").replace(/^KX/, "");
+  const known = {
+    KXNBAGAME: "Games",
+    KXNBASPREAD: "Spreads",
+    KXNBATOTAL: "Totals",
+    KXNBA: "Futures",
+    KXNFLGAME: "Games",
+    KXNFLSPREAD: "Spreads",
+    KXNFLTOTAL: "Totals",
+    KXSB: "Super Bowl",
+    KXNCAAMBGAME: "Games",
+    KXNCAAMBSPREAD: "Spreads",
+    KXNCAAMBTOTAL: "Totals",
+    KXMARMAD: "March Madness",
+    KXNCAAWBGAME: "Women's games",
+    KXNCAAFGAME: "Games",
+    KXNCAAFSPREAD: "Spreads",
+    KXNCAAFTOTAL: "Totals",
+    KXMLBGAME: "Games",
+    KXMLBSPREAD: "Spreads",
+    KXNHLGAME: "Games",
+    KXPGATOUR: "Tournaments",
+    KXATPMATCH: "ATP matches",
+    KXATPCHALLENGERMATCH: "ATP challenger",
+    KXWTAMATCH: "WTA matches",
+    KXWTACHALLENGERMATCH: "WTA challenger",
+    KXUFCFIGHT: "Fights",
+    KXBTCD: "Daily BTC",
+    KXBTC15M: "15-minute BTC",
+    KXBTC: "BTC",
+    KXETHD: "Daily ETH",
+    KXFEDDECISION: "Fed decisions",
+    KXFEDCHAIRNOM: "Fed chair",
+    KXINXU: "Inflation",
+    PRES: "Presidency"
+  };
+  if (known[ticker]) return known[ticker];
+  return clean
+    .replace(/GAME$/, " games")
+    .replace(/SPREAD$/, " spreads")
+    .replace(/TOTAL$/, " totals")
+    .replace(/MATCH$/, " matches")
+    .replace(/FIGHT$/, " fights")
+    .replace(/TOUR$/, " tournaments")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .trim();
+}
+
+const tmActiveTickerRows = tmActiveCategory
+  ? tmData
+      .filter(d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+      .map(d => ({
+        report_ticker: d.report_ticker,
+        is_sports: d.is_sports,
+        value: +d.value || 0,
+        label: reportTickerLabel(d.report_ticker),
+        mtype: classifyTreemapTicker(d.report_ticker, d.is_sports).mtype
+      }))
+      .filter(d => d.value > 0)
+      .sort((a, b) => b.value - a.value)
+  : [];
+
+const tmActiveMarketRowsByTicker = d3.group(
+  mktLeaderboard
+    .filter(d => tmActiveReportTickers.has(d.report_ticker))
+    .map(d => ({
+      ...d,
+      rawValue: marketMetricValue(d),
+      label: marketShortName(d)
+    }))
+    .filter(d => d.rawValue > 0)
+    .sort((a, b) => b.rawValue - a.rawValue),
+  d => d.report_ticker
+);
+```
+
+```js
+const categoryEventMode = view(Inputs.radio(["On", "Off"], {
+  label: "Annotated event mode",
+  value: "On"
+}));
+```
+
+<div class="instruction-line"><strong>How to use this page:</strong> hover a category to preview emphasis, click to zoom in, then click the zoomed treemap again to return to the full map.</div>
+
+```js
+if (tmActiveCategory) {
+  display(html`<a class="ui-button zoom-reset-link" href="${location.pathname}">Back to all categories from ${tmActiveCategory}</a>`);
+}
 ```
 
 ```js
@@ -119,6 +401,7 @@ const tmData = (() => {
   }
 
   // ── Build nested totals ───────────────────────────────────────────────────
+  const isZoomed = !!tmActiveCategory && tmActiveTickerRows.length > 0;
   const nest = {};
   for (const row of tmData) {
     const v = row.value || 0;
@@ -130,20 +413,59 @@ const tmData = (() => {
     nest[grp][cat][mtype] += v;
   }
 
-  const hierData = {
-    name: "root",
-    children: ["Sports", "Non-sports"].filter(g => nest[g]).map(grp => ({
-      name: grp,
-      children: Object.entries(nest[grp])
-        .sort((a, b) => d3.sum(Object.values(b[1])) - d3.sum(Object.values(a[1])))
-        .map(([cat, mtypes]) => ({
-          name: cat,
-          children: Object.entries(mtypes)
-            .sort((a, b) => b[1] - a[1])
-            .map(([mtype, value]) => ({name: mtype, value}))
+  const marketChildren = tmActiveTickerRows.map(tickerRow => {
+    const rawMarkets = tmActiveMarketRowsByTicker.get(tickerRow.report_ticker) || [];
+    const rawTotal = d3.sum(rawMarkets, d => d.rawValue || 0);
+    const topMarkets = rawMarkets.slice(0, Math.max(4, Math.min(10, Math.round(W / 90))));
+    const children = rawTotal > 0
+      ? topMarkets.map(row => ({
+          name: row.label,
+          value: tickerRow.value * ((row.rawValue || 0) / rawTotal),
+          mtype: tickerRow.mtype,
+          market_key: row.market_key,
+          report_ticker: row.report_ticker
         }))
-    }))
-  };
+      : [];
+    const shown = d3.sum(children, d => d.value || 0);
+    const remainder = Math.max(0, tickerRow.value - shown);
+    if (remainder > tickerRow.value * 0.01 || !children.length) {
+      children.push({
+        name: `Other ${tickerRow.label.toLowerCase()}`,
+        value: remainder || tickerRow.value,
+        mtype: tickerRow.mtype,
+        report_ticker: tickerRow.report_ticker,
+        isOther: true
+      });
+    }
+    return {
+      name: tickerRow.label,
+      report_ticker: tickerRow.report_ticker,
+      children
+    };
+  });
+
+  const hierData = isZoomed
+    ? {
+        name: "root",
+        children: [{
+          name: tmActiveGroup || "Selected",
+          children: marketChildren
+        }]
+      }
+    : {
+        name: "root",
+        children: ["Sports", "Non-sports"].filter(g => nest[g]).map(grp => ({
+          name: grp,
+          children: Object.entries(nest[grp])
+            .sort((a, b) => d3.sum(Object.values(b[1])) - d3.sum(Object.values(a[1])))
+            .map(([cat, mtypes]) => ({
+              name: cat,
+              children: Object.entries(mtypes)
+                .sort((a, b) => b[1] - a[1])
+                .map(([mtype, value]) => ({name: mtype, value}))
+            }))
+        }))
+      };
 
   // ── Treemap layout ────────────────────────────────────────────────────────
   const root = d3.hierarchy(hierData)
@@ -182,12 +504,30 @@ const tmData = (() => {
   };
 
   const getFill = cat => CAT_COLOR[cat] || "#888";
+  const activeCategory = tmHoveredCategory || tmActiveCategory;
+  const pinnedSet = new Set(tmPinnedCategories);
+  const shortLabel = (text, max = 34) => {
+    const s = String(text ?? "");
+    return s.length > max ? s.slice(0, max - 3) + "..." : s;
+  };
 
   // ── SVG ───────────────────────────────────────────────────────────────────
   const svg = d3.create("svg")
     .attr("width", W).attr("height", H)
     .style("display","block")
     .style("font-family","var(--font-sans)");
+
+  if (isZoomed) {
+    svg.append("rect")
+      .attr("class", "zoom-reset-hit")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", W)
+      .attr("height", H)
+      .attr("fill", "transparent")
+      .style("cursor", "zoom-out")
+      .on("click", () => { tmSelectedCategory.value = null; });
+  }
 
   // ── Render leaf tiles (market-type level) ─────────────────────────────────
   const leaves = root.leaves();
@@ -198,9 +538,18 @@ const tmData = (() => {
     .attr("x", d => d.x0).attr("y", d => d.y0)
     .attr("width",  d => Math.max(0, d.x1 - d.x0))
     .attr("height", d => Math.max(0, d.y1 - d.y0))
-    .attr("fill", d => getFill(d.parent.data.name))
-    .attr("stroke","rgba(255,255,255,0.18)")
-    .attr("stroke-width", 0.5);
+    .attr("fill", d => getFill(isZoomed ? tmActiveCategory : d.parent.data.name))
+    .attr("fill-opacity", d => !activeCategory || isZoomed || d.parent.data.name === activeCategory ? 0.96 : 0.24)
+    .attr("stroke", d =>
+      d.parent.data.name === tmActiveCategory ? "rgba(255,255,255,0.70)"
+      : pinnedSet.has(d.parent.data.name) ? "rgba(255,255,255,0.56)"
+      : "rgba(255,255,255,0.18)"
+    )
+    .attr("stroke-width", d => d.parent.data.name === tmActiveCategory ? 1.05 : pinnedSet.has(d.parent.data.name) ? 0.85 : 0.5)
+    .style("cursor", isZoomed ? "zoom-out" : "default")
+    .on("click", () => {
+      if (isZoomed) tmSelectedCategory.value = null;
+    });
   leafSel.append("title")
     .text(d => `${d.parent.parent.data.name} › ${d.parent.data.name} › ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
 
@@ -209,6 +558,23 @@ const tmData = (() => {
 
   // Category labels — shifted toward top so market-type labels have room below
   const hasVisibleChildren = d => d.children && d.children.some(c => (c.x1-c.x0) > 45 && (c.y1-c.y0) > 18);
+
+  svg.selectAll("rect.category-outline")
+    .data(cats2)
+    .join("rect")
+    .attr("class", "category-outline")
+    .attr("x", d => d.x0)
+    .attr("y", d => d.y0)
+    .attr("width", d => Math.max(0, d.x1 - d.x0))
+    .attr("height", d => Math.max(0, d.y1 - d.y0))
+    .attr("fill", "none")
+    .attr("stroke", d =>
+      d.data.name === tmActiveCategory ? "rgba(255,255,255,0.92)"
+      : pinnedSet.has(d.data.name) ? "rgba(255,255,255,0.72)"
+      : "none"
+    )
+    .attr("stroke-width", d => d.data.name === tmActiveCategory ? 2.2 : pinnedSet.has(d.data.name) ? 1.25 : 0)
+    .attr("pointer-events", "none");
 
   svg.selectAll("text.cname")
     .data(cats2)
@@ -228,7 +594,8 @@ const tmData = (() => {
     .attr("paint-order","stroke")
     .attr("stroke","rgba(0,0,0,0.4)")
     .attr("stroke-width", 3)
-    .text(d => (d.x1-d.x0) > 40 && (d.y1-d.y0) > 18 ? d.data.name : "");
+    .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 0.98 : 0.45)
+    .text(d => (d.x1-d.x0) > (isZoomed ? 58 : 40) && (d.y1-d.y0) > (isZoomed ? 26 : 18) ? d.data.name : "");
 
   svg.selectAll("text.cvol")
     .data(cats2)
@@ -242,11 +609,15 @@ const tmData = (() => {
     .attr("text-anchor","middle")
     .attr("dominant-baseline","middle")
     .attr("fill","rgba(255,255,255,0.65)")
+    .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 1 : 0.45)
     .attr("font-size","10px")
-    .text(d => (d.x1-d.x0) > 60 && (d.y1-d.y0) > 36 ? `$${fmtCount(d.value)}` : "");
+    .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? `$${fmtCount(d.value)}` : "");
 
   // ── Market-type labels on large enough leaf tiles ─────────────────────────
-  const SKIP_LABEL = new Set(["Other", "Parlay", "Match/Fight"]);
+  const SKIP_LABEL = new Set(isZoomed ? [] : [
+    "Other", "Parlay", "Match/Fight", "Game", "Games", "Multi-game", "Same-game",
+    "Spread", "Spreads", "Total", "Totals", "Futures", "Election", "Daily", "15-minute"
+  ]);
   svg.selectAll("text.mtype")
     .data(leaves)
     .join("text")
@@ -261,12 +632,13 @@ const tmData = (() => {
     .attr("paint-order","stroke")
     .attr("stroke","rgba(0,0,0,0.3)")
     .attr("stroke-width", 2)
+    .attr("fill-opacity", d => !activeCategory || isZoomed || d.parent.data.name === activeCategory ? 1 : 0.32)
     .text(d => {
       const w = d.x1 - d.x0, h = d.y1 - d.y0;
       const label = d.data.name;
-      if (w < 45 || h < 18) return "";
+      if (w < (isZoomed ? 82 : 62) || h < (isZoomed ? 26 : 24)) return "";
       if (SKIP_LABEL.has(label)) return "";
-      return label;
+      return isZoomed ? shortLabel(label, w > 150 ? 38 : 24) : label;
     });
 
   // ── Group labels (Sports / Non-sports) ────────────────────────────────────
@@ -282,13 +654,83 @@ const tmData = (() => {
     .attr("letter-spacing","0.06em")
     .text(d => d.data.name.toUpperCase());
 
-  display(svg.node());
+  svg.selectAll("rect.category-hit")
+    .data(cats2)
+    .join("rect")
+    .attr("class", "category-hit")
+    .attr("x", d => d.x0)
+    .attr("y", d => d.y0)
+    .attr("width", d => Math.max(0, d.x1 - d.x0))
+    .attr("height", d => Math.max(0, d.y1 - d.y0))
+    .attr("fill", "transparent")
+    .style("cursor", isZoomed ? "zoom-out" : "pointer")
+    .on("mouseenter", (_, d) => { tmHoveredCategory.value = isZoomed ? null : d.data.name; })
+    .on("mouseleave", () => { tmHoveredCategory.value = null; })
+    .on("click", (_, d) => {
+      if (isZoomed) tmSelectedCategory.value = null;
+      else setSelectedCategory(d.data.name);
+    });
+
+  if (tmActiveCategory) {
+    const wrapper = html`<div></div>`;
+    const bar = html`<div class="zoom-toolbar"></div>`;
+    bar.append(html`<span>Viewing ${tmActiveCategory} markets. Click the map again to return to all categories.</span>`);
+    wrapper.append(bar, svg.node());
+    display(wrapper);
+  } else {
+    display(svg.node());
+  }
 }
 ```
 
-<p style="font-size:0.82em;color:#888;margin-top:0.5rem">Area = all-time volume (or fees). Warm colors = Sports &nbsp;·&nbsp; Blues = Non-sports. Thin lines = market type subdivision. Hover for details. Date-filtered view covers the top ~15 tracked tickers only; fees are estimated proportionally from all-time rates.</p>
+<div class="chart-note"><strong>Reading note:</strong> area represents category weight in the selected window. Click a category to zoom into families that add to 100% of that category; each family shows readable top markets plus an explicit Other remainder. Date-filtered top-level views cover tracked top tickers; zoomed market detail uses all-time market mix to allocate the selected-period family total.</div>
+
+```js
+{
+  if (!tmActiveCategory) {
+    display(html`<div class="chart-note">No category is selected. Click a treemap tile to zoom in, or pin categories below for comparison.</div>`);
+  } else {
+    const shell = html`<details class="focus-card compact-details"></details>`;
+    shell.append(html`<summary>${tmActiveCategory} focus controls</summary>`);
+    const crumbs = html`<div class="breadcrumbs"></div>`;
+    crumbs.append(html`<span class="crumb">Treemap</span>`);
+    if (tmActiveGroup) crumbs.append(html`<span class="crumb">${tmActiveGroup}</span>`);
+    crumbs.append(html`<span class="crumb is-active">${tmActiveCategory}</span>`);
+    shell.append(crumbs);
+
+    const header = html`<div class="focus-header"></div>`;
+    const copy = html`<div>
+      <div class="focus-title">Zoomed into ${tmActiveCategory}</div>
+      <p class="focus-copy">The treemap is showing the largest available individual markets for this category. Open this panel when you want to pin it for comparison.</p>
+    </div>`;
+    const actions = html`<div class="focus-actions"></div>`;
+    const pinBtn = html`<button type="button" class="ui-button">${tmIsPinnedActive ? "Unpin active" : "Pin active"}</button>`;
+    pinBtn.addEventListener("click", () => { togglePinnedCategory(tmActiveCategory); });
+    actions.append(pinBtn);
+    header.append(copy, actions);
+    shell.append(header);
+
+    const row = html`<div class="chip-row"></div>`;
+    for (const {category, value} of tmCategoryTotals) {
+      const active = category === tmActiveCategory;
+      const color = TM_CATEGORY_COLORS[category] || "#888";
+      const btn = html`<button type="button" class="ui-chip ${active ? "is-active" : ""}" style="
+        border-color:${color};
+        background:${active ? color + "2e" : color + "14"};
+        color:${active ? "var(--theme-foreground)" : "inherit"};
+      ">${category} | $${fmtCount(value)}</button>`;
+      btn.addEventListener("click", () => { setSelectedCategory(category); });
+      row.append(btn);
+    }
+    shell.append(row);
+    display(shell);
+  }
+}
+```
 
 ## All-time leaderboard
+
+<p class="section-intro">This leaderboard is the fastest way to see which report tickers dominate by volume, fees, or notional in the selected window.</p>
 
 ```js
 const metric = view(hashInput("metric", Inputs.select(["contracts", "fees", "notional"], {
@@ -358,9 +800,11 @@ Plot.plot({
 
 <span style="color:#1a9641">■ Sports</span> &nbsp; <span style="color:#00C2A8">■ Non-sports</span>
 
-<p style="font-size:0.82em;color:#888">Date-filtered view covers the top 15 tracked categories. All-time view covers all categories.</p>
+<div class="chart-note"><strong>Coverage note:</strong> date-filtered views cover the tracked top categories from the daily dataset; the full all-time leaderboard uses the broader summary table.</div>
 
 ## Volume by category over time
+
+<p class="section-intro">This monthly view shows how Kalshi's category mix changes through time. When a category is selected in the treemap, the matching series is emphasized here.</p>
 
 ```js
 const sportsSplit = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
@@ -556,13 +1000,62 @@ const plotTidy = activeTidy.map(d => ({
     : d.contracts
 }));
 
+const monthlyPrimaryFocus = tmActiveCategory
+  ? (chartDetail === "Detailed"
+      ? normalizeTreemapCategory(tmActiveCategory)
+      : generalMap[normalizeTreemapCategory(tmActiveCategory)] || normalizeTreemapCategory(tmActiveCategory))
+  : null;
+
+const monthlyHoverFocus = tmHoveredCategory
+  ? (chartDetail === "Detailed"
+      ? normalizeTreemapCategory(tmHoveredCategory)
+      : generalMap[normalizeTreemapCategory(tmHoveredCategory)] || normalizeTreemapCategory(tmHoveredCategory))
+  : null;
+
+const monthlyPinned = tmPinnedCategories.map(cat =>
+  chartDetail === "Detailed"
+    ? normalizeTreemapCategory(cat)
+    : generalMap[normalizeTreemapCategory(cat)] || normalizeTreemapCategory(cat)
+);
+
+const mapCategoryForCurrentDetail = category => chartDetail === "Detailed"
+  ? normalizeTreemapCategory(category)
+  : generalMap[normalizeTreemapCategory(category)] || normalizeTreemapCategory(category);
+
+const monthlyFocusSet = new Set([monthlyHoverFocus || monthlyPrimaryFocus, ...monthlyPinned].filter(Boolean));
+
+const monthTipData = Array.from(
+  d3.rollup(
+    plotTidy,
+    rows => {
+      const out = {month: rows[0].month};
+      for (const r of rows) out[r.category] = r.value;
+      out.total = d3.sum(rows, r => r.contracts);
+      return out;
+    },
+    d => d.month
+  )
+).map(([, v]) => v).sort((a, b) => a.month < b.month ? -1 : 1);
+
 const monthLabels = sortedMonths.map(([mo]) => mo);
 const monthTickFormat = mo => {
   const [y, m] = mo.split("-");
   const abbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1];
   return m === "01" ? `${abbr} '${y.slice(2)}` : abbr;
 };
+
+const monthPlotMax = chartScale === "Normalized"
+  ? 1
+  : d3.max(monthTipData, d => d.total || 0) || 1;
+
+const monthEventRows = eventRowsForRange(chartStart, chartEnd)
+  .map(d => ({...d, month: d.date.toISOString().slice(0, 7), y: monthPlotMax * 0.96}))
+  .filter(d => monthLabels.includes(d.month));
 ```
+
+<div class="instruction-line"><strong>How to use this:</strong> switch between <em>General</em> and <em>Detailed</em> to move from headline mix to more granular subcategory structure. Selecting a treemap category highlights the matching series.</div>
+
+<div class="plot-shell">
 
 ```js
 Plot.plot({
@@ -594,17 +1087,191 @@ Plot.plot({
       y: "value",
       fill: "category",
       order: activeOrder,
-      tip: true,
-      title: d => chartScale === "Normalized"
-        ? `${d.category}\n${d.month}\n${(d.value * 100).toFixed(1)}% of month`
-        : `${d.category}\n${d.month}\n$${fmtCount(d.contracts)}`
+      fillOpacity: d => !monthlyFocusSet.size || monthlyFocusSet.has(d.category) ? 0.88 : 0.18,
+      stroke: d => monthlyPrimaryFocus && d.category === monthlyPrimaryFocus ? "#111" : "none",
+      strokeWidth: d => monthlyPrimaryFocus && d.category === monthlyPrimaryFocus ? 1.1 : 0
     }),
+    Plot.ruleX(monthTipData, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
+    Plot.tip(monthTipData, Plot.pointerX({
+      x: "month",
+      title: d => [
+        d.month,
+        chartScale === "Normalized"
+          ? "Total: 100% of month"
+          : `Total: $${fmtCount(d.total || 0)}`,
+        ...activeOrder
+          .filter(cat => (d[cat] || 0) > 0)
+          .sort((a, b) => (d[b] || 0) - (d[a] || 0))
+          .map(cat => chartScale === "Normalized"
+            ? `${cat}: ${((d[cat] || 0) * 100).toFixed(1)}%`
+            : `${cat}: $${fmtCount(d[cat] || 0)}`)
+      ].join("\n")
+    })),
+    ...(categoryEventMode === "On" ? [
+      Plot.ruleX(monthEventRows, {x: "month", stroke: "var(--annotation-stroke)", strokeDasharray: "3,3", strokeWidth: 1}),
+      Plot.text(monthEventRows, {
+        x: "month", y: "y", text: "label",
+        textAnchor: "start", lineAnchor: "bottom",
+        rotate: -40, fontSize: 10, fill: "var(--annotation-text)", dx: 2, dy: -2
+      })
+    ] : []),
     Plot.ruleY([0])
   ]
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Monthly totals. <em>General</em>: Football, Basketball, Baseball, Other sports, Parlay, Non-sports. <em>Detailed</em>: NFL vs College football (orange pair), NBA vs College basketball (blue pair), plus all other individual categories. <em>Normalized</em> shows each category's share of total monthly volume.</p>
+</div>
+
+<div class="chart-note"><strong>Reading note:</strong> <em>General</em> compresses the market into Football, Basketball, Baseball, Other sports, Parlay, and Non-sports. <em>Detailed</em> expands back into individual categories. <em>Normalized</em> shows share of monthly volume rather than dollars.</div>
+
+## Pinned category comparison
+
+<p class="section-intro">Use this section when you want to compare trajectories directly rather than infer them from stacked bars. The active category becomes the primary series, and the pinned chips give you a compact peer set.</p>
+
+```js
+{
+  if (!tmActiveCategory) {
+    display(html`<div class="chart-note">Select a treemap category to enable primary-series comparison controls.</div>`);
+  } else {
+    const shell = html`<details class="surface-card compact-details"></details>`;
+    shell.append(html`<summary>${tmActiveCategory} comparison controls</summary>`);
+    shell.append(html`<div class="focus-header">
+      <div>
+        <div class="focus-title">Primary series: ${tmActiveCategory}</div>
+        <p class="focus-copy">Pin up to three comparison categories. The primary series stays thicker so you can read it first.</p>
+      </div>
+    </div>`);
+    const row = html`<div class="chip-row"></div>`;
+    for (const {category} of tmCategoryTotals) {
+      const active = tmPinnedCategories.includes(category);
+      const primary = category === tmActiveCategory;
+      const color = TM_CATEGORY_COLORS[category] || "#888";
+      const btn = html`<button type="button" class="ui-chip ${primary || active ? "is-active" : ""}" style="
+        border-color:${color};
+        background:${primary ? color + "30" : active ? color + "24" : "var(--card-bg)"};
+        color:inherit;
+        opacity:${primary ? 0.78 : 1};
+      ">${primary ? "Primary" : active ? "Pinned" : "Pin"} | ${category}</button>`;
+      if (!primary) btn.addEventListener("click", () => togglePinnedCategory(category));
+      row.append(btn);
+    }
+    shell.append(row);
+    display(shell);
+  }
+}
+```
+
+```js
+const comparePrimary = tmActiveCategory ? mapCategoryForCurrentDetail(tmActiveCategory) : null;
+const compareSeries = Array.from(new Set([
+  comparePrimary,
+  ...tmPinnedCategories.map(mapCategoryForCurrentDetail)
+])).filter(Boolean);
+
+const compareTidy = sortedMonths.flatMap(([month, vals]) =>
+  compareSeries.map(category => ({
+    month,
+    category,
+    contracts: vals[category] || 0,
+    value: chartScale === "Normalized"
+      ? (vals[category] || 0) / (monthTotals.get(month) || 1)
+      : (vals[category] || 0)
+  }))
+);
+
+const compareTipData = Array.from(
+  d3.rollup(
+    compareTidy,
+    rows => {
+      const out = {month: rows[0].month};
+      for (const r of rows) out[r.category] = r.value || 0;
+      return out;
+    },
+    d => d.month
+  )
+).map(([, v]) => v).sort((a, b) => a.month < b.month ? -1 : 1);
+
+const compareEventRows = eventRowsForRange(chartStart, chartEnd)
+  .map(d => ({...d, month: d.date.toISOString().slice(0, 7), y: chartScale === "Normalized" ? 1 : monthPlotMax * 0.96}))
+  .filter(d => monthLabels.includes(d.month));
+
+const comparePrimaryTidy = comparePrimary
+  ? compareTidy.filter(d => d.category === comparePrimary)
+  : [];
+
+const compareSecondaryTidy = compareTidy.filter(d => d.category !== comparePrimary);
+```
+
+<div class="plot-shell">
+
+```js
+if (!compareSeries.length) {
+  display(html`<div class="chart-note">Select a category in the treemap to start a comparison.</div>`);
+} else {
+  display(Plot.plot({
+    width,
+    height: 320,
+    marginLeft: 55,
+    style: {fontFamily: "var(--font-sans)"},
+    color: {legend: true, domain: compareSeries, range: compareSeries.map(cat => wideColors[cat] || "#666")},
+    x: {type: "band", domain: monthLabels, label: null, tickFormat: monthTickFormat},
+    y: {
+      label: chartScale === "Normalized" ? "Share of monthly volume" : "Monthly volume ($)",
+      grid: true,
+      tickFormat: chartScale === "Normalized" ? d => (d * 100).toFixed(0) + "%" : d => "$" + fmtCount(d)
+    },
+    marks: [
+      Plot.lineY(compareSecondaryTidy, {
+        x: "month",
+        y: "value",
+        stroke: "category",
+        curve: "monotone-x",
+        strokeWidth: 2
+      }),
+      Plot.dot(compareSecondaryTidy, {
+        x: "month",
+        y: "value",
+        fill: "category",
+        r: 2.3
+      }),
+      Plot.lineY(comparePrimaryTidy, {
+        x: "month",
+        y: "value",
+        stroke: "category",
+        curve: "monotone-x",
+        strokeWidth: 3
+      }),
+      Plot.dot(comparePrimaryTidy, {
+        x: "month",
+        y: "value",
+        fill: "category",
+        r: 3
+      }),
+      Plot.ruleX(compareTipData, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.2})),
+      Plot.tip(compareTipData, Plot.pointerX({
+        x: "month",
+        title: d => [
+          d.month,
+          ...compareSeries.map(cat => chartScale === "Normalized"
+            ? `${cat}: ${((d[cat] || 0) * 100).toFixed(1)}%`
+            : `${cat}: $${fmtCount(d[cat] || 0)}`)
+        ].join("\n")
+      })),
+      ...(categoryEventMode === "On" ? [
+        Plot.ruleX(compareEventRows, {x: "month", stroke: "var(--annotation-stroke)", strokeDasharray: "3,3", strokeWidth: 1}),
+        Plot.text(compareEventRows, {
+          x: "month", y: "y", text: "label",
+          textAnchor: "start", lineAnchor: "bottom",
+          rotate: -40, fontSize: 10, fill: "var(--annotation-text)", dx: 2, dy: -2
+        })
+      ] : []),
+      Plot.ruleY([0])
+    ]
+  }));
+}
+```
+
+</div>
 
 ## Sports market type breakdown
 
@@ -743,6 +1410,10 @@ Plot.plot({
 ---
 
 ## All-time individual market leaderboard
+
+<p class="section-intro">This table is meant for exploration rather than drill-down. Use the legend chips to isolate a theme, the search box to jump to a market, and the sortable columns to compare market structure.</p>
+
+<div class="instruction-line"><strong>Current scope:</strong> this leaderboard intentionally stays at the summary level for now. Detailed price-path or volume-arrival views should wait until a per-market time-series dataset is available.</div>
 
 Ranked by total contracts across all outcomes. Each row is one market (e.g. "Super Bowl 2026 winner"), not an individual yes/no contract.
 
@@ -1230,6 +1901,7 @@ const mktRanked = [...mktLeaderboard]
       display_cat:    getSportDisplayCategory(d)
     };
   });
+
 ```
 
 ```js
@@ -1348,7 +2020,11 @@ display(html`<style>
 const mktDisplay = mktFiltered.map(d => {
   const fees = d.fees_total;
   const feesNum = (fees == null || fees === "" || isNaN(+fees)) ? null : +fees;
-  return {...d, _c: d.display_cat || d.kalshi_category || "", fees_total: feesNum};
+  return {
+    ...d,
+    _c: d.display_cat || d.kalshi_category || "",
+    fees_total: feesNum
+  };
 });
 
 display(html`<div style="font-size:0.82em;color:var(--text-faint,#888);margin:0.3rem 0 0.6rem">Tip: click any column header to sort. Click again to reverse.</div>`);
@@ -1372,7 +2048,7 @@ const tbl = Inputs.table(mktDisplay, {
       return el;
     },
     contracts:  d => "$" + fmtC(d),
-    fees_total: d => (d == null || d === 0) ? "—" : "$" + fmtC(+d),
+    fees_total: d => (d == null || d === 0) ? "N/A" : "$" + fmtC(+d),
   },
   align: {
     rank: "right",

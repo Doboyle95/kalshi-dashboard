@@ -2,7 +2,12 @@
 title: Kalshi Fee Revenue
 ---
 
-# Kalshi Fee Revenue
+<div class="page-hero">
+  <div class="page-eyebrow">Kalshi</div>
+  <h1>Kalshi Fee Revenue</h1>
+  <p class="page-lead">Track how Kalshi monetizes its flow over time: daily fee capture, cumulative fee contribution, and the per-contract fee rate for overall activity, sports, and non-sports.</p>
+  <div class="page-meta">This page complements the volume page by translating activity into revenue and take-rate.</div>
+</div>
 
 ```js
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
@@ -90,6 +95,10 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "#75
 
 ## Daily fee revenue
 
+<p class="section-intro">The daily chart shows raw fee capture day by day. It is the quickest way to compare the revenue effect of the same macro moments that drive the volume charts.</p>
+
+<div class="instruction-line"><strong>Try this:</strong> brush into a specific era, then hover spike days to compare the raw fee print with the 7-day baseline.</div>
+
 ```js
 const dr1 = view(makeDateBrush(new Date("2025-01-01")));
 ```
@@ -98,6 +107,8 @@ const dr1 = view(makeDateBrush(new Date("2025-01-01")));
 const [s1, e1] = dr1;
 const fd1 = daily.filter(d => d.date >= s1 && d.date <= e1);
 ```
+
+<div class="plot-shell">
 
 ```js
 Plot.plot({
@@ -132,9 +143,18 @@ Plot.plot({
 })
 ```
 
-<span style="color:#756bb1">&#9632; Daily</span> &nbsp; <span style="color:#3f007d">&#8212; 7-day average</span>
+</div>
+
+<div class="inline-legend">
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#756bb1"></span>Daily fees</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #3f007d"></span>7-day average</span>
+</div>
 
 ## Cumulative fee revenue
+
+<p class="section-intro">This section answers a different question: not what happened on a given day, but which side of the book has contributed more to total fee generation over time.</p>
+
+<div class="instruction-line"><strong>How to read this:</strong> the stacked areas are cumulative, so slope matters more than height. Steeper segments indicate faster fee capture from that side of the book.</div>
 
 ```js
 const dr2 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "#1a9641"));
@@ -165,6 +185,8 @@ const cumFeesTipData = Array.from(
 ).map(([, v]) => v).sort((a, b) => a.date - b.date);
 ```
 
+<div class="plot-shell">
+
 ```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
@@ -193,9 +215,20 @@ Plot.plot({
 })
 ```
 
+</div>
+
 ## Fee rate (&#162; per contract)
 
-_Average fee Kalshi collects per contract traded. Peaks near 50&#162; contracts (where the bell-curve fee is highest); falls toward 0 at extreme prices. Drops reflect election-market fee waivers and shifts in mix toward high-certainty contracts._
+<p class="section-intro">Average fee Kalshi collects per contract traded. This usually peaks around mid-probability contracts and compresses when mix shifts toward higher-certainty outcomes or fee waivers.</p>
+
+<div class="instruction-line"><strong>Try this:</strong> use the segment toggle to compare whether sports and non-sports monetize differently on a per-contract basis.</div>
+
+```js
+const feeRateView = view(Inputs.radio(["Overall", "Sports", "Non-sports"], {
+  label: "Segment",
+  value: "Overall"
+}));
+```
 
 ```js
 const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#756bb1"));
@@ -203,10 +236,29 @@ const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.co
 
 ```js
 const [s3, e3] = dr3;
-const feeRate = daily
-  .filter(d => d.date >= s3 && d.date <= e3 && d.contracts_total > 0)
-  .map(d => ({date: d.date, rate: d.fees_total / d.contracts_total * 100}));
+const feeRate = (
+  feeRateView === "Overall"
+    ? daily.map(d => ({
+        date: d.date,
+        contracts: d.contracts_total || 0,
+        fees: d.fees_total || 0
+      }))
+    : sports.map(d => ({
+        date: d.date,
+        contracts: feeRateView === "Sports" ? (d.contracts_sports || 0) : (d.contracts_nonsports || 0),
+        fees: feeRateView === "Sports" ? (d.fees_sports || 0) : (d.fees_nonsports || 0)
+      }))
+)
+  .filter(d => d.date >= s3 && d.date <= e3 && d.contracts > 0)
+  .map(d => ({date: d.date, rate: d.fees / d.contracts * 100}));
+
+const feeRateColor =
+  feeRateView === "Sports" ? "#1a9641"
+  : feeRateView === "Non-sports" ? "#00C2A8"
+  : "#756bb1";
 ```
+
+<div class="plot-shell">
 
 ```js
 Plot.plot({
@@ -219,11 +271,13 @@ Plot.plot({
   marks: [
     Plot.lineY(feeRate, {
       x: "date", y: "rate",
-      stroke: "#756bb1", strokeWidth: 1.5, curve: "monotone-x",
+      stroke: feeRateColor, strokeWidth: 1.5, curve: "monotone-x",
       tip: true,
-      title: d => `${fmtDate(d.date)}\nAvg fee: ${d.rate.toFixed(3)}¢ per contract`
+      title: d => `${fmtDate(d.date)}\n${feeRateView} avg fee: ${d.rate.toFixed(3)}¢ per contract`
     }),
     Plot.ruleY([0])
   ]
 })
 ```
+
+</div>
