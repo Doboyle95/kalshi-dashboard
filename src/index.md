@@ -48,6 +48,16 @@ const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
   </div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Kalshi volume and fees come from cleaned daily trade aggregates. Competitor lines come from <code>competitor_daily.csv</code>, with platform names normalized for display. Volume is contracts traded, not notional dollars, and the log toggle only changes axis scaling.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Start on linear scale to understand absolute market size, then switch to log scale when smaller competitors disappear against Kalshi. Use the brush to compare specific regimes; hover any date to read all platforms from one shared tooltip.</p>
+</details>
+
 ## Platform comparison
 
 <p class="section-intro">This view is meant to set the overall scale of the market. Use the date brush to isolate specific eras, and switch between linear and log to compare absolute size versus relative growth.</p>

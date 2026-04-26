@@ -4,6 +4,16 @@ title: Competitors
 
 # Platform Comparison
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Kalshi comes from cleaned internal daily aggregates; competitor series come from public daily platform reports normalized into <code>competitor_daily.csv</code>. The metric toggle switches between contracts and fees where available. The brush changes the visible window, not the underlying all-time source data.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Use contracts to compare market activity and fees to compare monetization. Start with log scale if you care about smaller platforms, then return to linear scale to see how much Kalshi dominates absolute volume.</p>
+</details>
+
 ```js
 const kalshi     = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});

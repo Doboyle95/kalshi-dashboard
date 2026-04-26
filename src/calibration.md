@@ -6,6 +6,16 @@ title: Calibration
 
 How accurately do Kalshi contract prices predict outcomes? A perfectly calibrated market has contracts priced at X¢ winning X% of the time.
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Settled contracts are grouped into 5-cent price bins. The x-axis is implied probability from contract price; the y-axis is the realized win rate for contracts in that bin using the trade-weighted outcome rate. Bins below 5 cents and above 95 cents are excluded to keep sparse tails from dominating the visual.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Use the diagonal chart to see direction: points above the line mean outcomes happened more often than price implied, while points below mean they happened less often. Then use the error chart to find where miscalibration is largest by price band.</p>
+</details>
+
 ```js
 const calib = await FileAttachment("data/calibration_three_way.csv").csv({typed: true});
 ```

@@ -9,6 +9,16 @@ title: Categories
   <div class="page-meta">Click into categories to focus the rest of the page, pin comparisons, and use annotated event mode when you want more historical context.</div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>This page uses daily ticker/category aggregates rather than raw browser-side trades. The volume map starts from broad categories and can drill into the largest component markets inside the selected parent; smaller residual activity is grouped so the displayed pieces remain readable without implying the omitted tail is zero. Raw ticker prefixes are shortened in labels for readability.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Use the treemap as the navigation surface: hover to preview, click to drill in, and click the zoomed view again to return. Pinned comparisons are best for side-by-side trend reading; annotated event mode is best when you want to explain a category shift.</p>
+</details>
+
 ```js
 const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});

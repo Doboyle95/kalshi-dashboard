@@ -39,6 +39,16 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
   </div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Daily volume and trade count are summed from cleaned Kalshi trade records. Sports, non-sports, and parlay splits come from the daily sports split aggregate; category and sport-type views use curated ticker mappings plus residual buckets so known categories do not overstate total volume. Moving averages are trailing 7-day means.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to read the annotations</summary>
+  <p>Dashed vertical lines mark major product and sports-market events. Leave annotated event mode on when you are asking why a step-change happened; turn it off when you want the cleanest possible read on the bars and moving average.</p>
+</details>
+
 ```js
 // Reusable mini-brush factory. Returns an SVG node whose .value = [startDate, endDate].
 // Each chart calls view(makeDateBrush(...)) independently.

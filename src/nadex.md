@@ -32,6 +32,16 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
   </div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Crypto.com/Nadex views use daily event/category exports rather than trade-level prints. Volume is normalized contract count by day; sports and category splits come from local classification of event names and categories in the Nadex export.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Because this page uses daily aggregate source files, it is best for scale and mix rather than trade-level microstructure. Use the category charts to find dominant themes, then compare the all-time breakdown against the brushed time-series view.</p>
+</details>
+
 ```js
 function makeBrush(data, color) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;

@@ -49,6 +49,16 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
   </div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Fee revenue is summed from cleaned trade-level fee fields and aggregated by day. The sports/non-sports toggle uses the same classification as the volume split. Fee per contract divides daily fees by daily contracts traded, so it is a realized average fee rate rather than Kalshi's posted fee schedule.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Read daily fees for short-term spikes, cumulative fees for who contributed over time, and cents per contract for monetization mix. If fee revenue rises while fee per contract falls, volume growth is doing more work than take-rate.</p>
+</details>
+
 ```js
 function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "#756bb1") {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;

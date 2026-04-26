@@ -73,6 +73,17 @@ const overallPct = totalNet / totalStakes * 100;
   </div>
 </div>
 
+
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Parlay rows come from KXMVE* and PREPACK* series in the parlay P&amp;L export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total notional staked.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Read cumulative P&amp;L for the long-run bettor-vs-house picture, then use daily stakes and return charts to separate volume spikes from actual parlay outcome swings. Large negative daily returns are normal when popular parlays expire worthless.</p>
+</details>
+
 ```js
 // Date range — Mutable updated by brush
 const parlayDateSel = Mutable([new Date("2023-01-01"), d3.max(pnl, d => d.date)]);

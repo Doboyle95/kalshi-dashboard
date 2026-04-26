@@ -32,6 +32,16 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
   </div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>ForecastEx volume comes from public daily price/pair files normalized into category and sports-split aggregates. Volume is pair quantity or contract count, depending on the source field. Category and sports views use the local market classification rules applied during export.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Use the page as a concentration check: compare headline volume with the category and sports split charts to see whether ForecastEx activity is coming from one theme or several. The all-time breakdown is helpful for reading the persistent mix after brushing a noisy date range.</p>
+</details>
+
 ```js
 function makeBrush(data, color) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;

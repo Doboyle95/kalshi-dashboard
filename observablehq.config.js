@@ -6,8 +6,10 @@ export default {
   pages: [
     {name: "Overview", path: "/"},
     {name: "Kalshi Volume", path: "/volume"},
+    {name: "Trade Size Mix", path: "/trade-size"},
     {name: "Fee Revenue", path: "/fees"},
     {name: "Categories", path: "/categories"},
+    {name: "Ask Data", path: "/chat"},
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Calibration", path: "/calibration"},
     {name: "Platform Comparison", path: "/competitors"},

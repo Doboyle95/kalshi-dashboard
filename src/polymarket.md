@@ -32,6 +32,16 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
   </div>
 </div>
 
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Polymarket US volume comes from public daily market reports normalized into category and sports-split files. Volume is contract count. Category charts use the mapped category attached to each market report row; the sports split sums categories classified as sports versus everything else.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Use the top line to understand headline scale, then check sports versus non-sports and category share to see whether growth is broad or concentrated. The brush controls the visible window for every section on the page.</p>
+</details>
+
 ```js
 function makeBrush(data, color) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
