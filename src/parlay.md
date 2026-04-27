@@ -7,12 +7,6 @@ title: Parlay P&L
 Taker profit/loss on parlay contracts (KXMVE\* and PREPACK\* series). Negative values mean takers (bettors) lost money.
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
-const fmtUSD   = n => "$" + fmtCount(n);
-const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
-```
-
-```js
 const raw = await FileAttachment("data/parlay_pnl_net.csv").csv({typed: true});
 ```
 
@@ -51,38 +45,33 @@ const totalGross = lastRow?.gross_cumul ?? 0;
 const totalFees = totalGross - totalNet;
 const totalStakes = d3.sum(pnl, d => d.stakes);
 const overallPct = totalNet / totalStakes * 100;
+const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
+                  : n >= 1e6 ? (n/1e6).toFixed(1)+"M"
+                  : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
+                  : (n ?? 0).toString();
+const fmtUSD = n => "$" + fmtCount(n);
+const fmtDate = d => d ? d3.timeFormat("%b %-d, %Y")(d) : "";
 ```
 
 <div class="kpi-grid">
-  <div class="kpi-card">
+  <div class="kpi-card" data-accent="negative">
     <div class="kpi-label">Cumulative taker P&L (net)</div>
-    <div class="kpi-value">${fmtUSD(totalNet)}</div>
+    <div class="kpi-value">${totalNet.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
-  <div class="kpi-card">
+  <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">All-time fees paid</div>
-    <div class="kpi-value">${fmtUSD(totalFees)}</div>
+    <div class="kpi-value">${totalFees.toLocaleString(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0})}</div>
   </div>
-  <div class="kpi-card">
+  <div class="kpi-card" data-accent="negative">
     <div class="kpi-label">Overall taker ROI</div>
     <div class="kpi-value">${overallPct.toFixed(1)}%</div>
     <div class="kpi-meta">of total notional staked</div>
   </div>
-  <div class="kpi-card">
+  <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Total notional staked</div>
     <div class="kpi-value">${fmtUSD(totalStakes)}</div>
   </div>
 </div>
-
-
-<details class="surface-card compact-details">
-  <summary>How this is calculated</summary>
-  <p>Parlay rows come from KXMVE* and PREPACK* series in the parlay P&amp;L export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total notional staked.</p>
-</details>
-
-<details class="surface-card compact-details">
-  <summary>How to use this page</summary>
-  <p>Read cumulative P&amp;L for the long-run bettor-vs-house picture, then use daily stakes and return charts to separate volume spikes from actual parlay outcome swings. Large negative daily returns are normal when popular parlays expire worthless.</p>
-</details>
 
 ```js
 // Date range — Mutable updated by brush
@@ -101,8 +90,8 @@ const parlayDateSel = Mutable([new Date("2023-01-01"), d3.max(pnl, d => d.date)]
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
     .style("display", "block")
-    .style("background", "var(--theme-background-alt)")
-    .style("border", "1px solid var(--card-border)")
+    .style("background", "#fafafa")
+    .style("border", "1px solid #e8e8e8")
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
@@ -146,31 +135,24 @@ const tidyCumul = [
   ...pnlCumul.map(d => ({date: d.date, value: d.gross_cumul_w, series: "Before fees (gross)"})),
   ...pnlCumul.map(d => ({date: d.date, value: d.net_cumul_w,   series: "After fees (net)"}))
 ];
-
-// Pivot for single combined tooltip
-const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: d.net_cumul_w}));
 ```
 
 ## Cumulative taker P&L
 
 ```js
 Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
   width, height: 340,
-  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Cumulative P&L (USD)", grid: true,
       tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
   color: {legend: true, domain: ["Before fees (gross)", "After fees (net)"], range: ["#f4a736", "#d7191c"]},
   marks: [
     Plot.lineY(tidyCumul, {
-      x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"
+      x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x",
+      tip: true,
+      title: d => `${d.series}\n${d.date.toISOString().slice(0,10)}\n$${d.value.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
-    Plot.ruleX(cumPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(cumPivot, Plot.pointerX({
-      x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore fees: $${d.gross.toLocaleString(undefined,{maximumFractionDigits:0})}\nAfter fees: $${d.net.toLocaleString(undefined,{maximumFractionDigits:0})}`
-    })),
+    Plot.ruleX(tidyCumul, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0], {stroke: "#ccc"})
   ]
 })
@@ -182,9 +164,7 @@ _Bar height = daily notional staked by takers. Color = taker return that day (gr
 
 ```js
 Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
   width, height: 300,
-  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Daily notional staked (USD)", grid: true,
       tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
@@ -202,8 +182,9 @@ Plot.plot({
       y: d => d.stakes,
       fill: d => d.pct != null ? Math.max(-50, Math.min(50, d.pct)) : 0,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${d.date.toISOString().slice(0,10)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
+    Plot.ruleX(pnlFiltered.filter(d => d.stakes >= 1000), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
@@ -215,9 +196,7 @@ _Days with under $25,000 notional hidden (early low-volume days had outsized var
 
 ```js
 Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
   width, height: 260,
-  marginLeft: 55,
   x: {type: "utc", label: null},
   y: {label: "Taker return (% of notional)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
   marks: [
@@ -228,8 +207,9 @@ Plot.plot({
       fill: d => d.pct >= 0 ? "#1a9641" : "#d7191c",
       fillOpacity: 0.75,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${d.date.toISOString().slice(0,10)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
+    Plot.ruleX(pnlFiltered.filter(d => d.pct != null && d.stakes >= 25000), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
