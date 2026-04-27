@@ -198,17 +198,34 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#00C2A8", fillOpacity: 0.6
+      fill: d => d.is_partial ? "#7ed8cf" : "#00C2A8",
+      fillOpacity: d => d.is_partial ? 0.4 : 0.6
     }),
-    Plot.lineY(fd1.filter(d => d.ma7_contracts != null), {
+    Plot.lineY(fd1.filter(d => d.ma7_contracts != null && !d.is_partial), {
       x: "date", y: "ma7_contracts",
       stroke: "#e15759", strokeWidth: 2, curve: "monotone-x"
     }),
+    ...((() => {
+      const lastComplete = fd1.filter(d => !d.is_partial && d.ma7_contracts != null).at(-1);
+      const todayRow = fd1.find(d => d.is_partial);
+      if (!lastComplete || !todayRow || todayRow.ma7_contracts == null) return [];
+      return [
+        Plot.lineY([lastComplete, todayRow], {
+          x: "date", y: "ma7_contracts",
+          stroke: "#e15759", strokeWidth: 2, strokeDasharray: "5,3", curve: "monotone-x"
+        }),
+        Plot.dot([todayRow], {
+          x: "date", y: d => d.contracts_total,
+          fill: "#ff8c00", r: 4, stroke: "white", strokeWidth: 1.5
+        })
+      ];
+    })()),
     Plot.ruleX(fd1, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(fd1, Plot.pointerX({
       x: "date",
       title: d => [
         fmtDate(d.date),
+        d.is_partial ? "Partial day — updating live" : null,
         `Daily: ${fmtUSD(d.contracts_total||0)}`,
         `Fees: ${fmtUSD(d.fees_total||0)}`,
         d.ma7_contracts != null ? `7-day avg: ${fmtUSD(Math.round(d.ma7_contracts))}` : null
@@ -240,6 +257,7 @@ const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label:
 <div class="inline-legend">
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily bars</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#ff8c00"></span>Today (partial)</span>
   <span class="legend-chip is-active annotation-key">Event overlay</span>
 </div>
 
