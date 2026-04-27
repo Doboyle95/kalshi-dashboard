@@ -12,6 +12,24 @@
    ============================================================ */
 
 :root {
+  /* ── Observable Framework theme variables (air = light default) ── */
+  /* Must be set here so --theme-background / --theme-foreground are  */
+  /* defined even when data-theme is unset (system mode). Without     */
+  /* these, --plot-background is undefined and SVG fill defaults to   */
+  /* black, causing black-square tooltips on GitHub Pages.            */
+  color-scheme: light;
+  --theme-foreground:          #1b1e23;
+  --theme-foreground-focus:    #3b5fc0;
+  --theme-background-a:        #ffffff;
+  --theme-background-b:        color-mix(in srgb, var(--theme-foreground) 4%, var(--theme-background-a));
+  --theme-background:          var(--theme-background-a);
+  --theme-background-alt:      var(--theme-background-b);
+  --theme-foreground-alt:      color-mix(in srgb, var(--theme-foreground) 90%, var(--theme-background-a));
+  --theme-foreground-muted:    color-mix(in srgb, var(--theme-foreground) 60%, var(--theme-background-a));
+  --theme-foreground-faint:    color-mix(in srgb, var(--theme-foreground) 50%, var(--theme-background-a));
+  --theme-foreground-fainter:  color-mix(in srgb, var(--theme-foreground) 30%, var(--theme-background-a));
+  --theme-foreground-faintest: color-mix(in srgb, var(--theme-foreground) 14%, var(--theme-background-a));
+
   /* Platform accents (consistent across site) */
   --accent-kalshi:       #00C2A8;
   --accent-polymarket:   #3B7DD8;
@@ -77,12 +95,23 @@
   --annotation-bg:   color-mix(in srgb, var(--theme-background) 80%, transparent);
 }
 
-/* Dark-mode palette shared between system-dark and explicit dark override */
+/* near-midnight theme variables + dark accent overrides for system dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
+    --theme-foreground:          #dfdfd6;
+    --theme-foreground-focus:    oklch(0.712564 0.257662 265.758);
+    --theme-background-b:        #161616;
+    --theme-background-a:        color-mix(in srgb, var(--theme-foreground) 4%, var(--theme-background-b));
+    --theme-background:          var(--theme-background-a);
+    --theme-background-alt:      var(--theme-background-b);
+    --theme-foreground-alt:      color-mix(in srgb, var(--theme-foreground) 90%, var(--theme-background-b));
+    --theme-foreground-muted:    color-mix(in srgb, var(--theme-foreground) 60%, var(--theme-background-b));
+    --theme-foreground-faint:    color-mix(in srgb, var(--theme-foreground) 50%, var(--theme-background-b));
+    --theme-foreground-fainter:  color-mix(in srgb, var(--theme-foreground) 30%, var(--theme-background-b));
+    --theme-foreground-faintest: color-mix(in srgb, var(--theme-foreground) 14%, var(--theme-background-b));
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.25);
-    /* Slightly brighter accents for dark backgrounds */
     --accent-kalshi:     #2DD4C4;
     --accent-polymarket: #7FB3F5;
     --accent-forecastex: #FC6E6E;
