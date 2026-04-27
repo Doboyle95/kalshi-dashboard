@@ -18,12 +18,13 @@ How accurately do Kalshi contract prices predict outcomes? A perfectly calibrate
 
 ```js
 const calib = await FileAttachment("data/calibration_three_way.csv").csv({typed: true});
+import {hashGet, hashInput} from "./components/hash-state.js";
 ```
 
 ```js
-const group = view(Inputs.select(["ALL", "SPORTS_NON_PARLAY", "NON_SPORTS", "PARLAY", "NON_PARLAY"], {
+const group = view(hashInput("group", Inputs.select(["ALL", "SPORTS_NON_PARLAY", "NON_SPORTS", "PARLAY", "NON_PARLAY"], {
   label: "Market group",
-  value: "ALL",
+  value: hashGet("group", "ALL"),
   format: g => ({
     "ALL":               "All markets",
     "SPORTS_NON_PARLAY": "Sports (non-parlay)",
@@ -31,7 +32,7 @@ const group = view(Inputs.select(["ALL", "SPORTS_NON_PARLAY", "NON_SPORTS", "PAR
     "PARLAY":            "Parlay only",
     "NON_PARLAY":        "All non-parlay (sports + non-sports)"
   })[g] ?? g
-}));
+})));
 ```
 
 ```js
@@ -63,7 +64,9 @@ Plot.plot({
       fillOpacity: 0.7,
       tip: true,
       title: d => `${d.price_bin}¢ contracts\nActual: ${(+d.actual_win_rate_wt*100).toFixed(1)}%\nImplied: ${(+d.implied_prob*100).toFixed(1)}%\nError: ${(+d.calib_error*100).toFixed(2)}%\nTrades: ${(+d.n_trades).toLocaleString()}`
-    })
+    }),
+    Plot.ruleX(data, Plot.pointerX({x: d => +d.implied_prob, stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.ruleY(data, Plot.pointerX({y: d => +d.actual_win_rate_wt, stroke: "currentColor", strokeOpacity: 0.25}))
   ]
 })
 ```
@@ -88,7 +91,8 @@ Plot.plot({
       fillOpacity: 0.75,
       tip: true,
       title: d => `${d.price_bin}¢\nError: ${(+d.calib_error*100).toFixed(2)}%\nActual: ${(+d.actual_win_rate_wt*100).toFixed(1)}%`
-    })
+    }),
+    Plot.ruleX(data, Plot.pointerX({x: d => +d.price_bin, stroke: "currentColor", strokeOpacity: 0.25}))
   ]
 })
 ```

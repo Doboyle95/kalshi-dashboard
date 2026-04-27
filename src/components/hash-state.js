@@ -53,10 +53,14 @@ export function hashSet(key, val) {
  * Decorate an Observable Inputs element so that changes to its `value`
  * propagate into the hash automatically. Returns the same element so it can
  * be passed directly to `view(...)`.
+ *
+ * For inputs whose value isn't a primitive (e.g. Inputs.search returns the
+ * filtered array), prefer wrapping the inner <input> with a bespoke listener.
  */
 export function hashInput(key, el) {
   const push = () => hashSet(key, el.value);
   el.addEventListener("input", push);
+  // Some Observable inputs only dispatch "input" inside a form; guard on change too.
   el.addEventListener("change", push);
   return el;
 }
