@@ -40,6 +40,11 @@ const latestTradeSizeDate = d3.max(tradeSizeRaw, d => d.date);
 const platformOptions = ["Kalshi", "Polymarket US", "ForecastEx"]
   .filter(platform => tradeSizeRaw.some(d => d.platform === platform));
 
+```
+
+<div class="control-strip">
+
+```js
 const selectedPlatform = view(Inputs.radio(platformOptions, {
   label: "Platform",
   value: "Kalshi"
@@ -68,6 +73,16 @@ const segmentTotals = Array.from(
 
 const segmentOptions = segmentTotals.map(d => d.value);
 ```
+
+```js
+const rawSegmentKey = view(Inputs.select(segmentOptions, {
+  label: "Segment",
+  value: segmentOptions[0],
+  format: optionLabel
+}));
+```
+
+</div>
 
 ```js
 function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color = "#00C2A8") {
@@ -117,11 +132,6 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
 ```
 
 ```js
-const rawSegmentKey = view(Inputs.select(segmentOptions, {
-  label: "Segment",
-  value: segmentOptions[0],
-  format: optionLabel
-}));
 const selectedSegmentKey = segmentOptions.includes(rawSegmentKey) ? rawSegmentKey : segmentOptions[0];
 ```
 
@@ -156,12 +166,16 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
   <p>Pick a platform and segment first, then choose a large-trade threshold. The top chart shows only contracts from trades at or above that threshold; the ribbon shows the full size mix for the same window, so spikes are easiest to interpret when both move together.</p>
 </details>
 
+<div class="control-strip">
+
 ```js
 const rangePreset = view(Inputs.radio(["Since Jan 2025", "Last 180 days", "Last 90 days", "All history"], {
   label: "Date window",
   value: "Since Jan 2025"
 }));
 ```
+
+</div>
 
 ```js
 const latestSelectedDate = d3.max(selectedRowsAllTime, d => d.date) || latestTradeSizeDate;
@@ -258,13 +272,6 @@ const spikeRows = thresholdRows
 
 <div class="instruction-line"><strong>Try this:</strong> switch between <em>Sports</em> and <em>Non-sports</em>, then change the threshold from <em>10k+</em> to <em>100k+</em> to see whether the spike is broad block flow or true whale flow.</div>
 
-```js
-const largeThreshold = view(Inputs.radio(["1k+", "10k+", "50k+", "100k+"], {
-  label: "Volume threshold",
-  value: "1k+"
-}));
-```
-
 <div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${dateWindowLabel}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total Kalshi volume.</div>
 
 <div class="plot-shell">
@@ -274,7 +281,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 170,
-  marginLeft: 58,
+  marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: `${largeThreshold} contracts`, grid: true, tickFormat: fmtCount},
   marks: [
@@ -318,7 +325,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 360,
-  marginLeft: 52,
+  marginLeft: 70,
   color: {domain: bucketDomain, range: bucketColors, legend: true},
   x: {type: "utc", label: null},
   y: {label: "Share of contracts", percent: true, grid: true},
@@ -346,6 +353,17 @@ Plot.plot({
 
 </div>
 
+<div class="control-strip">
+
+```js
+const largeThreshold = view(Inputs.radio(["1k+", "10k+", "50k+", "100k+"], {
+  label: "Volume threshold",
+  value: "1k+"
+}));
+```
+
+</div>
+
 ## Large-trade share radar
 
 <p class="section-intro">This isolates the selected threshold and flags days when large-trade share is far above its trailing baseline. The goal is to catch days where volume was not just high, but unusually block-heavy.</p>
@@ -357,7 +375,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 280,
-  marginLeft: 52,
+  marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: `${largeThreshold} share`, percent: true, grid: true},
   marks: [

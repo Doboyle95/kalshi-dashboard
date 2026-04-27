@@ -10,26 +10,37 @@ const split     = await FileAttachment("data/polymarket_sports_split_daily.csv")
 ```
 
 ```js
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
+const fmtUSD   = n => "$" + fmtCount(n);
+const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+```
+
+```js
 const totalContracts = d3.sum(split, d => d.contracts_total);
 const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, split[0]);
-const fmtCount = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B"
-                  : n >= 1e6 ? (n/1e6).toFixed(1)+"M"
-                  : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
-                  : (n ?? 0).toString();
-const fmtDate = d => d ? d3.timeFormat("%b %-d, %Y")(d) : "";
 ```
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="polymarket">
-    <div class="kpi-label">Contracts (since Oct 2025)</div>
-    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-label">Volume (since Oct 2025)</div>
+    <div class="kpi-value">${fmtUSD(totalContracts)}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtCount(peakDay?.contracts_total || 0)}</div>
+    <div class="kpi-value">${fmtUSD(peakDay?.contracts_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
   </div>
 </div>
+
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Polymarket US volume comes from public daily market reports normalized into category and sports-split files. Volume is contract count. Category charts use the mapped category attached to each market report row; the sports split sums categories classified as sports versus everything else.</p>
+</details>
+
+<details class="surface-card compact-details">
+  <summary>How to use this page</summary>
+  <p>Use the top line to understand headline scale, then check sports versus non-sports and category share to see whether growth is broad or concentrated. The brush controls the visible window for every section on the page.</p>
+</details>
 
 ```js
 function makeBrush(data, color) {
@@ -41,8 +52,8 @@ function makeBrush(data, color) {
 
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
-    .style("display", "block").style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8").style("border-radius", "4px")
+    .style("display", "block").style("background", "var(--theme-background-alt)")
+    .style("border", "1px solid var(--card-border)").style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
   svg.append("path").datum(data)
@@ -71,7 +82,7 @@ function makeBrush(data, color) {
 ```
 
 ```js
-const brush = view(makeBrush(split, "#e66101"));
+const brush = view(makeBrush(split, "#3B7DD8"));
 ```
 
 ```js
@@ -84,20 +95,21 @@ const catDailyF = catDaily.filter(d => d.date >= s && d.date <= e);
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
+  marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: "Volume ($)", grid: true},
   marks: [
     Plot.rectY(splitF, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#e66101", fillOpacity: 0.6,
+      fill: "#3B7DD8", fillOpacity: 0.6,
       tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)}\n${(d.contracts_total||0).toLocaleString()} contracts`
+      title: d => `${fmtDate(d.date)}\n${fmtUSD(d.contracts_total||0)}`
     }),
-    Plot.ruleX(splitF, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.ruleY([0])
   ]
 })
@@ -116,18 +128,24 @@ const tidySplit = splitF.flatMap(d => [
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 240,
+  marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#2c7bb6"]},
+  y: {label: "Volume ($)", grid: true},
+  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
       order: ["Non-sports", "Sports"],
       curve: "monotone-x", fillOpacity: 0.85
     }),
-    Plot.ruleX(tidySplit, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.ruleX(splitF, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(splitF, Plot.pointerX({
+      x: "date",
+      title: d => `${fmtDate(d.date)}\nSports: ${fmtUSD(d.contracts_sports||0)}\nNon-sports: ${fmtUSD(d.contracts_nonsports||0)}`
+    })),
     Plot.ruleY([0])
   ]
 })
@@ -142,21 +160,36 @@ const catFiltered = catDailyF.filter(d => topCats.includes(d.category));
 ```
 
 ```js
+// Per-date pivot for single combined tooltip (avoids overlapping bubbles)
+const catTipData = Array.from(
+  d3.rollup(catFiltered, rs => {
+    const o = {date: rs[0].date};
+    for (const r of rs) o[r.category] = r.contracts || 0;
+    return o;
+  }, d => d.date.getTime())
+).map(([, v]) => v).sort((a, b) => a.date - b.date);
+```
+
+```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
+  marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Contracts", grid: true},
+  y: {label: "Volume ($)", grid: true},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
     Plot.areaY(catFiltered, {
       x: "date", y: "contracts", fill: "category",
       order: topCats.slice().reverse(),
-      curve: "monotone-x", fillOpacity: 0.85,
-      tip: true,
-      title: d => `${d.date.toISOString().slice(0,10)} · ${d.category}\n${(d.contracts||0).toLocaleString()} contracts`
+      curve: "monotone-x", fillOpacity: 0.85
     }),
-    Plot.ruleX(catFiltered, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.ruleX(catTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(catTipData, Plot.pointerX({
+      x: "date",
+      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtUSD(d[c])}` : null).filter(Boolean)].join("\n")
+    })),
     Plot.ruleY([0])
   ]
 })
@@ -172,6 +205,7 @@ const catBar = [...catTotals.entries()]
 
 ```js
 Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
   width,
   height: catBar.length * 28 + 40,
   marginLeft: 170,
@@ -181,9 +215,9 @@ Plot.plot({
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#e66101", fillOpacity: 0.7,
+      fill: "#3B7DD8", fillOpacity: 0.7,
       tip: true,
-      title: d => `${d.category}: ${d.contracts.toLocaleString()}`
+      title: d => `${d.category}: ${fmtUSD(d.contracts)}`
     }),
     Plot.ruleX([0])
   ]
