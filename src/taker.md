@@ -5,111 +5,93 @@ title: Taker-Side Volume
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Taker-Side Volume</h1>
-  <p class="page-lead">The closest equivalent to sportsbook handle: every contract traded where the taker absorbed market risk. A rising taker share signals a healthy two-sided book.</p>
-  <div class="page-meta">Taker side = the participant who crosses the spread and accepts the posted price. Maker side = the resting liquidity provider. Total taker volume ≈ gross handle.</div>
+  <p class="page-lead">The closest equivalent to sportsbook handle: dollars staked by the participants crossing the spread. Yes-side takers bought upside; no-side takers faded it.</p>
+  <div class="page-meta">Each trade has one taker (the aggressor who crosses the spread) and one maker (the resting order). Taker notional = contracts × price paid. For yes-side: price paid is the yes price. For no-side: price paid is 1 − yes price.</div>
 </div>
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
-const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+const fmtUSD  = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-$" : "$"; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : a.toFixed(0)); };
+const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
 ```js
-const taker = await FileAttachment("data/taker_volume_daily.csv").csv({typed: true});
+const taker = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
 ```
 
 ```js
-// Compute 7-day rolling mean for total and yes/no
 function rollingMean(rows, key) {
   return rows.map((d, i) => ({
     date: d.date,
     ma: d3.mean(rows.slice(Math.max(0, i - 6), i + 1), r => r[key])
   })).filter((_, i) => i >= 6);
 }
-const ma7Total = rollingMean(taker, "contracts_total");
-const ma7Yes   = rollingMean(taker, "contracts_yes");
-const ma7No    = rollingMean(taker, "contracts_no");
+const ma7 = rollingMean(taker, "notional_total");
 ```
 
 ```js
-const totalTaker  = d3.sum(taker, d => d.contracts_total);
-const peakDay     = taker.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, taker[0]);
-const recentRows  = taker.slice(-30);
-const recentAvg   = d3.mean(recentRows, d => d.contracts_total);
-const recentPctYes = d3.mean(recentRows, d => d.pct_yes);
+const totalNotional = d3.sum(taker, d => d.notional_total);
+const peakDay       = taker.reduce((b, d) => d.notional_total > b.notional_total ? d : b, taker[0]);
+const recentRows    = taker.slice(-30);
+const recentAvg     = d3.mean(recentRows, d => d.notional_total);
+const recentPctYes  = d3.mean(recentRows, d => d.notional_yes / d.notional_total * 100);
 ```
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">All-time taker volume</div>
-    <div class="kpi-value">${fmtCount(totalTaker)}</div>
-    <div class="kpi-meta">contracts</div>
+    <div class="kpi-label">All-time taker notional</div>
+    <div class="kpi-value">${fmtUSD(totalNotional)}</div>
+    <div class="kpi-meta">dollars staked by takers</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-value">${fmtUSD(peakDay?.notional_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">30-day daily avg</div>
-    <div class="kpi-value">${fmtCount(Math.round(recentAvg))}</div>
-    <div class="kpi-meta">contracts/day</div>
+    <div class="kpi-value">${fmtUSD(Math.round(recentAvg))}</div>
+    <div class="kpi-meta">dollars/day</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Recent yes-side share</div>
     <div class="kpi-value">${recentPctYes?.toFixed(1)}%</div>
-    <div class="kpi-meta">30-day avg</div>
+    <div class="kpi-meta">of notional (30-day avg)</div>
   </div>
 </div>
 
 ```js
-// Date brush
 function makeTakerBrush(defaultStart) {
-  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
-  const w = width;
+  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8, w = width;
   const x = d3.scaleUtc().domain(d3.extent(taker, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(taker, d => d.contracts_total) || 1;
+  const yMax = d3.max(taker, d => d.notional_total) || 1;
   const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-
-  const svg = d3.create("svg")
-    .attr("width", w).attr("height", h)
-    .style("display", "block")
-    .style("background", "var(--theme-background-alt)")
-    .style("border", "1px solid var(--card-border)")
-    .style("border-radius", "4px")
-    .style("margin-bottom", "1.5rem");
-
-  svg.append("path")
-    .datum(taker)
-    .attr("fill", "#00C2A8").attr("fill-opacity", 0.2)
-    .attr("d", d3.area()
-      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total))
-      .curve(d3.curveBasis));
-
-  svg.append("g")
-    .attr("transform", `translate(0,${h - mb})`)
+  const svg = d3.create("svg").attr("width", w).attr("height", h)
+    .style("display","block").style("background","var(--theme-background-alt)")
+    .style("border","1px solid var(--card-border)").style("border-radius","4px")
+    .style("margin-bottom","1.5rem");
+  svg.append("path").datum(taker)
+    .attr("fill","#00C2A8").attr("fill-opacity",0.2)
+    .attr("d", d3.area().x(d => x(d.date)).y0(h-mb).y1(d => y(d.notional_total)).curve(d3.curveBasis));
+  svg.append("g").attr("transform",`translate(0,${h-mb})`)
     .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke", "#ccc"))
-    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
-
+    .call(g => g.select(".domain").attr("stroke","#ccc"))
+    .call(g => g.selectAll("text").style("font-size","10px").attr("fill","#888"));
   const defaultEnd = d3.max(taker, d => d.date);
-  const brush = d3.brushX()
-    .extent([[ml, mt], [w - mr, h - mb]])
+  const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
     .on("brush end", event => {
       if (!event.sourceEvent) return;
       if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
     });
-
-  svg.append("g").attr("class", "brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill", "#00C2A8").style("fill-opacity", 0.8);
+  svg.append("g").attr("class","brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.selectAll(".handle").style("fill","#00C2A8").style("fill-opacity",0.8);
   svg.property("value", [defaultStart, defaultEnd]);
   return svg.node();
 }
 ```
 
-## Daily taker volume
+## Daily taker notional
 
-<p class="section-intro">Each bar is one day of taker-side contracts. The red line is the trailing 7-day average. Super Bowl LX (Feb 8, 2026) is the all-time peak.</p>
+<p class="section-intro">Dollars staked by the active side of each trade — the sportsbook handle equivalent. Unlike contract count, this weights each bet by its dollar cost, so a 99¢ YES contract and a 1¢ NO contract on the same market contribute equally.</p>
 
 ```js
 const dr = view(makeTakerBrush(new Date("2025-01-01")));
@@ -117,8 +99,8 @@ const dr = view(makeTakerBrush(new Date("2025-01-01")));
 
 ```js
 const [s1, e1] = dr;
-const fd = taker.filter(d => d.date >= s1 && d.date <= e1);
-const ma7fd = ma7Total.filter(d => d.date >= s1 && d.date <= e1);
+const fd    = taker.filter(d => d.date >= s1 && d.date <= e1);
+const ma7fd = ma7.filter(d => d.date >= s1 && d.date <= e1);
 ```
 
 <div class="plot-shell">
@@ -128,14 +110,14 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 360,
-  marginLeft: 72,
+  marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker contracts", grid: true},
+  y: {label: "Taker notional ($)", grid: true},
   marks: [
     Plot.rectY(fd, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => d.contracts_total || 0,
+      y: d => d.notional_total || 0,
       fill: "#00C2A8",
       fillOpacity: 0.6
     }),
@@ -148,10 +130,10 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Total: ${fmtCount(d.contracts_total)}`,
-        `Yes-side: ${fmtCount(d.contracts_yes)} (${d.pct_yes?.toFixed(1)}%)`,
-        `No-side:  ${fmtCount(d.contracts_no)} (${d.pct_no?.toFixed(1)}%)`
-      ].filter(Boolean).join("\n")
+        `Total: ${fmtUSD(d.notional_total)}`,
+        `Yes-side: ${fmtUSD(d.notional_yes)} (${(d.notional_yes/d.notional_total*100).toFixed(1)}%)`,
+        `No-side:  ${fmtUSD(d.notional_no)}  (${(d.notional_no/d.notional_total*100).toFixed(1)}%)`
+      ].join("\n")
     })),
     Plot.ruleY([0])
   ]
@@ -161,18 +143,18 @@ Plot.plot({
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker volume</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker notional</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
-## Yes vs. No side
+## Yes vs. No notional
 
-<p class="section-intro">Which direction are takers leaning? A persistent yes-side majority means more participants are buying upside contracts — a rough read on directional sentiment across all markets.</p>
+<p class="section-intro">Which direction is the aggressive money flowing? Yes-side takers are buying upside; no-side takers are fading it. A persistent yes-side majority reflects that buyers are more aggressive than sellers across the book.</p>
 
 ```js
 const fdStack = fd.flatMap(d => [
-  {date: d.date, side: "Yes", value: d.contracts_yes || 0},
-  {date: d.date, side: "No",  value: d.contracts_no  || 0}
+  {date: d.date, side: "Yes", value: d.notional_yes  || 0},
+  {date: d.date, side: "No",  value: d.notional_no   || 0}
 ]);
 ```
 
@@ -183,9 +165,9 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
-  marginLeft: 72,
+  marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker contracts", grid: true, stackOffset: null},
+  y: {label: "Taker notional ($)", grid: true},
   color: {domain: ["Yes", "No"], range: ["#00C2A8", "#e15759"], legend: false},
   marks: [
     Plot.rectY(fdStack, {
@@ -201,8 +183,8 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Yes: ${fmtCount(d.contracts_yes)} (${d.pct_yes?.toFixed(1)}%)`,
-        `No:  ${fmtCount(d.contracts_no)} (${d.pct_no?.toFixed(1)}%)`
+        `Yes: ${fmtUSD(d.notional_yes)} (${(d.notional_yes/d.notional_total*100).toFixed(1)}%)`,
+        `No:  ${fmtUSD(d.notional_no)}  (${(d.notional_no/d.notional_total*100).toFixed(1)}%)`
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -218,6 +200,6 @@ Plot.plot({
 </div>
 
 <details class="surface-card compact-details">
-  <summary>About taker-side volume</summary>
-  <p>In a limit-order-book exchange, every trade has two sides: a <strong>maker</strong> who posts a resting order and a <strong>taker</strong> who crosses the spread to fill it. Taker volume counts only the taking side of each matched trade — which is why it equals total contracts traded (each contract produces one taker and one maker). The split between yes-side and no-side takers reveals directional flow: if more takers are buying yes contracts, buyers are more aggressive than sellers across Kalshi's book. Sportsbooks call the equivalent number <em>handle</em>.</p>
+  <summary>How taker notional is calculated</summary>
+  <p>Every matched trade has an aggressor (taker) who crosses the spread and a liquidity provider (maker) who rests. The taker's cost depends on which side they take: a yes-side taker pays the yes price per contract; a no-side taker pays <em>1 − yes price</em> per contract. Summing those dollar amounts across all takers gives total taker notional — the prediction-market equivalent of handle in sports betting. Unlike raw contract count, notional is unaffected by artificial inflation from high-frequency trading in near-certain contracts.</p>
 </details>
