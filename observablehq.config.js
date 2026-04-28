@@ -44,6 +44,7 @@ export default {
   pages: [
     {name: "Overview", path: "/"},
     {name: "Kalshi Volume", path: "/volume"},
+    {name: "Taker Volume", path: "/taker"},
     {name: "Trade Size Mix", path: "/trade-size"},
     {name: "Fee Revenue", path: "/fees"},
     {name: "Categories", path: "/categories"},
