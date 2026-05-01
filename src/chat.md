@@ -26,11 +26,15 @@ title: Ask Data
   const { marked } = await import("npm:marked");
   marked.setOptions({mangle: false, headerIds: false});
 
-  const apiUrl = "http://127.0.0.1:8000/ask";
-  const resetUrl = "http://127.0.0.1:8000/reset";
-  const healthUrl = "http://127.0.0.1:8000/health";
+  const API_BASE = (process.env.CHAT_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+  const API_TOKEN = process.env.CHAT_TOKEN ?? "";
+  const apiUrl = `${API_BASE}/ask`;
+  const resetUrl = `${API_BASE}/reset`;
+  const healthUrl = `${API_BASE}/health`;
+  const authHeader = API_TOKEN ? {"Authorization": `Bearer ${API_TOKEN}`} : {};
   const apiCommand = "cd KalshiData/python && python -m uvicorn api:app --port 8000";
   const HISTORY_KEY = "kalshi_chat_history";
+  const PREFILL_KEY = "kalshi_chat_prefill";
   const HISTORY_MAX = 10;
   const EXAMPLES = [
     "Top 5 categories by contracts in March 2026",
@@ -128,6 +132,18 @@ title: Ask Data
     chips.append(chip);
   }
 
+  try {
+    const pending = JSON.parse(localStorage.getItem(PREFILL_KEY) || "null");
+    if (pending?.question) {
+      textarea.value = pending.context
+        ? `${pending.question}\n\nContext: ${pending.context}`
+        : pending.question;
+      replyLabel.textContent = "Ask about the page you came from";
+      formWrapper.open = true;
+      localStorage.removeItem(PREFILL_KEY);
+    }
+  } catch {}
+
   function setBusy(isBusy) {
     submitButton.disabled = isBusy;
     newConvButton.disabled = isBusy;
@@ -154,7 +170,7 @@ title: Ask Data
 
   async function refreshStatus() {
     try {
-      const response = await fetch(healthUrl);
+      const response = await fetch(healthUrl, {headers: authHeader});
       const data = await response.json();
       statusSection.replaceChildren(
         html`<span class="chat-status-dot ${data.ok ? "is-ok" : "is-error"}"></span>`,
@@ -325,7 +341,7 @@ title: Ask Data
     try {
       const response = await fetch(apiUrl, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {...authHeader, "Content-Type": "application/json"},
         body: JSON.stringify({question})
       });
 
@@ -355,7 +371,7 @@ title: Ask Data
           try {
             const insResp = await fetch(`${apiUrl.replace("/ask", "/insights")}`, {
               method: "POST",
-              headers: {"Content-Type": "application/json"},
+              headers: {...authHeader, "Content-Type": "application/json"},
               body: JSON.stringify({question, sql: data.sql, rows: data.rows, columns: data.columns})
             });
             if (!insResp.ok) throw new Error(`HTTP ${insResp.status}`);
@@ -431,7 +447,7 @@ title: Ask Data
   });
 
   newConvButton.addEventListener("click", async () => {
-    try { await fetch(resetUrl, {method: "POST"}); } catch {}
+    try { await fetch(resetUrl, {method: "POST", headers: authHeader}); } catch {}
     thread.replaceChildren();
     textarea.value = "";
     formWrapper.setAttribute("open", "");
