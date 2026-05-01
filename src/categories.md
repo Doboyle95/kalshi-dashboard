@@ -887,7 +887,7 @@ if (tmActiveCategory) {
 }
 ```
 
-<div class="chart-note"><strong>Reading note:</strong> area represents category weight in the selected window. Click a category to zoom into families that add to 100% of that category; each family shows readable top markets plus an explicit Other remainder. Date-filtered top-level views cover tracked top tickers; zoomed market detail uses all-time market mix to allocate the selected-period family total.</div>
+<div class="chart-note"><strong>Reading note:</strong> area represents category weight in the selected window. Click a category to zoom into families that add to 100% of that category; named market tiles keep their measured size, and any unlisted or unresolved remainder appears as an explicit Other tile.</div>
 
 ```js
 {

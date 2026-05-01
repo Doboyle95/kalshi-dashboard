@@ -49,6 +49,7 @@ export default {
     {name: "Fee Revenue", path: "/fees"},
     {name: "Categories", path: "/categories"},
     {name: "Ask Data", path: "/chat"},
+    {name: "Taker P&L", path: "/taker-pnl"},
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Calibration", path: "/calibration"},
     {name: "Platform Comparison", path: "/competitors"},

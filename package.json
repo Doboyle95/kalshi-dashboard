@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "observable preview",
     "build": "observable build",
+    "data:sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-kalshi-output.ps1",
+    "data:sync:force": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-kalshi-output.ps1 -ForceAll",
+    "build:fresh": "npm run data:sync && npm run build",
     "clean": "rm -rf dist"
   },
   "type": "module",
