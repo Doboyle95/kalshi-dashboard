@@ -23,7 +23,24 @@ title: Categories
 const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
 const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Category trends", date: latestDate(topDaily), updatedAt: fileUpdatedAt(freshness, "daily_top_categories.csv"), meta: "Can be within 15 minutes locally after near-live refresh"},
+    {label: "Category leaderboard", value: `${leaderboard.length.toLocaleString()} series`, updatedAt: fileUpdatedAt(freshness, "category_leaderboard.csv"), meta: "All-time raw API rebuild", tone: "settlement"},
+    {label: "Market leaderboard", value: `${mktLeaderboard.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "market_leaderboard.csv"), meta: "All-time raw API + settlement metadata", tone: "settlement"}
+  ],
+  note: "Trend charts can be fresher than all-time leaderboards. Winner fields and settled outcomes depend on settlement metadata refreshes."
+}));
+display(askPageLink({
+  question: "Find the most important recent category shifts and compare them with the all-time category leaderboard.",
+  context: "Categories page using daily_top_categories.csv, category_leaderboard.csv, and market_leaderboard.csv."
+}));
 ```
 
 ```js

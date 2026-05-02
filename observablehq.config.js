@@ -57,5 +57,5 @@ export default {
     {name: "ForecastEx", path: "/forecastex"},
     {name: "Crypto.com/Nadex", path: "/nadex"},
   ],
-  footer: "Data: Kalshi trade records via Daniel O'Boyle. Updated nightly.",
+  footer: "Data: Kalshi trade records and public competitor sources via Daniel O'Boyle. Freshness varies by page; see each page's data status panel.",
 };

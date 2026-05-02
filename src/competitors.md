@@ -17,6 +17,22 @@ title: Competitors
 ```js
 const kalshi     = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Kalshi", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
+    {label: "Competitors", date: latestDate(competitor.filter(d => d.platform !== "Kalshi")), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public platform files/scrapes", tone: "competitor"}
+  ],
+  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, and Crypto.com/Nadex update when their external files are downloaded and rebuilt."
+}));
+display(askPageLink({
+  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, and Crypto.com/Nadex, noting any freshness caveats.",
+  context: "Platform Comparison page using daily_overall.csv and competitor_daily.csv."
+}));
 ```
 
 ```js

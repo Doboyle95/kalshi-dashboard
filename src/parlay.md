@@ -14,6 +14,21 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 
 ```js
 const raw = await FileAttachment("data/parlay_pnl_net.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Parlay P&L", date: latestDate(raw, d => d.row_label), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_net.csv"), meta: "Settlement-dependent parlay export", tone: "settlement"}
+  ],
+  note: "Recent parlay P&L can be incomplete until contracts settle. Subtype labels are usable but should still be treated as taxonomy-dependent."
+}));
+display(askPageLink({
+  question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
+  context: "Parlay P&L page using parlay_pnl_net.csv."
+}));
 ```
 
 ```js
@@ -147,6 +162,12 @@ const tidyCumul = [
   ...pnlCumul.map(d => ({date: d.date, value: d.net_cumul_w,   series: "After fees (net)"}))
 ];
 
+const cumulativeSeries = ["Before fees (gross)", "After fees (net)"];
+const cumulativeColors = {
+  "Before fees (gross)": "#f4a736",
+  "After fees (net)": "#d7191c"
+};
+
 // Pivot for single combined tooltip
 const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: d.net_cumul_w}));
 ```
@@ -161,7 +182,7 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Cumulative P&L (USD)", grid: true,
       tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
-  color: {legend: true, domain: ["Before fees (gross)", "After fees (net)"], range: ["#f4a736", "#d7191c"]},
+  color: {legend: true, domain: cumulativeSeries, range: cumulativeSeries.map(label => cumulativeColors[label])},
   marks: [
     Plot.lineY(tidyCumul, {
       x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"

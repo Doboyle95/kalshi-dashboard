@@ -18,6 +18,22 @@ How accurately do Kalshi contract prices predict outcomes? A perfectly calibrate
 
 ```js
 const calib = await FileAttachment("data/calibration_three_way.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Calibration sample", value: `${d3.sum(calib, d => +d.n_trades || 0).toLocaleString()} trades`, updatedAt: fileUpdatedAt(freshness, "calibration_three_way.csv"), meta: "Settled binary contracts only", tone: "settlement"},
+    {label: "Price bins", value: `${new Set(calib.map(d => d.price_bin)).size}`, updatedAt: fileUpdatedAt(freshness, "calibration_three_way.csv"), meta: "5-cent bins from raw API trades"}
+  ],
+  note: "Calibration is settlement-dependent. It should be read as an all-history settled-market diagnostic, not a minute-live metric."
+}));
+display(askPageLink({
+  question: "Summarize where Kalshi appears most underpriced or overpriced in the calibration data, with settlement caveats.",
+  context: "Calibration page using calibration_three_way.csv."
+}));
 ```
 
 ```js

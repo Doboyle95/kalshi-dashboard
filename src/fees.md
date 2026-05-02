@@ -12,6 +12,22 @@ title: Kalshi Fee Revenue
 ```js
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Fee totals", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
+    {label: "Sports fee split", date: latestDate(sports), updatedAt: fileUpdatedAt(freshness, "daily_sports_vs_nonsports.csv"), meta: "Can be within 15 minutes locally after near-live refresh"}
+  ],
+  note: "Fee-rate calculations update with the daily aggregate files; today can remain partial until the trading day closes."
+}));
+display(askPageLink({
+  question: "Analyze the latest Kalshi fee revenue and whether sports or non-sports are driving recent fee-rate changes.",
+  context: "Kalshi Fee Revenue page using daily_overall.csv and daily_sports_vs_nonsports.csv."
+}));
 ```
 
 ```js

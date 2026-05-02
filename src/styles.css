@@ -686,6 +686,178 @@ a.ui-button {
   border-top: 2px dashed var(--annotation-stroke);
 }
 
+/* ============================================================
+   Data freshness and source badges
+   ============================================================ */
+
+.freshness-panel {
+  margin: 0 0 var(--space-5);
+}
+
+.freshness-panel.compact-details {
+  padding: var(--space-3) var(--space-4);
+}
+
+.freshness-panel[open] {
+  padding-bottom: var(--space-4);
+}
+
+.freshness-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+  min-height: 1.5rem;
+}
+
+.freshness-summary::-webkit-details-marker {
+  display: none;
+}
+
+.freshness-summary::before {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  color: var(--accent-kalshi);
+  background: color-mix(in srgb, var(--accent-kalshi) 12%, transparent);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.freshness-panel[open] .freshness-summary::before {
+  content: "-";
+}
+
+.freshness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: 0;
+}
+
+.freshness-title {
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.freshness-title::after {
+  content: " — click for source dates";
+  color: var(--text-faint);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.freshness-panel[open] .freshness-title::after {
+  content: "";
+}
+
+.freshness-summary-updated {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.page-ask-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--accent-kalshi) 28%, var(--card-border));
+  border-radius: 999px;
+  color: var(--accent-kalshi);
+  background: color-mix(in srgb, var(--accent-kalshi) 8%, transparent);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.page-ask-link:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent-kalshi) 13%, transparent);
+  border-color: color-mix(in srgb, var(--accent-kalshi) 45%, var(--card-border));
+}
+
+.freshness-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.freshness-item {
+  position: relative;
+  padding: var(--space-3);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.freshness-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent-kalshi);
+}
+
+.freshness-item[data-tone="settlement"]::before { background: var(--accent-secondary); }
+.freshness-item[data-tone="competitor"]::before { background: var(--accent-polymarket); }
+.freshness-item[data-tone="local"]::before { background: var(--accent-warning); }
+
+.freshness-label {
+  margin-bottom: 0.2rem;
+  color: var(--text-muted);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.freshness-value {
+  color: var(--theme-foreground);
+  font-size: 0.98rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.freshness-updated {
+  margin-top: 0.2rem;
+  color: var(--accent-kalshi);
+  font-size: var(--text-caption);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.freshness-meta {
+  margin-top: 0.25rem;
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  line-height: 1.35;
+}
+
+.freshness-note {
+  margin: var(--space-3) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+}
+
 /* Tabular numerals everywhere numbers matter */
 .kpi-grid,
 .kpi-card,

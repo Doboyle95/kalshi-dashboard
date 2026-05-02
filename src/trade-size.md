@@ -17,6 +17,22 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numer
 
 ```js
 const tradeSizeRaw = await FileAttachment("data/trade_size_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Trade-size mix", date: latestDate(tradeSizeRaw), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Kalshi can be within 15 minutes locally; competitors follow public files"},
+    {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
+  ],
+  note: "Competitor rows update when their public trade files are downloaded and rebuilt."
+}));
+display(askPageLink({
+  question: "Look for unusual recent large-trade activity and compare large-trade share across supported platforms.",
+  context: "Trade Size Mix page using trade_size_daily.csv."
+}));
 ```
 
 ```js

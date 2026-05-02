@@ -67,4 +67,36 @@ if ($missing.Count -gt 0) {
   Write-Warning ("Missing from source output: " + ($missing -join ", "))
 }
 
+$manifestFiles = @{}
+foreach ($file in $files) {
+  $src = Join-Path $resolvedSource $file
+  $dst = Join-Path $resolvedTarget $file
+  $item = if (Test-Path -LiteralPath $src) {
+    Get-Item -LiteralPath $src
+  } elseif (Test-Path -LiteralPath $dst) {
+    Get-Item -LiteralPath $dst
+  } else {
+    $null
+  }
+
+  if ($null -ne $item) {
+    $manifestFiles[$file] = [pscustomobject]@{
+      last_write_time       = $item.LastWriteTime.ToString("o")
+      last_write_time_utc   = $item.LastWriteTimeUtc.ToString("o")
+      size_bytes            = $item.Length
+    }
+  }
+}
+
+$manifest = [pscustomobject]@{
+  generated_at      = (Get-Date).ToString("o")
+  generated_at_utc  = (Get-Date).ToUniversalTime().ToString("o")
+  source_dir        = $resolvedSource.Path
+  files             = $manifestFiles
+}
+
+$manifestPath = Join-Path $resolvedTarget "freshness_manifest.json"
+$manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+Write-Host ("  wrote   freshness_manifest.json ({0:n0} files)" -f $manifestFiles.Count)
+
 Write-Host "Done: $copied copied, $skippedOlder skipped."

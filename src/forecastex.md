@@ -7,6 +7,22 @@ title: ForecastEx
 ```js
 const catDaily  = await FileAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
 const split     = await FileAttachment("data/forecastex_sports_split_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "forecastex_categories_daily.csv"), meta: "Public ForecastEx files", tone: "competitor"},
+    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "forecastex_sports_split_daily.csv"), meta: "Derived from mapped categories", tone: "competitor"}
+  ],
+  note: "ForecastEx updates when its public daily files are downloaded and rebuilt; fees come from the pairs-file fee convention."
+}));
+display(askPageLink({
+  question: "Summarize recent ForecastEx activity and the category mix behind it.",
+  context: "ForecastEx page using forecastex_categories_daily.csv and forecastex_sports_split_daily.csv."
+}));
 ```
 
 ```js

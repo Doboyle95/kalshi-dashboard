@@ -7,6 +7,22 @@ title: Crypto.com/Nadex
 ```js
 const catDaily  = await FileAttachment("data/nadex_categories_daily.csv").csv({typed: true});
 const split     = await FileAttachment("data/nadex_sports_split_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "nadex_categories_daily.csv"), meta: "CFTC/Nadex bulletin scrape", tone: "competitor"},
+    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "nadex_sports_split_daily.csv"), meta: "Derived from mapped bulletin categories", tone: "competitor"}
+  ],
+  note: "Crypto.com/Nadex updates when daily bulletins are scraped and rebuilt; this is not a trade-level feed."
+}));
+display(askPageLink({
+  question: "Summarize recent Crypto.com/Nadex event-contract activity and category mix.",
+  context: "Crypto.com/Nadex page using nadex_categories_daily.csv and nadex_sports_split_daily.csv."
+}));
 ```
 
 ```js

@@ -15,6 +15,23 @@ const notionalDaily = await FileAttachment("data/taker_notional_daily.csv").csv(
 const categorySummary = await FileAttachment("data/taker_category_summary.csv").csv({typed: true});
 const categoryDaily = await FileAttachment("data/taker_category_daily.csv").csv({typed: true});
 const sportsDaily = await FileAttachment("data/taker_sports_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
+    {label: "Taker notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
+    {label: "Category P&L", date: latestDate(categoryDaily), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
+  ],
+  note: "Recent dates can look incomplete until markets settle. Open interest is not part of the fast window refresh because it requires full rolling position state."
+}));
+display(askPageLink({
+  question: "Explain recent taker P&L, including whether results are complete enough to interpret and which categories drove the result.",
+  context: "Taker P&L page using taker_pnl_daily.csv, taker_notional_daily.csv, taker_category_daily.csv, and taker_sports_daily.csv."
+}));
 ```
 
 ```js
@@ -26,12 +43,16 @@ const fmtUSD = n => (n < 0 ? "-$" : "$") + fmtCount(Math.abs(n ?? 0));
 const fmtPct = n => `${(n ?? 0).toFixed(1)}%`;
 const fmtROI = n => `${(n ?? 0).toFixed(2)}%`;
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
-const latestDate = d3.max(daily, d => d.date);
-const earliestDate = d3.min(daily, d => d.date);
+const latestPnlDate = d3.max(daily, d => d.date);
+const earliestPnlDate = d3.min(daily, d => d.date);
 const positive = "#1a9641";
 const negative = "#d7191c";
 const grossColor = "#f4a736";
 const netColor = "#d7191c";
+const takerPnlSeries = ["Before fees", "After fees"];
+const takerPnlColors = {"Before fees": grossColor, "After fees": netColor};
+const sportsSegmentSeries = ["Sports", "Non-sports"];
+const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
 ```
 
 <details class="surface-card compact-details">
@@ -52,12 +73,12 @@ const dateWindow = view(Inputs.radio(["All history", "Since sports launch", "202
 
 ```js
 function windowStart(label) {
-  if (label === "All history") return earliestDate;
+  if (label === "All history") return earliestPnlDate;
   if (label === "Since sports launch") return new Date("2025-01-23");
   if (label === "2026") return new Date("2026-01-01");
-  if (label === "Last 180 days") return new Date(latestDate.getTime() - 180 * 864e5);
-  if (label === "Last 90 days") return new Date(latestDate.getTime() - 90 * 864e5);
-  return earliestDate;
+  if (label === "Last 180 days") return new Date(latestPnlDate.getTime() - 180 * 864e5);
+  if (label === "Last 90 days") return new Date(latestPnlDate.getTime() - 90 * 864e5);
+  return earliestPnlDate;
 }
 
 const startDate = windowStart(dateWindow);
@@ -73,7 +94,7 @@ const dailyWithNotional = daily.map(d => {
 });
 
 const filteredDaily = dailyWithNotional
-  .filter(d => d.date >= startDate && d.date <= latestDate)
+  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
   .sort((a, b) => a.date - b.date);
 
 const totals = {
@@ -162,7 +183,7 @@ Plot.plot({
     grid: true,
     tickFormat: d => fmtUSD(d)
   },
-  color: {legend: true, domain: ["Before fees", "After fees"], range: [grossColor, netColor]},
+  color: {legend: true, domain: takerPnlSeries, range: takerPnlSeries.map(label => takerPnlColors[label])},
   marks: [
     Plot.lineY(cumulativeRows, {
       x: "date",
@@ -279,7 +300,7 @@ Plot.plot({
 
 ```js
 const sportsRows = sportsDaily
-  .filter(d => d.date >= startDate && d.date <= latestDate)
+  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
   .map(d => ({
     date: d.date,
     segment: String(d.is_sports).toLowerCase() === "true" ? "Sports" : "Non-sports",
@@ -311,7 +332,7 @@ Plot.plot({
   marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Cumulative net P&L (USD)", grid: true, tickFormat: d => fmtUSD(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
+  color: {legend: true, domain: sportsSegmentSeries, range: sportsSegmentSeries.map(label => sportsSegmentColors[label])},
   marks: [
     Plot.lineY(sportsCumulative, {
       x: "date",
@@ -340,7 +361,7 @@ const focusCategory = view(Inputs.select(categoryRows.map(d => d.category), {
 
 ```js
 const focusRows = categoryDaily
-  .filter(d => d.kalshi_category === focusCategory && d.date >= startDate && d.date <= latestDate)
+  .filter(d => d.kalshi_category === focusCategory && d.date >= startDate && d.date <= latestPnlDate)
   .sort((a, b) => a.date - b.date);
 
 let focusRunning = 0;

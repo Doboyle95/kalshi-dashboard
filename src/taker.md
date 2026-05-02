@@ -16,6 +16,21 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numer
 
 ```js
 const taker = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Taker notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"}
+  ],
+  note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
+}));
+display(askPageLink({
+  question: "Analyze recent taker-side notional and whether yes-side or no-side takers are driving the change.",
+  context: "Taker-Side Volume page using taker_notional_daily.csv."
+}));
 ```
 
 ```js
@@ -152,10 +167,14 @@ Plot.plot({
 <p class="section-intro">Which direction is the aggressive money flowing? Yes-side takers are buying upside; no-side takers are fading it. A persistent yes-side majority reflects that buyers are more aggressive than sellers across the book.</p>
 
 ```js
-const fdStack = fd.flatMap(d => [
-  {date: d.date, side: "Yes", value: d.notional_yes  || 0},
-  {date: d.date, side: "No",  value: d.notional_no   || 0}
-]);
+const fdStack = fd.flatMap(d => {
+  const yes = d.notional_yes || 0;
+  const no = d.notional_no || 0;
+  return [
+    {date: d.date, side: "Yes", y1: 0, y2: yes},
+    {date: d.date, side: "No",  y1: yes, y2: yes + no}
+  ];
+});
 ```
 
 <div class="plot-shell">
@@ -173,10 +192,10 @@ Plot.plot({
     Plot.rectY(fdStack, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
-      y: "value",
+      y1: "y1",
+      y2: "y2",
       fill: "side",
-      fillOpacity: 0.75,
-      offset: "stack"
+      fillOpacity: 0.75
     }),
     Plot.ruleX(fd, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(fd, Plot.pointerX({

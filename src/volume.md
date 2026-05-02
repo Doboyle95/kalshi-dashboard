@@ -19,6 +19,23 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
+    {label: "Sports split", date: latestDate(sports), updatedAt: fileUpdatedAt(freshness, "daily_sports_vs_nonsports.csv"), meta: "Can be within 15 minutes locally after near-live refresh"},
+    {label: "Tracked categories", date: latestDate(topDaily), updatedAt: fileUpdatedAt(freshness, "daily_top_categories.csv"), meta: "Can be within 15 minutes locally after near-live refresh"}
+  ],
+  note: "Today may be partial while the local raw API collector is still running. Public GitHub Pages only updates after synced CSVs are pushed."
+}));
+display(askPageLink({
+  question: "Explain the latest Kalshi volume trend, including trade count, sports share, and any recent category mix changes.",
+  context: "Kalshi Volume page using daily_overall.csv, daily_sports_vs_nonsports.csv, and daily_top_categories.csv."
+}));
 ```
 
 ```js

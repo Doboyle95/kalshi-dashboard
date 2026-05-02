@@ -7,6 +7,22 @@ title: Polymarket US
 ```js
 const catDaily  = await FileAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
 const split     = await FileAttachment("data/polymarket_sports_split_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "polymarket_categories_daily.csv"), meta: "Public Polymarket US files", tone: "competitor"},
+    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "polymarket_sports_split_daily.csv"), meta: "Derived from mapped categories", tone: "competitor"}
+  ],
+  note: "Polymarket US is refreshed when public files are downloaded and rebuilt; it is not tied to the Kalshi near-live API collector."
+}));
+display(askPageLink({
+  question: "Summarize recent Polymarket US activity and whether sports or non-sports categories are driving it.",
+  context: "Polymarket US page using polymarket_categories_daily.csv and polymarket_sports_split_daily.csv."
+}));
 ```
 
 ```js

@@ -12,6 +12,22 @@ title: Overview
 ```js
 const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Kalshi aggregates", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Local pipeline can refresh within minutes when the collector is running"},
+    {label: "Competitor comparison", date: latestDate(competitor), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public competitor sources + Kalshi API rows", tone: "competitor"}
+  ],
+  note: "This static page is current as of the CSV snapshot committed or synced into the dashboard. Local refresh scripts can be fresher than the public GitHub Pages build."
+}));
+display(askPageLink({
+  question: "Summarize the latest platform comparison and identify what changed most recently.",
+  context: "Overview page with daily_overall.csv and competitor_daily.csv."
+}));
 ```
 
 ```js
