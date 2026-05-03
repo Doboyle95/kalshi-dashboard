@@ -50,7 +50,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 
 ```js
 const TM_CATEGORY_ORDER = [
-  "NFL", "College Football", "NBA", "WNBA", "College Basketball", "Baseball",
+  "NFL", "College Football", "NBA", "College Basketball", "Baseball",
   "Hockey", "Golf", "Tennis", "Soccer", "Cricket", "Combat Sports", "Esports", "Parlay",
   "Crypto", "Politics", "Finance", "Entertainment", "Weather",
   "Other Sports", "Other Non-sports"
@@ -62,7 +62,6 @@ const TM_CATEGORY_COLORS = {
   "College Football": "#E64A19",
   "Tennis": "#E53935",
   "NBA": "#F57F17",
-  "WNBA": "#E91E63",
   "Soccer": "#F9A825",
   "Cricket": "#FA8072",
   "Golf": "#FBC02D",
@@ -101,7 +100,6 @@ function classifyTreemapTicker(ticker, isSports) {
   if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
   else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
   else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
-  else if (ticker.startsWith("KXWNBA"))                                          cat = "WNBA";
   else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
   else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
            ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
@@ -109,7 +107,8 @@ function classifyTreemapTicker(ticker, isSports) {
   else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
   else if (ticker.startsWith("KXPGA")  || ticker.startsWith("KXMASTERS") ||
            ticker.startsWith("KXUSOPEN"))                                        cat = "Golf";
-  else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
+  else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
+           ticker.startsWith("KXITF"))                                           cat = "Tennis";
   else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
            ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
            ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
@@ -117,7 +116,7 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER"))        cat = "Soccer";
   else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
            ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
-           ticker.startsWith("KXASIACUP"))                                       cat = "Cricket";
+           ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
   else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING"))         cat = "Combat Sports";
   else if (ticker.startsWith("KXCS2")  || ticker.startsWith("KXLOL")  ||
            ticker.startsWith("KXVALORANT") || ticker.startsWith("KXDOTA2") ||
@@ -585,7 +584,6 @@ if (tmActiveCategory) {
     if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
     else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
     else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
-    else if (ticker.startsWith("KXWNBA"))                                          cat = "WNBA";
     else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
     else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
              ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
@@ -593,7 +591,8 @@ if (tmActiveCategory) {
     else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
     else if (ticker.startsWith("KXPGA")  || ticker.startsWith("KXMASTERS") ||
              ticker.startsWith("KXUSOPEN"))                                        cat = "Golf";
-    else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
+    else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
+             ticker.startsWith("KXITF"))                                           cat = "Tennis";
     else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
              ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
              ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
@@ -601,7 +600,7 @@ if (tmActiveCategory) {
              ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER"))        cat = "Soccer";
     else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
              ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
-             ticker.startsWith("KXASIACUP"))                                       cat = "Cricket";
+             ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
     else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING"))        cat = "Combat Sports";
     else if (ticker.startsWith("KXCS2")  || ticker.startsWith("KXLOL")  ||
              ticker.startsWith("KXVALORANT") || ticker.startsWith("KXDOTA2") ||
