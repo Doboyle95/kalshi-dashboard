@@ -51,7 +51,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```js
 const TM_CATEGORY_ORDER = [
   "NFL", "College Football", "NBA", "College Basketball", "Baseball",
-  "Hockey", "Golf", "Tennis", "Soccer", "Combat Sports", "Parlay",
+  "Hockey", "Golf", "Tennis", "Soccer", "Cricket", "Combat Sports", "Parlay",
   "Crypto", "Politics", "Finance", "Entertainment", "Weather",
   "Other Sports", "Other Non-sports"
 ];
@@ -63,6 +63,7 @@ const TM_CATEGORY_COLORS = {
   "Tennis": "#E53935",
   "NBA": "#F57F17",
   "Soccer": "#F9A825",
+  "Cricket": "#2E7D32",
   "Golf": "#FBC02D",
   "Parlay": "#FDD835",
   "Baseball": "#F06292",
@@ -105,10 +106,14 @@ function classifyTreemapTicker(ticker, isSports) {
   else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
   else if (ticker.startsWith("KXPGA"))                                           cat = "Golf";
   else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
-  else if (ticker.startsWith("KXEPL") || ticker.startsWith("KXUCL") ||
+  else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
            ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
-           ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXIPL") ||
-           ticker.startsWith("KXEUROLEAGUE") || ticker.startsWith("KXT20"))     cat = "Soccer";
+           ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
+           ticker.startsWith("KXMLS")  || ticker.startsWith("KXLIGAMX") ||
+           ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER"))        cat = "Soccer";
+  else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
+           ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
+           ticker.startsWith("KXASIACUP"))                                       cat = "Cricket";
   else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING"))         cat = "Combat Sports";
   else if (ticker.startsWith("KXBTC") || ticker.startsWith("KXETH") ||
            ticker.startsWith("KXSOL"))                                           cat = "Crypto";
@@ -582,8 +587,12 @@ if (tmActiveCategory) {
     else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
     else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
              ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
-             ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXIPL") ||
-             ticker.startsWith("KXEUROLEAGUE") || ticker.startsWith("KXT20"))     cat = "Soccer";
+             ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
+             ticker.startsWith("KXMLS")  || ticker.startsWith("KXLIGAMX") ||
+             ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER"))        cat = "Soccer";
+    else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
+             ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
+             ticker.startsWith("KXASIACUP"))                                       cat = "Cricket";
     else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING"))        cat = "Combat Sports";
     else if (ticker.startsWith("KXBTC")  || ticker.startsWith("KXETH")  ||
              ticker.startsWith("KXSOL"))                                           cat = "Crypto";
