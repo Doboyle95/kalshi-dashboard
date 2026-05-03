@@ -99,28 +99,67 @@ function classifyTreemapTicker(ticker, isSports) {
   let cat;
   if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
   else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
-  else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
-  else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
+  else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN"))      cat = "College Football";
+  else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAM"))       cat = "NBA";
   else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
            ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
-  else if (ticker.startsWith("KXMLB"))                                           cat = "Baseball";
-  else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
+  else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC"))            cat = "Baseball";
+  else if (ticker.startsWith("KXNHL") || ticker.startsWith("KXKHL")  ||
+           ticker.startsWith("KXAHL")  || ticker.startsWith("KXSHL")  ||
+           ticker.startsWith("KXLIIGA") || ticker.startsWith("KXDEL") ||
+           ticker.startsWith("KXIIHF"))                                          cat = "Hockey";
   else if (ticker.startsWith("KXPGA")  || ticker.startsWith("KXMASTERS") ||
-           ticker.startsWith("KXUSOPEN"))                                        cat = "Golf";
-  else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
-           ticker.startsWith("KXITF"))                                           cat = "Tennis";
+           ticker.startsWith("KXTHEOPEN") || ticker.startsWith("KXLIVTOUR") ||
+           ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
+           ticker.startsWith("KXRYDER") || ticker.startsWith("KXTGL"))          cat = "Golf";
+  else if (ticker.startsWith("KXATP")  || ticker.startsWith("KXWTA")  ||
+           ticker.startsWith("KXITF")  || ticker.startsWith("KXUSO")  ||
+           ticker.startsWith("KXFOMEN") || ticker.startsWith("KXFOWOMEN") ||
+           ticker.startsWith("KXWMENSINGLES") || ticker.startsWith("KXWWOMENSINGLES") ||
+           ticker.startsWith("KXWMEN") || ticker.startsWith("KXWWOMEN") ||
+           ticker.startsWith("KXWIMBLEDON") || ticker.startsWith("KXAUSTRALIAN") ||
+           ticker.startsWith("KXAOMEN") || ticker.startsWith("KXAOWOMEN") ||
+           ticker.startsWith("KXDAVISCUP") || ticker.startsWith("KXUNITEDCUP") ||
+           ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM")) cat = "Tennis";
   else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
-           ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
+           ticker.startsWith("KXUEL")  || ticker.startsWith("KXUECL") ||
+           ticker.startsWith("KXUEFA") || ticker.startsWith("KXLALIGA") ||
+           ticker.startsWith("KXSERIEA") || ticker.startsWith("KXSERIEB") ||
            ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
            ticker.startsWith("KXMLS")  || ticker.startsWith("KXLIGAMX") ||
-           ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER"))        cat = "Soccer";
+           ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER") ||
+           ticker.startsWith("KXFIFA") || ticker.startsWith("KXMENWORLDCUP") ||
+           ticker.startsWith("KXWORLDCUP") || ticker.startsWith("KXCLUBWC") ||
+           ticker.startsWith("KXEWC")  || ticker.startsWith("KXCOPA")  ||
+           ticker.startsWith("KXCOPADELREY") || ticker.startsWith("KXFACUP") ||
+           ticker.startsWith("KXEFL")  || ticker.startsWith("KXPREMIER") ||
+           ticker.startsWith("KXESPSUPER") || ticker.startsWith("KXAFCON") ||
+           ticker.startsWith("KXJLEAGUE") || ticker.startsWith("KXJBLEAGUE") ||
+           ticker.startsWith("KXBRASILEIRO") || ticker.startsWith("KXSUPERLIG") ||
+           ticker.startsWith("KXARGPREMDIV") || ticker.startsWith("KXLIGAPORTUGAL") ||
+           ticker.startsWith("KXALEAGUE") || ticker.startsWith("KXSAUDIPLG") ||
+           ticker.startsWith("KXEREDIVISIE") || ticker.startsWith("KXBELGIANPL") ||
+           ticker.startsWith("KXSCOTTISHPREM") || ticker.startsWith("KXKLEAGUE") ||
+           ticker.startsWith("KXBALLONDOR") || ticker.startsWith("KXMESSI") ||
+           ticker.startsWith("KXINTLFRIENDLY") || ticker.startsWith("KXDFBPOKAL") ||
+           ticker.startsWith("KXWPL")  || ticker.startsWith("KXEWSL") ||
+           ticker.startsWith("KXINTERCONCUP") || ticker.startsWith("KXITASUPERCUP") ||
+           ticker.startsWith("KXCOPPAIT") || ticker.startsWith("KXCOUPEDEFRANCE") ||
+           ticker.startsWith("KXKNVBCUP") || ticker.startsWith("KXSLGREECE") ||
+           ticker.startsWith("KXDENSUPER") || ticker.startsWith("KXFRASUPERCUP") ||
+           ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
+           ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
+           ticker.startsWith("KXHNL"))                                           cat = "Soccer";
   else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
            ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
            ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
-  else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING"))         cat = "Combat Sports";
+  else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING") ||
+           ticker.startsWith("KXMMA"))                                           cat = "Combat Sports";
   else if (ticker.startsWith("KXCS2")  || ticker.startsWith("KXLOL")  ||
            ticker.startsWith("KXVALORANT") || ticker.startsWith("KXDOTA2") ||
-           ticker.startsWith("KXRL"))                                            cat = "Esports";
+           ticker.startsWith("KXRL")   || ticker.startsWith("KXCSGO") ||
+           ticker.startsWith("KXCOD")  || ticker.startsWith("KXR6") ||
+           ticker.startsWith("KXMIDSEASONINVITATIONAL"))                         cat = "Esports";
   else if (ticker.startsWith("KXBTC") || ticker.startsWith("KXETH") ||
            ticker.startsWith("KXSOL"))                                           cat = "Crypto";
   else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
@@ -583,28 +622,67 @@ if (tmActiveCategory) {
     let cat;
     if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
     else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
-    else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
-    else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
+    else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN"))      cat = "College Football";
+    else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAM"))       cat = "NBA";
     else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
              ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
-    else if (ticker.startsWith("KXMLB"))                                           cat = "Baseball";
-    else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
+    else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC"))            cat = "Baseball";
+    else if (ticker.startsWith("KXNHL") || ticker.startsWith("KXKHL")  ||
+             ticker.startsWith("KXAHL")  || ticker.startsWith("KXSHL")  ||
+             ticker.startsWith("KXLIIGA") || ticker.startsWith("KXDEL") ||
+             ticker.startsWith("KXIIHF"))                                          cat = "Hockey";
     else if (ticker.startsWith("KXPGA")  || ticker.startsWith("KXMASTERS") ||
-             ticker.startsWith("KXUSOPEN"))                                        cat = "Golf";
-    else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
-             ticker.startsWith("KXITF"))                                           cat = "Tennis";
+             ticker.startsWith("KXTHEOPEN") || ticker.startsWith("KXLIVTOUR") ||
+             ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
+             ticker.startsWith("KXRYDER") || ticker.startsWith("KXTGL"))          cat = "Golf";
+    else if (ticker.startsWith("KXATP")  || ticker.startsWith("KXWTA")  ||
+             ticker.startsWith("KXITF")  || ticker.startsWith("KXUSO")  ||
+             ticker.startsWith("KXFOMEN") || ticker.startsWith("KXFOWOMEN") ||
+             ticker.startsWith("KXWMENSINGLES") || ticker.startsWith("KXWWOMENSINGLES") ||
+             ticker.startsWith("KXWMEN") || ticker.startsWith("KXWWOMEN") ||
+             ticker.startsWith("KXWIMBLEDON") || ticker.startsWith("KXAUSTRALIAN") ||
+             ticker.startsWith("KXAOMEN") || ticker.startsWith("KXAOWOMEN") ||
+             ticker.startsWith("KXDAVISCUP") || ticker.startsWith("KXUNITEDCUP") ||
+             ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM")) cat = "Tennis";
     else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
-             ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
+             ticker.startsWith("KXUEL")  || ticker.startsWith("KXUECL") ||
+             ticker.startsWith("KXUEFA") || ticker.startsWith("KXLALIGA") ||
+             ticker.startsWith("KXSERIEA") || ticker.startsWith("KXSERIEB") ||
              ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
              ticker.startsWith("KXMLS")  || ticker.startsWith("KXLIGAMX") ||
-             ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER"))        cat = "Soccer";
+             ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER") ||
+             ticker.startsWith("KXFIFA") || ticker.startsWith("KXMENWORLDCUP") ||
+             ticker.startsWith("KXWORLDCUP") || ticker.startsWith("KXCLUBWC") ||
+             ticker.startsWith("KXEWC")  || ticker.startsWith("KXCOPA")  ||
+             ticker.startsWith("KXCOPADELREY") || ticker.startsWith("KXFACUP") ||
+             ticker.startsWith("KXEFL")  || ticker.startsWith("KXPREMIER") ||
+             ticker.startsWith("KXESPSUPER") || ticker.startsWith("KXAFCON") ||
+             ticker.startsWith("KXJLEAGUE") || ticker.startsWith("KXJBLEAGUE") ||
+             ticker.startsWith("KXBRASILEIRO") || ticker.startsWith("KXSUPERLIG") ||
+             ticker.startsWith("KXARGPREMDIV") || ticker.startsWith("KXLIGAPORTUGAL") ||
+             ticker.startsWith("KXALEAGUE") || ticker.startsWith("KXSAUDIPLG") ||
+             ticker.startsWith("KXEREDIVISIE") || ticker.startsWith("KXBELGIANPL") ||
+             ticker.startsWith("KXSCOTTISHPREM") || ticker.startsWith("KXKLEAGUE") ||
+             ticker.startsWith("KXBALLONDOR") || ticker.startsWith("KXMESSI") ||
+             ticker.startsWith("KXINTLFRIENDLY") || ticker.startsWith("KXDFBPOKAL") ||
+             ticker.startsWith("KXWPL")  || ticker.startsWith("KXEWSL") ||
+             ticker.startsWith("KXINTERCONCUP") || ticker.startsWith("KXITASUPERCUP") ||
+             ticker.startsWith("KXCOPPAIT") || ticker.startsWith("KXCOUPEDEFRANCE") ||
+             ticker.startsWith("KXKNVBCUP") || ticker.startsWith("KXSLGREECE") ||
+             ticker.startsWith("KXDENSUPER") || ticker.startsWith("KXFRASUPERCUP") ||
+             ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
+             ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
+             ticker.startsWith("KXHNL"))                                           cat = "Soccer";
     else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
              ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
              ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
-    else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING"))        cat = "Combat Sports";
+    else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING") ||
+             ticker.startsWith("KXMMA"))                                           cat = "Combat Sports";
     else if (ticker.startsWith("KXCS2")  || ticker.startsWith("KXLOL")  ||
              ticker.startsWith("KXVALORANT") || ticker.startsWith("KXDOTA2") ||
-             ticker.startsWith("KXRL"))                                            cat = "Esports";
+             ticker.startsWith("KXRL")   || ticker.startsWith("KXCSGO") ||
+             ticker.startsWith("KXCOD")  || ticker.startsWith("KXR6") ||
+             ticker.startsWith("KXMIDSEASONINVITATIONAL"))                         cat = "Esports";
     else if (ticker.startsWith("KXBTC")  || ticker.startsWith("KXETH")  ||
              ticker.startsWith("KXSOL"))                                           cat = "Crypto";
     else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
