@@ -41,6 +41,7 @@ const pnl = raw
     const dailyFees  = +d.fees_ALL_PARLAYS || 0;
     const dailyGross = dailyNet + dailyFees;
     const stakes     = +d.ALL_PARLAYS || 0;       // notional (USD at stake)
+    const contracts  = +d.contracts_ALL_PARLAYS || 0;
     const pct        = +d.net_pnl_pct_ALL_PARLAYS || null; // P&L as % of stakes
     grossRunning += dailyGross;
     netRunning   += dailyNet;
@@ -52,6 +53,7 @@ const pnl = raw
       daily_gross: dailyGross,
       daily_fees:  dailyFees,
       stakes,
+      contracts,
       pct
     };
   })
@@ -65,6 +67,7 @@ const totalNet  = lastRow?.net_cumul  ?? 0;
 const totalGross = lastRow?.gross_cumul ?? 0;
 const totalFees = totalGross - totalNet;
 const totalStakes = d3.sum(pnl, d => d.stakes);
+const totalContracts = d3.sum(pnl, d => d.contracts);
 const overallPct = totalNet / totalStakes * 100;
 ```
 
@@ -86,16 +89,16 @@ const overallPct = totalNet / totalStakes * 100;
     <div class="kpi-label">Total notional staked</div>
     <div class="kpi-value">${fmtUSD(totalStakes)}</div>
   </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Settled parlay contracts</div>
+    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+  </div>
 </div>
 
 
 <details class="surface-card compact-details">
-  <summary>How this is calculated</summary>
-  <p>Parlay rows come from KXMVE* and PREPACK* series in the parlay P&amp;L export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total notional staked.</p>
-</details>
-
-<details class="surface-card compact-details">
-  <summary>How to use this page</summary>
+  <summary>About this page</summary>
+  <p>Parlay rows come from settled KXMVE* and PREPACK* taker-side trades in the raw API export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total notional staked, while contract counts are shown separately.</p>
   <p>Read cumulative P&amp;L for the long-run bettor-vs-house picture, then use daily stakes and return charts to separate volume spikes from actual parlay outcome swings. Large negative daily returns are normal when popular parlays expire worthless.</p>
 </details>
 
@@ -223,7 +226,7 @@ Plot.plot({
       y: d => d.stakes,
       fill: d => d.pct != null ? Math.max(-50, Math.min(50, d.pct)) : 0,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${fmtDate(d.date)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nContracts: ${d.contracts.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
     Plot.ruleY([0])
   ]
@@ -249,7 +252,7 @@ Plot.plot({
       fill: d => d.pct >= 0 ? "#1a9641" : "#d7191c",
       fillOpacity: 0.75,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => `${fmtDate(d.date)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nContracts: ${d.contracts.toLocaleString(undefined,{maximumFractionDigits:0})}`
     }),
     Plot.ruleY([0])
   ]

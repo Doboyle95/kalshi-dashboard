@@ -11,6 +11,7 @@ title: Taker P&L
 
 ```js
 const daily = await FileAttachment("data/taker_pnl_daily.csv").csv({typed: true});
+const makerDaily = await FileAttachment("data/maker_pnl_daily.csv").csv({typed: true});
 const notionalDaily = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
 const categorySummary = await FileAttachment("data/taker_category_summary.csv").csv({typed: true});
 const categoryDaily = await FileAttachment("data/taker_category_daily.csv").csv({typed: true});
@@ -23,6 +24,7 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
+    {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Taker notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
     {label: "Category P&L", date: latestDate(categoryDaily), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
   ],
@@ -30,7 +32,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Explain recent taker P&L, including whether results are complete enough to interpret and which categories drove the result.",
-  context: "Taker P&L page using taker_pnl_daily.csv, taker_notional_daily.csv, taker_category_daily.csv, and taker_sports_daily.csv."
+  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_category_daily.csv, and taker_sports_daily.csv."
 }));
 ```
 
@@ -49,15 +51,19 @@ const positive = "#1a9641";
 const negative = "#d7191c";
 const grossColor = "#f4a736";
 const netColor = "#d7191c";
+const makerGrossColor = "#2f7dd1";
+const makerNetColor = "#0b4f8a";
 const takerPnlSeries = ["Before fees", "After fees"];
 const takerPnlColors = {"Before fees": grossColor, "After fees": netColor};
+const makerPnlSeries = ["Before maker fees", "After maker fees"];
+const makerPnlColors = {"Before maker fees": makerGrossColor, "After maker fees": makerNetColor};
 const sportsSegmentSeries = ["Sports", "Non-sports"];
 const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
 ```
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Gross taker P&L is settlement outcome before fees. Net taker P&L subtracts taker fees. Overall ROI uses daily taker notional paid: yes takers pay price, no takers pay 100 minus price. Category charts still use settled face value until a category-level notional export is added.</p>
+  <p>Gross taker P&L is settlement outcome before fees. Net taker P&L subtracts taker fees. Maker gross P&L is the opposite side of the same settled trades; maker net P&L subtracts maker fees where Kalshi charged them. Overall ROI uses daily taker notional paid: yes takers pay price, no takers pay 100 minus price.</p>
 </details>
 
 <div class="control-strip">
@@ -97,6 +103,10 @@ const filteredDaily = dailyWithNotional
   .filter(d => d.date >= startDate && d.date <= latestPnlDate)
   .sort((a, b) => a.date - b.date);
 
+const filteredMakerDaily = makerDaily
+  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
+  .sort((a, b) => a.date - b.date);
+
 const totals = {
   gross: d3.sum(filteredDaily, d => d.pnl_gross || 0),
   net: d3.sum(filteredDaily, d => d.pnl_net || 0),
@@ -111,6 +121,13 @@ totals.grossRoi = totals.notional ? totals.gross / totals.notional * 100 : 0;
 totals.netRoi = totals.notional ? totals.net / totals.notional * 100 : 0;
 totals.feeDragRoi = totals.notional ? totals.fees / totals.notional * 100 : 0;
 totals.coverage = totals.total ? totals.settled / totals.total * 100 : 0;
+
+const makerTotals = {
+  gross: d3.sum(filteredMakerDaily, d => d.pnl_gross || 0),
+  net: d3.sum(filteredMakerDaily, d => d.pnl_net || 0),
+  fees: d3.sum(filteredMakerDaily, d => d.fees_maker || 0),
+  settled: d3.sum(filteredMakerDaily, d => d.contracts_settled || 0)
+};
 ```
 
 <div class="kpi-grid">
