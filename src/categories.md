@@ -152,7 +152,8 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXWIMBLEDON") || ticker.startsWith("KXAUSTRALIAN") ||
            ticker.startsWith("KXAOMEN") || ticker.startsWith("KXAOWOMEN") ||
            ticker.startsWith("KXDAVISCUP") || ticker.startsWith("KXUNITEDCUP") ||
-           ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM")) cat = "Tennis";
+           ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM") ||
+           ticker.startsWith("KXMOMEN") || ticker.startsWith("KXMOWOMEN"))       cat = "Tennis";
   else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
            ticker.startsWith("KXUEL")  || ticker.startsWith("KXUECL") ||
            ticker.startsWith("KXUEFA") || ticker.startsWith("KXLALIGA") ||
@@ -217,7 +218,8 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXKHAMENEI") || ticker.startsWith("KXDHSFUND") ||
            ticker.startsWith("KXHORMUZ") || ticker.startsWith("KXCLOSEHORMUZ") ||
            ticker.startsWith("KXSTARMER") || ticker.startsWith("KXNJGOV") ||
-           ticker.startsWith("KXNYGOV"))                                         cat = "Politics";
+           ticker.startsWith("KXNYGOV") || ticker.startsWith("PRESPARTY") ||
+           ticker.startsWith("KXFRENCH"))                                         cat = "Politics";
   else if (ticker.startsWith("KXFED") || ticker.startsWith("KXINXU") ||
            ticker.startsWith("ECMOV") || ticker.startsWith("KXNASDAQ") ||
            ticker.startsWith("NASDAQ") || ticker.startsWith("INX") ||
@@ -230,7 +232,10 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXIPO") || ticker.startsWith("USDJPY") ||
            ticker.startsWith("KXLAYOFF") || ticker.startsWith("KXRT") ||
            ticker.startsWith("KXU3") || ticker.startsWith("KXFOREIGN"))         cat = "Finance";
-  else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
+  else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW") ||
+           ticker.startsWith("KXRAIN") || ticker.startsWith("RAIN") ||
+           ticker.startsWith("KXSNOW") || ticker.startsWith("SNOW") ||
+           ticker.startsWith("KXTEMP") || ticker.startsWith("KXTROP"))           cat = "Weather";
   else if (ticker.startsWith("KXOSCAR") || ticker.startsWith("KXGRAM") ||
            ticker.startsWith("KXSURVIV") || ticker.startsWith("KXSPOTIFY") ||
            ticker.startsWith("KXTOPMODEL") || ticker.startsWith("KXTOPARTIST") ||
@@ -755,7 +760,8 @@ if (tmActiveCategory) {
              ticker.startsWith("KXWIMBLEDON") || ticker.startsWith("KXAUSTRALIAN") ||
              ticker.startsWith("KXAOMEN") || ticker.startsWith("KXAOWOMEN") ||
              ticker.startsWith("KXDAVISCUP") || ticker.startsWith("KXUNITEDCUP") ||
-             ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM")) cat = "Tennis";
+             ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM") ||
+             ticker.startsWith("KXMOMEN") || ticker.startsWith("KXMOWOMEN"))      cat = "Tennis";
     else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
              ticker.startsWith("KXUEL")  || ticker.startsWith("KXUECL") ||
              ticker.startsWith("KXUEFA") || ticker.startsWith("KXLALIGA") ||
@@ -820,7 +826,8 @@ if (tmActiveCategory) {
              ticker.startsWith("KXKHAMENEI") || ticker.startsWith("KXDHSFUND") ||
              ticker.startsWith("KXHORMUZ") || ticker.startsWith("KXCLOSEHORMUZ") ||
              ticker.startsWith("KXSTARMER") || ticker.startsWith("KXNJGOV") ||
-             ticker.startsWith("KXNYGOV"))                                         cat = "Politics";
+             ticker.startsWith("KXNYGOV") || ticker.startsWith("PRESPARTY") ||
+             ticker.startsWith("KXFRENCH"))                                        cat = "Politics";
     else if (ticker.startsWith("KXFED") || ticker.startsWith("KXINXU") ||
              ticker.startsWith("ECMOV") || ticker.startsWith("KXNASDAQ") ||
              ticker.startsWith("NASDAQ") || ticker.startsWith("INX") ||
@@ -833,7 +840,10 @@ if (tmActiveCategory) {
              ticker.startsWith("KXIPO") || ticker.startsWith("USDJPY") ||
              ticker.startsWith("KXLAYOFF") || ticker.startsWith("KXRT") ||
              ticker.startsWith("KXU3") || ticker.startsWith("KXFOREIGN"))         cat = "Finance";
-    else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
+    else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW") ||
+             ticker.startsWith("KXRAIN") || ticker.startsWith("RAIN") ||
+             ticker.startsWith("KXSNOW") || ticker.startsWith("SNOW") ||
+             ticker.startsWith("KXTEMP") || ticker.startsWith("KXTROP"))          cat = "Weather";
     else if (ticker.startsWith("KXOSCAR") || ticker.startsWith("KXGRAM") ||
              ticker.startsWith("KXSURVIV") || ticker.startsWith("KXSPOTIFY") ||
              ticker.startsWith("KXTOPMODEL") || ticker.startsWith("KXTOPARTIST") ||
