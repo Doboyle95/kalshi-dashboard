@@ -294,6 +294,22 @@ function getTmRange(period) {
   return ranges[period];
 }
 
+// Below this all-time contract threshold, trust R's is_sports flag directly
+// rather than our manual JS prefix rules (exception: Parlays, which R misclassifies).
+const FALLBACK_THRESHOLD = 5_000_000;
+const allTimeContractsMap = new Map(leaderboard.map(d => [d.report_ticker, +d.contracts || 0]));
+
+function classifyWithFallback(ticker, isSports) {
+  const cl = classifyTreemapTicker(ticker, isSports);
+  if (cl.cat === "Parlay") return cl;
+  if ((allTimeContractsMap.get(ticker) || 0) < FALLBACK_THRESHOLD) {
+    const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+    const cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+    return { grp, cat, wideCat: cat, mtype: ticker };
+  }
+  return cl;
+}
+
 const tmTrackedMeta = topDailyCols.map(report_ticker => {
   const meta = leaderboard.find(l => l.report_ticker === report_ticker) || {};
   return {
@@ -301,7 +317,7 @@ const tmTrackedMeta = topDailyCols.map(report_ticker => {
     fees: +meta.fees || 0,
     contracts: +meta.contracts || 0,
     is_sports: meta.is_sports ?? "FALSE",
-    ...classifyTreemapTicker(report_ticker, meta.is_sports ?? "FALSE")
+    ...classifyWithFallback(report_ticker, meta.is_sports ?? "FALSE")
   };
 });
 
@@ -463,7 +479,7 @@ const tmCategoryTotals = Array.from(
   d3.rollup(
     tmData,
     rows => d3.sum(rows, d => d.value || 0),
-    d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat
+    d => classifyWithFallback(d.report_ticker, d.is_sports).cat
   ),
   ([category, value]) => ({category, value})
 ).sort((a, b) => b.value - a.value);
@@ -478,7 +494,7 @@ const tmActiveGroup = tmActiveCategory
 
 const tmActiveReportTickers = new Set(
   tmData
-    .filter(d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+    .filter(d => classifyWithFallback(d.report_ticker, d.is_sports).cat === tmActiveCategory)
     .map(d => d.report_ticker)
 );
 
@@ -662,13 +678,13 @@ function reportTickerLabel(ticker) {
 
 const tmActiveTickerRows = tmActiveCategory
   ? tmData
-      .filter(d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+      .filter(d => classifyWithFallback(d.report_ticker, d.is_sports).cat === tmActiveCategory)
       .map(d => ({
         report_ticker: d.report_ticker,
         is_sports: d.is_sports,
         value: +d.value || 0,
         label: reportTickerLabel(d.report_ticker),
-        mtype: classifyTreemapTicker(d.report_ticker, d.is_sports).mtype
+        mtype: classifyWithFallback(d.report_ticker, d.is_sports).mtype
       }))
       .filter(d => d.value > 0)
       .sort((a, b) => b.value - a.value)
@@ -889,7 +905,13 @@ if (tmActiveCategory) {
   for (const row of tmData) {
     const v = row.value || 0;
     if (!v) continue;
-    const {grp, cat, mtype} = classify(row.report_ticker, row.is_sports);
+    let {grp, cat, mtype} = classify(row.report_ticker, row.is_sports);
+    // Below threshold: trust R's is_sports directly (same logic as classifyWithFallback)
+    if (cat !== "Parlay" && (allTimeContractsMap.get(row.report_ticker) || 0) < FALLBACK_THRESHOLD) {
+      grp = row.is_sports === "TRUE" ? "Sports" : "Non-sports";
+      cat  = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+      mtype = row.report_ticker;
+    }
     if (!nest[grp])             nest[grp] = {};
     if (!nest[grp][cat])        nest[grp][cat] = {};
     if (!nest[grp][cat][mtype]) nest[grp][cat][mtype] = 0;
