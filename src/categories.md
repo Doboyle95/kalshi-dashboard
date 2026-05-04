@@ -249,7 +249,8 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXCOLBERT") || ticker.startsWith("KXSNL") ||
            ticker.startsWith("KX60MIN") || ticker.startsWith("KXLATENIGHTMENTION") ||
            ticker.startsWith("KXMRBEAST") || ticker.startsWith("KXSWIFTMENTION") ||
-           ticker.startsWith("KXFOXNEWSMENTION") || ticker.startsWith("KXRANKLIST"))  cat = "Entertainment";
+           ticker.startsWith("KXFOXNEWSMENTION") || ticker.startsWith("KXRANKLIST") ||
+           ticker.startsWith("KXCODINGMODEL"))                                    cat = "Entertainment";
   else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
 
   const SPORTS_CATS_SET = new Set(["NFL","College Football","NBA","College Basketball","Baseball","Hockey","Golf","Tennis","Soccer","Cricket","Combat Sports","Racing","Esports","Parlay"]);
@@ -302,6 +303,8 @@ const allTimeContractsMap = new Map(leaderboard.map(d => [d.report_ticker, +d.co
 function classifyWithFallback(ticker, isSports) {
   const cl = classifyTreemapTicker(ticker, isSports);
   if (cl.cat === "Parlay") return cl;
+  // Only apply R's is_sports for tickers JS couldn't categorize specifically
+  if (cl.cat !== "Other Sports" && cl.cat !== "Other Non-sports") return cl;
   if ((allTimeContractsMap.get(ticker) || 0) < FALLBACK_THRESHOLD) {
     const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
     const cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
@@ -873,7 +876,8 @@ if (tmActiveCategory) {
              ticker.startsWith("KXCOLBERT") || ticker.startsWith("KXSNL") ||
              ticker.startsWith("KX60MIN") || ticker.startsWith("KXLATENIGHTMENTION") ||
              ticker.startsWith("KXMRBEAST") || ticker.startsWith("KXSWIFTMENTION") ||
-             ticker.startsWith("KXFOXNEWSMENTION") || ticker.startsWith("KXRANKLIST"))  cat = "Entertainment";
+             ticker.startsWith("KXFOXNEWSMENTION") || ticker.startsWith("KXRANKLIST") ||
+             ticker.startsWith("KXCODINGMODEL"))                                    cat = "Entertainment";
     else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
 
     const SPORTS_CATS_SET = new Set(["NFL","College Football","NBA","College Basketball","Baseball","Hockey","Golf","Tennis","Soccer","Cricket","Combat Sports","Racing","Esports","Parlay"]);
@@ -906,8 +910,9 @@ if (tmActiveCategory) {
     const v = row.value || 0;
     if (!v) continue;
     let {grp, cat, mtype} = classify(row.report_ticker, row.is_sports);
-    // Below threshold: trust R's is_sports directly (same logic as classifyWithFallback)
-    if (cat !== "Parlay" && (allTimeContractsMap.get(row.report_ticker) || 0) < FALLBACK_THRESHOLD) {
+    // Only apply R's is_sports for tickers JS couldn't categorize specifically
+    if ((cat === "Other Sports" || cat === "Other Non-sports") &&
+        (allTimeContractsMap.get(row.report_ticker) || 0) < FALLBACK_THRESHOLD) {
       grp = row.is_sports === "TRUE" ? "Sports" : "Non-sports";
       cat  = grp === "Sports" ? "Other Sports" : "Other Non-sports";
       mtype = row.report_ticker;
