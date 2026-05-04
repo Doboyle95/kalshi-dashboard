@@ -98,16 +98,26 @@ function classifyTreemapTicker(ticker, isSports) {
 
   let cat;
   if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
-  else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
-  else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN"))      cat = "College Football";
-  else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAM"))       cat = "NBA";
+  else if (ticker.startsWith("KXNFL") || ticker === "KXSB" ||
+           ticker.startsWith("KXNEXTTEAMNFL") || ticker.startsWith("KXNEXTTEAMMICAH") ||
+           ticker.startsWith("KXNEXTTEAMTYREEK") || ticker.startsWith("KXNEXTTEAMMCLAURIN") ||
+           ticker.startsWith("KXNEWCOACH") || ticker.startsWith("KXNEXTCOACHOUTNFL")) cat = "NFL";
+  else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN") ||
+           ticker.startsWith("KXLSUCOACH") || ticker.startsWith("KXMICHCOACH")) cat = "College Football";
+  else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAMNBA") ||
+           ticker.startsWith("KXNEXTTEAMGIANNIS") || ticker.startsWith("KXNEXTTEAMLEBRON") ||
+           ticker.startsWith("KXNEXTTEAMWESTBROOK") || ticker.startsWith("KXNEXTCOACHOUTNBA")) cat = "NBA";
   else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
-           ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
-  else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC"))            cat = "Baseball";
+           ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD") ||
+           ticker.startsWith("KXNCAABB") || ticker.startsWith("KXMAKEMARMAD")) cat = "College Basketball";
+  else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC") ||
+           ticker.startsWith("KXNCAABASEBALL") || ticker.startsWith("KXNEXTTEAMMLB") ||
+           ticker.startsWith("KXNEXTTEAMSKUBAL"))                               cat = "Baseball";
   else if (ticker.startsWith("KXNHL") || ticker.startsWith("KXKHL")  ||
            ticker.startsWith("KXAHL")  || ticker.startsWith("KXSHL")  ||
            ticker.startsWith("KXLIIGA") || ticker.startsWith("KXDEL") ||
-           ticker.startsWith("KXIIHF"))                                          cat = "Hockey";
+           ticker.startsWith("KXIIHF") || ticker.startsWith("KXWOMHOCKEY") ||
+           ticker.startsWith("KXWOHOCKEY") || ticker.startsWith("KXWOWHOCKEY")) cat = "Hockey";
   else if (ticker.startsWith("KXPGA")  || ticker.startsWith("KXMASTERS") ||
            ticker.startsWith("KXTHEOPEN") || ticker.startsWith("KXLIVTOUR") ||
            ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
@@ -149,7 +159,7 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXDENSUPER") || ticker.startsWith("KXFRASUPERCUP") ||
            ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
            ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
-           ticker.startsWith("KXHNL"))                                           cat = "Soccer";
+           ticker.startsWith("KXHNL") || ticker.startsWith("KXAFCCL"))          cat = "Soccer";
   else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
            ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
            ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
@@ -621,16 +631,26 @@ if (tmActiveCategory) {
 
     let cat;
     if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
-    else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
-    else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN"))      cat = "College Football";
-    else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAM"))       cat = "NBA";
+    else if (ticker.startsWith("KXNFL") || ticker === "KXSB" ||
+             ticker.startsWith("KXNEXTTEAMNFL") || ticker.startsWith("KXNEXTTEAMMICAH") ||
+             ticker.startsWith("KXNEXTTEAMTYREEK") || ticker.startsWith("KXNEXTTEAMMCLAURIN") ||
+             ticker.startsWith("KXNEWCOACH") || ticker.startsWith("KXNEXTCOACHOUTNFL")) cat = "NFL";
+    else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN") ||
+             ticker.startsWith("KXLSUCOACH") || ticker.startsWith("KXMICHCOACH")) cat = "College Football";
+    else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAMNBA") ||
+             ticker.startsWith("KXNEXTTEAMGIANNIS") || ticker.startsWith("KXNEXTTEAMLEBRON") ||
+             ticker.startsWith("KXNEXTTEAMWESTBROOK") || ticker.startsWith("KXNEXTCOACHOUTNBA")) cat = "NBA";
     else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
-             ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
-    else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC"))            cat = "Baseball";
+             ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD") ||
+             ticker.startsWith("KXNCAABB") || ticker.startsWith("KXMAKEMARMAD")) cat = "College Basketball";
+    else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC") ||
+             ticker.startsWith("KXNCAABASEBALL") || ticker.startsWith("KXNEXTTEAMMLB") ||
+             ticker.startsWith("KXNEXTTEAMSKUBAL"))                               cat = "Baseball";
     else if (ticker.startsWith("KXNHL") || ticker.startsWith("KXKHL")  ||
              ticker.startsWith("KXAHL")  || ticker.startsWith("KXSHL")  ||
              ticker.startsWith("KXLIIGA") || ticker.startsWith("KXDEL") ||
-             ticker.startsWith("KXIIHF"))                                          cat = "Hockey";
+             ticker.startsWith("KXIIHF") || ticker.startsWith("KXWOMHOCKEY") ||
+             ticker.startsWith("KXWOHOCKEY") || ticker.startsWith("KXWOWHOCKEY")) cat = "Hockey";
     else if (ticker.startsWith("KXPGA")  || ticker.startsWith("KXMASTERS") ||
              ticker.startsWith("KXTHEOPEN") || ticker.startsWith("KXLIVTOUR") ||
              ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
@@ -672,7 +692,7 @@ if (tmActiveCategory) {
              ticker.startsWith("KXDENSUPER") || ticker.startsWith("KXFRASUPERCUP") ||
              ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
              ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
-             ticker.startsWith("KXHNL"))                                           cat = "Soccer";
+             ticker.startsWith("KXHNL") || ticker.startsWith("KXAFCCL"))          cat = "Soccer";
     else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
              ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
              ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
