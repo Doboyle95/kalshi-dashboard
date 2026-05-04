@@ -253,7 +253,7 @@ function classifyTreemapTicker(ticker, isSports) {
 
   let mtype;
   if (cat === "Other Sports" || cat === "Other Non-sports") {
-    mtype = "Other";
+    mtype = ticker;
   } else if (cat === "Parlay") {
     mtype = ticker.includes("SINGLEGAME") ? "Same-game" : "Multi-game";
   } else if (cat === "Crypto") {
@@ -856,7 +856,7 @@ if (tmActiveCategory) {
 
     let mtype;
     if (cat === "Other Sports" || cat === "Other Non-sports") {
-      mtype = "Other";
+      mtype = ticker;
     } else if (cat === "Parlay") {
       mtype = ticker.includes("SINGLEGAME") ? "Same-game" : "Multi-game";
     } else if (cat === "Crypto") {
