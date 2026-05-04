@@ -95,7 +95,7 @@ function normalizeTreemapCategory(cat) {
 }
 
 function classifyTreemapTicker(ticker, isSports) {
-  const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+  let grp = isSports === "TRUE" ? "Sports" : "Non-sports";
 
   let cat;
   if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
@@ -182,7 +182,8 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
            ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
            ticker.startsWith("KXHNL") || ticker.startsWith("KXAFCCL") ||
-           ticker.startsWith("KXTEAMSINUCL"))                                    cat = "Soccer";
+           ticker.startsWith("KXTEAMSINUCL") || ticker.startsWith("KXCONCACAF") ||
+           ticker.startsWith("KXCONMEBOL"))                                      cat = "Soccer";
   else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
            ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
            ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
@@ -197,16 +198,58 @@ function classifyTreemapTicker(ticker, isSports) {
   else if (ticker.startsWith("KXNASCAR") || ticker.startsWith("KXF1") ||
            ticker.startsWith("KXINDY500") || ticker.startsWith("KXINDY"))        cat = "Racing";
   else if (ticker.startsWith("KXBTC") || ticker.startsWith("KXETH") ||
-           ticker.startsWith("KXSOL"))                                           cat = "Crypto";
+           ticker.startsWith("KXSOL") || ticker.startsWith("KXXRP") ||
+           ticker.startsWith("KXDOGE") || ticker.startsWith("KXHYPE") ||
+           ticker.startsWith("KXBNB") || ticker.startsWith("KXSHIBA"))          cat = "Crypto";
   else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
            ticker.startsWith("KXTRUMP") || ticker.startsWith("POPVOTE") ||
-           ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV"))          cat = "Politics";
+           ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV") ||
+           ticker.startsWith("KXPRES") || ticker.startsWith("SENATE") ||
+           ticker.startsWith("KXSENATE") || ticker.startsWith("GOV") ||
+           ticker.startsWith("HOUSE") || ticker.startsWith("CONTROL") ||
+           ticker.startsWith("CLOSESTSTATE") || ticker.startsWith("KXELECTIONMOV") ||
+           ticker.startsWith("KXCANADAPM") || ticker.startsWith("KXCABOUT") ||
+           ticker.startsWith("KXDJT") || ticker.startsWith("KXSECAG") ||
+           ticker.startsWith("KXSECDEF") || ticker.startsWith("KXSECHHS") ||
+           ticker.startsWith("KXBIDENPARDON") || ticker.startsWith("KXEPSTEIN") ||
+           ticker.startsWith("KXSWINGSTATE") || ticker.startsWith("KXNEXTIRANLEADER") ||
+           ticker.startsWith("KXMADURO") || ticker.startsWith("KXLEADERSOUT") ||
+           ticker.startsWith("KXKHAMENEI") || ticker.startsWith("KXDHSFUND") ||
+           ticker.startsWith("KXHORMUZ") || ticker.startsWith("KXCLOSEHORMUZ") ||
+           ticker.startsWith("KXSTARMER") || ticker.startsWith("KXNJGOV") ||
+           ticker.startsWith("KXNYGOV"))                                         cat = "Politics";
   else if (ticker.startsWith("KXFED") || ticker.startsWith("KXINXU") ||
-           ticker.startsWith("ECMOV"))                                           cat = "Finance";
+           ticker.startsWith("ECMOV") || ticker.startsWith("KXNASDAQ") ||
+           ticker.startsWith("NASDAQ") || ticker.startsWith("INX") ||
+           ticker.startsWith("KXINX") || ticker.startsWith("KXWTI") ||
+           ticker.startsWith("KXAAA") || ticker.startsWith("KXCPI") ||
+           ticker.startsWith("KXPAYROLL") || ticker.startsWith("KXGDP") ||
+           ticker.startsWith("KXRATECUT") || ticker.startsWith("RATECUT") ||
+           ticker.startsWith("FED") || ticker.startsWith("LEAVEPOWELL") ||
+           ticker.startsWith("TNOTE") || ticker.startsWith("POWER") ||
+           ticker.startsWith("KXIPO") || ticker.startsWith("USDJPY") ||
+           ticker.startsWith("KXLAYOFF") || ticker.startsWith("KXRT") ||
+           ticker.startsWith("KXU3") || ticker.startsWith("KXFOREIGN"))         cat = "Finance";
   else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
-  else if (ticker.startsWith("KXFOXNEWSMENTION"))                                cat = "Entertainment";
-  else if (ticker.startsWith("KXFOREIGNTARIFF"))                                  cat = "Finance";
+  else if (ticker.startsWith("KXOSCAR") || ticker.startsWith("KXGRAM") ||
+           ticker.startsWith("KXSURVIV") || ticker.startsWith("KXSPOTIFY") ||
+           ticker.startsWith("KXTOPMODEL") || ticker.startsWith("KXTOPARTIST") ||
+           ticker.startsWith("KXNETFLIXRANK") || ticker.startsWith("KXALBUMSALES") ||
+           ticker.startsWith("KXFIRSTSUPERBOWLSONG") || ticker.startsWith("KXSUPERBOWLAD") ||
+           ticker.startsWith("KXPERFORMSUPERBOWL") || ticker.startsWith("KXSBGUESTS") ||
+           ticker.startsWith("KXSBADS") || ticker.startsWith("KXSBSETLISTS") ||
+           ticker.startsWith("KXSBPERFORM") || ticker.startsWith("KXSBADAPPEARANCES") ||
+           ticker.startsWith("KXSBVIEWER") || ticker.startsWith("KXSBMENTION") ||
+           ticker.startsWith("KXTIME") || ticker.startsWith("KXKIMMEL") ||
+           ticker.startsWith("KXCOLBERT") || ticker.startsWith("KXSNL") ||
+           ticker.startsWith("KX60MIN") || ticker.startsWith("KXLATENIGHTMENTION") ||
+           ticker.startsWith("KXMRBEAST") || ticker.startsWith("KXSWIFTMENTION") ||
+           ticker.startsWith("KXFOXNEWSMENTION") || ticker.startsWith("KXRANKLIST"))  cat = "Entertainment";
   else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+
+  const SPORTS_CATS_SET = new Set(["NFL","College Football","NBA","College Basketball","Baseball","Hockey","Golf","Tennis","Soccer","Cricket","Combat Sports","Racing","Esports","Parlay"]);
+  if (SPORTS_CATS_SET.has(cat)) grp = "Sports";
+  else if (cat !== "Other Sports" && cat !== "Other Non-sports") grp = "Non-sports";
 
   let mtype;
   if (cat === "Other Sports" || cat === "Other Non-sports") {
@@ -655,7 +698,7 @@ if (tmActiveCategory) {
 
   // -- Classify each ticker into group / category / market-type -------------
   function classify(ticker, isSports) {
-    const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+    let grp = isSports === "TRUE" ? "Sports" : "Non-sports";
 
     let cat;
     if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
@@ -742,7 +785,8 @@ if (tmActiveCategory) {
              ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
              ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
              ticker.startsWith("KXHNL") || ticker.startsWith("KXAFCCL") ||
-             ticker.startsWith("KXTEAMSINUCL"))                                    cat = "Soccer";
+             ticker.startsWith("KXTEAMSINUCL") || ticker.startsWith("KXCONCACAF") ||
+             ticker.startsWith("KXCONMEBOL"))                                      cat = "Soccer";
     else if (ticker.startsWith("KXIPL")  || ticker.startsWith("KXT20")  ||
              ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
              ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
@@ -756,17 +800,59 @@ if (tmActiveCategory) {
              ticker.startsWith("KXSTARLADDER"))                                    cat = "Esports";
     else if (ticker.startsWith("KXNASCAR") || ticker.startsWith("KXF1") ||
              ticker.startsWith("KXINDY500") || ticker.startsWith("KXINDY"))        cat = "Racing";
-    else if (ticker.startsWith("KXBTC")  || ticker.startsWith("KXETH")  ||
-             ticker.startsWith("KXSOL"))                                           cat = "Crypto";
+    else if (ticker.startsWith("KXBTC") || ticker.startsWith("KXETH") ||
+             ticker.startsWith("KXSOL") || ticker.startsWith("KXXRP") ||
+             ticker.startsWith("KXDOGE") || ticker.startsWith("KXHYPE") ||
+             ticker.startsWith("KXBNB") || ticker.startsWith("KXSHIBA"))          cat = "Crypto";
     else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
              ticker.startsWith("KXTRUMP") || ticker.startsWith("POPVOTE") ||
-             ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV"))          cat = "Politics";
-    else if (ticker.startsWith("KXFED")  || ticker.startsWith("KXINXU") ||
-             ticker.startsWith("ECMOV"))                                           cat = "Finance";
+             ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV") ||
+             ticker.startsWith("KXPRES") || ticker.startsWith("SENATE") ||
+             ticker.startsWith("KXSENATE") || ticker.startsWith("GOV") ||
+             ticker.startsWith("HOUSE") || ticker.startsWith("CONTROL") ||
+             ticker.startsWith("CLOSESTSTATE") || ticker.startsWith("KXELECTIONMOV") ||
+             ticker.startsWith("KXCANADAPM") || ticker.startsWith("KXCABOUT") ||
+             ticker.startsWith("KXDJT") || ticker.startsWith("KXSECAG") ||
+             ticker.startsWith("KXSECDEF") || ticker.startsWith("KXSECHHS") ||
+             ticker.startsWith("KXBIDENPARDON") || ticker.startsWith("KXEPSTEIN") ||
+             ticker.startsWith("KXSWINGSTATE") || ticker.startsWith("KXNEXTIRANLEADER") ||
+             ticker.startsWith("KXMADURO") || ticker.startsWith("KXLEADERSOUT") ||
+             ticker.startsWith("KXKHAMENEI") || ticker.startsWith("KXDHSFUND") ||
+             ticker.startsWith("KXHORMUZ") || ticker.startsWith("KXCLOSEHORMUZ") ||
+             ticker.startsWith("KXSTARMER") || ticker.startsWith("KXNJGOV") ||
+             ticker.startsWith("KXNYGOV"))                                         cat = "Politics";
+    else if (ticker.startsWith("KXFED") || ticker.startsWith("KXINXU") ||
+             ticker.startsWith("ECMOV") || ticker.startsWith("KXNASDAQ") ||
+             ticker.startsWith("NASDAQ") || ticker.startsWith("INX") ||
+             ticker.startsWith("KXINX") || ticker.startsWith("KXWTI") ||
+             ticker.startsWith("KXAAA") || ticker.startsWith("KXCPI") ||
+             ticker.startsWith("KXPAYROLL") || ticker.startsWith("KXGDP") ||
+             ticker.startsWith("KXRATECUT") || ticker.startsWith("RATECUT") ||
+             ticker.startsWith("FED") || ticker.startsWith("LEAVEPOWELL") ||
+             ticker.startsWith("TNOTE") || ticker.startsWith("POWER") ||
+             ticker.startsWith("KXIPO") || ticker.startsWith("USDJPY") ||
+             ticker.startsWith("KXLAYOFF") || ticker.startsWith("KXRT") ||
+             ticker.startsWith("KXU3") || ticker.startsWith("KXFOREIGN"))         cat = "Finance";
     else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
-    else if (ticker.startsWith("KXFOXNEWSMENTION"))                                cat = "Entertainment";
-    else if (ticker.startsWith("KXFOREIGNTARIFF"))                                  cat = "Finance";
+    else if (ticker.startsWith("KXOSCAR") || ticker.startsWith("KXGRAM") ||
+             ticker.startsWith("KXSURVIV") || ticker.startsWith("KXSPOTIFY") ||
+             ticker.startsWith("KXTOPMODEL") || ticker.startsWith("KXTOPARTIST") ||
+             ticker.startsWith("KXNETFLIXRANK") || ticker.startsWith("KXALBUMSALES") ||
+             ticker.startsWith("KXFIRSTSUPERBOWLSONG") || ticker.startsWith("KXSUPERBOWLAD") ||
+             ticker.startsWith("KXPERFORMSUPERBOWL") || ticker.startsWith("KXSBGUESTS") ||
+             ticker.startsWith("KXSBADS") || ticker.startsWith("KXSBSETLISTS") ||
+             ticker.startsWith("KXSBPERFORM") || ticker.startsWith("KXSBADAPPEARANCES") ||
+             ticker.startsWith("KXSBVIEWER") || ticker.startsWith("KXSBMENTION") ||
+             ticker.startsWith("KXTIME") || ticker.startsWith("KXKIMMEL") ||
+             ticker.startsWith("KXCOLBERT") || ticker.startsWith("KXSNL") ||
+             ticker.startsWith("KX60MIN") || ticker.startsWith("KXLATENIGHTMENTION") ||
+             ticker.startsWith("KXMRBEAST") || ticker.startsWith("KXSWIFTMENTION") ||
+             ticker.startsWith("KXFOXNEWSMENTION") || ticker.startsWith("KXRANKLIST"))  cat = "Entertainment";
     else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+
+    const SPORTS_CATS_SET = new Set(["NFL","College Football","NBA","College Basketball","Baseball","Hockey","Golf","Tennis","Soccer","Cricket","Combat Sports","Racing","Esports","Parlay"]);
+    if (SPORTS_CATS_SET.has(cat)) grp = "Sports";
+    else if (cat !== "Other Sports" && cat !== "Other Non-sports") grp = "Non-sports";
 
     let mtype;
     if (cat === "Other Sports" || cat === "Other Non-sports") {
