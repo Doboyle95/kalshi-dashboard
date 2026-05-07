@@ -23,6 +23,7 @@ $files = @(
   "polymarket_categories_daily.csv",
   "polymarket_sports_split_daily.csv",
   "taker_pnl_daily.csv",
+  "maker_pnl_daily.csv",
   "taker_notional_daily.csv",
   "taker_category_summary.csv",
   "taker_category_daily.csv",

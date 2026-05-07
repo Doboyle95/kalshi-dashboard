@@ -95,7 +95,7 @@ export function freshnessPanel({
 export function askPageLink({
   question,
   context = "",
-  label = "Ask about this page"
+  label = "Ask data about this page"
 } = {}) {
   const link = el("a", "page-ask-link", label);
   link.href = "chat";

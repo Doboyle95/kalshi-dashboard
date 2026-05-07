@@ -178,7 +178,7 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
 </div>
 
 <details class="surface-card compact-details">
-  <summary>How to use this page</summary>
+  <summary>About this page</summary>
   <p>Pick a platform and segment first, then choose a large-trade threshold. The top chart shows only contracts from trades at or above that threshold; the ribbon shows the full size mix for the same window, so spikes are easiest to interpret when both move together.</p>
 </details>
 
@@ -284,9 +284,9 @@ const spikeRows = thresholdRows
 
 ## Volume and size mix
 
-<p class="section-intro">The first chart now shows only volume from trades at or above the selected size. The ribbon below keeps the full composition view so you can tell whether the threshold spike is part of a broader shift in trade-size mix.</p>
+<p class="section-intro">Threshold-only volume above; full size composition below.</p>
 
-<div class="instruction-line"><strong>Try this:</strong> switch between <em>Sports</em> and <em>Non-sports</em>, then change the threshold from <em>10k+</em> to <em>100k+</em> to see whether the spike is broad block flow or true whale flow.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> move from <em>10k+</em> to <em>100k+</em>; if the spike survives, it is true whale flow rather than ordinary block trading.</div>
 
 <div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${dateWindowLabel}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total Kalshi volume.</div>
 
@@ -382,7 +382,7 @@ const largeThreshold = view(Inputs.radio(["1k+", "10k+", "50k+", "100k+"], {
 
 ## Large-trade share radar
 
-<p class="section-intro">This isolates the selected threshold and flags days when large-trade share is far above its trailing baseline. The goal is to catch days where volume was not just high, but unusually block-heavy.</p>
+<p class="section-intro">Flags days where volume was unusually block-heavy, not just high.</p>
 
 <div class="plot-shell">
 

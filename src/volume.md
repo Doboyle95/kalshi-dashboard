@@ -182,13 +182,13 @@ const volWideDaily = topDaily.map(row => {
 
 ## Daily volume
 
-<p class="section-intro">This is the cleanest view of headline activity. The bars show each trading day, the moving average smooths short-term volatility, and the event overlay helps separate structural step-ups from one-off spikes.</p>
+<p class="section-intro">Headline daily activity, with a trailing average and optional event markers.</p>
 
 ```js
 const dr1 = view(makeDateBrush(new Date("2025-01-01")));
 ```
 
-<div class="instruction-line"><strong>Try this:</strong> hover an outlier day to compare raw volume, fees, and the 7-day baseline. Turn annotations off when you want a cleaner read on the trendline.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> use <em>Log</em> scale when earlier eras look flat; it makes pre-2025 growth readable without hiding the recent spike.</div>
 
 ```js
 const [s1, e1] = dr1;
@@ -280,9 +280,9 @@ const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label:
 
 ## Daily trade count
 
-<p class="section-intro">Volume alone can hide whether activity came from many traders or a smaller number of larger tickets. This chart gives you the participation side of that same story.</p>
+<p class="section-intro">Trade count separates broad participation from fewer, larger tickets.</p>
 
-<div class="instruction-line"><strong>Try this:</strong> compare trade spikes with the volume chart above to see whether a regime shift came from broader participation or larger average trade size.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> hover the same date here and above; if volume jumps more than trade count, the day was driven by larger tickets rather than broader participation.</div>
 
 ```js
 const drTrades = view(makeDateBrush(new Date("2025-01-01"), d => d.trades || 0, "#f28e2b"));
@@ -363,9 +363,9 @@ const volumeEventMode = view(Inputs.radio(["On", "Off"], {
 
 ## Sports vs. non-sports volume
 
-<p class="section-intro">Use this section to see what kind of business is driving the headline number. The stacked view is the fastest read on internal mix; the isolated views are better for category-level regime changes.</p>
+<p class="section-intro">Sports, non-sports, and parlay mix behind the headline number.</p>
 
-<div class="instruction-line"><strong>Try this:</strong> switch between <em>Volume</em> and <em>Fees</em>, then isolate sports or non-sports to see whether revenue mix moves differently from headline activity.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> switch this chart to <em>Fees</em> after spotting a volume regime change; sports and non-sports often monetize very differently per contract.</div>
 
 ```js
 const dr2 = view(makeDateBrush(new Date("2025-01-01")));

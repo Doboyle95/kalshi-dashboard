@@ -11,6 +11,7 @@ title: Taker P&L
 
 ```js
 const daily = await FileAttachment("data/taker_pnl_daily.csv").csv({typed: true});
+const makerDaily = await FileAttachment("data/maker_pnl_daily.csv").csv({typed: true});
 const notionalDaily = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
 const categorySummary = await FileAttachment("data/taker_category_summary.csv").csv({typed: true});
 const categoryDaily = await FileAttachment("data/taker_category_daily.csv").csv({typed: true});
@@ -23,6 +24,7 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
+    {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Taker notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
     {label: "Category P&L", date: latestDate(categoryDaily), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
   ],
@@ -30,7 +32,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Explain recent taker P&L, including whether results are complete enough to interpret and which categories drove the result.",
-  context: "Taker P&L page using taker_pnl_daily.csv, taker_notional_daily.csv, taker_category_daily.csv, and taker_sports_daily.csv."
+  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_category_daily.csv, and taker_sports_daily.csv."
 }));
 ```
 
@@ -49,15 +51,19 @@ const positive = "#1a9641";
 const negative = "#d7191c";
 const grossColor = "#f4a736";
 const netColor = "#d7191c";
+const makerGrossColor = "#2f7dd1";
+const makerNetColor = "#0b4f8a";
 const takerPnlSeries = ["Before fees", "After fees"];
 const takerPnlColors = {"Before fees": grossColor, "After fees": netColor};
+const makerPnlSeries = ["Before maker fees", "After maker fees"];
+const makerPnlColors = {"Before maker fees": makerGrossColor, "After maker fees": makerNetColor};
 const sportsSegmentSeries = ["Sports", "Non-sports"];
 const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
 ```
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Gross taker P&L is settlement outcome before fees. Net taker P&L subtracts taker fees. Overall ROI uses daily taker notional paid: yes takers pay price, no takers pay 100 minus price. Category charts still use settled face value until a category-level notional export is added.</p>
+  <p>Gross taker P&L is settlement outcome before fees. Net taker P&L subtracts taker fees. Maker gross P&L is the opposite side of the same settled trades; maker net P&L subtracts maker fees where Kalshi charged them. Overall ROI uses daily taker notional paid: yes takers pay price, no takers pay 100 minus price.</p>
 </details>
 
 <div class="control-strip">
@@ -97,6 +103,10 @@ const filteredDaily = dailyWithNotional
   .filter(d => d.date >= startDate && d.date <= latestPnlDate)
   .sort((a, b) => a.date - b.date);
 
+const filteredMakerDaily = makerDaily
+  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
+  .sort((a, b) => a.date - b.date);
+
 const totals = {
   gross: d3.sum(filteredDaily, d => d.pnl_gross || 0),
   net: d3.sum(filteredDaily, d => d.pnl_net || 0),
@@ -111,6 +121,13 @@ totals.grossRoi = totals.notional ? totals.gross / totals.notional * 100 : 0;
 totals.netRoi = totals.notional ? totals.net / totals.notional * 100 : 0;
 totals.feeDragRoi = totals.notional ? totals.fees / totals.notional * 100 : 0;
 totals.coverage = totals.total ? totals.settled / totals.total * 100 : 0;
+
+const makerTotals = {
+  gross: d3.sum(filteredMakerDaily, d => d.pnl_gross || 0),
+  net: d3.sum(filteredMakerDaily, d => d.pnl_net || 0),
+  fees: d3.sum(filteredMakerDaily, d => d.fees_maker || 0),
+  settled: d3.sum(filteredMakerDaily, d => d.contracts_settled || 0)
+};
 ```
 
 <div class="kpi-grid">
@@ -205,6 +222,86 @@ Plot.plot({
 </div>
 
 ```js
+let runningMakerGross = 0;
+let runningMakerNet = 0;
+const makerCumulativeRows = filteredMakerDaily.flatMap(d => {
+  runningMakerGross += d.pnl_gross || 0;
+  runningMakerNet += d.pnl_net || 0;
+  return [
+    {date: d.date, series: "Before maker fees", value: runningMakerGross, dailyGross: d.pnl_gross || 0, dailyNet: d.pnl_net || 0, fees: d.fees_maker || 0, contracts: d.contracts_settled || 0},
+    {date: d.date, series: "After maker fees", value: runningMakerNet, dailyGross: d.pnl_gross || 0, dailyNet: d.pnl_net || 0, fees: d.fees_maker || 0, contracts: d.contracts_settled || 0}
+  ];
+});
+
+const makerCumulativeTip = Array.from(
+  d3.rollup(
+    makerCumulativeRows,
+    rows => {
+      const out = {date: rows[0].date, dailyGross: rows[0].dailyGross, dailyNet: rows[0].dailyNet, fees: rows[0].fees, contracts: rows[0].contracts};
+      for (const row of rows) out[row.series] = row.value;
+      return out;
+    },
+    d => +d.date
+  ),
+  ([, value]) => value
+).sort((a, b) => a.date - b.date);
+```
+
+## Cumulative Maker P&L
+
+<p class="section-intro">The maker-side view is the other side of settled trades. The gap between the two lines is maker fees, which only apply to maker-fee markets and changed from flat per-contract pricing to a price-curve fee in July 2025.</p>
+
+<div class="kpi-grid compact-kpis">
+  <div class="kpi-card" data-accent="kalshi">
+    <div class="kpi-label">Net maker P&L</div>
+    <div class="kpi-value">${fmtUSD(makerTotals.net)}</div>
+  </div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Maker fees paid</div>
+    <div class="kpi-value">${fmtUSD(makerTotals.fees)}</div>
+  </div>
+  <div class="kpi-card" data-accent="secondary">
+    <div class="kpi-label">Gross maker P&L</div>
+    <div class="kpi-value">${fmtUSD(makerTotals.gross)}</div>
+  </div>
+</div>
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 320,
+  marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {
+    label: "Cumulative maker P&L (USD)",
+    grid: true,
+    tickFormat: d => fmtUSD(d)
+  },
+  color: {legend: true, domain: makerPnlSeries, range: makerPnlSeries.map(label => makerPnlColors[label])},
+  marks: [
+    Plot.lineY(makerCumulativeRows, {
+      x: "date",
+      y: "value",
+      stroke: "series",
+      strokeWidth: 2,
+      curve: "monotone-x"
+    }),
+    Plot.ruleX(makerCumulativeTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
+    Plot.tip(makerCumulativeTip, Plot.pointerX({
+      x: "date",
+      title: d => `${fmtDate(d.date)}\nBefore maker fees: ${fmtUSD(d["Before maker fees"])}\nAfter maker fees: ${fmtUSD(d["After maker fees"])}\nDaily gross maker P&L: ${fmtUSD(d.dailyGross)}\nDaily net maker P&L: ${fmtUSD(d.dailyNet)}\nMaker fees: ${fmtUSD(d.fees)}\nSettled contracts: ${fmtCount(d.contracts)}`
+    })),
+    Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.35})
+  ]
+})
+```
+
+</div>
+
+```js
 const dailyBars = filteredDaily
   .filter(d => (d.contracts_settled || 0) >= 25000)
   .map(d => ({
@@ -216,7 +313,7 @@ const dailyBars = filteredDaily
 
 ## Daily Outcome Swings
 
-<p class="section-intro">Bars show dollars won or lost by takers each day. Color shows severity per settled contract, so huge days and bad prices are not conflated.</p>
+<p class="section-intro">Daily net P&L, colored by return on taker cost so large days and bad prices are not conflated.</p>
 
 <div class="plot-shell">
 
@@ -270,7 +367,7 @@ const categoryTop = categoryRows.slice(0, 12);
 
 ## Category Leaderboard
 
-<p class="section-intro">The categories where takers lost the most net dollars. The tooltip separates outcome loss from fee drag.</p>
+<p class="section-intro">Categories ranked by net dollars won or lost by takers.</p>
 
 <div class="plot-shell">
 
@@ -318,9 +415,9 @@ for (const segment of ["Sports", "Non-sports"]) {
 }
 ```
 
-## Sports vs Non-Sports
-
-<p class="section-intro">This separates the newer sports regime from the older non-sports book.</p>
+<details class="surface-card compact-details secondary-section">
+  <summary>Sports vs non-sports detail</summary>
+  <p>Optional split between the newer sports regime and the older non-sports book.</p>
 
 <div class="plot-shell">
 
@@ -348,6 +445,12 @@ Plot.plot({
 
 </div>
 
+</details>
+
+<details class="surface-card compact-details secondary-section">
+  <summary>Focus category detail</summary>
+  <p>Optional drill-in for whether one category's losses came from a steady grind or a few sharp settlement events.</p>
+
 <div class="control-strip">
 
 ```js
@@ -370,10 +473,6 @@ const focusCumulative = focusRows.map(d => {
   return {...d, cumulative: focusRunning, netPerFace: d.contracts_settled ? d.pnl_net / d.contracts_settled * 100 : 0};
 });
 ```
-
-## Focus Category
-
-<p class="section-intro">Use this to see whether one category's losses came from a steady grind or a few sharp settlement events.</p>
 
 <div class="plot-shell">
 
@@ -407,6 +506,8 @@ Plot.plot({
 ```
 
 </div>
+
+</details>
 
 ```js
 Inputs.table(categoryRows.map(d => ({

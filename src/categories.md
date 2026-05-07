@@ -51,8 +51,8 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```js
 const TM_CATEGORY_ORDER = [
   "NFL", "College Football", "NBA", "College Basketball", "Baseball",
-  "Hockey", "Golf", "Tennis", "Soccer", "Combat Sports", "Parlay",
-  "Crypto", "Politics", "Finance", "Entertainment", "Weather",
+  "Hockey", "Golf", "Tennis", "Soccer", "Cricket", "Combat Sports", "Racing", "Esports", "Parlay",
+  "Crypto", "Politics", "Finance", "Entertainment", "Mention", "Weather",
   "Other Sports", "Other Non-sports"
 ];
 
@@ -63,17 +63,21 @@ const TM_CATEGORY_COLORS = {
   "Tennis": "#E53935",
   "NBA": "#F57F17",
   "Soccer": "#F9A825",
+  "Cricket": "#FA8072",
   "Golf": "#FBC02D",
   "Parlay": "#FDD835",
   "Baseball": "#F06292",
   "College Basketball": "#D81B60",
   "Hockey": "#4E342E",
+  "Racing": "#A1887F",
+  "Esports": "#BCAAA4",
   "Other Sports": "#8D6E63",
   "Crypto": "#0D47A1",
   "Politics": "#1A237E",
   "Finance": "#1E88E5",
   "Weather": "#4FC3F7",
   "Entertainment": "#0097A7",
+  "Mention": "#546E7A",
   "Other Non-sports": "#7986CB"
 };
 
@@ -81,6 +85,7 @@ const TM_TO_WIDE_CATEGORY = {
   "College Football": "College football",
   "College Basketball": "College basketball",
   "Combat Sports": "Combat sports",
+  "Mention": "Mention",
   "Other Sports": "Other sports",
   "Other Non-sports": "Other non-sports"
 };
@@ -92,41 +97,242 @@ function normalizeTreemapCategory(cat) {
 }
 
 function classifyTreemapTicker(ticker, isSports) {
-  const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+  const tickerUpper = String(ticker || "").toUpperCase();
+  let grp = isSports === "TRUE" ? "Sports" : "Non-sports";
 
   let cat;
-  if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
-  else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
-  else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
-  else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
+  if      (tickerUpper.includes("MENTION"))                                      cat = "Mention";
+  else if (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
+  else if (ticker.startsWith("KXNFL") || ticker === "KXSB" ||
+           ticker.startsWith("KXNEXTTEAMNFL") || ticker.startsWith("KXNEXTTEAMMICAH") ||
+           ticker.startsWith("KXNEXTTEAMTYREEK") || ticker.startsWith("KXNEXTTEAMMCLAURIN") ||
+           ticker.startsWith("KXNEWCOACH") || ticker.startsWith("KXNEXTCOACHOUTNFL") ||
+           ticker.startsWith("KXTEAMSINSB") || ticker.startsWith("KXNEXTNFLCOACH") ||
+           ticker === "KXAFC" || ticker === "KXNFC" ||
+           ticker.startsWith("KXNFCAFCSB") || ticker.startsWith("KXNYGCOACH") ||
+           ticker.startsWith("KXCOACHOUTNFL"))                                  cat = "NFL";
+  else if (ticker.startsWith("KXNCAAF") || ticker.startsWith("KXHEISMAN") ||
+           ticker.startsWith("KXLSUCOACH") || ticker.startsWith("KXMICHCOACH") ||
+           ticker.startsWith("KXPSUCOACH") || ticker.startsWith("KXFLACOACH") ||
+           ticker.startsWith("KXTENNCOACH") || ticker.startsWith("KXARKCOACH") ||
+           ticker.startsWith("KXVTCOACH") || ticker.startsWith("KXAUBCOACH") ||
+           ticker.startsWith("KXCOACHOUTOLEMISS") || ticker.startsWith("KXCFPSEED") ||
+           ticker.startsWith("KXCFBMENTION"))                                   cat = "College Football";
+  else if (ticker.startsWith("KXNBA") || ticker.startsWith("KXNEXTTEAMNBA") ||
+           ticker.startsWith("KXNEXTTEAMGIANNIS") || ticker.startsWith("KXNEXTTEAMLEBRON") ||
+           ticker.startsWith("KXNEXTTEAMWESTBROOK") || ticker.startsWith("KXNEXTCOACHOUTNBA") ||
+           ticker.startsWith("KXWNBA") || ticker.startsWith("KXEUROLEAGUE") ||
+           ticker.startsWith("KXEUROCUP") || ticker.startsWith("KXCBAGAME") ||
+           ticker.startsWith("KXNBLGAME") || ticker.startsWith("KXKBLGAME") ||
+           ticker.startsWith("KXFIBA") || ticker.startsWith("KXABAGAME") ||
+           ticker.startsWith("KXBSLGAME") || ticker.startsWith("KXARGLNBGAME") ||
+           ticker.startsWith("KXLNBELITEGAME") || ticker.startsWith("KXACBGAME") ||
+           ticker.startsWith("KXBBSERIEA") || ticker.startsWith("KXVTBGAME") ||
+           ticker.startsWith("KXTEAMSINNBAF"))                                  cat = "NBA";
   else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
-           ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
-  else if (ticker.startsWith("KXMLB"))                                           cat = "Baseball";
-  else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
-  else if (ticker.startsWith("KXPGA"))                                           cat = "Golf";
-  else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
+           ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD") ||
+           ticker.startsWith("KXNCAAB") || ticker.startsWith("KXMAKEMARMAD") ||
+           ticker.startsWith("KXNCAAMACC") || ticker.startsWith("KXNCAAMENT") ||
+           ticker.startsWith("KXNCAAMBNEXTCOACH"))                              cat = "College Basketball";
+  else if (ticker.startsWith("KXMLB") || ticker.startsWith("KXWBC") ||
+           ticker.startsWith("KXNCAABASEBALL") || ticker.startsWith("KXNEXTTEAMMLB") ||
+           ticker.startsWith("KXNEXTTEAMSKUBAL") || ticker.startsWith("KXKBO") ||
+           ticker.startsWith("KXNPB"))                                          cat = "Baseball";
+  else if (ticker.startsWith("KXNHL") || ticker.startsWith("KXKHL") ||
+           ticker.startsWith("KXAHL") || ticker.startsWith("KXSHL") ||
+           ticker.startsWith("KXLIIGA") || ticker.startsWith("KXDEL") ||
+           ticker.startsWith("KXIIHF") || ticker.startsWith("KXWOMHOCKEY") ||
+           ticker.startsWith("KXWOHOCKEY") || ticker.startsWith("KXWOWHOCKEY") ||
+           ticker.startsWith("KXNCAAHOCKEY"))                                   cat = "Hockey";
+  else if (ticker.startsWith("KXPGA") || ticker.startsWith("KXMASTERS") ||
+           ticker.startsWith("KXTHEOPEN") || ticker.startsWith("KXLIVTOUR") ||
+           ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
+           ticker.startsWith("KXRYDER") || ticker.startsWith("KXTGL") ||
+           ticker.startsWith("KXGENESISINVITATIONAL"))                          cat = "Golf";
+  else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
+           ticker.startsWith("KXITF") || ticker.startsWith("KXUSO") ||
+           ticker.startsWith("KXFOMEN") || ticker.startsWith("KXFOWOMEN") ||
+           ticker.startsWith("KXWMENSINGLES") || ticker.startsWith("KXWWOMENSINGLES") ||
+           ticker.startsWith("KXWMEN") || ticker.startsWith("KXWWOMEN") ||
+           ticker.startsWith("KXIWMEN") || ticker.startsWith("KXIWWOMEN") ||
+           ticker.startsWith("KXWIMBLEDON") || ticker.startsWith("KXAUSTRALIAN") ||
+           ticker.startsWith("KXAOMEN") || ticker.startsWith("KXAOWOMEN") ||
+           ticker.startsWith("KXDAVISCUP") || ticker.startsWith("KXUNITEDCUP") ||
+           ticker.startsWith("KXTENNISEX") || ticker.startsWith("KXSIXKINGSSLAM") ||
+           ticker.startsWith("KXMOMEN") || ticker.startsWith("KXMOWOMEN"))      cat = "Tennis";
   else if (ticker.startsWith("KXEPL") || ticker.startsWith("KXUCL") ||
-           ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
-           ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXIPL") ||
-           ticker.startsWith("KXEUROLEAGUE") || ticker.startsWith("KXT20"))     cat = "Soccer";
-  else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING"))         cat = "Combat Sports";
-  else if (ticker.startsWith("KXBTC") || ticker.startsWith("KXETH") ||
-           ticker.startsWith("KXSOL"))                                           cat = "Crypto";
+           ticker.startsWith("KXUEL") || ticker.startsWith("KXUECL") ||
+           ticker.startsWith("KXUEFA") || ticker.startsWith("KXLALIGA") ||
+           ticker.startsWith("KXSERIEA") || ticker.startsWith("KXSERIEB") ||
+           ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXLIGUE") ||
+           ticker.startsWith("KXMLS") || ticker.startsWith("KXLIGAMX") ||
+           ticker.startsWith("KXNWSL") || ticker.startsWith("KXSOCCER") ||
+           ticker.startsWith("KXFIFA") || ticker.startsWith("KXMENWORLDCUP") ||
+           ticker.startsWith("KXWORLDCUP") || ticker.startsWith("KXCLUBWC") ||
+           ticker.startsWith("KXEWC") || ticker.startsWith("KXCOPA") ||
+           ticker.startsWith("KXCOPADELREY") || ticker.startsWith("KXFACUP") ||
+           ticker.startsWith("KXEFL") || ticker.startsWith("KXPREMIER") ||
+           ticker.startsWith("KXESPSUPER") || ticker.startsWith("KXAFCON") ||
+           ticker.startsWith("KXJLEAGUE") || ticker.startsWith("KXJBLEAGUE") ||
+           ticker.startsWith("KXBRASILEIRO") || ticker.startsWith("KXSUPERLIG") ||
+           ticker.startsWith("KXARGPREMDIV") || ticker.startsWith("KXLIGAPORTUGAL") ||
+           ticker.startsWith("KXALEAGUE") || ticker.startsWith("KXSAUDIPLG") ||
+           ticker.startsWith("KXEREDIVISIE") || ticker.startsWith("KXBELGIANPL") ||
+           ticker.startsWith("KXSCOTTISHPREM") || ticker.startsWith("KXKLEAGUE") ||
+           ticker.startsWith("KXBALLONDOR") || ticker.startsWith("KXMESSI") ||
+           ticker.startsWith("KXINTLFRIENDLY") || ticker.startsWith("KXDFBPOKAL") ||
+           ticker.startsWith("KXWPL") || ticker.startsWith("KXEWSL") ||
+           ticker.startsWith("KXINTERCONCUP") || ticker.startsWith("KXITASUPERCUP") ||
+           ticker.startsWith("KXCOPPAIT") || ticker.startsWith("KXCOUPEDEFRANCE") ||
+           ticker.startsWith("KXKNVBCUP") || ticker.startsWith("KXSLGREECE") ||
+           ticker.startsWith("KXDENSUPER") || ticker.startsWith("KXFRASUPERCUP") ||
+           ticker.startsWith("KXTACAPORT") || ticker.startsWith("KXDIMAYOR") ||
+           ticker.startsWith("KXSWISSLEAGUE") || ticker.startsWith("KXEKSTRAKLASA") ||
+           ticker.startsWith("KXHNL") || ticker.startsWith("KXAFCCL") ||
+           ticker.startsWith("KXTEAMSINUCL") || ticker.startsWith("KXCONCACAF") ||
+           ticker.startsWith("KXCONMEBOL") || ticker.startsWith("KXEGYPLGAME") ||
+           ticker.startsWith("KXCHNSLGAME") || ticker.startsWith("KXURYPDGAME") ||
+           ticker.startsWith("KXECULPGAME"))                                    cat = "Soccer";
+  else if (ticker.startsWith("KXIPL") || ticker.startsWith("KXT20") ||
+           ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
+           ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
+  else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING") ||
+           ticker.startsWith("KXMMA"))                                          cat = "Combat Sports";
+  else if (ticker.startsWith("KXCS2") || ticker.startsWith("KXLOL") ||
+           ticker.startsWith("KXVALORANT") || ticker.startsWith("KXDOTA2") ||
+           ticker.startsWith("KXRL") || ticker.startsWith("KXCSGO") ||
+           ticker.startsWith("KXCOD") || ticker.startsWith("KXR6") ||
+           ticker.startsWith("KXMIDSEASONINVITATIONAL") || ticker.startsWith("KXLEAGUEWORLDS") ||
+           ticker.startsWith("KXSTARLADDER"))                                   cat = "Esports";
+  else if (ticker.startsWith("KXNASCAR") || ticker.startsWith("KXF1") ||
+           ticker.startsWith("KXINDY500") || ticker.startsWith("KXINDY"))       cat = "Racing";
+  else if (ticker.startsWith("KXWO") || ticker.startsWith("KXWINTEROLYMPICS") ||
+           ticker.startsWith("KXOLYMPICS") || ticker.startsWith("KXCHESS") ||
+           ticker.includes("CHESS") ||
+           (ticker.startsWith("KXFIDE") && !ticker.startsWith("KXFIDESZ")) ||
+           ticker.startsWith("KXRUGBY") ||
+           ticker.startsWith("KXSIXNATIONS") || ticker.startsWith("KXNCAAMLAX") ||
+           ticker.startsWith("KXNCAALAX") || ticker.startsWith("KXDARTS") ||
+           ticker.startsWith("KXPREMDARTS") || ticker.startsWith("KXPICKLEBALL") ||
+           ticker.startsWith("KXLAXTEWAARATON") || ticker.endsWith("GAME"))     cat = "Other Sports";
+  else if (ticker.startsWith("KXNATHAN"))                                       cat = "Other Sports";
+  else if (ticker.startsWith("KXBTC") || ticker.startsWith("BTC") ||
+           ticker.startsWith("KXETH") || ticker.startsWith("ETH") ||
+           ticker.startsWith("KXSOL") || ticker.startsWith("SOL") ||
+           ticker.startsWith("KXXRP") || ticker.startsWith("XRP") ||
+           ticker.startsWith("KXDOGE") || ticker.startsWith("DOGE") ||
+           ticker.startsWith("KXHYPE") || ticker.startsWith("KXBNB") ||
+           ticker.startsWith("KXSHIBA"))                                        cat = "Crypto";
+  else if (ticker.startsWith("KXCITRINI"))                                      cat = "Finance";
   else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
            ticker.startsWith("KXTRUMP") || ticker.startsWith("POPVOTE") ||
-           ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV"))          cat = "Politics";
+           ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV") ||
+           ticker.startsWith("KXPRES") || ticker.startsWith("PRES") ||
+           ticker.startsWith("KXVPRES") || ticker.startsWith("VPRES") ||
+           ticker.startsWith("SENATE") || ticker.startsWith("KXSENATE") ||
+           ticker.startsWith("GOV") || ticker.startsWith("HOUSE") ||
+           ticker.startsWith("CONTROL") || ticker.startsWith("CLOSESTSTATE") ||
+           ticker.startsWith("KXELECTIONMOV") || ticker.startsWith("KXCANADAPM") ||
+           ticker.startsWith("KXCABOUT") || ticker.startsWith("KXDJT") ||
+           ticker.startsWith("KXSECAG") || ticker.startsWith("KXSECDEF") ||
+           ticker.startsWith("KXSECHHS") || ticker.startsWith("KXBIDENPARDON") ||
+           ticker.startsWith("KXEPSTEIN") ||
+           ticker.startsWith("KXSWINGSTATE") ||
+           ticker.startsWith("KXNEXTIRANLEADER") || ticker.startsWith("KXMADURO") ||
+           ticker.startsWith("KXLEADERSOUT") || ticker.startsWith("KXKHAMENEI") ||
+           ticker.startsWith("KXDHSFUND") || ticker.startsWith("KXHORMUZ") ||
+           ticker.startsWith("KXCLOSEHORMUZ") || ticker.startsWith("KXSTARMER") ||
+           ticker.startsWith("KXNJGOV") || ticker.startsWith("KXNYGOV") ||
+           ticker.startsWith("PRESPARTY") || ticker.startsWith("KXFRENCH") ||
+           ticker.startsWith("KXCUOMO") || ticker.startsWith("CUOMO") ||
+           ticker.startsWith("KXEOWEEK") || ticker.startsWith("KXEOCOUNT") ||
+           ticker.startsWith("KXUSAIRAN") || ticker.startsWith("KXGREENLAND") ||
+           ticker.startsWith("KXLEADEROUT") || ticker.startsWith("KXLEAVEADMIN") ||
+           ticker.startsWith("CABINET") || ticker.startsWith("KXVOTER") ||
+           ticker.startsWith("RSENATE") || ticker.startsWith("KXSENMAJORITY") ||
+           ticker.startsWith("KXSTATEDEEP") || ticker.startsWith("KXBONDIOUT") ||
+           ticker.startsWith("KXNEXTAG") || ticker.startsWith("KXCANCOALITION") ||
+           ticker.startsWith("KXSECTREASURY") || ticker.startsWith("KXDNI") ||
+           ticker.startsWith("KXLEAVEWALZ") || ticker.startsWith("KXVIRGINIAREDISTRICTING") ||
+           ticker.startsWith("KXINAUG") || ticker.startsWith("KXVOTEPERCENT") ||
+           ticker.startsWith("KXTXSEND") || ticker.startsWith("RHOUSESEATS") ||
+           ticker.startsWith("KXNYCMAYOR") || ticker.startsWith("KXVOTE") ||
+           ticker.startsWith("KXHONDURASPRES") || ticker.startsWith("KXVENEZUELALEADER") ||
+           ticker.startsWith("KXFIDESZ") ||
+           ticker.startsWith("SHUTDOWN") || ticker.startsWith("KXTXSEN") ||
+           ticker.startsWith("KXDOED") || ticker.startsWith("KXSAVEACT") ||
+           ticker.startsWith("KXDEMSWEEP") || ticker.startsWith("KXGREENTERRITORY") ||
+           ticker.startsWith("KXFBI") || ticker.startsWith("KXWLEADER") ||
+           ticker.includes("REDISTRICT") || ticker.startsWith("TIKTOKBAN") ||
+           ticker.startsWith("KXTARIFF") || ticker.startsWith("538APPROVE") ||
+           ticker.startsWith("KXWISCOTUS") || ticker.startsWith("KXNEXTHUNGARYPM") ||
+           ticker.startsWith("KXGA14S"))                                       cat = "Politics";
   else if (ticker.startsWith("KXFED") || ticker.startsWith("KXINXU") ||
-           ticker.startsWith("ECMOV"))                                           cat = "Finance";
-  else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
+           ticker.startsWith("ECMOV") || ticker.startsWith("KXNASDAQ") ||
+           ticker.startsWith("NASDAQ") || ticker.startsWith("INX") ||
+           ticker.startsWith("KXINX") || ticker.startsWith("KXWTI") ||
+           ticker.startsWith("KXAAA") || ticker.startsWith("KXCPI") ||
+           ticker.startsWith("CPI") || ticker.startsWith("KXPAYROLL") ||
+           ticker.startsWith("KXGDP") || ticker.startsWith("GDP") ||
+           ticker.startsWith("KXRATECUT") || ticker.startsWith("RATECUT") ||
+           ticker.startsWith("FED") || ticker.startsWith("LEAVEPOWELL") ||
+           ticker.startsWith("TNOTE") || ticker.startsWith("POWER") ||
+           ticker.startsWith("KXIPO") || ticker.startsWith("USDJPY") ||
+           ticker.startsWith("EURUSD") || ticker.startsWith("KXLAYOFF") ||
+           ticker.startsWith("KXRT") || ticker.startsWith("KXU3") ||
+           ticker.startsWith("KXFOREIGN") || ticker.startsWith("KXFOMC") ||
+           ticker.startsWith("RECSSNBER") || ticker.startsWith("KXECONSTAT") ||
+           ticker.startsWith("KXTESLA"))                                        cat = "Finance";
+  else if (ticker.startsWith("KXHIGH") || ticker.startsWith("HIGH") ||
+           ticker.startsWith("KXLOW") || ticker.startsWith("LOW") ||
+           ticker.startsWith("KXRAIN") || ticker.startsWith("RAIN") ||
+           ticker.startsWith("KXSNOW") || ticker.startsWith("SNOW") ||
+           ticker.includes("SNOW") ||
+           ticker.startsWith("KXTEMP") || ticker.startsWith("TEMP") ||
+           ticker.startsWith("KXTROP"))                                         cat = "Weather";
+  else if (ticker.startsWith("KXOSCAR") || ticker.startsWith("OSCAR") ||
+           ticker.startsWith("KXGRAM") || ticker.startsWith("GRAM") ||
+           ticker.startsWith("KXSURVIV") || ticker.startsWith("SURVIV") ||
+           ticker.startsWith("KXSPOTIFY") || ticker.startsWith("SPOTIFY") ||
+           ticker.startsWith("KXTOPMODEL") || ticker.startsWith("KXTOPARTIST") ||
+           ticker.startsWith("KXNETFLIXRANK") || ticker.startsWith("KXALBUMSALES") ||
+           ticker.startsWith("KXFIRSTSUPERBOWLSONG") || ticker.startsWith("KXSUPERBOWLAD") ||
+           ticker.startsWith("KXPERFORMSUPERBOWL") || ticker.startsWith("KXSBGUESTS") ||
+           ticker.startsWith("KXSBADS") || ticker.startsWith("KXSBSETLISTS") ||
+           ticker.startsWith("KXSBPERFORM") || ticker.startsWith("KXSBADAPPEARANCES") ||
+           ticker.startsWith("KXSBVIEWER") || ticker.startsWith("KXSBMENTION") ||
+           ticker.startsWith("KXTIME") || ticker.startsWith("KXKIMMEL") ||
+           ticker.startsWith("KXCOLBERT") || ticker.startsWith("KXSNL") ||
+           ticker.startsWith("KX60MIN") ||
+           ticker.startsWith("KXMRBEAST") ||
+           ticker.startsWith("KXRANKLIST") ||
+           ticker.startsWith("KXCODINGMODEL") || ticker.startsWith("GAMEAWARDS") ||
+           ticker.startsWith("KXGAMEAWARDS") ||
+           ticker.startsWith("GTA6") || ticker.startsWith("KXSONG") ||
+           ticker.startsWith("SONG") || ticker.startsWith("KXDANCINGWITHTHESTARS") ||
+           ticker.startsWith("DANCINGWITHTHESTARS") || ticker.startsWith("KXDANCING") ||
+           ticker.startsWith("DANCING") || ticker.startsWith("KXEMMY") ||
+           ticker.startsWith("EMMY") || ticker.startsWith("KXGOLDENGLOBE") ||
+           ticker.startsWith("GOLDENGLOBE") || ticker.startsWith("KXBOXOFFICE") ||
+           ticker.startsWith("BOXOFFICE") || ticker.startsWith("KXMOVIE") ||
+           ticker.startsWith("MOVIE") || ticker.startsWith("KXSUPERBOWLHEADLINE") ||
+           ticker.startsWith("KXTRAITORS") || ticker.startsWith("KXTOP10BILLBOARD") ||
+           ticker.startsWith("KXTOPMONTHLY"))                                   cat = "Entertainment";
   else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+
+  const sportsCatsSet = new Set(["NFL", "College Football", "NBA", "College Basketball", "Baseball", "Hockey", "Golf", "Tennis", "Soccer", "Cricket", "Combat Sports", "Racing", "Esports", "Other Sports", "Parlay"]);
+  if (sportsCatsSet.has(cat)) grp = "Sports";
+  else if (cat !== "Other Sports" && cat !== "Other Non-sports") grp = "Non-sports";
 
   let mtype;
   if (cat === "Other Sports" || cat === "Other Non-sports") {
-    mtype = "Other";
+    mtype = ticker;
   } else if (cat === "Parlay") {
     mtype = ticker.includes("SINGLEGAME") ? "Same-game" : "Multi-game";
   } else if (cat === "Crypto") {
     mtype = /15M$/.test(ticker) ? "15-minute" : /D$/.test(ticker) ? "Daily" : "Other";
+  } else if (cat === "Mention") {
+    mtype = "Mention";
   } else if (cat === "Politics") {
     mtype = (ticker === "PRES" || /POPVOTE|MAYOR|GOV|SENATE|HOUSE/.test(ticker)) ? "Election" : "Other";
   } else if (/GAME$/.test(ticker) || ticker === "KXSB") {
@@ -158,6 +364,57 @@ function getTmRange(period) {
   return ranges[period];
 }
 
+// Below this all-time contract threshold, trust R's is_sports flag directly
+// rather than our manual JS prefix rules (exception: Parlays, which R misclassifies).
+const FALLBACK_THRESHOLD = 5_000_000;
+const FALLBACK_NOTIONAL_THRESHOLD = 15_000_000;
+const allTimeContractsMap = new Map(leaderboard.map(d => [d.report_ticker, +d.contracts || 0]));
+const allTimeNotionalMap = new Map(leaderboard.map(d => [d.report_ticker, +d.notional || 0]));
+const kalshiCategoryByReportTicker = new Map(
+  d3.rollups(
+    mktLeaderboard.filter(d => d.report_ticker && d.kalshi_category),
+    rows => d3.rollups(
+      rows,
+      vals => d3.sum(vals, v => +v.contracts || 0),
+      d => d.kalshi_category
+    ).sort((a, b) => b[1] - a[1])[0]?.[0],
+    d => d.report_ticker
+  )
+);
+
+function categoryFromKalshiCategory(rawCategory) {
+  const c = String(rawCategory || "").toLowerCase();
+  if (!c) return null;
+  if (c.includes("mention")) return "Mention";
+  if (c.includes("election") || c.includes("politic")) return "Politics";
+  if (c.includes("economic") || c.includes("financial") || c.includes("companie")) return "Finance";
+  if (c.includes("entertainment")) return "Entertainment";
+  if (c.includes("crypto")) return "Crypto";
+  if (c.includes("weather") || c.includes("climate")) return "Weather";
+  if (c.includes("sports")) return "Other Sports";
+  return null;
+}
+
+function classifyWithFallback(ticker, isSports) {
+  const cl = classifyTreemapTicker(ticker, isSports);
+  if (cl.cat === "Parlay") return cl;
+  if (cl.cat === "Other Sports") return cl;
+  if (cl.cat !== "Other Sports" && cl.cat !== "Other Non-sports") return cl;
+  const fallbackCat = categoryFromKalshiCategory(kalshiCategoryByReportTicker.get(ticker));
+  const belowFallbackSize = (allTimeContractsMap.get(ticker) || 0) < FALLBACK_THRESHOLD ||
+    (allTimeNotionalMap.get(ticker) || 0) < FALLBACK_NOTIONAL_THRESHOLD;
+  if (fallbackCat && belowFallbackSize) {
+    const grp = fallbackCat === "Other Sports" ? "Sports" : "Non-sports";
+    return {grp, cat: fallbackCat, wideCat: normalizeTreemapCategory(fallbackCat), mtype: ticker};
+  }
+  if (belowFallbackSize) {
+    const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
+    const cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
+    return {grp, cat, wideCat: normalizeTreemapCategory(cat), mtype: ticker};
+  }
+  return cl;
+}
+
 const tmTrackedMeta = topDailyCols.map(report_ticker => {
   const meta = leaderboard.find(l => l.report_ticker === report_ticker) || {};
   return {
@@ -165,7 +422,7 @@ const tmTrackedMeta = topDailyCols.map(report_ticker => {
     fees: +meta.fees || 0,
     contracts: +meta.contracts || 0,
     is_sports: meta.is_sports ?? "FALSE",
-    ...classifyTreemapTicker(report_ticker, meta.is_sports ?? "FALSE")
+    ...classifyWithFallback(report_ticker, meta.is_sports ?? "FALSE")
   };
 });
 
@@ -327,7 +584,7 @@ const tmCategoryTotals = Array.from(
   d3.rollup(
     tmData,
     rows => d3.sum(rows, d => d.value || 0),
-    d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat
+    d => classifyWithFallback(d.report_ticker, d.is_sports).cat
   ),
   ([category, value]) => ({category, value})
 ).sort((a, b) => b.value - a.value);
@@ -336,13 +593,15 @@ const tmActiveCategory = tmCategoryTotals.some(d => d.category === tmSelectedCat
   ? tmSelectedCategory
   : null;
 
+const displayTreemapCategory = cat => cat === "NBA" ? "Pro basketball" : cat;
+
 const tmActiveGroup = tmActiveCategory
   ? tmTrackedMeta.find(d => d.cat === tmActiveCategory)?.grp
   : null;
 
 const tmActiveReportTickers = new Set(
   tmData
-    .filter(d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+    .filter(d => classifyWithFallback(d.report_ticker, d.is_sports).cat === tmActiveCategory)
     .map(d => d.report_ticker)
 );
 
@@ -362,10 +621,138 @@ function marketShortName(row) {
     .trim();
 }
 
+function parseMarketDateFromKey(marketKey) {
+  const match = String(marketKey || "").match(/-(\d{2})([A-Z]{3})(\d{2})/);
+  if (!match) return null;
+  const yy = 2000 + (+match[1] || 0);
+  const month = {
+    JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+    JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
+  }[match[2]];
+  if (month == null) return null;
+  const day = +match[3] || 1;
+  return new Date(Date.UTC(yy, month, day));
+}
+
+function nbaGamePhaseFromKey(marketKey) {
+  const dt = parseMarketDateFromKey(marketKey);
+  if (!dt) return "Regular season";
+  const playoffCutoff = Date.UTC(dt.getUTCFullYear(), 3, 15);
+  return dt.getTime() >= playoffCutoff ? "Playoffs" : "Regular season";
+}
+
+function nflGamePhaseFromKey(marketKey) {
+  const dt = parseMarketDateFromKey(marketKey);
+  if (!dt) return "Regular season";
+  const month = dt.getUTCMonth();
+  const day = dt.getUTCDate();
+  return (month === 1 || (month === 0 && day >= 10)) ? "Playoffs" : "Regular season";
+}
+
+function seasonPhaseLabel(phase, marketType) {
+  const suffix = {
+    Games: "games",
+    Spreads: "spreads",
+    Totals: "totals"
+  }[marketType] || "markets";
+  return `${phase} ${suffix}`;
+}
+
+const TENNIS_SLAM_WINDOWS_BY_YEAR = {
+  2025: {
+    "Australian Open": [Date.UTC(2025, 0, 5), Date.UTC(2025, 0, 26)],
+    "French Open": [Date.UTC(2025, 4, 18), Date.UTC(2025, 5, 8)],
+    "Wimbledon": [Date.UTC(2025, 5, 23), Date.UTC(2025, 6, 13)],
+    "US Open": [Date.UTC(2025, 7, 17), Date.UTC(2025, 8, 7)]
+  },
+  2026: {
+    "Australian Open": [Date.UTC(2026, 0, 11), Date.UTC(2026, 1, 1)],
+    "French Open": [Date.UTC(2026, 4, 17), Date.UTC(2026, 5, 7)],
+    "Wimbledon": [Date.UTC(2026, 5, 22), Date.UTC(2026, 6, 12)],
+    "US Open": [Date.UTC(2026, 7, 23), Date.UTC(2026, 8, 13)]
+  }
+};
+
+function tennisSlamFromDate(dt) {
+  if (!dt) return null;
+  const windows = TENNIS_SLAM_WINDOWS_BY_YEAR[dt.getUTCFullYear()];
+  if (!windows) return null;
+  for (const [slam, [startUtc, endUtc]] of Object.entries(windows)) {
+    if (dt.getTime() >= startUtc && dt.getTime() <= endUtc) {
+      return slam;
+    }
+  }
+  return null;
+}
+
+function isTennisSlamEvent(event) {
+  return event === "Australian Open" || event === "French Open" || event === "Wimbledon" || event === "US Open";
+}
+
+function tennisPhaseFromMarketKey(marketKey) {
+  const key = String(marketKey || "");
+  if (/^(KXATPGRANDSLAM|KXWTAGRANDSLAM|KXATPGRANDSLAMFIELD)/.test(key)) {
+    return "Grand slam futures";
+  }
+  if (/^(KXUSOPEN|KXUSO|KXUSOMENSINGLES|KXUSOWOMENSINGLES|KXWIMBLEDON|KXAUSTRALIAN|KXFOMENSINGLES|KXFOWOMENSINGLES|KXWMENSINGLES|KXWWOMENSINGLES|KXWMEN|KXWWOMEN|KXAOMEN|KXAOWOMEN|KXTENNISEX|KXSIXKINGSSLAM)/.test(key)) {
+    return "Grand slams";
+  }
+  const dt = parseMarketDateFromKey(key);
+  if (!dt) return "ATP/WTA tour";
+  return tennisSlamFromDate(dt) ? "Grand slams" : "ATP/WTA tour";
+}
+
+function tennisEventFromMarketKey(marketKey, sourceTicker) {
+  const key = String(marketKey || "");
+  const src = String(sourceTicker || "");
+  if (/^KXATPMATCH|^KXWTAMATCH/.test(src)) {
+    const dt = parseMarketDateFromKey(key);
+    const slam = tennisSlamFromDate(dt);
+    if (slam) return slam;
+    return "ATP/WTA tour";
+  }
+  if (/^KXUSOPEN|^KXUSO/.test(src)) return "US Open";
+  if (/^KXWIMBLEDON|^KXWMENSINGLES|^KXWWOMENSINGLES|^KXWMEN|^KXWWOMEN/.test(src)) return "Wimbledon";
+  if (/^KXAUSTRALIAN|^KXAOMEN|^KXAOWOMEN/.test(src)) return "Australian Open";
+  if (/^KXFOMENSINGLES|^KXFOWOMENSINGLES|^KXFOMEN|^KXFOWOMEN/.test(src)) return "French Open";
+  if (/^KXATPGRANDSLAM|^KXWTAGRANDSLAM|^KXATPGRANDSLAMFIELD/.test(src)) return "Grand slam futures";
+  return "ATP/WTA tour";
+}
+
+function tennisGenderFromTicker(sourceTicker, marketKey) {
+  const src = String(sourceTicker || "");
+  const key = String(marketKey || "");
+  if (/WTA|WOMEN|WWOMEN|FOWOMEN|AOWOMEN/.test(src) || /WOMEN/.test(key)) return "Women";
+  if (/ATP|MEN|WMEN|FOMEN|AOMEN/.test(src) || /MEN/.test(key)) return "Men";
+  return "Open";
+}
+
+function tennisTourBucketFromTicker(sourceTicker) {
+  const src = String(sourceTicker || "");
+  if (/CHALLENGER/.test(src)) return "Challengers";
+  if (/^KXWTA/.test(src)) return "WTA main tour";
+  if (/^KXATP/.test(src)) return "ATP main tour";
+  return "Other tennis";
+}
+
+const TENNIS_DAILY_SPLIT_TICKERS = new Set([
+  "KXATPMATCH",
+  "KXWTAMATCH",
+  "KXATPCHALLENGERMATCH",
+  "KXWTACHALLENGERMATCH",
+  "KXATPSETWINNER",
+  "KXWTASETWINNER",
+  "KXATPDOUBLES",
+  "KXATPEXACTMATCH",
+  "KXATPTOTALSETS",
+  "KXATPGSPREAD",
+  "KXATPGAMETOTAL"
+]);
+
 function reportTickerLabel(ticker) {
   const clean = String(ticker || "").replace(/^KX/, "");
   const known = {
-    KXNBAGAME: "Games",
+    KXNBAGAME: "NBA games",
     KXNBASPREAD: "Spreads",
     KXNBATOTAL: "Totals",
     KXNBA: "Futures",
@@ -377,7 +764,7 @@ function reportTickerLabel(ticker) {
     KXNBAWEST: "Western Conference",
     KXNBACUP: "NBA Cup",
     KXNBAFINALSMVP: "Finals MVP",
-    KXNFLGAME: "Games",
+    KXNFLGAME: "NFL games",
     KXNFLSPREAD: "Spreads",
     KXNFLTOTAL: "Totals",
     KXSB: "Super Bowl",
@@ -406,7 +793,7 @@ function reportTickerLabel(ticker) {
     KXMLBTOTAL: "Totals",
     KXMLB: "Futures",
     KXMLBSERIES: "Series",
-    KXMLBSTGAME: "Standings games",
+    KXMLBSTGAME: "Season standings",
     KXMLBWORLD: "World Series",
     KXNHLGAME: "Games",
     KXNHLTOTAL: "Totals",
@@ -424,24 +811,27 @@ function reportTickerLabel(ticker) {
     KXPGAR2LEAD: "Round 2 leader",
     KXPGATOP10: "Top 10",
     KXPGATOP5: "Top 5",
-    KXATPMATCH: "ATP matches",
-    KXATPCHALLENGERMATCH: "ATP challenger",
-    KXWTAMATCH: "WTA matches",
-    KXWTACHALLENGERMATCH: "WTA challenger",
-    KXATPSETWINNER: "ATP set winners",
-    KXATPDOUBLES: "ATP doubles",
-    KXATPEXACTMATCH: "ATP exact match",
-    KXATPTOTALSETS: "ATP total sets",
-    KXATPFINALS: "ATP finals",
-    KXATPIT: "ATP Indian Wells",
-    KXWTAIT: "WTA Indian Wells",
-    KXATPMIA: "ATP Miami",
-    KXWTAFINALS: "WTA finals",
-    KXWTAMIA: "WTA Miami",
-    KXATPGSPREAD: "ATP game spreads",
-    KXATPGAMETOTAL: "ATP game totals",
-    KXATPGRANDSLAM: "ATP grand slams",
-    KXWTAGRANDSLAM: "WTA grand slams",
+    KXATPMATCH: "ATP/WTA tour",
+    KXATPCHALLENGERMATCH: "ATP/WTA tour",
+    KXWTAMATCH: "ATP/WTA tour",
+    KXWTACHALLENGERMATCH: "ATP/WTA tour",
+    KXATPSETWINNER: "ATP/WTA tour",
+    KXATPDOUBLES: "ATP/WTA tour",
+    KXATPEXACTMATCH: "ATP/WTA tour",
+    KXATPTOTALSETS: "ATP/WTA tour",
+    KXATPFINALS: "ATP/WTA tour",
+    KXATPIT: "ATP/WTA tour",
+    KXWTAIT: "ATP/WTA tour",
+    KXATPMIA: "ATP/WTA tour",
+    KXWTAFINALS: "ATP/WTA tour",
+    KXWTAMIA: "ATP/WTA tour",
+    KXATPGSPREAD: "ATP/WTA tour",
+    KXATPGAMETOTAL: "ATP/WTA tour",
+    KXATPGRANDSLAM: "Grand slams",
+    KXWTAGRANDSLAM: "Grand slams",
+    KXATPGRANDSLAMFIELD: "Grand slams",
+    KXDAVISCUP: "Other tennis",
+    KXUNITEDCUP: "Other tennis",
     KXUFCFIGHT: "Fights",
     KXBOXING: "Boxing",
     KXUFCMOV: "UFC method",
@@ -504,6 +894,10 @@ function reportTickerLabel(ticker) {
     KXMVECBCHAMPIONSHIP: "College basketball championship parlays",
     PRES: "Presidency"
   };
+  const grandSlam = String(ticker || "").match(/^(KXATPGRANDSLAM|KXWTAGRANDSLAM|KXATPGRANDSLAMFIELD|KXUSOPEN|KXUSO|KXUSOMENSINGLES|KXUSOWOMENSINGLES|KXWIMBLEDON|KXAUSTRALIAN|KXFOMENSINGLES|KXFOWOMENSINGLES|KXWMENSINGLES|KXWWOMENSINGLES|KXWMEN|KXWWOMEN|KXIWMEN|KXIWWOMEN|KXAOMEN|KXAOWOMEN|KXTENNISEX|KXSIXKINGSSLAM)/);
+  if (grandSlam) return "Grand slams";
+  const tourEvent = String(ticker || "").match(/^(KXATPMATCH|KXATPCHALLENGERMATCH|KXWTAMATCH|KXWTACHALLENGERMATCH|KXATPSETWINNER|KXATPDOUBLES|KXATPEXACTMATCH|KXATPTOTALSETS|KXATPFINALS|KXATPIT|KXWTAIT|KXATPMIA|KXWTAFINALS|KXWTAMIA|KXATPGSPREAD|KXATPGAMETOTAL)/);
+  if (tourEvent) return "ATP/WTA tour";
   if (known[ticker]) return known[ticker];
   const cityNames = {
     NY: "New York", NYC: "New York", LAX: "Los Angeles", CHI: "Chicago", MIA: "Miami",
@@ -526,13 +920,13 @@ function reportTickerLabel(ticker) {
 
 const tmActiveTickerRows = tmActiveCategory
   ? tmData
-      .filter(d => classifyTreemapTicker(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+      .filter(d => classifyWithFallback(d.report_ticker, d.is_sports).cat === tmActiveCategory)
       .map(d => ({
         report_ticker: d.report_ticker,
         is_sports: d.is_sports,
         value: +d.value || 0,
         label: reportTickerLabel(d.report_ticker),
-        mtype: classifyTreemapTicker(d.report_ticker, d.is_sports).mtype
+        mtype: classifyWithFallback(d.report_ticker, d.is_sports).mtype
       }))
       .filter(d => d.value > 0)
       .sort((a, b) => b.value - a.value)
@@ -555,9 +949,9 @@ const tmActiveMarketRowsByTicker = d3.group(
 <div class="instruction-line"><strong>How to use this page:</strong> hover a category to preview emphasis, click to zoom in, then click the zoomed treemap again to return to the full map.</div>
 
 ```js
-if (tmActiveCategory) {
-  display(html`<a class="ui-button zoom-reset-link" href="${location.pathname}">Back to all categories from ${tmActiveCategory}</a>`);
-}
+  if (tmActiveCategory) {
+    display(html`<a class="ui-button zoom-reset-link" href="${location.pathname}">Back to all categories from ${displayTreemapCategory(tmActiveCategory)}</a>`);
+  }
 ```
 
 ```js
@@ -567,51 +961,7 @@ if (tmActiveCategory) {
 
   // -- Classify each ticker into group / category / market-type -------------
   function classify(ticker, isSports) {
-    const grp = isSports === "TRUE" ? "Sports" : "Non-sports";
-
-    let cat;
-    if      (ticker.startsWith("KXMVE"))                                           cat = "Parlay";
-    else if (ticker.startsWith("KXNFL") || ticker === "KXSB")                     cat = "NFL";
-    else if (ticker.startsWith("KXNCAAF"))                                         cat = "College Football";
-    else if (ticker.startsWith("KXNBA"))                                           cat = "NBA";
-    else if (ticker.startsWith("KXNCAAMB") || ticker.startsWith("KXNCAAWB") ||
-             ticker.startsWith("KXMARMAD") || ticker.startsWith("KXWMARMAD"))     cat = "College Basketball";
-    else if (ticker.startsWith("KXMLB"))                                           cat = "Baseball";
-    else if (ticker.startsWith("KXNHL"))                                           cat = "Hockey";
-    else if (ticker.startsWith("KXPGA"))                                           cat = "Golf";
-    else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA"))            cat = "Tennis";
-    else if (ticker.startsWith("KXEPL")  || ticker.startsWith("KXUCL")  ||
-             ticker.startsWith("KXLALIGA") || ticker.startsWith("KXSERIEA") ||
-             ticker.startsWith("KXBUNDESLIGA") || ticker.startsWith("KXIPL") ||
-             ticker.startsWith("KXEUROLEAGUE") || ticker.startsWith("KXT20"))     cat = "Soccer";
-    else if (ticker.startsWith("KXUFC")  || ticker.startsWith("KXBOXING"))        cat = "Combat Sports";
-    else if (ticker.startsWith("KXBTC")  || ticker.startsWith("KXETH")  ||
-             ticker.startsWith("KXSOL"))                                           cat = "Crypto";
-    else if (ticker === "PRES" || ticker.startsWith("KXFEDCHAIR") ||
-             ticker.startsWith("KXTRUMP") || ticker.startsWith("POPVOTE") ||
-             ticker.startsWith("KXMAYOR") || ticker.startsWith("KXGOV"))          cat = "Politics";
-    else if (ticker.startsWith("KXFED")  || ticker.startsWith("KXINXU") ||
-             ticker.startsWith("ECMOV"))                                           cat = "Finance";
-    else if (ticker.startsWith("KXHIGH") || ticker.startsWith("KXLOW"))           cat = "Weather";
-    else                                                                           cat = grp === "Sports" ? "Other Sports" : "Other Non-sports";
-
-    let mtype;
-    if (cat === "Other Sports" || cat === "Other Non-sports") {
-      mtype = "Other";
-    } else if (cat === "Parlay") {
-      mtype = ticker.includes("SINGLEGAME") ? "Same-game" : "Multi-game";
-    } else if (cat === "Crypto") {
-      mtype = /15M$/.test(ticker) ? "15-minute" : /D$/.test(ticker) ? "Daily" : "Other";
-    } else if (cat === "Politics") {
-      mtype = (ticker === "PRES" || /POPVOTE|MAYOR|GOV|SENATE|HOUSE/.test(ticker)) ? "Election" : "Other";
-    } else if (/GAME$/.test(ticker) || ticker === "KXSB") mtype = "Game";
-    else if (/MATCH$|FIGHT$/.test(ticker))                mtype = "Match/Fight";
-    else if (/SPREAD$/.test(ticker))                      mtype = "Spread";
-    else if (/TOTAL$/.test(ticker))                       mtype = "Total";
-    else if (/TOUR$|SERIES$|CHAMP$|MAD$/.test(ticker))   mtype = "Futures";
-    else                                                  mtype = "Other";
-
-    return {grp, cat, mtype};
+    return classifyWithFallback(ticker, isSports);
   }
 
   // -- Build nested totals ---------------------------------------------------
@@ -627,39 +977,303 @@ if (tmActiveCategory) {
     nest[grp][cat][mtype] += v;
   }
 
-  const marketChildren = tmActiveTickerRows.map(tickerRow => {
-    const rawMarkets = tmActiveMarketRowsByTicker.get(tickerRow.report_ticker) || [];
-    const rawTotal = d3.sum(rawMarkets, d => d.rawValue || 0);
-    const topMarkets = rawMarkets.slice(0, Math.max(4, Math.min(10, Math.round(W / 90))));
-    const marketScale = rawTotal > tickerRow.value && tickerRow.value > 0
-      ? tickerRow.value / rawTotal
-      : 1;
-    const children = rawTotal > 0
-      ? topMarkets.map(row => ({
-          name: row.label,
-          value: (row.rawValue || 0) * marketScale,
-          mtype: tickerRow.mtype,
-          market_key: row.market_key,
-          report_ticker: row.report_ticker
-        }))
-      : [];
-    const shown = d3.sum(children, d => d.value || 0);
-    const remainder = Math.max(0, tickerRow.value - shown);
-    if (remainder > tickerRow.value * 0.01 || !children.length) {
-      children.push({
-        name: `Other ${tickerRow.label.toLowerCase()}`,
-        value: remainder || tickerRow.value,
-        mtype: tickerRow.mtype,
-        report_ticker: tickerRow.report_ticker,
-        isOther: true
-      });
-    }
+  const activeTickerTotal = d3.sum(tmActiveTickerRows, d => d.value || 0);
+  const allTimeActiveCategoryRows = tmActiveCategory
+    ? leaderboard
+        .filter(d => classifyWithFallback(d.report_ticker, d.is_sports).cat === tmActiveCategory)
+        .filter(d => (+d.contracts || 0) > 0)
+    : [];
+  const allTimeNamedTickerRows = tmActiveCategory && allTimeActiveCategoryRows.length
+    ? allTimeActiveCategoryRows
+        .sort((a, b) => (+b.contracts || 0) - (+a.contracts || 0))
+        .filter((d, i) => {
+          const total = d3.sum(allTimeActiveCategoryRows, r => +r.contracts || 0);
+          const config = tmActiveCategory === "Other Sports"
+            ? {keepRows: 14, share: 0.03}
+            : tmActiveCategory === "Other Non-sports"
+              ? {keepRows: 18, share: 0.02}
+              : {keepRows: 26, share: 0.015};
+          return i < config.keepRows || (+d.contracts || 0) >= total * config.share;
+        })
+    : [];
+  const allTimeNamedTickerSet = new Set(allTimeNamedTickerRows.map(d => d.report_ticker));
+  const allTimeTailCount = allTimeActiveCategoryRows.filter(d => !allTimeNamedTickerSet.has(d.report_ticker)).length;
+
+  const tailCollapseConfig = tmActiveCategory === "Other Sports"
+    ? {minRows: 12, keepRows: 14, share: 0.03}
+    : tmActiveCategory === "Other Non-sports"
+      ? {minRows: 12, keepRows: 18, share: 0.02}
+      : {minRows: 30, keepRows: 26, share: 0.015};
+  const collapseZoomTail = isZoomed && tmActiveTickerRows.length > tailCollapseConfig.minRows;
+  const namedTickerRows = collapseZoomTail
+    ? tmActiveTickerRows.filter((d, i) => i < tailCollapseConfig.keepRows || (d.value || 0) >= activeTickerTotal * tailCollapseConfig.share)
+    : tmActiveTickerRows;
+  const namedTickerSet = new Set(namedTickerRows.map(d => d.report_ticker));
+  const tailTickerRows = collapseZoomTail
+    ? tmActiveTickerRows.filter(d => !namedTickerSet.has(d.report_ticker))
+    : [];
+  const zoomTickerRows = collapseZoomTail && tailTickerRows.length
+    ? [
+        ...namedTickerRows,
+        {
+          report_ticker: `__${String(tmActiveCategory).replace(/[^A-Z0-9]+/gi, "_").toUpperCase()}_TAIL__`,
+          is_sports: tmActiveGroup === "Sports" ? "TRUE" : "FALSE",
+          value: d3.sum(tailTickerRows, d => d.value || 0),
+          label: "Other",
+          mtype: "Other",
+          isCombinedTail: true,
+          tailCount: tailTickerRows.length,
+          allTimeTailCount
+        }
+      ].filter(d => (d.value || 0) > 0)
+    : namedTickerRows;
+
+  const displayZoomTickerRows = isZoomed && tmActiveCategory === "Tennis"
+    ? zoomTickerRows.flatMap(tickerRow => {
+        if (tickerRow.report_ticker !== "KXATPMATCH" && tickerRow.report_ticker !== "KXWTAMATCH") return [tickerRow];
+        const rawMarkets = tmActiveMarketRowsByTicker.get(tickerRow.report_ticker) || [];
+        const phaseRows = Array.from(
+          d3.rollup(
+            rawMarkets,
+            rows => d3.sum(rows, d => d.rawValue || 0),
+            d => tennisPhaseFromMarketKey(d.market_key)
+          ),
+          ([phase, value]) => ({
+            ...tickerRow,
+            report_ticker: `${tickerRow.report_ticker}__${phase.replace(/\W+/g, "_").toUpperCase()}`,
+            source_report_tickers: [tickerRow.report_ticker],
+            phase,
+            label: phase,
+            value,
+            mtype: phase
+          })
+        ).sort((a, b) => b.value - a.value);
+        return phaseRows.length ? phaseRows : [tickerRow];
+      })
+    : zoomTickerRows;
+
+  const tennisPhaseRows = tmActiveCategory === "Tennis"
+    ? Array.from(
+        d3.rollup(
+          displayZoomTickerRows.filter(d => d.phase),
+          rows => {
+            const first = rows[0];
+            return {
+              ...first,
+              report_ticker: `TENNIS_${first.phase.replace(/\W+/g, "_").toUpperCase()}`,
+              source_report_tickers: Array.from(new Set(rows.flatMap(r => r.source_report_tickers || [r.report_ticker]))),
+              value: d3.sum(rows, d => d.value || 0),
+              label: first.phase,
+              mtype: first.phase
+            };
+          },
+          d => d.phase
+        ).values()
+      )
+    : [];
+
+  const displayZoomRowsFinal = tmActiveCategory === "Tennis"
+    ? [
+        ...displayZoomTickerRows.filter(d => !d.phase),
+        ...tennisPhaseRows.sort((a, b) => b.value - a.value)
+      ]
+    : displayZoomTickerRows;
+
+  const phaseSplitNode = (tickerRow, rawMarkets, phaseFn, marketType) => {
+    const phaseRows = Array.from(
+      d3.rollup(
+        rawMarkets,
+        rows => d3.sum(rows, d => d.rawValue || 0),
+        d => phaseFn(d.market_key)
+      ),
+      ([phase, value]) => ({phase, value})
+    ).filter(d => d.value > 0);
+    const rawTotal = d3.sum(phaseRows, d => d.value || 0);
+    const scale = rawTotal > 0 && tickerRow.value > 0 ? tickerRow.value / rawTotal : 1;
+    const children = phaseRows
+      .sort((a, b) => b.value - a.value)
+      .map(d => ({
+        name: seasonPhaseLabel(d.phase, marketType),
+        value: d.value * scale,
+        mtype: marketType,
+        report_ticker: tickerRow.report_ticker
+      }));
     return {
       name: tickerRow.label,
       report_ticker: tickerRow.report_ticker,
-      children
+      children: children.length ? children : [{
+        name: `All ${String(tickerRow.label || marketType).toLowerCase()}`,
+        value: tickerRow.value,
+        mtype: marketType,
+        report_ticker: tickerRow.report_ticker,
+        isOther: true
+      }]
     };
-  });
+  };
+
+  const marketChildren = tmActiveCategory === "Tennis"
+    ? (() => {
+        const eventBuckets = new Map();
+        const addTennisValue = (event, gender, value, sourceTicker) => {
+          if (!value || value <= 0) return;
+          const eventName = event || "Other tennis";
+          const genderName = gender || "Open";
+          if (!eventBuckets.has(eventName)) eventBuckets.set(eventName, new Map());
+          const genderMap = eventBuckets.get(eventName);
+          genderMap.set(genderName, (genderMap.get(genderName) || 0) + value);
+        };
+
+        for (const tickerRow of zoomTickerRows.filter(d => !d.isCombinedTail)) {
+          const sourceTicker = tickerRow.source_report_ticker || tickerRow.report_ticker;
+          if (TENNIS_DAILY_SPLIT_TICKERS.has(sourceTicker)) {
+            const tmActiveRange = getTmRange(tmPeriod);
+            const dailyRows = tmActiveRange
+              ? topDaily.filter(d => d.date >= tmActiveRange[0] && d.date <= tmActiveRange[1])
+              : topDaily;
+            const tourBucket = tennisTourBucketFromTicker(sourceTicker);
+            const dailyTotals = Array.from(
+              d3.rollup(
+                dailyRows,
+                rows => d3.sum(rows, d => +d[sourceTicker] || 0),
+                d => tennisSlamFromDate(d.date) || tourBucket
+              ),
+              ([event, value]) => ({event, value})
+            ).filter(d => d.value > 0);
+            const dailyTotal = d3.sum(dailyTotals, d => d.value || 0);
+            const scale = dailyTotal > 0 ? (tickerRow.value || 0) / dailyTotal : 0;
+            for (const row of dailyTotals) {
+              addTennisValue(
+                isTennisSlamEvent(row.event) ? "Grand slams" : row.event,
+                isTennisSlamEvent(row.event) ? row.event : tennisGenderFromTicker(sourceTicker),
+                row.value * scale,
+                sourceTicker
+              );
+            }
+            if (!dailyTotals.length) {
+              addTennisValue(tourBucket, tennisGenderFromTicker(sourceTicker), tickerRow.value || 0, sourceTicker);
+            }
+          } else if (/^KXATPCHALLENGERMATCH|^KXWTACHALLENGERMATCH|^KXATPSETWINNER|^KXATPDOUBLES|^KXATPEXACTMATCH|^KXATPTOTALSETS|^KXATPFINALS|^KXATPIT|^KXWTAIT|^KXATPMIA|^KXWTAFINALS|^KXWTAMAD|^KXWTAMIA|^KXATPGSPREAD|^KXATPGAMETOTAL|^KXATPMC|^KXATPIWO|^KXWTAIWO|^KXATPNEXTGEN|^KXATPAMT|^KXWTADDF|^KXATP1RANK|^KXATPMCO|^KXWTASETWINNER|^KXWTAATX|^KXWTAMOA|^KXWTASERENA|^KXATPMAD/.test(sourceTicker)) {
+            addTennisValue(tennisTourBucketFromTicker(sourceTicker), tennisGenderFromTicker(sourceTicker), tickerRow.value || 0, sourceTicker);
+          } else {
+            const event = tennisEventFromMarketKey(null, sourceTicker);
+            addTennisValue(
+              isTennisSlamEvent(event) ? "Grand slams" : event,
+              isTennisSlamEvent(event) ? event : tennisGenderFromTicker(sourceTicker),
+              tickerRow.value || 0,
+              sourceTicker
+            );
+          }
+        }
+
+        const eventNodes = Array.from(
+          eventBuckets,
+          ([event, genderMap]) => {
+            const genderRows = Array.from(genderMap, ([gender, value]) => ({gender, value}))
+              .filter(d => d.value > 0)
+              .sort((a, b) => b.value - a.value);
+            const total = d3.sum(genderRows, d => d.value || 0);
+            const useGenderSplit = total >= 2.5e7 && genderRows.length > 1;
+            const children = useGenderSplit
+              ? genderRows.map(d => ({
+                  name: d.gender,
+                  value: d.value,
+                  mtype: d.gender,
+                  report_ticker: `TENNIS_${event.replace(/\W+/g, "_").toUpperCase()}_${d.gender.toUpperCase()}`
+                }))
+              : (() => {
+                  const primary = genderRows[0];
+                  return [{
+                    name: primary?.gender || event,
+                    value: total,
+                    mtype: primary?.gender || "Open",
+                    report_ticker: `TENNIS_${event.replace(/\W+/g, "_").toUpperCase()}_TOTAL`
+                  }];
+                })();
+            return {
+              name: event,
+              report_ticker: `TENNIS_${event.replace(/\W+/g, "_").toUpperCase()}`,
+              children
+            };
+          }
+        ).sort((a, b) => d3.sum(b.children, d => d.value || 0) - d3.sum(a.children, d => d.value || 0));
+
+        const otherRows = zoomTickerRows.filter(d => d.isCombinedTail).map(tickerRow => ({
+          name: tickerRow.label,
+          report_ticker: tickerRow.report_ticker,
+          children: [{
+            name: tickerRow.allTimeTailCount && tickerRow.allTimeTailCount > tickerRow.tailCount
+              ? `${tickerRow.tailCount.toLocaleString()} active smaller tickers (${tickerRow.allTimeTailCount.toLocaleString()} all-time)`
+              : `${tickerRow.tailCount.toLocaleString()} smaller tickers`,
+            value: tickerRow.value,
+            mtype: "Other",
+            report_ticker: tickerRow.report_ticker,
+            isOther: true
+          }]
+        }));
+        return [...eventNodes, ...otherRows];
+      })()
+    : displayZoomRowsFinal.map(tickerRow => {
+        if (tickerRow.isCombinedTail) {
+          return {
+            name: tickerRow.label,
+            report_ticker: tickerRow.report_ticker,
+            children: [{
+              name: tickerRow.allTimeTailCount && tickerRow.allTimeTailCount > tickerRow.tailCount
+                ? `${tickerRow.tailCount.toLocaleString()} active smaller tickers (${tickerRow.allTimeTailCount.toLocaleString()} all-time)`
+                : `${tickerRow.tailCount.toLocaleString()} smaller tickers`,
+              value: tickerRow.value,
+              mtype: "Other",
+              report_ticker: tickerRow.report_ticker,
+              isOther: true
+            }]
+          };
+        }
+        const sourceTickers = tickerRow.source_report_tickers || [tickerRow.source_report_ticker || tickerRow.report_ticker];
+        const rawMarkets = sourceTickers.flatMap(sourceTicker =>
+          (tmActiveMarketRowsByTicker.get(sourceTicker) || []).filter(d =>
+            tickerRow.phase ? tennisPhaseFromMarketKey(d.market_key) === tickerRow.phase : true
+          )
+        );
+        const sourceTicker = sourceTickers[0];
+        if (sourceTicker === "KXNBAGAME" || sourceTicker === "KXNBASPREAD" || sourceTicker === "KXNBATOTAL") {
+          const marketType = sourceTicker === "KXNBAGAME" ? "Games" : sourceTicker === "KXNBASPREAD" ? "Spreads" : "Totals";
+          return phaseSplitNode(tickerRow, rawMarkets, nbaGamePhaseFromKey, marketType);
+        }
+        if (sourceTicker === "KXNFLGAME" || sourceTicker === "KXNFLSPREAD" || sourceTicker === "KXNFLTOTAL") {
+          const marketType = sourceTicker === "KXNFLGAME" ? "Games" : sourceTicker === "KXNFLSPREAD" ? "Spreads" : "Totals";
+          return phaseSplitNode(tickerRow, rawMarkets, nflGamePhaseFromKey, marketType);
+        }
+        const rawTotal = d3.sum(rawMarkets, d => d.rawValue || 0);
+        const topMarkets = rawMarkets.slice(0, Math.max(4, Math.min(10, Math.round(W / 90))));
+        const marketScale = rawTotal > tickerRow.value && tickerRow.value > 0
+          ? tickerRow.value / rawTotal
+          : 1;
+        const children = rawTotal > 0
+          ? topMarkets.map(row => ({
+              name: row.label,
+              value: (row.rawValue || 0) * marketScale,
+              mtype: tickerRow.mtype,
+              market_key: row.market_key,
+              report_ticker: row.report_ticker
+            }))
+          : [];
+        const shown = d3.sum(children, d => d.value || 0);
+        const remainder = Math.max(0, tickerRow.value - shown);
+        if (remainder > 0 || !children.length) {
+          children.push({
+            name: `Other ${tickerRow.label.toLowerCase()}`,
+            value: remainder || tickerRow.value,
+            mtype: tickerRow.mtype,
+            report_ticker: tickerRow.report_ticker,
+            isOther: true
+          });
+        }
+        return {
+          name: tickerRow.label,
+          report_ticker: tickerRow.report_ticker,
+          children
+        };
+      });
 
   const hierData = isZoomed
     ? {
@@ -711,12 +1325,16 @@ if (tmActiveCategory) {
     "Baseball":           "#F06292",  // medium pink
     "College Basketball": "#D81B60",  // deep pink
     "Hockey":             "#4E342E",  // dark brown
+    "Racing":             "#A1887F",  // taupe
+    "Esports":            "#BCAAA4",  // muted tan
+    "Cricket":            "#FA8072",  // salmon
     "Other Sports":       "#8D6E63",  // warm tan
     "Crypto":             "#0D47A1",  // dark navy
     "Politics":           "#1A237E",  // very dark indigo
     "Finance":            "#1E88E5",  // bright medium blue
     "Weather":            "#4FC3F7",  // light sky blue
     "Entertainment":      "#0097A7",  // teal-blue
+    "Mention":            "#546E7A",  // slate
     "Other Non-sports":   "#7986CB",  // medium indigo-blue
   };
 
@@ -768,7 +1386,7 @@ if (tmActiveCategory) {
       if (isZoomed) setSelectedCategory(null);
     });
   leafSel.append("title")
-    .text(d => `${d.parent.parent.data.name} - ${d.parent.data.name} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
+    .text(d => `${displayTreemapCategory(d.parent.parent.data.name)} - ${displayTreemapCategory(d.parent.data.name)} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
 
   // -- Category labels + volume (depth 2) -----------------------------------
   const cats2 = root.descendants().filter(d => d.depth === 2);
@@ -813,7 +1431,11 @@ if (tmActiveCategory) {
     .attr("stroke-width", 3)
     .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 0.98 : 0.45)
     .attr("pointer-events", "none")
-    .text(d => (d.x1-d.x0) > (isZoomed ? 58 : 40) && (d.y1-d.y0) > (isZoomed ? 26 : 18) ? d.data.name : "");
+    .text(d => {
+      const w = d.x1 - d.x0, h = d.y1 - d.y0;
+      if (isZoomed && d.data.name === "Other" && w > 34 && h > 16) return "Other";
+      return w > (isZoomed ? 58 : 40) && h > (isZoomed ? 26 : 18) ? displayTreemapCategory(d.data.name) : "";
+    });
 
   svg.selectAll("text.cvol")
     .data(cats2)
@@ -873,7 +1495,7 @@ if (tmActiveCategory) {
     .attr("font-weight","700")
     .attr("letter-spacing","0.06em")
     .attr("pointer-events", "none")
-    .text(d => d.data.name.toUpperCase());
+    .text(d => displayTreemapCategory(d.data.name).toUpperCase());
 
   svg.selectAll("rect.category-hit")
     .data(cats2)
@@ -895,7 +1517,7 @@ if (tmActiveCategory) {
   if (tmActiveCategory) {
     const wrapper = html`<div></div>`;
     const bar = html`<div class="zoom-toolbar"></div>`;
-    bar.append(html`<span>Viewing ${tmActiveCategory} markets. Click the map again to return to all categories.</span>`);
+    bar.append(html`<span>Viewing ${displayTreemapCategory(tmActiveCategory)} markets. Click the map again to return to all categories.</span>`);
     wrapper.append(bar, svg.node());
     display(wrapper);
   } else {
@@ -904,7 +1526,7 @@ if (tmActiveCategory) {
 }
 ```
 
-<div class="chart-note"><strong>Reading note:</strong> area represents category weight in the selected window. Click a category to zoom into families that add to 100% of that category; named market tiles keep their measured size, and any unlisted or unresolved remainder appears as an explicit Other tile.</div>
+<div class="chart-note"><strong>Reading note:</strong> area represents category weight in the selected window. Click a category to zoom into pieces that add to 100% of that category. If the named tiles do not exhaust the category, the remainder is always shown as an explicit Other tile. Categories with many small report tickers combine the smallest tail into one Other tile for readability.</div>
 
 ```js
 {
@@ -912,16 +1534,16 @@ if (tmActiveCategory) {
     display(html`<div class="chart-note">No category is selected. Click a treemap tile to zoom in and open the focused comparison.</div>`);
   } else {
     const shell = html`<details class="focus-card compact-details"></details>`;
-    shell.append(html`<summary>${tmActiveCategory} focus controls</summary>`);
+    shell.append(html`<summary>${displayTreemapCategory(tmActiveCategory)} focus controls</summary>`);
     const crumbs = html`<div class="breadcrumbs"></div>`;
     crumbs.append(html`<span class="crumb">Treemap</span>`);
     if (tmActiveGroup) crumbs.append(html`<span class="crumb">${tmActiveGroup}</span>`);
-    crumbs.append(html`<span class="crumb is-active">${tmActiveCategory}</span>`);
+    crumbs.append(html`<span class="crumb is-active">${displayTreemapCategory(tmActiveCategory)}</span>`);
     shell.append(crumbs);
 
     const header = html`<div class="focus-header"></div>`;
     const copy = html`<div>
-      <div class="focus-title">Zoomed into ${tmActiveCategory}</div>
+      <div class="focus-title">Zoomed into ${displayTreemapCategory(tmActiveCategory)}</div>
       <p class="focus-copy">The treemap is showing the largest available individual markets for this category. This category is also active in the focused comparison below.</p>
     </div>`;
     header.append(copy);
@@ -935,7 +1557,7 @@ if (tmActiveCategory) {
         border-color:${color};
         background:${active ? color + "2e" : color + "14"};
         color:${active ? "var(--theme-foreground)" : "inherit"};
-      ">${category} | $${fmtCount(value)}</button>`;
+      ">${displayTreemapCategory(category)} | $${fmtCount(value)}</button>`;
       btn.addEventListener("click", () => { setSelectedCategory(category); });
       row.append(btn);
     }
@@ -974,7 +1596,7 @@ const wideMap = {
   // Non-sports
   KXBTCD: "Crypto", KXBTC15M: "Crypto",
   PRES: "Politics", KXFEDCHAIRNOM: "Politics", KXTRUMPMENTION: "Politics",
-  KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance",
+  KXFEDDECISION: "Finance", KXINXU: "Finance", ECMOV: "Finance", KXCITRINI: "Finance",
   KXFIRSTSUPERBOWLSONG: "Entertainment", KXSUPERBOWLAD: "Entertainment",
   KXPERFORMSUPERBOWLB: "Entertainment", KXSBGUESTS: "Entertainment",
   KXSBADS: "Entertainment", KXHALFTIMESHOW: "Entertainment",
@@ -986,6 +1608,11 @@ const wideMap = {
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
 
+function wideCategoryForTicker(ticker) {
+  if (String(ticker || "").toUpperCase().includes("MENTION")) return "Mention";
+  return wideMap[ticker];
+}
+
 // Build wide-category daily totals
 const wideDaily = topDaily.map(row => {
   const sp = sportsSplit.find(s => +s.date === +row.date) || {};
@@ -994,11 +1621,11 @@ const wideDaily = topDaily.map(row => {
     NBA: 0, "College basketball": 0,
     Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
     Soccer: 0, "Combat sports": 0,
-    Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Weather: 0
+    Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
   };
   for (const [cat, v] of Object.entries(row)) {
     if (cat === "date") continue;
-    const wg = wideMap[cat];
+    const wg = wideCategoryForTicker(cat);
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
   const parlay       = +sp.contracts_parlay    || 0;
@@ -1006,7 +1633,7 @@ const wideDaily = topDaily.map(row => {
   const totNonSports = +sp.contracts_nonsports || 0;
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
     groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
   return {
     date: row.date,
     ...groups,
@@ -1020,7 +1647,7 @@ const wideDaily = topDaily.map(row => {
 // Football pair (warm): NFL dark, College football light
 // Basketball pair (blue): NBA dark, College basketball light
 const wideOrder = [
-  "Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto",
+  "Other non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
   "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
   "College football", "NFL",
   "College basketball", "NBA",
@@ -1030,7 +1657,7 @@ const wideOrder = [
 // Color map - subcategory pairs share hue family
 const wideColors = {
   "Other non-sports": "#e8eaf0", "Weather": "#b0bec5", "Entertainment": "#90a4ae",
-  "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
+  "Mention": "#78909c", "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
   "Other sports": "#c8e6c9",
   "Combat sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
   "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
@@ -1098,7 +1725,7 @@ const generalMap = {
   "Soccer": "Other sports", "Combat sports": "Other sports", "Other sports": "Other sports",
   "Parlay": "Parlay",
   "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
-  "Entertainment": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
+  "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
 };
 const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Basketball", "Football", "Parlay"];
 const generalColors = {
@@ -1295,11 +1922,11 @@ if (hasCategoryFocus) {
       : [];
 
     const shell = html`<details class="surface-card compact-details"></details>`;
-    shell.append(html`<summary>${tmActiveCategory ? `${tmActiveCategory} comparison controls` : "Pinned comparison controls"}</summary>`);
+    shell.append(html`<summary>${tmActiveCategory ? `${displayTreemapCategory(tmActiveCategory)} comparison controls` : "Pinned comparison controls"}</summary>`);
     shell.append(html`<div class="focus-header">
       <div>
-        <div class="focus-title">${tmActiveCategory ? `Primary series: ${tmActiveCategory}` : "Pinned comparison set"}</div>
-        <p class="focus-copy">Pin up to three exact comparison categories. This comparison always stays detailed, so NBA does not become all Basketball.</p>
+        <div class="focus-title">${tmActiveCategory ? `Primary series: ${displayTreemapCategory(tmActiveCategory)}` : "Pinned comparison set"}</div>
+        <p class="focus-copy">Pin up to three exact comparison categories. This comparison always stays detailed, so Pro basketball does not become all Basketball.</p>
       </div>
     </div>`);
     if (suggestedPeers.length) {
@@ -1311,7 +1938,7 @@ if (hasCategoryFocus) {
           border-color:${color};
           background:${color + "12"};
           color:inherit;
-        ">${category}</button>`;
+        ">${displayTreemapCategory(category)}</button>`;
         btn.addEventListener("click", () => togglePinnedCategory(category));
         suggested.append(btn);
       }
@@ -1327,7 +1954,7 @@ if (hasCategoryFocus) {
         background:${primary ? color + "30" : active ? color + "24" : "var(--card-bg)"};
         color:inherit;
         opacity:${primary ? 0.78 : 1};
-      ">${primary ? "Primary" : active ? "Pinned" : "Compare"} | ${category}</button>`;
+      ">${primary ? "Primary" : active ? "Pinned" : "Compare"} | ${displayTreemapCategory(category)}</button>`;
       if (!primary) btn.addEventListener("click", () => togglePinnedCategory(category));
       row.append(btn);
     }

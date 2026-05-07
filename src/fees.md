@@ -66,12 +66,8 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
 </div>
 
 <details class="surface-card compact-details">
-  <summary>How this is calculated</summary>
+  <summary>About this page</summary>
   <p>Fee revenue is summed from cleaned trade-level fee fields and aggregated by day. The sports/non-sports toggle uses the same classification as the volume split. Fee per contract divides daily fees by daily contracts traded, so it is a realized average fee rate rather than Kalshi's posted fee schedule.</p>
-</details>
-
-<details class="surface-card compact-details">
-  <summary>How to use this page</summary>
   <p>Read daily fees for short-term spikes, cumulative fees for who contributed over time, and cents per contract for monetization mix. If fee revenue rises while fee per contract falls, volume growth is doing more work than take-rate.</p>
 </details>
 
@@ -121,9 +117,9 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "#75
 
 ## Daily fee revenue
 
-<p class="section-intro">The daily chart shows raw fee capture day by day. It is the quickest way to compare the revenue effect of the same macro moments that drive the volume charts.</p>
+<p class="section-intro">Daily fee capture from the same activity behind the volume charts.</p>
 
-<div class="instruction-line"><strong>Try this:</strong> brush into an era, then hover spike days against the 7-day baseline.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> brush around a major volume spike, then compare whether fees stayed elevated after volume normalized.</div>
 
 ```js
 const dr1 = view(makeDateBrush(new Date("2025-01-01")));
@@ -178,9 +174,9 @@ Plot.plot({
 
 ## Cumulative fee revenue
 
-<p class="section-intro">This section answers a different question: not what happened on a given day, but which side of the book has contributed more to total fee generation over time.</p>
+<p class="section-intro">Cumulative contribution by sports and non-sports over time.</p>
 
-<div class="instruction-line"><strong>How to read this:</strong> slope matters more than height; steeper segments mean faster fee capture.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> look for slope changes, not just height; a steeper segment means Kalshi started capturing fees faster in that period.</div>
 
 ```js
 const dr2 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "#1a9641"));
@@ -245,9 +241,9 @@ Plot.plot({
 
 ## Fee rate (cents per contract)
 
-<p class="section-intro">Average fee Kalshi collects per contract traded. This usually peaks around mid-probability contracts and compresses when mix shifts toward higher-certainty outcomes or fee waivers.</p>
+<p class="section-intro">Average fee collected per contract traded.</p>
 
-<div class="instruction-line"><strong>Try this:</strong> compare whether sports and non-sports monetize differently per contract.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> use this after a volume spike to tell whether revenue rose because of more contracts or because each contract monetized better.</div>
 
 ```js
 const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#756bb1"));

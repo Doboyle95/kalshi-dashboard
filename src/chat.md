@@ -12,12 +12,8 @@ title: Ask Data
 <p class="section-intro">This page is local-only. Your API key and the full dataset stay on your machine; the browser only talks to <code>http://127.0.0.1:8000</code>.</p>
 
 <details class="surface-card compact-details">
-  <summary>How the local chat works</summary>
+  <summary>How local chat works</summary>
   <p>The page sends your question to the local FastAPI server at <code>http://127.0.0.1:8000</code>. The server asks the configured LLM to generate read-only SQL, validates it, runs it against local DuckDB views over Parquet and CSV data, and returns SQL, rows, and interpretation. The full dataset stays on your machine; only the question plus schema context go to the configured LLM provider.</p>
-</details>
-
-<details class="surface-card compact-details">
-  <summary>How to get better answers</summary>
   <p>Ask for a metric, population, and date window in the same sentence, for example "sports vs non-sports fees in February 2026." Use follow-ups for interpretation after the first query succeeds; the SQL and evidence panels are there to help sanity-check what the model actually used.</p>
 </details>
 
@@ -37,10 +33,10 @@ title: Ask Data
   const PREFILL_KEY = "kalshi_chat_prefill";
   const HISTORY_MAX = 10;
   const EXAMPLES = [
-    "Top 5 categories by contracts in March 2026",
-    "Daily fees for sports vs non-sports in February 2026",
-    "Which report tickers had the most contracts on 2026-02-08?",
-    "Taker yes vs no volume since 2026-01-25"
+    "Find days where volume rose but fee rate fell, and explain the likely mix shift",
+    "Compare taker P&L in sports vs non-sports since February 2026",
+    "Which markets drove the biggest parlay loss days in April 2026?",
+    "Show categories where large-trade share spiked before total volume did"
   ];
 
   function sanitizeMarkdown(markdown, inline = false) {
@@ -99,7 +95,7 @@ title: Ask Data
   </div>`;
   const historySection = html`<div class="chat-history-section"></div>`;
   const examples = html`<details class="chat-examples">
-    <summary class="chat-examples-label">Example questions</summary>
+    <summary class="chat-examples-label">Less obvious questions to try</summary>
     <div class="chat-example-chips"></div>
   </details>`;
   const formWrapper = html`<details class="chat-reply-wrapper" open>

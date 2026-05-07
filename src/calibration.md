@@ -7,12 +7,8 @@ title: Calibration
 How accurately do Kalshi contract prices predict outcomes? A perfectly calibrated market has contracts priced at X¢ winning X% of the time.
 
 <details class="surface-card compact-details">
-  <summary>How this is calculated</summary>
+  <summary>About this page</summary>
   <p>Settled contracts are grouped into 5-cent price bins. The x-axis is implied probability from contract price; the y-axis is the realized win rate for contracts in that bin using the trade-weighted outcome rate. Bins below 5 cents and above 95 cents are excluded to keep sparse tails from dominating the visual.</p>
-</details>
-
-<details class="surface-card compact-details">
-  <summary>How to use this page</summary>
   <p>Use the diagonal chart to see direction: points above the line mean outcomes happened more often than price implied, while points below mean they happened less often. Then use the error chart to find where miscalibration is largest by price band.</p>
 </details>
 
@@ -40,7 +36,7 @@ display(askPageLink({
 const data = calib.filter(d => d.group === group && +d.price_bin >= 5 && +d.price_bin <= 95);
 ```
 
-## Actual vs. implied win rate
+## Taker-side actual vs. implied win rate
 
 Each point is a price bin (5¢ increments). The diagonal is perfect calibration. Points above the line = contracts underpriced (market overestimates difficulty). Points below = contracts overpriced.
 
@@ -131,4 +127,4 @@ const maxNeg = data.reduce((worst, d) => +d.calib_error < +worst.calib_error ? d
   </div>
 </div>
 
-<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Trade-weighted win rates using settled contracts (void filter applied). Data covers Kalshi's full history through April 2026. Parlay markets = KXMVE* and PREPACK* series. Bubble size proportional to trade count.</p>
+<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Trade-weighted win rates using settled taker-side contracts (void filter applied). The price bin is the price paid for the side the taker bought; actual win rate is whether that side won. Parlay markets = KXMVE* and PREPACK* series. Bubble size proportional to trade count.</p>
