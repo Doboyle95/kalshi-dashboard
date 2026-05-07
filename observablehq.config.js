@@ -52,6 +52,7 @@ export default {
     {name: "Taker P&L", path: "/taker-pnl"},
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Calibration", path: "/calibration"},
+    {name: "Robinhood", path: "/robinhood"},
     {name: "Platform Comparison", path: "/competitors"},
     {name: "Polymarket US", path: "/polymarket"},
     {name: "ForecastEx", path: "/forecastex"},
