@@ -634,6 +634,22 @@ function parseMarketDateFromKey(marketKey) {
   return new Date(Date.UTC(yy, month, day));
 }
 
+// When a non-"All time" period is selected, drop markets whose market_key date
+// falls outside the active range. Markets with no parseable date (e.g. season
+// futures like KXNBA-25-LAL) are kept — they could be active across many days
+// and we can't tell from the key alone, so the permissive behavior is safer.
+// Without this filter, drill-down ratios (e.g. NFL games regular/playoff) come
+// from all-time data and never change as the user switches period selections.
+function filterMarketsByPeriod(rawMarkets, period, range) {
+  if (period === "All time" || !range) return rawMarkets;
+  const [start, end] = range;
+  return rawMarkets.filter(d => {
+    const mdt = parseMarketDateFromKey(d.market_key);
+    if (!mdt) return true;
+    return mdt >= start && mdt <= end;
+  });
+}
+
 function nbaGamePhaseFromKey(marketKey) {
   const dt = parseMarketDateFromKey(marketKey);
   if (!dt) return "Regular season";
@@ -1028,10 +1044,15 @@ const tmActiveMarketRowsByTicker = d3.group(
       ].filter(d => (d.value || 0) > 0)
     : namedTickerRows;
 
+  const tmActiveRange = getTmRange(tmPeriod);
+
   const displayZoomTickerRows = isZoomed && tmActiveCategory === "Tennis"
     ? zoomTickerRows.flatMap(tickerRow => {
         if (tickerRow.report_ticker !== "KXATPMATCH" && tickerRow.report_ticker !== "KXWTAMATCH") return [tickerRow];
-        const rawMarkets = tmActiveMarketRowsByTicker.get(tickerRow.report_ticker) || [];
+        const rawMarkets = filterMarketsByPeriod(
+          tmActiveMarketRowsByTicker.get(tickerRow.report_ticker) || [],
+          tmPeriod, tmActiveRange
+        );
         const phaseRows = Array.from(
           d3.rollup(
             rawMarkets,
@@ -1230,7 +1251,10 @@ const tmActiveMarketRowsByTicker = d3.group(
         }
         const sourceTickers = tickerRow.source_report_tickers || [tickerRow.source_report_ticker || tickerRow.report_ticker];
         const rawMarkets = sourceTickers.flatMap(sourceTicker =>
-          (tmActiveMarketRowsByTicker.get(sourceTicker) || []).filter(d =>
+          filterMarketsByPeriod(
+            tmActiveMarketRowsByTicker.get(sourceTicker) || [],
+            tmPeriod, tmActiveRange
+          ).filter(d =>
             tickerRow.phase ? tennisPhaseFromMarketKey(d.market_key) === tickerRow.phase : true
           )
         );
