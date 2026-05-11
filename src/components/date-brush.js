@@ -70,7 +70,12 @@ export function renderDateBrush({
 
   const brush = d3.brushX()
     .extent([[marginLeft, marginTop], [w - marginRight, height - marginBottom]])
-    .on("brush end", (event) => {
+    // Only update the Mutable on "end" (mouseup) — not "brush" (continuous
+    // drag). The downstream cells re-run on every Mutable change, and on
+    // expensive pages (like the treemap) per-mousemove re-runs ate the drag
+    // state and made the brush look frozen. Settling on mouseup is plenty
+    // responsive and avoids that.
+    .on("end", (event) => {
       if (!event.sourceEvent) return;
       const sel = event.selection;
       if (sel) {

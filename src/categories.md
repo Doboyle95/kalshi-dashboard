@@ -457,7 +457,7 @@ function clearPinnedCategories() {
 
 ## All-time leaderboard
 
-<p class="section-intro">This leaderboard is the fastest way to see which report tickers dominate by volume, fees, or notional in the selected window before you drill into the treemap.</p>
+<p class="section-intro">This leaderboard is the fastest way to see which report tickers dominate by volume, fees, or notional in the selected window before you drill into the treemap. Drag the brush below to set the window — when it covers the full data range the chart falls back to the all-tickers leaderboard; otherwise it aggregates the top-15-by-day data.</p>
 
 <div class="control-strip">
 
@@ -470,19 +470,42 @@ const showSports = view(hashInput("sports", Inputs.select(["All", "Sports only",
 })));
 ```
 
+</div>
+
 ```js
-const fromStr = view(hashInput("from", Inputs.text({label: "From", placeholder: "YYYY-MM-DD", value: hashGet("from", "2025-01-01"), width: 130})));
-const toStr   = view(hashInput("to",   Inputs.text({label: "To",   placeholder: "YYYY-MM-DD (blank = latest)", value: hashGet("to", ""), width: 130})));
+// Date brush replaces the old From/To text inputs. Default Jan 1 2025 → latest.
+const lbMinDate = d3.min(topDaily, d => d.date);
+const lbMaxDate = d3.max(topDaily, d => d.date);
+const lbDateSel = Mutable([
+  new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
+  lbMaxDate
+]);
 ```
 
-</div>
+```js
+{
+  const sparkData = topDaily.map(d => ({
+    date: d.date,
+    value: Object.keys(d).filter(k => k !== "date").reduce((a, k) => a + (+d[k] || 0), 0)
+  }));
+  display(renderDateBrush({
+    data: sparkData,
+    dateAccessor: d => d.date,
+    valueAccessor: d => d.value,
+    selection: lbDateSel,
+    color: "var(--accent-kalshi)",
+    width
+  }));
+}
+```
 
 ```js
 const catCols = Object.keys(topDaily[0]).filter(k => k !== "date");
 
-const cutoff  = fromStr && !isNaN(new Date(fromStr)) ? new Date(fromStr) : new Date("2021-01-01");
-const cutoffTo = toStr && !isNaN(new Date(toStr)) ? new Date(toStr) : new Date();
-const isAllTime = cutoff <= new Date("2021-07-01") && cutoffTo >= new Date();
+const [cutoff, cutoffTo] = lbDateSel;
+// "All time" path uses the full leaderboard (every ticker, not just the
+// top 15 in topDaily). Detect that the brush covers the full data span.
+const isAllTime = +cutoff <= +lbMinDate && +cutoffTo >= +lbMaxDate;
 
 // Aggregate contracts from daily data for the selected period (top 15 tickers)
 const dailyAgg = catCols.map(cat => {
@@ -2256,7 +2279,8 @@ const mtDateSel = Mutable([mtStart0, mtEnd0]);
 
   const [ds, de] = mtDateSel;
   const brush = d3.brushX().extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", (event) => { if (!event.sourceEvent) return; if (event.selection) mtDateSel.value = event.selection.map(x.invert); });
+    // "end" only, not "brush end" — see components/date-brush.js for why.
+    .on("end", (event) => { if (!event.sourceEvent) return; if (event.selection) mtDateSel.value = event.selection.map(x.invert); });
   svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
   display(svg.node());
 }

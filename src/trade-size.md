@@ -148,7 +148,8 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
   const defaultEnd = xMax;
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", event => {
+    // "end" only — see components/date-brush.js for why.
+    .on("end", event => {
       if (!event.sourceEvent) return;
       if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
     });
