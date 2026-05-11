@@ -462,11 +462,17 @@ function clearPinnedCategories() {
 <div class="control-strip">
 
 ```js
-const metric = view(hashInput("metric", Inputs.select(["contracts", "fees", "notional"], {
-  label: "Metric", value: hashGet("metric", "contracts")
+// "notional" dropped — for a flow-style metric prefer taker-side volume,
+// which has its own page. Sorting categories by gross notional is rarely
+// the right comparison since it conflates volume with price level.
+const metric = view(hashInput("metric", Inputs.radio(["contracts", "fees"], {
+  label: "Metric",
+  value: hashGet("metric", "contracts"),
+  format: m => m === "contracts" ? "Volume" : "Fees"
 })));
-const showSports = view(hashInput("sports", Inputs.select(["All", "Sports only", "Non-sports only"], {
-  label: "Filter", value: hashGet("sports", "All")
+const showSports = view(hashInput("sports", Inputs.radio(["All", "Sports only", "Non-sports only"], {
+  label: "Filter",
+  value: hashGet("sports", "All")
 })));
 ```
 
@@ -521,7 +527,6 @@ const dailyAgg = catCols.map(cat => {
     report_ticker: cat,
     contracts: total,
     fees: (meta.fees || 0) * (total / (meta.contracts || 1)),
-    notional: (meta.notional || 0) * (total / (meta.contracts || 1)),
     is_sports: meta.is_sports ?? "FALSE"
   };
 }).filter(d => d.contracts > 0);
@@ -540,7 +545,7 @@ Plot.plot({
   width,
   height: filtered.length * 22 + 40,
   marginLeft: 220,
-  x: {label: metric === "contracts" ? "Volume ($)" : metric === "fees" ? "Fees ($)" : "Notional ($)", grid: true},
+  x: {label: metric === "contracts" ? "Volume ($)" : "Fees ($)", grid: true},
   y: {label: null},
   marks: [
     Plot.barX(filtered, {
