@@ -1448,8 +1448,46 @@ const tmActiveMarketRowsByTicker = d3.group(
     .on("click", () => {
       if (isZoomed) setSelectedCategory(null);
     });
+  // Rich HTML tooltip on hover — replaces the native browser <title> tooltip
+  // (kept as a fallback for screen readers / right-click info). Position is
+  // pageX/pageY-driven; the tooltip is page-fixed and cleaned up when this
+  // cell re-runs because it's appended to the same wrapper as the SVG.
   leafSel.append("title")
     .text(d => `${displayTreemapCategory(d.parent.parent.data.name)} - ${displayTreemapCategory(d.parent.data.name)} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "kd-treemap-tooltip";
+  tooltip.style.opacity = "0";
+  const rootTotal = root.value || 1;
+  const metricLabel = tmMetric === "Fees" ? "Fees" : "Volume";
+  const fmtTooltipBody = d => {
+    const grp  = displayTreemapCategory(d.parent.parent.data.name);
+    const cat  = displayTreemapCategory(d.parent.data.name);
+    const leaf = d.data.name;
+    const pct  = rootTotal ? (d.value / rootTotal * 100) : 0;
+    const headline = `${cat}${leaf && leaf !== cat ? " — " + leaf : ""}`;
+    return `
+      <div class="kd-tt-title">${headline}</div>
+      <div class="kd-tt-sub">${grp}</div>
+      <div class="kd-tt-row"><span>${metricLabel}</span><span>$${fmtCount(d.value)}</span></div>
+      <div class="kd-tt-row"><span>Share of view</span><span>${pct.toFixed(2)}%</span></div>
+    `;
+  };
+  leafSel
+    .on("mouseenter.kdtt", function(event, d) {
+      tooltip.innerHTML = fmtTooltipBody(d);
+      tooltip.style.opacity = "1";
+    })
+    .on("mousemove.kdtt", function(event) {
+      // pageX/pageY work whether the SVG is scrolled or transformed
+      const x = event.pageX + 14;
+      const y = event.pageY + 14;
+      tooltip.style.left = x + "px";
+      tooltip.style.top  = y + "px";
+    })
+    .on("mouseleave.kdtt", function() {
+      tooltip.style.opacity = "0";
+    });
 
   // -- Category labels + volume (depth 2) -----------------------------------
   const cats2 = root.descendants().filter(d => d.depth === 2);
@@ -1577,14 +1615,19 @@ const tmActiveMarketRowsByTicker = d3.group(
       else setSelectedCategory(d.data.name);
     });
 
+  // Mount the tooltip as a sibling of the SVG. Page-fixed positioning means
+  // it can render outside the wrapper bounds; pointer-events:none keeps it
+  // from blocking the rect hover.
   if (tmActiveCategory) {
     const wrapper = html`<div></div>`;
     const bar = html`<div class="zoom-toolbar"></div>`;
     bar.append(html`<span>Viewing ${displayTreemapCategory(tmActiveCategory)} markets. Click the map again to return to all categories.</span>`);
-    wrapper.append(bar, svg.node());
+    wrapper.append(bar, svg.node(), tooltip);
     display(wrapper);
   } else {
-    display(svg.node());
+    const wrapper = html`<div></div>`;
+    wrapper.append(svg.node(), tooltip);
+    display(wrapper);
   }
 }
 ```

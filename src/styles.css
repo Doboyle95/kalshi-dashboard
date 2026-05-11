@@ -2022,3 +2022,40 @@ form input[type="submit"]:hover {
 .kd-brush .selection {
   cursor: move;
 }
+
+/* ============================================================
+   Treemap hover tooltip (categories.md leaf rects)
+   ============================================================ */
+.kd-treemap-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  background: rgba(20, 22, 28, 0.94);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  max-width: 320px;
+  transition: opacity 0.1s ease-out;
+}
+.kd-treemap-tooltip .kd-tt-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.kd-treemap-tooltip .kd-tt-sub {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+.kd-treemap-tooltip .kd-tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.kd-treemap-tooltip .kd-tt-row span:last-child {
+  font-variant-numeric: tabular-nums;
+}
