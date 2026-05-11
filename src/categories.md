@@ -480,33 +480,30 @@ const showSports = view(hashInput("sports", Inputs.radio(["All", "Sports only", 
 
 ```js
 // Date brush replaces the old From/To text inputs. Default Jan 1 2025 → latest.
+// Mutable + brush in same cell so callback captures the wrapper (see notes
+// in parlay.md / categories.md treemap brush).
 const lbMinDate = d3.min(topDaily, d => d.date);
 const lbMaxDate = d3.max(topDaily, d => d.date);
 const lbDateSel = Mutable([
   new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
   lbMaxDate
 ]);
-```
-
-```js
-{
-  const sparkData = topDaily.map(d => ({
-    date: d.date,
-    value: Object.keys(d).filter(k => k !== "date").reduce((a, k) => a + (+d[k] || 0), 0)
-  }));
-  display(renderDateBrush({
-    data: sparkData,
-    dateAccessor: d => d.date,
-    valueAccessor: d => d.value,
-    initialRange: [
-      new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
-      lbMaxDate
-    ],
-    onSelect: r => { lbDateSel.value = r; },
-    color: "var(--accent-kalshi)",
-    width
-  }));
-}
+const lbSparkData = topDaily.map(d => ({
+  date: d.date,
+  value: Object.keys(d).filter(k => k !== "date").reduce((a, k) => a + (+d[k] || 0), 0)
+}));
+display(renderDateBrush({
+  data: lbSparkData,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.value,
+  initialRange: [
+    new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
+    lbMaxDate
+  ],
+  onSelect: r => { lbDateSel.value = r; },
+  color: "var(--accent-kalshi)",
+  width
+}));
 ```
 
 ```js
@@ -580,9 +577,10 @@ const tmMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", label: 
 </div>
 
 ```js
-// Brushable date range for the treemap. Default = Jan 1, 2025 → latest topDaily
-// date. Drag the brush edges to widen/narrow. Dragging both edges to the data
-// boundary is the all-time view.
+// Mutable + brush in the same cell so the brush callback closes over the
+// Mutable wrapper. Observable Framework yields the unwrapped value (not the
+// wrapper) to OTHER cells, so a setter defined in a different cell would
+// receive the array and `.value = X` would no-op.
 const tmDailyDates = topDaily.map(d => d.date).filter(Boolean);
 const tmMinDate = d3.min(tmDailyDates);
 const tmMaxDate = d3.max(tmDailyDates);
@@ -590,28 +588,22 @@ const tmDateSel = Mutable([
   new Date(Math.max(+new Date("2025-01-01"), +tmMinDate)),
   tmMaxDate
 ]);
-```
-
-```js
-{
-  // Sparkline data: total daily volume across the tracked top tickers
-  const sparkData = topDaily.map(d => ({
-    date: d.date,
-    value: topDailyCols.reduce((a, c) => a + (+d[c] || 0), 0)
-  }));
-  display(renderDateBrush({
-    data: sparkData,
-    dateAccessor: d => d.date,
-    valueAccessor: d => d.value,
-    initialRange: [
-      new Date(Math.max(+new Date("2025-01-01"), +tmMinDate)),
-      tmMaxDate
-    ],
-    onSelect: r => { tmDateSel.value = r; },
-    color: "var(--accent-kalshi)",
-    width
-  }));
-}
+const tmSparkData = topDaily.map(d => ({
+  date: d.date,
+  value: topDailyCols.reduce((a, c) => a + (+d[c] || 0), 0)
+}));
+display(renderDateBrush({
+  data: tmSparkData,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.value,
+  initialRange: [
+    new Date(Math.max(+new Date("2025-01-01"), +tmMinDate)),
+    tmMaxDate
+  ],
+  onSelect: r => { tmDateSel.value = r; },
+  color: "var(--accent-kalshi)",
+  width
+}));
 ```
 
 ```js
@@ -2306,43 +2298,25 @@ const mtDaily = Array.from(mtRolled, ([dateStr, byType]) => {
 ```
 
 ```js
-// Independent date brush for this chart
+// Mutable + brush in the SAME cell so the callback closes over the wrapper.
+// Default window: last 6 months. Drag the edges to widen or narrow.
 const mtEnd0 = d3.max(mtDaily, d => d.date);
 const mtStart0 = new Date(mtEnd0);
 mtStart0.setMonth(mtStart0.getMonth() - 6);
 const mtDateSel = Mutable([mtStart0, mtEnd0]);
-```
-
-```js
-{
-  const h = 60, mt = 4, mb = 22, ml = 8, mr = 8, w = width;
-  const x = d3.scaleUtc().domain(d3.extent(mtDaily, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(mtDaily, d => mtOrder.reduce((s, g) => s + (d[g] || 0), 0));
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-
-  const svg = d3.create("svg").attr("width", w).attr("height", h)
-    .style("display", "block").style("background", "#fafafa")
-    .style("border", "1px solid #e8e8e8").style("border-radius", "4px").style("margin-bottom", "1.5rem");
-
-  // Total sports volume sparkline
-  svg.append("path").datum(mtDaily)
-    .attr("fill", "#4e79a7").attr("fill-opacity", 0.2)
-    .attr("d", d3.area()
-      .x(d => x(d.date)).y0(h - mb).y1(d => y(mtOrder.reduce((s, g) => s + (d[g] || 0), 0)))
-      .curve(d3.curveBasis));
-
-  svg.append("g").attr("transform", `translate(0,${h - mb})`)
-    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke", "#ccc"))
-    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
-
-  const [ds, de] = mtDateSel;
-  const brush = d3.brushX().extent([[ml, mt], [w - mr, h - mb]])
-    // "end" only, not "brush end" — see components/date-brush.js for why.
-    .on("end", (event) => { if (!event.sourceEvent) return; if (event.selection) mtDateSel.value = event.selection.map(x.invert); });
-  svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
-  display(svg.node());
-}
+const mtSparkData = mtDaily.map(row => ({
+  date: row.date,
+  value: mtOrder.reduce((s, g) => s + (row[g] || 0), 0)
+}));
+display(renderDateBrush({
+  data: mtSparkData,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.value,
+  initialRange: [mtStart0, mtEnd0],
+  onSelect: r => { mtDateSel.value = r; },
+  color: "#4e79a7",
+  width
+}));
 ```
 
 ```js

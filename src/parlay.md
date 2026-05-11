@@ -104,12 +104,11 @@ const overallPct = totalNet / totalStakes * 100;
 </details>
 
 ```js
-// Date range — Mutable updated by the brush below. Default shows 2025-present;
-// drag the edges of the brush to widen or narrow the window.
+// Mutable + brush rendered in the SAME cell so the brush callback closes over
+// the Mutable wrapper. Observable Framework yields the unwrapped value (not
+// the wrapper) to consuming cells, so a setter defined in another cell would
+// only see the array and `.value = X` would be a no-op.
 const parlayDateSel = Mutable([new Date("2025-01-01"), d3.max(pnl, d => d.date)]);
-```
-
-```js
 display(renderDateBrush({
   data: pnl,
   dateAccessor: d => d.date,

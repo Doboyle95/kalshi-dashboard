@@ -68,15 +68,14 @@ const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
 </details>
 
 ```js
-// Brushable date range. Default = Jan 1, 2025 → latest. Drag the brush edges to
-// widen or narrow the window; all KPIs / charts on this page recompute from it.
+// Mutable + brush in the same cell so the brush callback closes over the
+// Mutable wrapper (see parlay.md / categories.md for the same pattern). The
+// runtime hands consuming cells the unwrapped value, so a setter in another
+// cell would no-op.
 const takerDateSel = Mutable([
   new Date(Math.max(+new Date("2025-01-01"), +earliestPnlDate)),
   latestPnlDate
 ]);
-```
-
-```js
 display(renderDateBrush({
   data: daily,
   dateAccessor: d => d.date,
