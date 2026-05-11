@@ -18,6 +18,7 @@ const categoryDaily = await FileAttachment("data/taker_category_daily.csv").csv(
 const sportsDaily = await FileAttachment("data/taker_sports_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {renderDateBrush} from "./components/date-brush.js";
 ```
 
 ```js
@@ -66,28 +67,28 @@ const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
   <p>Gross taker P&L is settlement outcome before fees. Net taker P&L subtracts taker fees. Maker gross P&L is the opposite side of the same settled trades; maker net P&L subtracts maker fees where Kalshi charged them. Overall ROI uses daily taker notional paid: yes takers pay price, no takers pay 100 minus price.</p>
 </details>
 
-<div class="control-strip">
+```js
+// Brushable date range. Default = Jan 1, 2025 → latest. Drag the brush edges to
+// widen or narrow the window; all KPIs / charts on this page recompute from it.
+const takerDateSel = Mutable([
+  new Date(Math.max(+new Date("2025-01-01"), +earliestPnlDate)),
+  latestPnlDate
+]);
+```
 
 ```js
-const dateWindow = view(Inputs.radio(["All history", "Since sports launch", "2026", "Last 180 days", "Last 90 days"], {
-  label: "Date window",
-  value: "Since sports launch"
+display(renderDateBrush({
+  data: daily,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.contracts_total || 0,
+  selection: takerDateSel,
+  color: grossColor,
+  width
 }));
 ```
 
-</div>
-
 ```js
-function windowStart(label) {
-  if (label === "All history") return earliestPnlDate;
-  if (label === "Since sports launch") return new Date("2025-01-23");
-  if (label === "2026") return new Date("2026-01-01");
-  if (label === "Last 180 days") return new Date(latestPnlDate.getTime() - 180 * 864e5);
-  if (label === "Last 90 days") return new Date(latestPnlDate.getTime() - 90 * 864e5);
-  return earliestPnlDate;
-}
-
-const startDate = windowStart(dateWindow);
+const [startDate, endDate] = takerDateSel;
 const notionalByDate = new Map(notionalDaily.map(d => [+d.date, d]));
 const dailyWithNotional = daily.map(d => {
   const n = notionalByDate.get(+d.date) ?? {};
@@ -100,11 +101,11 @@ const dailyWithNotional = daily.map(d => {
 });
 
 const filteredDaily = dailyWithNotional
-  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
+  .filter(d => d.date >= startDate && d.date <= endDate)
   .sort((a, b) => a.date - b.date);
 
 const filteredMakerDaily = makerDaily
-  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
+  .filter(d => d.date >= startDate && d.date <= endDate)
   .sort((a, b) => a.date - b.date);
 
 const totals = {
@@ -397,7 +398,7 @@ Plot.plot({
 
 ```js
 const sportsRows = sportsDaily
-  .filter(d => d.date >= startDate && d.date <= latestPnlDate)
+  .filter(d => d.date >= startDate && d.date <= endDate)
   .map(d => ({
     date: d.date,
     segment: String(d.is_sports).toLowerCase() === "true" ? "Sports" : "Non-sports",
@@ -464,7 +465,7 @@ const focusCategory = view(Inputs.select(categoryRows.map(d => d.category), {
 
 ```js
 const focusRows = categoryDaily
-  .filter(d => d.kalshi_category === focusCategory && d.date >= startDate && d.date <= latestPnlDate)
+  .filter(d => d.kalshi_category === focusCategory && d.date >= startDate && d.date <= endDate)
   .sort((a, b) => a.date - b.date);
 
 let focusRunning = 0;

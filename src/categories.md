@@ -26,6 +26,7 @@ const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {renderDateBrush} from "./components/date-brush.js";
 ```
 
 ```js
@@ -536,35 +537,50 @@ Plot.plot({
 
 ## Volume map
 
-<p class="section-intro">Start here. The treemap gives the fastest read on which categories matter most in the selected period. Click a tile to zoom into the largest individual markets inside that category.</p>
+<p class="section-intro">Start here. The treemap gives the fastest read on which categories matter most in the selected period. Drag the brush below to widen or narrow the date range; click a tile to zoom into the largest individual markets inside that category.</p>
 
 <div class="control-strip">
 
 ```js
 const tmMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", label: "Metric"}));
-const tmPeriod = view(Inputs.select(
-  ["All time", "2025", "2026", "Since sports launch (Jan 23)", "Last 90 days"],
-  {label: "Period", value: "All time"}
-));
 ```
 
 </div>
 
 ```js
+// Brushable date range for the treemap. Default = Jan 1, 2025 → latest topDaily
+// date. Drag the brush edges to widen/narrow. Dragging both edges to the data
+// boundary is the all-time view.
+const tmDailyDates = topDaily.map(d => d.date).filter(Boolean);
+const tmMinDate = d3.min(tmDailyDates);
+const tmMaxDate = d3.max(tmDailyDates);
+const tmDateSel = Mutable([
+  new Date(Math.max(+new Date("2025-01-01"), +tmMinDate)),
+  tmMaxDate
+]);
+```
+
+```js
+{
+  // Sparkline data: total daily volume across the tracked top tickers
+  const sparkData = topDaily.map(d => ({
+    date: d.date,
+    value: topDailyCols.reduce((a, c) => a + (+d[c] || 0), 0)
+  }));
+  display(renderDateBrush({
+    data: sparkData,
+    dateAccessor: d => d.date,
+    valueAccessor: d => d.value,
+    selection: tmDateSel,
+    color: "var(--accent-kalshi)",
+    width
+  }));
+}
+```
+
+```js
 const tmData = (() => {
-  const range = getTmRange(tmPeriod);
-
-  if (!range) {
-    // All time - use full leaderboard directly
-    return leaderboard.map(d => ({
-      report_ticker: d.report_ticker,
-      is_sports: d.is_sports,
-      value: tmMetric === "Volume" ? +d.contracts : +d.fees
-    }));
-  }
-
-  // Date-filtered - aggregate topDaily (top ~15 tickers) and estimate fees proportionally
-  const [s, e] = range;
+  const [s, e] = tmDateSel;
   return topDailyCols.map(cat => {
     const total = topDaily
       .filter(d => d.date >= s && d.date <= e)
@@ -634,14 +650,14 @@ function parseMarketDateFromKey(marketKey) {
   return new Date(Date.UTC(yy, month, day));
 }
 
-// When a non-"All time" period is selected, drop markets whose market_key date
-// falls outside the active range. Markets with no parseable date (e.g. season
-// futures like KXNBA-25-LAL) are kept — they could be active across many days
-// and we can't tell from the key alone, so the permissive behavior is safer.
-// Without this filter, drill-down ratios (e.g. NFL games regular/playoff) come
-// from all-time data and never change as the user switches period selections.
-function filterMarketsByPeriod(rawMarkets, period, range) {
-  if (period === "All time" || !range) return rawMarkets;
+// Drop markets whose market_key date falls outside the brushed range. Markets
+// with no parseable date (season futures like KXNBA-25-LAL) are kept — they
+// could be active across many days and we can't tell from the key alone, so
+// the permissive behavior is safer. Without this filter, drill-down ratios
+// (e.g. NFL games regular/playoff) come from all-time data and never change
+// as the user moves the brush.
+function filterMarketsByPeriod(rawMarkets, range) {
+  if (!range) return rawMarkets;
   const [start, end] = range;
   return rawMarkets.filter(d => {
     const mdt = parseMarketDateFromKey(d.market_key);
@@ -1044,14 +1060,14 @@ const tmActiveMarketRowsByTicker = d3.group(
       ].filter(d => (d.value || 0) > 0)
     : namedTickerRows;
 
-  const tmActiveRange = getTmRange(tmPeriod);
+  const tmActiveRange = tmDateSel;
 
   const displayZoomTickerRows = isZoomed && tmActiveCategory === "Tennis"
     ? zoomTickerRows.flatMap(tickerRow => {
         if (tickerRow.report_ticker !== "KXATPMATCH" && tickerRow.report_ticker !== "KXWTAMATCH") return [tickerRow];
         const rawMarkets = filterMarketsByPeriod(
           tmActiveMarketRowsByTicker.get(tickerRow.report_ticker) || [],
-          tmPeriod, tmActiveRange
+          tmActiveRange
         );
         const phaseRows = Array.from(
           d3.rollup(
@@ -1147,7 +1163,7 @@ const tmActiveMarketRowsByTicker = d3.group(
         for (const tickerRow of zoomTickerRows.filter(d => !d.isCombinedTail)) {
           const sourceTicker = tickerRow.source_report_ticker || tickerRow.report_ticker;
           if (TENNIS_DAILY_SPLIT_TICKERS.has(sourceTicker)) {
-            const tmActiveRange = getTmRange(tmPeriod);
+            const tmActiveRange = tmDateSel;
             const dailyRows = tmActiveRange
               ? topDaily.filter(d => d.date >= tmActiveRange[0] && d.date <= tmActiveRange[1])
               : topDaily;
@@ -1253,7 +1269,7 @@ const tmActiveMarketRowsByTicker = d3.group(
         const rawMarkets = sourceTickers.flatMap(sourceTicker =>
           filterMarketsByPeriod(
             tmActiveMarketRowsByTicker.get(sourceTicker) || [],
-            tmPeriod, tmActiveRange
+            tmActiveRange
           ).filter(d =>
             tickerRow.phase ? tennisPhaseFromMarketKey(d.market_key) === tickerRow.phase : true
           )

@@ -1990,3 +1990,35 @@ form input[type="submit"]:hover {
     width: min(280px, 85vw);
   }
 }
+
+/* ============================================================
+   Date-range brush (components/date-brush.js)
+   ============================================================
+   d3 v7 hides brush resize handles by default (display:none on
+   .handle inside the brush). Restore them and give them visible
+   styling so users can grab the edges to widen/narrow the range.
+   ============================================================ */
+.kd-brush .selection {
+  fill: var(--accent-primary, #00C2A8);
+  fill-opacity: 0.18;
+  stroke: var(--accent-primary, #00C2A8);
+  stroke-opacity: 0.55;
+}
+.kd-brush .handle {
+  display: block !important;
+  fill: var(--accent-primary, #00C2A8);
+  fill-opacity: 0.85;
+  stroke: var(--theme-background, #fff);
+  stroke-width: 1;
+}
+.kd-brush .handle--w,
+.kd-brush .handle--e {
+  width: 7px;
+  rx: 2;
+}
+.kd-brush .overlay {
+  cursor: crosshair;
+}
+.kd-brush .selection {
+  cursor: move;
+}

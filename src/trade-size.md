@@ -208,24 +208,10 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
   <p>Pick a platform and segment first, then choose a large-trade threshold. The top chart shows only contracts from trades at or above that threshold; the ribbon shows the full size mix for the same window, so spikes are easiest to interpret when both move together.</p>
 </details>
 
-<div class="control-strip">
-
 ```js
-const rangePreset = view(Inputs.radio(["Since Jan 2025", "Last 180 days", "Last 90 days", "All history"], {
-  label: "Date window",
-  value: "Since Jan 2025"
-}));
-```
-
-</div>
-
-```js
-const latestSelectedDate = d3.max(selectedRowsAllTime, d => d.date) || latestTradeSizeDate;
-const earliestSelectedDate = d3.min(selectedRowsAllTime, d => d.date) || new Date("2021-06-30");
-const brushDefaultStart = rangePreset === "Last 90 days" ? new Date(+latestSelectedDate - 89 * 864e5)
-  : rangePreset === "Last 180 days" ? new Date(+latestSelectedDate - 179 * 864e5)
-  : rangePreset === "All history" ? earliestSelectedDate
-  : new Date("2025-01-01");
+// Default brush window: Jan 1, 2025 → latest. Drag the brush edges to widen or
+// narrow the range; the chart, mix ribbon, and KPIs all recompute reactively.
+const brushDefaultStart = new Date("2025-01-01");
 ```
 
 ```js

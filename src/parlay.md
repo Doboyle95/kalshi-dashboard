@@ -16,6 +16,7 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 const raw = await FileAttachment("data/parlay_pnl_net.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {renderDateBrush} from "./components/date-brush.js";
 ```
 
 ```js
@@ -103,50 +104,20 @@ const overallPct = totalNet / totalStakes * 100;
 </details>
 
 ```js
-// Date range — Mutable updated by brush
-const parlayDateSel = Mutable([new Date("2023-01-01"), d3.max(pnl, d => d.date)]);
+// Date range — Mutable updated by the brush below. Default shows 2025-present;
+// drag the edges of the brush to widen or narrow the window.
+const parlayDateSel = Mutable([new Date("2025-01-01"), d3.max(pnl, d => d.date)]);
 ```
 
 ```js
-// Brush mini chart (sparkline of daily stakes)
-{
-  const h = 60, mt = 4, mb = 22, ml = 8, mr = 8, w = width;
-
-  const x = d3.scaleUtc().domain(d3.extent(pnl, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(pnl, d => d.stakes);
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-
-  const svg = d3.create("svg")
-    .attr("width", w).attr("height", h)
-    .style("display", "block")
-    .style("background", "var(--theme-background-alt)")
-    .style("border", "1px solid var(--card-border)")
-    .style("border-radius", "4px")
-    .style("margin-bottom", "1.5rem");
-
-  svg.append("path").datum(pnl)
-    .attr("fill", "#f4a736").attr("fill-opacity", 0.3)
-    .attr("d", d3.area()
-      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.stakes))
-      .curve(d3.curveBasis));
-
-  svg.append("g")
-    .attr("transform", `translate(0,${h - mb})`)
-    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke", "#ccc"))
-    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
-
-  const [defStart, defEnd] = parlayDateSel;
-  const brush = d3.brushX()
-    .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", (event) => {
-      if (!event.sourceEvent) return;
-      if (event.selection) parlayDateSel.value = event.selection.map(x.invert);
-    });
-
-  svg.append("g").call(brush).call(brush.move, [defStart, defEnd].map(x));
-  display(svg.node());
-}
+display(renderDateBrush({
+  data: pnl,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.stakes,
+  selection: parlayDateSel,
+  color: "#f4a736",
+  width
+}));
 ```
 
 ```js
