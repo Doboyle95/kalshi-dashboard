@@ -55,7 +55,10 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 </details>
 
 ```js
-function makeBrush(data, color) {
+// Short axis format: "400M" instead of "400,000,000"
+const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
+
+function makeBrush(data, color, defaultStart) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(data, d => d.date)).range([ml, w - mr]);
@@ -77,8 +80,12 @@ function makeBrush(data, color) {
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const start = d3.min(data, d => d.date);
-  const end   = d3.max(data, d => d.date);
+  // Default brush start: clamp to available data
+  const dataMin = d3.min(data, d => d.date);
+  const dataMax = d3.max(data, d => d.date);
+  const start = defaultStart && +defaultStart > +dataMin ? defaultStart : dataMin;
+  const end = dataMax;
+
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", event => {
@@ -87,23 +94,29 @@ function makeBrush(data, color) {
     });
 
   svg.append("g").call(brush).call(brush.move, [start, end].map(x));
-  svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
+  svg.selectAll(".handle")
+    .style("display", "block")
+    .style("fill", color).style("fill-opacity", 0.9);
+  svg.selectAll(".selection")
+    .style("stroke", color).style("stroke-width", "2px")
+    .style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
   return svg.node();
 }
 ```
 
-```js
-const brush = view(makeBrush(split, "#E53535"));
-```
-
-```js
-const [s, e] = brush;
-const splitF    = split.filter(d => d.date >= s && d.date <= e);
-const catDailyF = catDaily.filter(d => d.date >= s && d.date <= e);
-```
-
 ## Daily volume
+
+<p class="section-intro">ForecastEx full exchange volume. Defaults to 2025+ since 2024's election days otherwise compress the view.</p>
+
+```js
+const brushVolume = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
+```
+
+```js
+const [sV, eV] = brushVolume;
+const splitFVolume = split.filter(d => d.date >= sV && d.date <= eV);
+```
 
 ```js
 Plot.plot({
@@ -112,13 +125,13 @@ Plot.plot({
   height: 300,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true},
+  y: {label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
-    Plot.rectY(splitF, {
+    Plot.rectY(splitFVolume, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#E53535", fillOpacity: 0.6,
+      fill: "#E53535", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtUSD(d.contracts_total||0)}`
     }),
@@ -131,8 +144,16 @@ Plot.plot({
 
 ## Sports vs. non-sports
 
+<p class="section-intro">Independent date selector for this chart.</p>
+
 ```js
-const tidySplit = splitF.flatMap(d => [
+const brushSports = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
+```
+
+```js
+const [sS, eS] = brushSports;
+const splitFSports = split.filter(d => d.date >= sS && d.date <= eS);
+const tidySplit = splitFSports.flatMap(d => [
   {date: d.date, category: "Sports",     value: d.contracts_sports    || 0},
   {date: d.date, category: "Non-sports", value: d.contracts_nonsports || 0}
 ]);
@@ -145,7 +166,7 @@ Plot.plot({
   height: 240,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true},
+  y: {label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#E53535", "#00C2A8"]},
   marks: [
     Plot.areaY(tidySplit, {
@@ -153,8 +174,8 @@ Plot.plot({
       order: ["Non-sports", "Sports"],
       curve: "monotone-x", fillOpacity: 0.85
     }),
-    Plot.ruleX(splitF, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(splitF, Plot.pointerX({
+    Plot.ruleX(splitFSports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(splitFSports, Plot.pointerX({
       x: "date",
       title: d => `${fmtDate(d.date)}\nSports: ${fmtUSD(d.contracts_sports||0)}\nNon-sports: ${fmtUSD(d.contracts_nonsports||0)}`
     })),
@@ -165,10 +186,18 @@ Plot.plot({
 
 ## Volume by category
 
+<p class="section-intro">Independent date selector for this chart.</p>
+
 ```js
+const brushCats = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
+```
+
+```js
+const [sC, eC] = brushCats;
+const catDailyFCats = catDaily.filter(d => d.date >= sC && d.date <= eC);
 const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => d.category);
 const topCats = [...catTotals.entries()].sort((a,b) => b[1] - a[1]).slice(0, 8).map(d => d[0]);
-const catFiltered = catDailyF.filter(d => topCats.includes(d.category));
+const catFiltered = catDailyFCats.filter(d => topCats.includes(d.category));
 ```
 
 ```js
@@ -189,7 +218,7 @@ Plot.plot({
   height: 280,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true},
+  y: {label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
     Plot.areaY(catFiltered, {

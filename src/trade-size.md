@@ -108,8 +108,15 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     d3.rollup(rows, rs => d3.sum(rs, yAcc), d => +d.date),
     ([date, contracts]) => ({date: new Date(date), contracts})
   ).sort((a, b) => a.date - b.date);
-  const x = d3.scaleUtc().domain(d3.extent(totals, d => d.date)).range([ml, w - mr]);
-  const y = d3.scaleLinear().domain([0, d3.max(totals, d => d.contracts) || 1]).range([h - mb, mt]);
+
+  // Defensive: if filtered rows have no data, fall back to global trade-size date span
+  // so the brush remains usable (otherwise the x scale is degenerate and drag does nothing).
+  const xDomain = totals.length > 0
+    ? d3.extent(totals, d => d.date)
+    : d3.extent(tradeSizeRaw, d => d.date);
+  const yMax = totals.length > 0 ? (d3.max(totals, d => d.contracts) || 1) : 1;
+  const x = d3.scaleUtc().domain(xDomain).range([ml, w - mr]);
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
 
   const svg = d3.create("svg")
     .attr("width", w).attr("height", h)
@@ -119,12 +126,14 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     .style("border-radius", "4px")
     .style("margin-bottom", "1.5rem");
 
-  svg.append("path")
-    .datum(totals)
-    .attr("fill", color).attr("fill-opacity", 0.2)
-    .attr("d", d3.area()
-      .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts))
-      .curve(d3.curveBasis));
+  if (totals.length > 0) {
+    svg.append("path")
+      .datum(totals)
+      .attr("fill", color).attr("fill-opacity", 0.2)
+      .attr("d", d3.area()
+        .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts))
+        .curve(d3.curveBasis));
+  }
 
   svg.append("g")
     .attr("transform", `translate(0,${h - mb})`)
@@ -132,7 +141,11 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const defaultEnd = d3.max(totals, d => d.date);
+  // Clamp defaultStart to the available date range so the initial brush selection
+  // is always meaningful even when preset windows are wider than the data.
+  const xMin = xDomain[0], xMax = xDomain[1];
+  const clampedStart = defaultStart && +defaultStart < +xMin ? xMin : (defaultStart || xMin);
+  const defaultEnd = xMax;
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", event => {
@@ -140,9 +153,22 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
       if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
     });
 
-  svg.append("g").attr("class", "brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
-  svg.property("value", [defaultStart, defaultEnd]);
+  svg.append("g").attr("class", "brush").call(brush).call(brush.move, [clampedStart, defaultEnd].map(x));
+
+  // d3 v7 hides .handle by default - force visible so users can see the draggable edges.
+  svg.selectAll(".handle")
+    .style("display", "block")
+    .style("fill", color)
+    .style("fill-opacity", 0.9);
+
+  // Style the selection rectangle outline to make it obvious it's draggable.
+  svg.selectAll(".selection")
+    .style("stroke", color)
+    .style("stroke-width", "2px")
+    .style("fill", color)
+    .style("fill-opacity", 0.15);
+
+  svg.property("value", [clampedStart, defaultEnd]);
   return svg.node();
 }
 ```

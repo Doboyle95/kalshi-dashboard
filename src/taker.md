@@ -167,7 +167,13 @@ Plot.plot({
 <p class="section-intro">Which direction is the aggressive money flowing? Yes-side takers are buying upside; no-side takers are fading it. A persistent yes-side majority reflects that buyers are more aggressive than sellers across the book.</p>
 
 ```js
-const fdStack = fd.flatMap(d => {
+const drYesNo = view(makeTakerBrush(new Date("2025-01-01")));
+```
+
+```js
+const [sYN, eYN] = drYesNo;
+const fdYesNo = taker.filter(d => d.date >= sYN && d.date <= eYN);
+const fdStack = fdYesNo.flatMap(d => {
   const yes = d.notional_yes || 0;
   const no = d.notional_no || 0;
   return [

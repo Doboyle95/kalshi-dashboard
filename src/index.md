@@ -41,7 +41,14 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 const totalContracts = d3.sum(kalshi, d => d.contracts_total);
 const totalFees = d3.sum(kalshi, d => d.fees_total);
 const peakDay = kalshi.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, kalshi[0]);
-const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
+// "Run rate" should reflect *current* pace, not all-time average. Use the trailing
+// 30 days of fee data (excluding today if it is partial, since today understates).
+// All-time average (the old calc) drags this down by ~10x because of sparse pre-2024 days.
+const isPartialIdx = d => d.is_partial === true || d.is_partial === "TRUE";
+const completedKalshi = kalshi.filter(d => !isPartialIdx(d));
+const recent30 = completedKalshi.slice(-30);
+const recentDailyFees = recent30.length > 0 ? d3.mean(recent30, d => d.fees_total) : 0;
+const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 ```
 
 <div class="kpi-grid">
@@ -56,6 +63,7 @@ const annualizedFees = Math.round(totalFees / kalshi.length * 365 / 1e6) * 1e6;
   <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Kalshi annualized revenue run rate</div>
     <div class="kpi-value">${fmtUSDWhole(annualizedFees)}/yr</div>
+    <div class="kpi-meta">based on trailing 30 days</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Kalshi peak single day volume</div>

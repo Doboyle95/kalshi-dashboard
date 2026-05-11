@@ -11,8 +11,13 @@ title: Kalshi Volume
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
+// Short axis format (no $ prefix): "400M" instead of "400,000,000"
+const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
 const fmtUSD   = n => "$" + fmtCount(n);
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+// is_partial in daily_overall.csv is the string "TRUE"/"FALSE" (uppercase) which
+// d3.autoType does not coerce to boolean, so naive truthiness fails. Use explicit check.
+const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 ```
 
 ```js
@@ -209,22 +214,22 @@ Plot.plot({
   height: 380,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Volume ($)", grid: true},
+  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
     Plot.rectY(fd1, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: d => d.is_partial ? "#7ed8cf" : "#00C2A8",
-      fillOpacity: d => d.is_partial ? 0.4 : 0.6
+      fill: d => isPartial(d) ? "#7ed8cf" : "#00C2A8",
+      fillOpacity: d => isPartial(d) ? 0.55 : 0.95
     }),
-    Plot.lineY(fd1.filter(d => d.ma7_contracts != null && !d.is_partial), {
+    Plot.lineY(fd1.filter(d => d.ma7_contracts != null && !isPartial(d)), {
       x: "date", y: "ma7_contracts",
       stroke: "#e15759", strokeWidth: 2, curve: "monotone-x"
     }),
     ...((() => {
-      const lastComplete = fd1.filter(d => !d.is_partial && d.ma7_contracts != null).at(-1);
-      const todayRow = fd1.find(d => d.is_partial);
+      const lastComplete = fd1.filter(d => !isPartial(d) && d.ma7_contracts != null).at(-1);
+      const todayRow = fd1.find(d => isPartial(d));
       if (!lastComplete || !todayRow || todayRow.ma7_contracts == null) return [];
       return [
         Plot.lineY([lastComplete, todayRow], {
@@ -242,7 +247,7 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        d.is_partial ? "Partial day — updating live" : null,
+        isPartial(d) ? "Partial day — updating live" : null,
         `Daily: ${fmtUSD(d.contracts_total||0)}`,
         `Fees: ${fmtUSD(d.fees_total||0)}`,
         d.ma7_contracts != null ? `7-day avg: ${fmtUSD(Math.round(d.ma7_contracts))}` : null
@@ -402,15 +407,28 @@ const tidySports =
           value: sportsMetric === "Fees" ? totalFees2 * ((w[g] || 0) / totalContracts2) : (w[g] || 0)
         }));
       })
-  : fs2.flatMap(d => [
-      {date: d.date, category: "Non-sports", value: sportsMetric === "Fees" ? (d.fees_nonsports || 0) : (d.contracts_nonsports || 0)},
-      {date: d.date, category: "Sports",     value: sportsMetric === "Fees" ? (d.fees_sports    || 0) : (d.contracts_sports    || 0)}
-    ]);
+  : fs2.flatMap(d => {
+      // Data quirk: in older periods (pre-May 2026), contracts_parlay was counted
+      // *inside* contracts_sports (so sports + nonsports = total). Starting around
+      // May 2026, parlay became a disjoint third bucket (sports + nonsports + parlay
+      // = total). Detect via share sum; subtract parlay from sports for the old
+      // regime so the three stacks always reconcile to daily_overall.contracts_total.
+      const shareSum = (+d.share_sports || 0) + (+d.share_nonsports || 0) + (+d.share_parlay || 0);
+      const parlayDisjoint = shareSum <= 1.01;
+      const sportsVal = parlayDisjoint
+        ? (+d.contracts_sports || 0)
+        : Math.max(0, (+d.contracts_sports || 0) - (+d.contracts_parlay || 0));
+      return [
+        {date: d.date, category: "Non-sports", value: sportsMetric === "Fees" ? (+d.fees_nonsports || 0) : (+d.contracts_nonsports || 0)},
+        {date: d.date, category: "Sports",     value: sportsMetric === "Fees" ? (+d.fees_sports    || 0) : sportsVal},
+        {date: d.date, category: "Parlay",     value: sportsMetric === "Fees" ? 0 : (+d.contracts_parlay || 0)}
+      ];
+    });
 
 const subOrder =
   sportsView === "Sports only"    ? sportsOrder
   : sportsView === "Non-sports only" ? nonSportsOrder
-  : ["Non-sports", "Sports"];
+  : ["Non-sports", "Sports", "Parlay"];
 
 const useTableau = sportsView !== "Both (stacked)";
 
@@ -433,14 +451,16 @@ Plot.plot({
   height: 280,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume ($)", grid: true},
+  y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
-    : {legend: true, domain: ["Non-sports", "Sports"], range: ["#00C2A8", "#1a9641"]},
+    : {legend: true, domain: ["Non-sports", "Sports", "Parlay"], range: ["#00C2A8", "#1a9641", "#ff8c00"]},
   marks: [
     Plot.areaY(tidySports, {
       x: "date", y: "value", fill: "category",
-      order: subOrder, curve: "monotone-x", fillOpacity: 0.85
+      order: subOrder, curve: "monotone-x", fillOpacity: 0.85,
+      tip: true,
+      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtUSD(d.value || 0)}`
     }),
     ...(useTableau ? [Plot.lineY(sportsMA, {
       x: "date", y: "ma",
