@@ -2973,24 +2973,36 @@ display(html`<style>
 
 // Add _c column - an invisible carrier for the data-mkt-cat attribute used by :has() CSS above.
 // Coerce fees_total to a real number (null for missing) so column-sort is numeric, not string.
+// Resolve the display date for each market: try the embedded game-date in the
+// market_key first (KXNBAGAME-26JAN10-... etc), fall back to the last_trade_date
+// emitted by the leaderboard builder (which for non-sports markets is the
+// effective settlement date — last day any trade printed).
 const mktDisplay = mktFiltered.map(d => {
   const fees = d.fees_total;
   const feesNum = (fees == null || fees === "" || isNaN(+fees)) ? null : +fees;
+  const parsed = parseMarketDateFromKey(d.market_key);
+  const ltd = d.last_trade_date instanceof Date
+    ? d.last_trade_date
+    : (typeof d.last_trade_date === "string" && d.last_trade_date
+        ? new Date(d.last_trade_date) : null);
+  const displayDate = parsed || ltd;
   return {
     ...d,
     _c: d.display_cat || d.kalshi_category || "",
-    fees_total: feesNum
+    fees_total: feesNum,
+    market_date: displayDate
   };
 });
 
 display(html`<div style="font-size:0.82em;color:var(--text-faint,#888);margin:0.3rem 0 0.6rem">Tip: click any column header to sort. Click again to reverse.</div>`);
 
 const tbl = Inputs.table(mktDisplay, {
-  columns: ["rank", "_c", "display_name", "contracts", "fees_total", "winner_display", "top_short"],
+  columns: ["rank", "_c", "display_name", "market_date", "contracts", "fees_total", "winner_display", "top_short"],
   header: {
     rank:          "#",
     _c:            "",
     display_name:  "Market",
+    market_date:   "Date",
     contracts:     "Volume",
     fees_total:    "Kalshi fees",
     winner_display:"Winner",
@@ -3003,6 +3015,7 @@ const tbl = Inputs.table(mktDisplay, {
       el.setAttribute("data-mkt-cat", cat);
       return el;
     },
+    market_date: d => d ? d.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : "—",
     contracts:  d => "$" + fmtC(d),
     fees_total: d => (d == null || d === 0) ? "N/A" : "$" + fmtC(+d),
   },
