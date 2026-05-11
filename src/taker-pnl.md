@@ -81,7 +81,11 @@ display(renderDateBrush({
   data: daily,
   dateAccessor: d => d.date,
   valueAccessor: d => d.contracts_total || 0,
-  selection: takerDateSel,
+  initialRange: [
+    new Date(Math.max(+new Date("2025-01-01"), +earliestPnlDate)),
+    latestPnlDate
+  ],
+  onSelect: r => { takerDateSel.value = r; },
   color: grossColor,
   width
 }));

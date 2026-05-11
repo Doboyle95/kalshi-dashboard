@@ -114,7 +114,8 @@ display(renderDateBrush({
   data: pnl,
   dateAccessor: d => d.date,
   valueAccessor: d => d.stakes,
-  selection: parlayDateSel,
+  initialRange: [new Date("2025-01-01"), d3.max(pnl, d => d.date)],
+  onSelect: r => { parlayDateSel.value = r; },
   color: "#f4a736",
   width
 }));

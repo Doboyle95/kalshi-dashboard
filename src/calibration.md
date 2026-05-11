@@ -92,7 +92,15 @@ Plot.plot({
 ```
 
 ```js
-const group = view(Inputs.select(["ALL", "SPORTS_NON_PARLAY", "NON_SPORTS", "PARLAY", "NON_PARLAY"], {
+// Filter to the groups actually present in the CSV. R/calibration_three_way.R
+// declares 5 group aggregates (ALL, NON_PARLAY, PARLAY, SPORTS_NON_PARLAY,
+// NON_SPORTS) but the deployed CSV only carries the first three — the
+// sports/non-sports split needs the script re-run after the recent enrich
+// changes. Until that lands, hide options that would produce an empty chart.
+const calibGroups = Array.from(new Set(calib.map(d => d.group)));
+const groupOrder = ["ALL", "NON_PARLAY", "PARLAY", "SPORTS_NON_PARLAY", "NON_SPORTS"];
+const availableGroups = groupOrder.filter(g => calibGroups.includes(g));
+const group = view(Inputs.select(availableGroups, {
   label: "Market group",
   value: "ALL",
   format: g => ({

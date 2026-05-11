@@ -1,15 +1,28 @@
 // Shared date-range brush. A small sparkline of `data` with a draggable d3 brush
-// on top. The component updates the passed-in `selection` Mutable on brush move,
-// so consumer JS blocks reactively re-filter.
+// on top.
+//
+// Why an onSelect callback instead of a Mutable parameter?
+// Passing a Mutable across the module boundary was a dead-end — Observable
+// Framework auto-unwraps Mutables to their current value when referenced
+// outside the defining cell, so by the time the wrapper reaches an imported
+// function it's just the array, and `selection.value = X` silently does
+// nothing. Defining the setter inside the consuming cell (where the cell can
+// drive the Mutable's setter directly) is the reliable path.
 //
 // Usage:
-//   const dateSel = Mutable([new Date("2025-01-01"), latestDate]);
-//   display(renderDateBrush({data, dateAccessor, valueAccessor, selection: dateSel, width}));
-//   // ... in another block:
-//   const [start, end] = dateSel;
+//   const parlayDateSel = Mutable([new Date("2025-01-01"), latestDate]);
+//   display(renderDateBrush({
+//     data: pnl,
+//     dateAccessor: d => d.date,
+//     valueAccessor: d => d.stakes,
+//     initialRange: [new Date("2025-01-01"), latestDate],
+//     onSelect: r => { parlayDateSel.value = r; },
+//     width
+//   }));
 //
-// d3 v7 default-hides the brush resize handles via display:none. styles.css
-// override (.kd-brush .handle) restores visibility so users can grab the edges.
+// The brush only writes on `end` (mouseup), not continuously during drag —
+// per-mousemove Mutable writes triggered cascading cell re-runs on expensive
+// pages (treemap) and broke the drag.
 
 import * as d3 from "npm:d3";
 
@@ -17,7 +30,8 @@ export function renderDateBrush({
   data,
   dateAccessor = d => d.date,
   valueAccessor = d => d.value,
-  selection,                  // Mutable<[Date, Date]>
+  initialRange,               // [Date, Date] — defaults to data extent
+  onSelect,                   // (range: [Date, Date]) => void
   width,
   height = 60,
   color = "#f4a736",
@@ -59,9 +73,9 @@ export function renderDateBrush({
     .call(g => g.select(".domain").attr("stroke", "var(--card-border)"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "currentColor").attr("fill-opacity", 0.6));
 
-  // Initial selection clamped to data domain
+  // Clamp the initial range to the data domain.
   const [domainStart, domainEnd] = xDomain;
-  let [defStart, defEnd] = selection.value || xDomain;
+  let [defStart, defEnd] = initialRange || xDomain;
   if (!(defStart instanceof Date)) defStart = new Date(defStart);
   if (!(defEnd instanceof Date)) defEnd = new Date(defEnd);
   if (defStart < domainStart) defStart = domainStart;
@@ -70,17 +84,12 @@ export function renderDateBrush({
 
   const brush = d3.brushX()
     .extent([[marginLeft, marginTop], [w - marginRight, height - marginBottom]])
-    // Only update the Mutable on "end" (mouseup) — not "brush" (continuous
-    // drag). The downstream cells re-run on every Mutable change, and on
-    // expensive pages (like the treemap) per-mousemove re-runs ate the drag
-    // state and made the brush look frozen. Settling on mouseup is plenty
-    // responsive and avoids that.
     .on("end", (event) => {
       if (!event.sourceEvent) return;
       const sel = event.selection;
-      if (sel) {
+      if (sel && typeof onSelect === "function") {
         const [a, b] = sel.map(x.invert);
-        selection.value = [a, b];
+        onSelect([a, b]);
       }
     });
 

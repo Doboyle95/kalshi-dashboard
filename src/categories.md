@@ -492,7 +492,11 @@ const lbDateSel = Mutable([
     data: sparkData,
     dateAccessor: d => d.date,
     valueAccessor: d => d.value,
-    selection: lbDateSel,
+    initialRange: [
+      new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
+      lbMaxDate
+    ],
+    onSelect: r => { lbDateSel.value = r; },
     color: "var(--accent-kalshi)",
     width
   }));
@@ -594,7 +598,11 @@ const tmDateSel = Mutable([
     data: sparkData,
     dateAccessor: d => d.date,
     valueAccessor: d => d.value,
-    selection: tmDateSel,
+    initialRange: [
+      new Date(Math.max(+new Date("2025-01-01"), +tmMinDate)),
+      tmMaxDate
+    ],
+    onSelect: r => { tmDateSel.value = r; },
     color: "var(--accent-kalshi)",
     width
   }));
@@ -1444,9 +1452,12 @@ const tmActiveMarketRowsByTicker = d3.group(
       : "rgba(255,255,255,0.18)"
     )
     .attr("stroke-width", d => d.parent.data.name === tmActiveCategory ? 1.05 : pinnedSet.has(d.parent.data.name) ? 0.85 : 0.5)
-    .style("cursor", isZoomed ? "zoom-out" : "default")
-    .on("click", () => {
+    .style("cursor", isZoomed ? "zoom-out" : "pointer")
+    .on("mouseenter.hover", (_, d) => { tmHoveredCategory.value = isZoomed ? null : d.parent.data.name; })
+    .on("mouseleave.hover", () => { tmHoveredCategory.value = null; })
+    .on("click", (_, d) => {
       if (isZoomed) setSelectedCategory(null);
+      else setSelectedCategory(d.parent.data.name);
     });
   // Rich HTML tooltip on hover — replaces the native browser <title> tooltip
   // (kept as a fallback for screen readers / right-click info). Position is
@@ -1598,6 +1609,12 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("pointer-events", "none")
     .text(d => displayTreemapCategory(d.data.name).toUpperCase());
 
+  // category-hit USED to be a transparent overlay on top of the leaf rects
+  // that captured hover + click and dispatched them to the category. It was
+  // intercepting events meant for the leaf rects (tooltip mouseenter etc.)
+  // so it's pointer-events: none now — equivalent hover/click are wired
+  // directly on leafSel above via leaf.parent.data.name. The rect itself is
+  // retained as a no-op stroke target for any future styling needs.
   svg.selectAll("rect.category-hit")
     .data(cats2)
     .join("rect")
@@ -1607,13 +1624,7 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("width", d => Math.max(0, d.x1 - d.x0))
     .attr("height", d => Math.max(0, d.y1 - d.y0))
     .attr("fill", "transparent")
-    .style("cursor", isZoomed ? "zoom-out" : "pointer")
-    .on("mouseenter", (_, d) => { tmHoveredCategory.value = isZoomed ? null : d.data.name; })
-    .on("mouseleave", () => { tmHoveredCategory.value = null; })
-    .on("click", (_, d) => {
-      if (isZoomed) setSelectedCategory(null);
-      else setSelectedCategory(d.data.name);
-    });
+    .style("pointer-events", "none");
 
   // Mount the tooltip as a sibling of the SVG. Page-fixed positioning means
   // it can render outside the wrapper bounds; pointer-events:none keeps it
