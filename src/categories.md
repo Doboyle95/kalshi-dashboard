@@ -2991,7 +2991,11 @@ const mktDisplay = mktFiltered.map(d => {
     ? d.last_trade_date
     : (typeof d.last_trade_date === "string" && d.last_trade_date
         ? new Date(d.last_trade_date) : null);
-  const displayDate = parsed || ltd;
+  // Show parsed game date for any market (incl. scheduled future games).
+  // For markets without a parseable date, only show last_trade_date if the
+  // market has actually settled — otherwise leave blank.
+  const isSettled = !!(d.winner_ticker && String(d.winner_ticker).trim());
+  const displayDate = parsed || (isSettled ? ltd : null);
   return {
     ...d,
     _c: d.display_cat || d.kalshi_category || "",
