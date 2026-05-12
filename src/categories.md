@@ -2716,7 +2716,13 @@ function fmtWinner(d) {
   if (WINNER_OVERRIDES[wt]) return WINNER_OVERRIDES[wt];
   // Fix Kalshi metadata error: "Hike 0bps" = no rate change = hold
   if (/hike\s*0\s*bps/i.test(w)) return "Hold";
-  if (w && !w.startsWith("::")) return w;
+  // Skip literal "yes"/"no" subtitles when the winner_ticker has a real outcome
+  // code (e.g. KXSB-26-SEA). Only return the raw winner for true binary markets
+  // whose ticker ends in -YES or -NO.
+  if (w && !w.startsWith("::")) {
+    const isBinaryOutcome = wt && /-(YES|NO)$/i.test(wt);
+    if (isBinaryOutcome || !/^(yes|no)$/i.test(w)) return w;
+  }
   if (w.startsWith("::")) { const a = w.replace(/^::\s*/, "").trim(); if (a) return a; }
   if (wt) {
     const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
