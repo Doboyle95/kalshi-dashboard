@@ -2554,6 +2554,24 @@ function parseGame(code, teamMap) {
   return t ? `${teamMap[t[0]]} vs. ${teamMap[t[1]]}` : null;
 }
 
+// PGA Tour event code → human name. Codes are the segment between `KXPGATOUR-`
+// and the 2-digit year. Add new codes here as new events appear; unknown codes
+// fall through to the raw ticker so they're visible in the leaderboard for triage.
+const PGA_EVENTS = {
+  MAST:    "Masters Tournament",
+  THPC:    "The Players Championship",
+  THGI:    "The Genesis Invitational",
+  RBH:     "RBC Heritage",
+  TRC:     "Truist Championship",
+  VATO:    "Valero Texas Open",
+  ATPBP:   "AT&T Pebble Beach Pro-Am",
+  ARPIPBM: "Arnold Palmer Invitational",
+  COCITPB: "Cognizant Classic in the Palm Beaches",
+  FSJC:    "FedEx St. Jude Championship",
+  // Unverified — add or correct once confirmed:
+  //   VAC, CAC — appear in 2026 leaderboard but exact tournament uncertain
+};
+
 function parseTicker(mk) {
   if (/^KXFEDCHAIRNOM/.test(mk))  return "Next Fed Chair";
   // Flip date before label so "Sep '25 Fed rate decision" reads well when truncated
@@ -2562,12 +2580,55 @@ function parseTicker(mk) {
     const yy = fedM[1], mon = fedM[2];
     return `${mon[0]+mon.slice(1).toLowerCase()} '${yy} Fed rate decision`;
   }
+  // Year-suffix sport futures: KX<SPORT>-YY → "<YYYY> <Event>"
+  // YY=26 means the season ending in 2026 (NBA/NHL playoffs, World Series, etc.)
+  const sportFut = mk.match(/^KX(NBA|MLB|NHL|NCAAF|MARMAD|MASTERS|USOPEN|WMENSINGLES|WMENDOUBLES|MENSINGLES|MENDOUBLES|NFLSBMVP|NBACUP|MLBWORLD|T20WORLDCUP)-(\d{2})$/);
+  if (sportFut) {
+    const map = {
+      NBA: "NBA Finals", MLB: "World Series", NHL: "Stanley Cup",
+      NCAAF: "CFP National Championship", MARMAD: "NCAA Men's Basketball Tournament",
+      MASTERS: "Masters Tournament", USOPEN: "US Open (Tennis)",
+      WMENSINGLES: "Wimbledon Men's Singles", WMENDOUBLES: "Wimbledon Men's Doubles",
+      MENSINGLES: "Australian/French Open Men's Singles", MENDOUBLES: "Australian/French Open Men's Doubles",
+      NFLSBMVP: "Super Bowl MVP", NBACUP: "NBA Cup",
+      MLBWORLD: "World Baseball Classic", T20WORLDCUP: "ICC Men's T20 World Cup"
+    };
+    return `20${sportFut[2]} ${map[sportFut[1]]}`;
+  }
+  // Politics futures: KXPRESNOMD-YY, KXPRESNOMR-YY → "<YYYY> Dem/Rep Pres. nominee"
+  const presNom = mk.match(/^KXPRESNOM([DR])-(\d{2})$/);
+  if (presNom) {
+    return `20${presNom[2]} ${presNom[1] === "D" ? "Democratic" : "Republican"} Presidential nominee`;
+  }
+  // NYC Mayor: KXMAYORNYCPARTY-YY → "<YYYY> NYC Mayor (party)"
+  const nycMP = mk.match(/^KXMAYORNYCPARTY-(\d{2})$/);
+  if (nycMP) return `20${nycMP[1]} NYC Mayor (party winner)`;
+  // Gov shutdown length: KXGOVSHUTLENGTH-YYMMMDD → "Gov shutdown length (started Mon DD, 'YY)"
+  const govShL = mk.match(/^KXGOVSHUTLENGTH-(\d{2})([A-Z]{3})(\d{2})$/);
+  if (govShL) {
+    const mo = govShL[2]; const m = mo[0] + mo.slice(1).toLowerCase();
+    return `Gov shutdown length (started ${m} ${parseInt(govShL[3])}, '${govShL[1]})`;
+  }
+  if (/^KXMLBRFI/.test(mk))          return "MLB Run First Inning (daily)";
   if (/^KXNFLNFCCHAMP/.test(mk))     return `NFC Championship`;
   if (/^KXNFLAFCCHAMP/.test(mk))     return `AFC Championship`;
   if (/^KXFIRSTSUPERBOWLSONG/.test(mk)) return "SB halftime: first song";
   if (/^KXSUPERBOWLAD/.test(mk))     return "Super Bowl ad";
+  if (/^KXPERFORMSUPERBOWLB/.test(mk)) return "Super Bowl halftime performer";
+  if (/^KXSBGUESTS/.test(mk))        return "Super Bowl LX guests";
   if (/^KXKHAMENEIOUT/.test(mk))     return "Khamenei out of power";
+  if (/^KXGOVSHUT(?!LENGTH)/.test(mk)) return "Government shutdown";
+  if (/^KXGOVTSHUTDOWN/.test(mk))    return "Government shutdown";
   if (/^KXBOXING/.test(mk))          return "Boxing match";
+  if (/^KXUFCFIGHT/.test(mk))        return "UFC fight";
+  // PGA Tour event: KXPGATOUR-<EVENT_CODE><YY>. We map common event codes;
+  // unknown codes fall through to the raw ticker so they're visible for triage.
+  const pgaM = mk.match(/^KXPGATOUR-([A-Z]+)(\d{2})$/);
+  if (pgaM) {
+    const code = pgaM[1], yy = pgaM[2];
+    const evt = PGA_EVENTS[code];
+    return evt ? `20${yy} ${evt}` : null;  // null → falls through to MKT_NAME_OVERRIDES / mk
+  }
   // Kalshi parlays - all start with KXMVE (multi-game extended)
   if (/^KXMVE/.test(mk))             return "Parlay";
   // NFL / NCAAF spread and total markets
@@ -2661,6 +2722,10 @@ const MKT_NAME_OVERRIDES = {
   "KXFIRSTSUPERBOWLSONG-26FEB09":"Super Bowl halftime: first song",
   "KXSUPERBOWLAD-SB2026":       "Most Super Bowl LX ads (by brand)",
   "KXRANKLISTGOOGLESEARCH-26JAN":"Top Google search (Jan 2026)",
+  // One-off entries for tickers that don't fit a parseTicker pattern
+  "KXLAYOFFSYINFO-26-494000":   "Tech layoffs in 2026 = 494,000",
+  "KXCITRINI-28JUL01":          "Citrini macro call by July 2028",
+  "KXALIENS-27":                "Alien/UAP disclosure by 2027",
 };
 
 // -- Shared winner-display logic -----------------------------------------------
