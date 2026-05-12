@@ -2564,12 +2564,12 @@ const PGA_EVENTS = {
   RBH:     "RBC Heritage",
   TRC:     "Truist Championship",
   VATO:    "Valero Texas Open",
+  VAC:     "Valspar Championship",
+  CAC:     "Cadillac Championship",
   ATPBP:   "AT&T Pebble Beach Pro-Am",
   ARPIPBM: "Arnold Palmer Invitational",
   COCITPB: "Cognizant Classic in the Palm Beaches",
   FSJC:    "FedEx St. Jude Championship",
-  // Unverified — add or correct once confirmed:
-  //   VAC, CAC — appear in 2026 leaderboard but exact tournament uncertain
 };
 
 function parseTicker(mk) {
