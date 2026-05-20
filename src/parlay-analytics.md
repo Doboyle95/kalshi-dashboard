@@ -31,13 +31,14 @@ const heRaw   = await FileAttachment("data/parlay_house_edge_by_legs.csv").csv({
 const timeRaw = await FileAttachment("data/parlay_legs_over_time.csv").csv({typed: true});
 const gamesRaw= await FileAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
 const mispRaw = await FileAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
-const sgpRaw  = await FileAttachment("data/parlay_sgp_pnl.csv").csv({typed: true});
+const pnlRaw  = await FileAttachment("data/parlay_pnl_daily_by_corr.csv").csv({typed: true});
+const mixRaw  = await FileAttachment("data/parlay_sportsmix_monthly.csv").csv({typed: true});
 ```
 
 ```js
 const KIND_DOMAIN = ["multi-game(independent)", "same-game(correlated)"];
 const KIND_COLORS = ["#5b8def", "#e4572e"];
-const kindShort = k => k.startsWith("same") ? "Same-game (correlated)" : "Multi-game (independent)";
+const kindShort = k => k.startsWith("same") ? "Correlated (SGP)" : "Non-correlated (multi)";
 
 const legOrder = {"02":2,"03":3,"04":4,"05":5,"06":6,"07":7,"08":8,"09":9,"A_10+":10};
 const he = heRaw.map(d => ({
@@ -171,32 +172,41 @@ Plot.plot({
 ```
 
 ```js
-// Cumulative bettor P&L (net of fees), split by parlay_type (MULTI vs SGP).
-// parlay_sgp_pnl.csv is daily. Sum to running totals per type to show how
-// much bettors have transferred to Kalshi/market-makers over the period.
-const sgpCum = (() => {
-  const sorted = sgpRaw.slice().sort((a, b) => a.date - b.date);
-  const cum = {MULTI: 0, SGP: 0};
+// Cumulative bettor P&L (net of fees), split by correlation kind.
+// parlay_pnl_daily_by_corr.csv is daily, built by R/parlay_analytics.R's
+// audited correlation classifier (corr_key with league-pooling). Sum to
+// running totals per kind. Bridge kind values to the canonical domain so
+// colors and tooltips match the rest of the page.
+const KIND_FROM_CORR = {correlated: "same-game(correlated)", independent: "multi-game(independent)"};
+const pnlCum = (() => {
+  const sorted = pnlRaw.slice().sort((a, b) => a.date - b.date);
+  const cum = {correlated: 0, independent: 0};
   return sorted.map(d => {
-    cum[d.parlay_type] += +d.net_pnl;
-    return {date: d.date, parlay_type: d.parlay_type, cum_pnl: cum[d.parlay_type], daily_net_pnl: +d.net_pnl};
+    cum[d.kind] += +d.net_pnl;
+    return {
+      date: d.date,
+      kind_raw: d.kind,
+      kind: KIND_FROM_CORR[d.kind] || d.kind,
+      cum_pnl: cum[d.kind],
+      daily_net_pnl: +d.net_pnl
+    };
   });
 })();
-const sgpEnd = {
-  MULTI: sgpCum.filter(d => d.parlay_type === "MULTI").slice(-1)[0]?.cum_pnl ?? 0,
-  SGP:   sgpCum.filter(d => d.parlay_type === "SGP").slice(-1)[0]?.cum_pnl ?? 0
+const pnlEnd = {
+  correlated:  pnlCum.filter(d => d.kind_raw === "correlated").slice(-1)[0]?.cum_pnl ?? 0,
+  independent: pnlCum.filter(d => d.kind_raw === "independent").slice(-1)[0]?.cum_pnl ?? 0
 };
-const sgpDataRange = (() => {
-  const dates = sgpRaw.map(d => d.date).sort();
+const pnlDataRange = (() => {
+  const dates = pnlRaw.map(d => d.date).sort();
   return {start: dates[0], end: dates[dates.length - 1]};
 })();
 const fmtSignedUSD = n => n < 0 ? "-$" + fmtCount(-n) : "$" + fmtCount(n);
 const fmtMonth = d => d3.utcFormat("%b %Y")(d instanceof Date ? d : new Date(d));
 ```
 
-## Cumulative bettor P&L by parlay type
+## Cumulative bettor P&L: correlated vs non-correlated
 
-_How much money parlay bettors have transferred to Kalshi (and market-makers) over the period, net of fees. Multi-game parlays carry the larger absolute losses; same-game parlays carry a steeper per-dollar margin (see the calibration chart below)._
+_How much money parlay bettors have transferred to Kalshi (and market-makers) over the period, net of fees. Classified using the same audited correlated/non-correlated split as the charts above._
 
 ```js
 Plot.plot({
@@ -204,22 +214,88 @@ Plot.plot({
   width, height: 320, marginLeft: 80,
   x: {type: "utc", label: null},
   y: {label: "Cumulative bettor P&L (net of fees)", grid: true, tickFormat: fmtSignedUSD},
-  color: {legend: true, domain: ["MULTI", "SGP"], range: KIND_COLORS, tickFormat: t => t === "MULTI" ? "Multi-game (independent)" : "Same-game (correlated)"},
+  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
   marks: [
-    Plot.line(sgpCum, {x: "date", y: "cum_pnl", stroke: "parlay_type", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.line(pnlCum, {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "#999"}),
-    Plot.ruleX(sgpCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(sgpCum, Plot.pointer({x: "date", y: "cum_pnl",
-      title: d => `${fmtMonth(d.date)} ${new Date(d.date).getUTCDate()}\n${d.parlay_type === "MULTI" ? "Multi-game" : "Same-game"}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
+    Plot.ruleX(pnlCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(pnlCum, Plot.pointer({x: "date", y: "cum_pnl",
+      title: d => `${fmtMonth(d.date)} ${new Date(d.date).getUTCDate()}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
   ]
 })
 ```
 
 <div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 16px 0;font-size:13px;color:var(--theme-foreground-muted);">
-  <div><strong style="color:${KIND_COLORS[0]}">Multi-game total:</strong> ${fmtSignedUSD(sgpEnd.MULTI)}</div>
-  <div><strong style="color:${KIND_COLORS[1]}">Same-game total:</strong> ${fmtSignedUSD(sgpEnd.SGP)}</div>
-  <div>Data through ${fmtMonth(sgpDataRange.end)} ${new Date(sgpDataRange.end).getUTCDate()}</div>
+  <div><strong style="color:${KIND_COLORS[1]}">Correlated (SGP) total:</strong> ${fmtSignedUSD(pnlEnd.correlated)}</div>
+  <div><strong style="color:${KIND_COLORS[0]}">Non-correlated (multi) total:</strong> ${fmtSignedUSD(pnlEnd.independent)}</div>
+  <div>Data through ${fmtMonth(pnlDataRange.end)} ${new Date(pnlDataRange.end).getUTCDate()}</div>
 </div>
+
+<div class="surface-card compact-details" style="font-size:13px;padding:12px 16px;margin:6px 0 18px 0;">
+<strong>How we split parlays.</strong> A parlay is <em>correlated</em> if any two
+of its legs touch the same underlying game (e.g. NFL spread + total + a player
+prop, all in the same game), so the leg outcomes are not statistically
+independent. A parlay is <em>non-correlated</em> if every leg is from a
+different game (or different futures market) and the legs can be priced by
+simply multiplying the individual win probabilities. Kalshi labels correlated
+parlays as <em>SGP</em> (same-game parlay); we use <em>correlated</em> /
+<em>non-correlated</em> as the editorial framing because Kalshi has launched
+new SGP-style series under varying ticker prefixes, and the correlation-based
+classification is what determines the pricing math.
+</div>
+
+## Mixed and non-sports parlays over time
+
+_Every chart above is dominated by all-sports parlays — they're 99.81% of all parlay volume. The remaining 0.19% (all-non-sports + cross-category mixed) sits below. Mixed parlays only appeared in March 2026, when Kalshi enabled cross-category combos._
+
+```js
+const mixMonthly = mixRaw
+  .filter(d => d.sportmix !== "all-sports")
+  .map(d => ({
+    date: d3.utcParse("%Y-%m")(String(d.month)),
+    month: String(d.month),
+    sportmix: d.sportmix,
+    n_parlays: +d.n_parlays,
+    total_vol: +d.total_vol
+  }))
+  .sort((a, b) => a.date - b.date);
+
+const mixTipData = (() => {
+  const m = new Map();
+  for (const r of mixMonthly) {
+    const k = +r.date;
+    if (!m.has(k)) m.set(k, {date: r.date, month: r.month});
+    m.get(k)[r.sportmix] = r.total_vol;
+    m.get(k)[r.sportmix + "_n"] = r.n_parlays;
+  }
+  return [...m.values()].sort((a, b) => +a.date - +b.date);
+})();
+const MIX_DOMAIN = ["mixed", "all-nonsports"];
+const MIX_COLORS = ["#7048e8", "#00C2A8"];
+const mixLabel = k => k === "mixed" ? "Mixed (sports + non-sports legs)" : "All non-sports legs";
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 280, marginLeft: 80,
+  x: {type: "utc", label: null},
+  y: {label: "Monthly parlay volume", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {legend: true, domain: MIX_DOMAIN, range: MIX_COLORS, tickFormat: mixLabel},
+  marks: [
+    Plot.rectY(mixMonthly, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix", order: MIX_DOMAIN}),
+    Plot.ruleX(mixTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(mixTipData, Plot.pointerX({
+      x: "date",
+      title: d => [
+        d.month,
+        ...MIX_DOMAIN.map(k => d[k] > 0 ? `${mixLabel(k)}: ${fmtUSD(d[k])} (${d[k+"_n"].toLocaleString()} parlays)` : null).filter(Boolean)
+      ].join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
 
 ```js
 const prettyGame = k => {
