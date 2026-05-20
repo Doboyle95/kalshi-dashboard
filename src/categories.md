@@ -98,6 +98,12 @@ function normalizeTreemapCategory(cat) {
 }
 
 function classifyTreemapTicker(ticker, isSports) {
+  // Phase 24 lookup-first: if R/classify_market.R produced a classification
+  // for this report_ticker in the leaderboard, use it (single source of truth).
+  // The JS rules below are kept as a defensive fallback for the rare ticker
+  // that isn't in the leaderboard yet.
+  const fromR = classByReportTicker.get(ticker);
+  if (fromR) return fromR;
   const tickerUpper = String(ticker || "").toUpperCase();
   let grp = isSports === "TRUE" ? "Sports" : "Non-sports";
 
@@ -371,6 +377,21 @@ const FALLBACK_THRESHOLD = 5_000_000;
 const FALLBACK_NOTIONAL_THRESHOLD = 15_000_000;
 const allTimeContractsMap = new Map(leaderboard.map(d => [d.report_ticker, +d.contracts || 0]));
 const allTimeNotionalMap = new Map(leaderboard.map(d => [d.report_ticker, +d.notional || 0]));
+// Phase 24 — R-as-single-brain: authoritative classification per report_ticker,
+// computed by R/classify_market.R (1:1 port of the JS rules below) and emitted
+// by R/build_leaderboard_from_duckdb.R into the leaderboard CSV. Used as a
+// lookup short-circuit at the top of classifyTreemapTicker / classifyWithFallback;
+// the JS rules below stay as a defensive fallback for tickers not in the
+// leaderboard (effectively all real volume is covered).
+const classByReportTicker = new Map(
+  leaderboard
+    .filter(d => d.report_ticker && d.grp && d.cat)
+    .map(d => [d.report_ticker, {
+      grp: d.grp, cat: d.cat,
+      wideCat: d.wide_cat || normalizeTreemapCategory(d.cat),
+      mtype: d.mtype || d.report_ticker
+    }])
+);
 const kalshiCategoryByReportTicker = new Map(
   d3.rollups(
     mktLeaderboard.filter(d => d.report_ticker && d.kalshi_category),
@@ -397,6 +418,11 @@ function categoryFromKalshiCategory(rawCategory) {
 }
 
 function classifyWithFallback(ticker, isSports) {
+  // Phase 24 lookup-first: same R-as-brain short-circuit. The R port already
+  // applied the volume-gate Kalshi fallback, so the leaderboard's grp/cat is
+  // the final answer.
+  const fromR = classByReportTicker.get(ticker);
+  if (fromR) return fromR;
   const cl = classifyTreemapTicker(ticker, isSports);
   if (cl.cat === "Parlay") return cl;
   if (cl.cat === "Other Sports") return cl;
