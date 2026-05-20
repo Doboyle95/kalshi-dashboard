@@ -365,7 +365,16 @@ Plot.plot({
       y2: "y0",
       fill: "size_bucket",
       fillOpacity: 0.92,
-      curve: "monotone-x",
+      curve: "monotone-x"
+    }),
+    Plot.ruleX(mixRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    // 2D pointer (not pointerX): on a stacked area we want the specific
+    // colored bucket band under the cursor, so match on x=date AND the band
+    // midpoint in share units. The old static `title:` channel rendered one
+    // SVG <title> per area path and effectively showed no usable tooltip.
+    Plot.tip(mixRows, Plot.pointer({
+      x: "date",
+      y: d => (d.y0 + d.y1) / 2,
       title: d => [
         fmtDate(d.date),
         `${d.size_bucket}: ${fmtPct(d.share)} of contracts`,
@@ -374,7 +383,7 @@ Plot.plot({
         `Total contracts: ${fmtCount(d.total_contracts)}`,
         `Largest trade: ${fmtCount(d.max_trade_size)}`
       ].join("\n")
-    }),
+    })),
     Plot.ruleY([0, 1])
   ]
 })
