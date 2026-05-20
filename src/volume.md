@@ -502,3 +502,50 @@ const sportsMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", lab
 ```
 
 </div>
+
+## Open interest
+
+_Total contracts held open across all Kalshi markets at end-of-day — money that hasn't been settled yet. Volume tells you how much trading happens; open interest tells you how much risk is currently parked on the exchange._
+
+```js
+const oiRaw = await FileAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
+const oi = oiRaw
+  .map(d => ({
+    date: d.date,
+    total_oi_contracts: +d.total_oi_contracts,
+    n_markets: +d.n_markets,
+    n_with_oi: +d.n_with_oi
+  }))
+  .filter(d => d.date && d.total_oi_contracts > 0)
+  .sort((a, b) => a.date - b.date);
+const oiPeak = oi.reduce((a, b) => (b.total_oi_contracts > a.total_oi_contracts ? b : a), oi[0]);
+const oiLast = oi[oi.length - 1];
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 300, marginLeft: 75,
+  x: {type: "utc", label: null},
+  y: {label: "Contracts of open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
+  marks: [
+    Plot.areaY(oi, {x: "date", y: "total_oi_contracts", fill: "#7048e8", fillOpacity: 0.18, curve: "monotone-x"}),
+    Plot.lineY(oi, {x: "date", y: "total_oi_contracts", stroke: "#7048e8", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleY([0]),
+    Plot.ruleX(oi, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(oi, Plot.pointerX({x: "date", y: "total_oi_contracts",
+      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.total_oi_contracts)} contracts\n${fmtCount(d.n_with_oi)} markets with open positions`}))
+  ]
+})
+```
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 18px 0;font-size:13px;color:var(--theme-foreground-muted);">
+  <div><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
+  <div><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
+  <div><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
+</div>
+
+<details class="surface-card compact-details">
+<summary>What this measures</summary>
+<p>For each market, open interest is the number of YES contracts (or equivalently NO contracts) that are currently held — bought but not yet sold or settled. Summed across all Kalshi markets at end-of-day. Note: data ends ${fmtDate(oiLast.date)}; the underlying snapshot pipeline isn't currently live, so this chart lags by a few weeks.</p>
+</details>
