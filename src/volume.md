@@ -442,6 +442,20 @@ function rollingMean7(rows, valueKey) {
   }).filter((_, i) => i >= 6);
 }
 const sportsMA = useTableau ? rollingMean7(tidySports, "value") : [];
+
+// Wide-format tip data: one row per date carrying every stacked category's
+// value. Plot.tip + Plot.pointerX on a stacked area needs this shape because
+// the bare `title:` channel inside areaY renders one SVG <title> per area
+// path and produces no usable tooltip on a stacked layout.
+const sportsTipData = (() => {
+  const m = new Map();
+  for (const r of tidySports) {
+    const k = +r.date;
+    if (!m.has(k)) m.set(k, {date: r.date});
+    m.get(k)[r.category] = r.value;
+  }
+  return [...m.values()].sort((a, b) => +a.date - +b.date);
+})();
 ```
 
 ```js
@@ -458,10 +472,13 @@ Plot.plot({
   marks: [
     Plot.areaY(tidySports, {
       x: "date", y: "value", fill: "category",
-      order: subOrder, curve: "monotone-x", fillOpacity: 0.85,
-      tip: true,
-      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtUSD(d.value || 0)}`
+      order: subOrder, curve: "monotone-x", fillOpacity: 0.85
     }),
+    Plot.ruleX(sportsTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(sportsTipData, Plot.pointerX({
+      x: "date",
+      title: d => [fmtDate(d.date), ...subOrder.map(c => (d[c] || 0) > 0 ? `${c}: ${fmtUSD(d[c])}` : null).filter(Boolean)].join("\n")
+    })),
     ...(useTableau ? [Plot.lineY(sportsMA, {
       x: "date", y: "ma",
       stroke: "#111", strokeWidth: 1.8, strokeDasharray: "4,2",

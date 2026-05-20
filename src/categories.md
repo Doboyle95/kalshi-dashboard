@@ -2272,6 +2272,69 @@ if (!compareSeries.length) {
 
 </div>
 
+## Top categories by month
+
+_Monthly contract volume for the ten all-time biggest individual report tickers — what was the dominant market in each month. Complements the wide-category trends above by surfacing the specific tickers (NFL game line vs March Madness vs Bitcoin etc.) instead of category bins._
+
+```js
+const monthlyTop = await FileAttachment("data/monthly_top_categories.csv").csv({typed: true});
+```
+
+```js
+// Map raw tickers to display names + colors. Keep ordering deterministic so
+// stack order is stable month to month.
+const MTC_LABELS = {
+  KXNFLGAME: "NFL",
+  KXNCAAFGAME: "College football",
+  KXNBAGAME: "NBA",
+  KXNCAAMBGAME: "College basketball",
+  KXMLBGAME: "MLB",
+  KXATPMATCH: "ATP tennis",
+  KXATPCHALLENGERMATCH: "ATP Challenger",
+  KXBTCD: "Bitcoin (daily)",
+  KXMVESPORTSMULTIGAMEEXTENDED: "Sports parlay",
+  KXMVECROSSCATEGORY: "Cross-category parlay"
+};
+const MTC_ORDER  = ["NFL","College football","NBA","College basketball","MLB","ATP tennis","ATP Challenger","Bitcoin (daily)","Sports parlay","Cross-category parlay"];
+const MTC_COLORS = ["#A30000","#FF7043","#1F4E96","#42A5F5","#2E7D32","#7CB342","#C5E1A5","#FFB300","#9C27B0","#CE93D8"];
+
+const mtcTidy = monthlyTop.flatMap(row => {
+  const date = new Date(Date.UTC(+row.year, +row.month - 1, 1));
+  return Object.entries(MTC_LABELS).map(([t, label]) => ({
+    date, month_label: row.month_label, category: label, contracts: +row[t] || 0
+  }));
+}).filter(d => d.contracts > 0);
+
+const mtcTipData = (() => {
+  const m = new Map();
+  for (const r of mtcTidy) {
+    const k = +r.date;
+    if (!m.has(k)) m.set(k, {date: r.date, month_label: r.month_label});
+    m.get(k)[r.category] = r.contracts;
+  }
+  return [...m.values()].sort((a, b) => +a.date - +b.date);
+})();
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 320, marginLeft: 70,
+  x: {type: "utc", label: null},
+  y: {label: "Contracts", grid: true, tickFormat: d => d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"},
+  color: {legend: true, columns: 5, domain: MTC_ORDER, range: MTC_COLORS},
+  marks: [
+    Plot.rectY(mtcTidy, {x: "date", interval: d3.utcMonth, y: "contracts", fill: "category", order: MTC_ORDER}),
+    Plot.ruleX(mtcTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(mtcTipData, Plot.pointerX({
+      x: "date",
+      title: d => [d.month_label, ...MTC_ORDER.map(c => (d[c] || 0) > 0 ? `${c}: ${(d[c]/1e6).toFixed(1)}M` : null).filter(Boolean)].join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
 ## Sports market type breakdown
 
 _How sports volume is split between market types across all sports tickers. Moneylines = individual game winners. Futures/Award = season champions, conference winners, awards, tournament brackets. Parlay (multi-game) = cross-game combos. Parlay (single-game) = same-game parlays._

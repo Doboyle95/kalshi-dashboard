@@ -31,6 +31,7 @@ const heRaw   = await FileAttachment("data/parlay_house_edge_by_legs.csv").csv({
 const timeRaw = await FileAttachment("data/parlay_legs_over_time.csv").csv({typed: true});
 const gamesRaw= await FileAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
 const mispRaw = await FileAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
+const sgpRaw  = await FileAttachment("data/parlay_sgp_pnl.csv").csv({typed: true});
 ```
 
 ```js
@@ -168,6 +169,57 @@ Plot.plot({
   ]
 })
 ```
+
+```js
+// Cumulative bettor P&L (net of fees), split by parlay_type (MULTI vs SGP).
+// parlay_sgp_pnl.csv is daily. Sum to running totals per type to show how
+// much bettors have transferred to Kalshi/market-makers over the period.
+const sgpCum = (() => {
+  const sorted = sgpRaw.slice().sort((a, b) => a.date - b.date);
+  const cum = {MULTI: 0, SGP: 0};
+  return sorted.map(d => {
+    cum[d.parlay_type] += +d.net_pnl;
+    return {date: d.date, parlay_type: d.parlay_type, cum_pnl: cum[d.parlay_type], daily_net_pnl: +d.net_pnl};
+  });
+})();
+const sgpEnd = {
+  MULTI: sgpCum.filter(d => d.parlay_type === "MULTI").slice(-1)[0]?.cum_pnl ?? 0,
+  SGP:   sgpCum.filter(d => d.parlay_type === "SGP").slice(-1)[0]?.cum_pnl ?? 0
+};
+const sgpDataRange = (() => {
+  const dates = sgpRaw.map(d => d.date).sort();
+  return {start: dates[0], end: dates[dates.length - 1]};
+})();
+const fmtSignedUSD = n => n < 0 ? "-$" + fmtCount(-n) : "$" + fmtCount(n);
+const fmtMonth = d => d3.utcFormat("%b %Y")(d instanceof Date ? d : new Date(d));
+```
+
+## Cumulative bettor P&L by parlay type
+
+_How much money parlay bettors have transferred to Kalshi (and market-makers) over the period, net of fees. Multi-game parlays carry the larger absolute losses; same-game parlays carry a steeper per-dollar margin (see the calibration chart below)._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 320, marginLeft: 80,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative bettor P&L (net of fees)", grid: true, tickFormat: fmtSignedUSD},
+  color: {legend: true, domain: ["MULTI", "SGP"], range: KIND_COLORS, tickFormat: t => t === "MULTI" ? "Multi-game (independent)" : "Same-game (correlated)"},
+  marks: [
+    Plot.line(sgpCum, {x: "date", y: "cum_pnl", stroke: "parlay_type", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.ruleY([0], {stroke: "#999"}),
+    Plot.ruleX(sgpCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(sgpCum, Plot.pointer({x: "date", y: "cum_pnl",
+      title: d => `${fmtMonth(d.date)} ${new Date(d.date).getUTCDate()}\n${d.parlay_type === "MULTI" ? "Multi-game" : "Same-game"}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
+  ]
+})
+```
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 16px 0;font-size:13px;color:var(--theme-foreground-muted);">
+  <div><strong style="color:${KIND_COLORS[0]}">Multi-game total:</strong> ${fmtSignedUSD(sgpEnd.MULTI)}</div>
+  <div><strong style="color:${KIND_COLORS[1]}">Same-game total:</strong> ${fmtSignedUSD(sgpEnd.SGP)}</div>
+  <div>Data through ${fmtMonth(sgpDataRange.end)} ${new Date(sgpDataRange.end).getUTCDate()}</div>
+</div>
 
 ```js
 const prettyGame = k => {

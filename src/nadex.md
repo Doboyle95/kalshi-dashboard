@@ -249,3 +249,71 @@ Plot.plot({
   ]
 })
 ```
+
+## Top sport events (all time)
+
+_The biggest individual sports events on Nadex by contract volume. Pulled from the daily Nadex bulletin events feed — Super Bowl LX dominates, with championship NFL/CFB games and the Masters following. Non-sport entries like financial indices and combo contracts are excluded for clarity._
+
+```js
+const nadexEvents = await FileAttachment("data/nadex_events_daily.csv").csv({typed: true});
+```
+
+```js
+const SPORT_PREFIX_LABELS = {
+  NFL: "NFL", NBA: "NBA", NHL: "NHL", MLB: "MLB", WNBA: "WNBA",
+  CFB: "College football", CBB: "College basketball", WBB: "Women's basketball",
+  GOLF: "Golf", UFC: "UFC", PGA: "PGA", LPGA: "LPGA"
+};
+const SPORT_COLORS = {
+  "NFL":"#A30000","NBA":"#1F4E96","NHL":"#3b6ea5","MLB":"#2E7D32","WNBA":"#42A5F5",
+  "College football":"#FF7043","College basketball":"#42A5F5","Women's basketball":"#7CB342",
+  "Golf":"#FFB300","UFC":"#9C27B0","PGA":"#FFB300","LPGA":"#FFB300"
+};
+const sportRe = /^(NFL|NBA|NHL|MLB|WNBA|CFB|CBB|WBB|GOLF|UFC|PGA|LPGA)-/;
+
+const eventTotals = d3.rollup(
+  nadexEvents.filter(d => sportRe.test(d.resource_description)),
+  v => ({volume: d3.sum(v, x => +x.volume), days: v.length}),
+  d => d.resource_description
+);
+
+const topEvents = [...eventTotals.entries()]
+  .sort((a,b) => b[1].volume - a[1].volume)
+  .slice(0, 20)
+  .map(([event, agg]) => {
+    const m = event.match(/^([A-Z]+)-\d+-(\d{6})/);
+    const sport = SPORT_PREFIX_LABELS[m?.[1]] || m?.[1] || "Other";
+    let dateStr = "";
+    if (m?.[2]) {
+      const dt = m[2];
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      dateStr = `${months[+dt.slice(2,4) - 1]} ${+dt.slice(4,6)}, '${dt.slice(0,2)}`;
+    } else {
+      // GOLF-NNNN-YYYY format (Masters, etc.)
+      const m2 = event.match(/^([A-Z]+)-\d+-(\d{4})$/);
+      if (m2?.[2]) dateStr = m2[2];
+    }
+    return {event, sport, label: `${sport} · ${dateStr || "season"}`, volume: agg.volume, days: agg.days};
+  });
+const sportDomain = [...new Set(topEvents.map(d => d.sport))];
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: topEvents.length * 26 + 60,
+  marginLeft: 170,
+  x: {label: "Contracts (all time)", grid: true, tickFormat: d => d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k"},
+  y: {label: null, domain: topEvents.map(d => d.label)},
+  color: {legend: true, domain: sportDomain, range: sportDomain.map(s => SPORT_COLORS[s] || "#9c27b0")},
+  marks: [
+    Plot.barX(topEvents, {
+      x: "volume", y: "label", fill: "sport", fillOpacity: 0.85,
+      tip: true,
+      title: d => `${d.label}\n${d.event}\nVolume: ${fmtUSD(d.volume)}\nTrading days: ${d.days}`
+    }),
+    Plot.ruleX([0])
+  ]
+})
+```
