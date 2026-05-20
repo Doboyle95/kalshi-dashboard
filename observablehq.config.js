@@ -51,6 +51,7 @@ export default {
     {name: "Ask Data", path: "/chat"},
     {name: "Taker P&L", path: "/taker-pnl"},
     {name: "Parlay P&L", path: "/parlay"},
+    {name: "Parlay Anatomy", path: "/parlay-analytics"},
     {name: "Calibration", path: "/calibration"},
     {name: "Robinhood", path: "/robinhood"},
     {name: "Platform Comparison", path: "/competitors"},
