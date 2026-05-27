@@ -1,0 +1,44 @@
+name: Dashboard freshness monitor
+
+# External watchdog independent of the cadence orchestrator. Runs on a
+# 30-min schedule. Reads freshness_manifest.json from the deployed site
+# and alerts (via GitHub issue + optional Slack webhook) when any tracked
+# dashboard CSV exceeds its freshness threshold.
+#
+# Why this exists separately from cadence_v2/tasks/post_cycle_health_check:
+# the in-cycle health check only fires if the orchestrator is alive. If the
+# orchestrator process itself dies (machine reboot, Prefect crash,
+# unhandled exception above task layer), nothing in-band would notify. This
+# workflow is the watchdog of the watchdog.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'    # every 30 minutes UTC
+  workflow_dispatch:           # allow manual trigger from Actions UI
+
+jobs:
+  check-freshness:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write            # to create/update the "Stale" issue
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need to read .github/scripts/check_freshness.py
+          # AND the most-recent freshness_manifest.json (which is regen'd
+          # on every push to main).
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run freshness check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python .github/scripts/check_freshness.py \
+            --manifest src/data/freshness_manifest.json
