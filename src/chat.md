@@ -22,8 +22,13 @@ title: Ask Data
   const { marked } = await import("npm:marked");
   marked.setOptions({mangle: false, headerIds: false});
 
-  const API_BASE = (process.env.CHAT_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
-  const API_TOKEN = process.env.CHAT_TOKEN ?? "";
+  // NOTE: this js block runs in the BROWSER (Observable Framework), so Node-only
+  // globals are unavailable -- an earlier version referenced one and crashed the
+  // whole chat panel on load. This page is local-only and talks to the local
+  // FastAPI server with no token, so the values are set directly below.
+  // (Change API_BASE here if you ever expose the API via a tunnel.)
+  const API_BASE = "http://127.0.0.1:8000";
+  const API_TOKEN = "";
   const apiUrl = `${API_BASE}/ask`;
   const resetUrl = `${API_BASE}/reset`;
   const healthUrl = `${API_BASE}/health`;
