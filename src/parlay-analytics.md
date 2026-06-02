@@ -9,17 +9,6 @@ rise of multi-leg betting over time, which real games draw the most parlay
 money, and whether the implied odds match what actually happens — split by
 **same-game (correlated)** vs **multi-game (independent)** tickets.
 
-<div class="surface-card" style="border-left:4px solid #1a9641;background:rgba(26,150,65,0.06);padding:12px 16px;margin:14px 0;">
-<strong>Verified 2026-05-19.</strong> Source: parlay market collector
-(~15M traded parlays, ~100M legs); combined classifier with locked rules
-(Option X game-key, league-winner pooling, per-competition granularity,
-crypto pooled, award shows each their own). Numbers reconciled against the
-source parquet by an independent recompute — PASS for all seven CSVs
-(see <code>output/parlay_analytics_verification_report.md</code>).
-The same-game / multi-game classifier was hand-audited on a stratified
-worksheet of 154 parlays.
-</div>
-
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
 const fmtUSD   = n => "$" + fmtCount(n);
@@ -466,6 +455,4 @@ Plot.plot({
   the real cost to the bettor is somewhat larger. <strong>Calibration gap</strong>
   is actual minus implied win rate; the negative gap is the all-in cost the
   bettor pays (margin/vig), not pure forecast error.</p>
-  <p><strong>Status.</strong> Preliminary and unverified — see the banner at
-  the top. Numbers may shift after verification and unit confirmation.</p>
 </details>

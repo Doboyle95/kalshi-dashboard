@@ -5,18 +5,12 @@ title: Categories
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Kalshi Categories</h1>
-  <p class="page-lead">Explore how Kalshi volume is distributed across sports, non-sports, and the subtypes inside each category. This page is built to be navigated, not just scanned.</p>
-  <div class="page-meta">Click into categories to focus the rest of the page, pin comparisons, and compare category trajectories.</div>
+  <p class="page-lead">How Kalshi's volume splits across sports, non-sports, and the categories inside each — from the broad picture down to the individual markets.</p>
 </div>
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
   <p>This page uses daily ticker/category aggregates rather than raw browser-side trades. The volume map starts from broad categories and can drill into the largest component markets inside the selected parent; smaller residual activity is grouped so the displayed pieces remain readable without implying the omitted tail is zero. Raw ticker prefixes are shortened in labels for readability.</p>
-</details>
-
-<details class="surface-card compact-details">
-  <summary>How to use this page</summary>
-  <p>Use the treemap as the navigation surface: hover to preview, click to drill in, and click the zoomed view again to return. Pinned comparisons are best for side-by-side trend reading without cluttering the main category map.</p>
 </details>
 
 ```js
@@ -483,7 +477,7 @@ function clearPinnedCategories() {
 
 ## All-time leaderboard
 
-<p class="section-intro">This leaderboard is the fastest way to see which report tickers dominate by volume or fees in the selected window before you drill into the treemap. Drag the brush below to set the window — when it covers the full data range the chart falls back to the all-tickers leaderboard; otherwise it aggregates the top-15-by-day data.</p>
+<p class="section-intro">The quickest read on which markets dominate by volume or fees in the window you pick — the starting point before you drill into the map below.</p>
 
 <div class="control-strip">
 
@@ -592,7 +586,7 @@ Plot.plot({
 
 ## Volume map
 
-<p class="section-intro">Start here. The treemap gives the fastest read on which categories matter most in the selected period. Drag the brush below to widen or narrow the date range; click a tile to zoom into the largest individual markets inside that category.</p>
+<p class="section-intro">Start here. The treemap is the fastest read on which categories matter most in the window — click any tile to zoom into the biggest markets inside it.</p>
 
 <div class="control-strip">
 
@@ -1032,7 +1026,6 @@ const tmActiveMarketRowsByTicker = d3.group(
 );
 ```
 
-<div class="instruction-line"><strong>How to use this page:</strong> hover a category to preview emphasis, click to zoom in, then click the zoomed treemap again to return to the full map.</div>
 
 ```js
   if (tmActiveCategory) {
@@ -1708,7 +1701,7 @@ const tmActiveMarketRowsByTicker = d3.group(
 ```
 ## Volume by category over time
 
-<p class="section-intro">This monthly view shows how Kalshi's category mix changes through time. Selecting or pinning a treemap category switches this chart to detailed series so categories like NBA and College basketball stay separate.</p>
+<p class="section-intro">How Kalshi's category mix has shifted month to month. Pick a category in the treemap to break it out into its own line.</p>
 
 ```js
 const sportsSplit = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
@@ -1954,7 +1947,6 @@ const monthPlotMax = chartScale === "Normalized"
 
 ```
 
-<div class="instruction-line"><strong>How to use this:</strong> switch between <em>General</em> and <em>Detailed</em> for the default view. Once you select or pin a treemap category, the chart automatically uses detailed series for precise highlighting.</div>
 
 <div class="plot-shell">
 
@@ -2039,7 +2031,7 @@ if (hasCategoryFocus) {
 {
   if (tmPinnedCategories.length) {
     display(html`<h2 id="focused-category-comparison" tabindex="-1"><a class="observablehq-header-anchor" href="#focused-category-comparison">Focused category comparison</a></h2>
-      <p class="section-intro">Use this section when you want exact category trajectories rather than broad buckets. The active category becomes the primary series, pins become the comparison set, and the chart can switch between market share, raw volume, and indexed growth.</p>`);
+      <p class="section-intro">Exact category trajectories, side by side — switch between market share, raw volume, and indexed growth to compare how categories have risen and fallen.</p>`);
   }
 }
 ```
@@ -2456,9 +2448,7 @@ Plot.plot({
 
 ## All-time individual market leaderboard
 
-<p class="section-intro">This table is meant for exploration rather than drill-down. Use the legend chips to isolate a theme, the search box to jump to a market, and the sortable columns to compare market structure.</p>
-
-<div class="instruction-line"><strong>Current scope:</strong> this leaderboard intentionally stays at the summary level for now. Detailed price-path or volume-arrival views should wait until a per-market time-series dataset is available.</div>
+<p class="section-intro">Every individual market, ranked. Filter by theme with the legend chips, search for a specific market, or sort any column to see what's biggest by volume, fees, or trades.</p>
 
 Ranked by total contracts across all outcomes. Each row is one market (e.g. "Super Bowl 2026 winner"), not an individual yes/no contract.
 

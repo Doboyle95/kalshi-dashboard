@@ -9,7 +9,7 @@ How accurately do Kalshi contract prices predict outcomes? A perfectly calibrate
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Settled contracts are grouped into 5-cent price bins. The x-axis is implied probability from contract price; the y-axis is the realized win rate for contracts in that bin using the trade-weighted outcome rate. Bins below 5 cents and above 95 cents are excluded to keep sparse tails from dominating the visual.</p>
-  <p>Use the diagonal chart to see direction: points above the line mean outcomes happened more often than price implied, while points below mean they happened less often. Then use the error chart to find where miscalibration is largest by price band.</p>
+  <p>On the scatter, points above the diagonal mean outcomes happened more often than the price implied; points below mean less often. The error chart shows where that gap is widest by price band.</p>
 </details>
 
 ```js
@@ -68,7 +68,11 @@ Plot.plot({
 
 <span style="color:#1a9641">● Above diagonal</span> (actual > implied — contracts underpriced) &nbsp; <span style="color:#d7191c">● Below diagonal</span> (actual < implied — contracts overpriced) &nbsp; Circle size ∝ trade count
 
+<div class="instruction-line"><strong>Useful trick:</strong> switch the market group below to <em>Parlay only</em> — long-shot parlay legs are where the mispricing runs widest, since cheap contracts rarely win as often as their price implies.</div>
+
 ## Calibration error by price bin
+
+<p class="section-intro">Where the market misses, broken out by price. Bars above zero are underpriced bands; below zero, overpriced.</p>
 
 ```js
 Plot.plot({
