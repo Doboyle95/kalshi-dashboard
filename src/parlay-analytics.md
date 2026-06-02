@@ -33,6 +33,8 @@ const gamesRaw= await FileAttachment("data/parlay_top_games_by_volume.csv").csv(
 const mispRaw = await FileAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
 const pnlRaw  = await FileAttachment("data/parlay_pnl_daily_by_corr.csv").csv({typed: true});
 const mixRaw  = await FileAttachment("data/parlay_sportsmix_monthly.csv").csv({typed: true});
+const popDailyRaw = await FileAttachment("data/parlay_popular_daily.csv").csv({typed: true});
+const popMetaRaw  = await FileAttachment("data/parlay_popular_meta.csv").csv({typed: true});
 ```
 
 ```js
@@ -327,6 +329,73 @@ Plot.plot({
     Plot.ruleX([0])
   ]
 })
+```
+
+## The most popular parlays
+
+_The 30 most-**traded** parlay tickets (by number of trades, not contracts) in the window you pick below. **Avg price** is the volume-weighted yes-side entry price — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
+
+```js
+const popDmin = d3.min(popDailyRaw, d => d.date);
+const popDmax = d3.max(popDailyRaw, d => d.date);
+const popRange = view(Inputs.form({
+  from: Inputs.date({label: "From", value: popDmin, min: popDmin, max: popDmax}),
+  to:   Inputs.date({label: "To",   value: popDmax, min: popDmin, max: popDmax})
+}));
+```
+
+```js
+const popMetaById = new Map(popMetaRaw.map(d => [d.pid, d]));
+const popFrom = popRange.from ?? popDmin;
+const popTo   = popRange.to   ?? popDmax;
+const popAgg = d3.rollup(
+  popDailyRaw.filter(d => d.date >= popFrom && d.date <= popTo),
+  v => ({trades: d3.sum(v, d => d.trades),
+         yc: d3.sum(v, d => d.yes_contracts),
+         yn: d3.sum(v, d => d.yes_notional)}),
+  d => d.pid);
+const popTop = Array.from(popAgg, ([pid, a]) => {
+  const m = popMetaById.get(pid) ?? {};
+  return {trades: a.trades,
+          avg_c: a.yc > 0 ? 100 * a.yn / a.yc : null,
+          n_legs: m.n_legs, result: m.result, family: m.family,
+          label: String(m.label ?? "").trim(), ticker: String(m.ticker ?? "")};
+}).sort((a, b) => b.trades - a.trades).slice(0, 30).map((d, i) => ({...d, rank: i + 1}));
+```
+
+```js
+const popFmtPrice = c => c == null ? "—" : c >= 1 ? c.toFixed(1) + "¢" : c >= 0.1 ? c.toFixed(2) + "¢" : c.toFixed(3) + "¢";
+const popResult = r => r === "hit" ? html`<span style="color:#1a9641;font-weight:600;">✓ hit</span>`
+  : r === "miss" ? html`<span style="color:#d7191c;">✗ miss</span>`
+  : html`<span style="color:#999;">pending</span>`;
+const popLabel = d => {
+  let s = d.label;
+  if (!s) s = (d.family ? d.family + " · " : "") + d.ticker.split("-").slice(1).join("-");
+  return s.length > 90 ? s.slice(0, 90) + "…" : s;
+};
+const popLegs = d => Number.isFinite(d.n_legs) ? d.n_legs : "—";
+```
+
+```js
+html`<div style="font-size:13px;color:#666;margin:2px 0 8px;">Top ${popTop.length} of ${popAgg.size.toLocaleString()} parlays traded in range</div>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  <thead><tr style="text-align:left;border-bottom:2px solid #ccc;">
+    <th style="padding:5px 6px;width:26px;">#</th>
+    <th style="padding:5px 6px;">Parlay</th>
+    <th style="padding:5px 6px;text-align:right;width:46px;">Legs</th>
+    <th style="padding:5px 6px;text-align:right;width:66px;">Trades</th>
+    <th style="padding:5px 6px;text-align:right;width:74px;">Avg price</th>
+    <th style="padding:5px 6px;width:72px;">Result</th>
+  </tr></thead>
+  <tbody>${popTop.map(d => html`<tr style="border-bottom:1px solid #eee;">
+    <td style="padding:5px 6px;color:#999;">${d.rank}</td>
+    <td style="padding:5px 6px;" title=${d.label}><span style="display:inline-block;font-size:11px;color:#3b82a0;background:rgba(59,130,160,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">${d.family}</span>${popLabel(d)}</td>
+    <td style="padding:5px 6px;text-align:right;">${popLegs(d)}</td>
+    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.trades.toLocaleString()}</td>
+    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${popFmtPrice(d.avg_c)}</td>
+    <td style="padding:5px 6px;">${popResult(d.result)}</td>
+  </tr>`)}</tbody>
+</table>`
 ```
 
 ```js
