@@ -187,12 +187,9 @@ const pnlEnd = {
   correlated:  pnlCum.filter(d => d.kind_raw === "correlated").slice(-1)[0]?.cum_pnl ?? 0,
   independent: pnlCum.filter(d => d.kind_raw === "independent").slice(-1)[0]?.cum_pnl ?? 0
 };
-const pnlDataRange = (() => {
-  const dates = pnlRaw.map(d => d.date).sort();
-  return {start: dates[0], end: dates[dates.length - 1]};
-})();
+const pnlDataRange = {start: d3.min(pnlRaw, d => d.date), end: d3.max(pnlRaw, d => d.date)};
 const fmtSignedUSD = n => n < 0 ? "-$" + fmtCount(-n) : "$" + fmtCount(n);
-const fmtMonth = d => d3.utcFormat("%b %Y")(d instanceof Date ? d : new Date(d));
+const fmtDay = d => (d instanceof Date ? d : new Date(d)).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
 ```
 
 ## Cumulative bettor P&L: correlated vs non-correlated
@@ -211,7 +208,7 @@ Plot.plot({
     Plot.ruleY([0], {stroke: "#999"}),
     Plot.ruleX(pnlCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(pnlCum, Plot.pointer({x: "date", y: "cum_pnl",
-      title: d => `${fmtMonth(d.date)} ${new Date(d.date).getUTCDate()}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
+      title: d => `${fmtDay(d.date)}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
   ]
 })
 ```
@@ -219,7 +216,7 @@ Plot.plot({
 <div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 16px 0;font-size:13px;color:var(--theme-foreground-muted);">
   <div><strong style="color:${KIND_COLORS[1]}">Correlated (SGP) total:</strong> ${fmtSignedUSD(pnlEnd.correlated)}</div>
   <div><strong style="color:${KIND_COLORS[0]}">Non-correlated (multi) total:</strong> ${fmtSignedUSD(pnlEnd.independent)}</div>
-  <div>Data through ${fmtMonth(pnlDataRange.end)} ${new Date(pnlDataRange.end).getUTCDate()}</div>
+  <div>Data through ${fmtDay(pnlDataRange.end)}</div>
 </div>
 
 <div class="surface-card compact-details" style="font-size:13px;padding:12px 16px;margin:6px 0 18px 0;">
