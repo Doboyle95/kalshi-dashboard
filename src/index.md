@@ -6,7 +6,6 @@ title: Overview
   <div class="page-eyebrow">Market Structure</div>
   <h1>US Prediction Market Dashboard</h1>
   <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, and Crypto.com/Nadex remain a small fraction of its scale.</p>
-  <div class="page-meta">Data updated nightly from Kalshi trade records plus public competitor sources.</div>
 </div>
 
 ```js

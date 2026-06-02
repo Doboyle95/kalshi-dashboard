@@ -5,8 +5,7 @@ title: Kalshi Fee Revenue
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Kalshi Fee Revenue</h1>
-  <p class="page-lead">Track how Kalshi monetizes its flow over time: daily fee capture, cumulative fee contribution, and the per-contract fee rate for overall activity, sports, and non-sports.</p>
-  <div class="page-meta">This page complements the volume page by translating activity into revenue and take-rate.</div>
+  <p class="page-lead">How much Kalshi actually makes from all that trading — fees collected day by day, who's contributed over time, and how many cents it keeps per contract.</p>
 </div>
 
 ```js
@@ -67,8 +66,7 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Fee revenue is summed from cleaned trade-level fee fields and aggregated by day. The sports/non-sports toggle uses the same classification as the volume split. Fee per contract divides daily fees by daily contracts traded, so it is a realized average fee rate rather than Kalshi's posted fee schedule.</p>
-  <p>Read daily fees for short-term spikes, cumulative fees for who contributed over time, and cents per contract for monetization mix. If fee revenue rises while fee per contract falls, volume growth is doing more work than take-rate.</p>
+  <p>Fees are summed from Kalshi's trade records and totaled by day. Fee per contract divides daily fees by daily contracts, so it's the realized average rate Kalshi actually collected — not its posted fee schedule. If revenue climbs while cents-per-contract falls, growth is coming from more volume, not a richer take.</p>
 </details>
 
 ```js
@@ -117,9 +115,9 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "#75
 
 ## Daily fee revenue
 
-<p class="section-intro">Daily fee capture from the same activity behind the volume charts.</p>
+<p class="section-intro">The fees Kalshi collected each day, from the same trading behind the volume charts.</p>
 
-<div class="instruction-line"><strong>Useful trick:</strong> brush around a major volume spike, then compare whether fees stayed elevated after volume normalized.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> brush around a major volume spike, then check whether fees stayed elevated after volume cooled off.</div>
 
 ```js
 const dr1 = view(makeDateBrush(new Date("2025-01-01")));
@@ -174,9 +172,9 @@ Plot.plot({
 
 ## Cumulative fee revenue
 
-<p class="section-intro">Cumulative contribution by sports and non-sports over time.</p>
+<p class="section-intro">How much sports and non-sports have each added to Kalshi's fee revenue over time.</p>
 
-<div class="instruction-line"><strong>Useful trick:</strong> look for slope changes, not just height; a steeper segment means Kalshi started capturing fees faster in that period.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> watch the slope, not just the height — a steeper stretch means Kalshi was collecting fees faster in that period.</div>
 
 ```js
 const dr2 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "#1a9641"));
@@ -241,9 +239,9 @@ Plot.plot({
 
 ## Fee rate (cents per contract)
 
-<p class="section-intro">Average fee collected per contract traded.</p>
+<p class="section-intro">The realized average fee Kalshi kept on each contract traded.</p>
 
-<div class="instruction-line"><strong>Useful trick:</strong> use this after a volume spike to tell whether revenue rose because of more contracts or because each contract monetized better.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> after a volume spike, use this to tell whether revenue rose from more contracts or from each contract monetizing better.</div>
 
 ```js
 const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#756bb1"));

@@ -5,8 +5,7 @@ title: Kalshi Volume
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Kalshi Volume</h1>
-  <p class="page-lead">Follow the shape of participation as Kalshi scales: daily volume, trade count, and the internal split between sports, non-sports, and parlays.</p>
-  <div class="page-meta">Use the same reading pattern across sections: brush to zoom, hover for exact values, and toggle annotations when you want cleaner trend reading.</div>
+  <p class="page-lead">How much trading runs through Kalshi and what's driving it — daily volume, how many trades it takes to get there, and the split between sports, non-sports, and parlays.</p>
 </div>
 
 ```js
@@ -63,7 +62,7 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Daily volume and trade count are summed from cleaned Kalshi trade records. Sports, non-sports, and parlay splits come from the daily sports split aggregate; category and sport-type views use curated ticker mappings plus residual buckets so known categories do not overstate total volume. Moving averages are trailing 7-day means.</p>
+  <p>Volume and trade count are summed straight from Kalshi's trade records. The sports/non-sports/parlay split and the category views map each market to a bucket, with unmapped markets kept in "Other" so nothing gets double-counted. Trend lines are trailing 7-day averages.</p>
 </details>
 
 ```js
@@ -187,13 +186,13 @@ const volWideDaily = topDaily.map(row => {
 
 ## Daily volume
 
-<p class="section-intro">Headline daily activity, with a trailing average and optional event markers.</p>
+<p class="section-intro">Kalshi's daily trading volume, with a 7-day trend line. Flip on event markers to line the spikes up with the days that caused them.</p>
 
 ```js
 const dr1 = view(makeDateBrush(new Date("2025-01-01")));
 ```
 
-<div class="instruction-line"><strong>Useful trick:</strong> use <em>Log</em> scale when earlier eras look flat; it makes pre-2025 growth readable without hiding the recent spike.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> switch to <em>Log</em> scale when the early years look flat — it makes Kalshi's pre-2025 growth readable without burying the recent spike.</div>
 
 ```js
 const [s1, e1] = dr1;
@@ -285,9 +284,9 @@ const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label:
 
 ## Daily trade count
 
-<p class="section-intro">Trade count separates broad participation from fewer, larger tickets.</p>
+<p class="section-intro">How many individual trades it took — a read on whether the action is coming from a crowd or a few big players.</p>
 
-<div class="instruction-line"><strong>Useful trick:</strong> hover the same date here and above; if volume jumps more than trade count, the day was driven by larger tickets rather than broader participation.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> compare the same date here and on the volume chart — if the dollars jumped more than the trades, that day was a few big tickets, not a crowd.</div>
 
 ```js
 const drTrades = view(makeDateBrush(new Date("2025-01-01"), d => d.trades || 0, "#f28e2b"));
@@ -368,9 +367,9 @@ const volumeEventMode = view(Inputs.radio(["On", "Off"], {
 
 ## Sports vs. non-sports volume
 
-<p class="section-intro">Sports, non-sports, and parlay mix behind the headline number.</p>
+<p class="section-intro">What's driving the volume — sports, non-sports, and parlays. Switch to a sports-only or non-sports-only view to see the categories inside each.</p>
 
-<div class="instruction-line"><strong>Useful trick:</strong> switch this chart to <em>Fees</em> after spotting a volume regime change; sports and non-sports often monetize very differently per contract.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> flip the metric to <em>Fees</em> after you spot a shift — sports and non-sports earn Kalshi very different amounts per contract.</div>
 
 ```js
 const dr2 = view(makeDateBrush(new Date("2025-01-01")));
@@ -505,7 +504,7 @@ const sportsMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", lab
 
 ## Open interest
 
-_Total contracts held open across all Kalshi markets at end-of-day — money that hasn't been settled yet. Volume tells you how much trading happens; open interest tells you how much risk is currently parked on the exchange._
+_Total contracts still open across Kalshi at the end of each day — bets placed but not yet settled. Volume is how much changes hands; open interest is how much money is currently riding on the exchange._
 
 ```js
 const oiRaw = await FileAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
@@ -547,5 +546,5 @@ Plot.plot({
 
 <details class="surface-card compact-details">
 <summary>What this measures</summary>
-<p>For each market, open interest is the number of YES contracts (or equivalently NO contracts) that are currently held — bought but not yet sold or settled. Summed across all Kalshi markets at end-of-day. Note: data ends ${fmtDate(oiLast.date)}; the underlying snapshot pipeline isn't currently live, so this chart lags by a few weeks.</p>
+<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot isn't running live right now, so the chart ends ${fmtDate(oiLast.date)} and lags by a few weeks.</p>
 </details>

@@ -5,8 +5,7 @@ title: Trade Size Mix
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi microstructure</div>
   <h1>Trade Size Mix</h1>
-  <p class="page-lead">Separate broad participation from blocky, large-trade-driven volume. The mix chart shows how much of each day came from small trades versus increasingly large contract blocks.</p>
-  <div class="page-meta">Compare Kalshi, Polymarket US, and ForecastEx. Crypto.com/Nadex is omitted because the local files available here are daily aggregates, not trade-level prints.</div>
+  <p class="page-lead">Whether a day's volume came from a crowd of small bets or a handful of huge blocks — and a radar that flags the days the big money showed up.</p>
 </div>
 
 ```js
@@ -206,7 +205,7 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Pick a platform and segment first, then choose a large-trade threshold. The top chart shows only contracts from trades at or above that threshold; the ribbon shows the full size mix for the same window, so spikes are easiest to interpret when both move together.</p>
+  <p>The top chart counts only the contracts from trades at or above the threshold you pick; the ribbon below shows the full size mix for the same window. Crypto.com/Nadex isn't shown here — only daily totals are available for it, not individual trades.</p>
 </details>
 
 ```js
@@ -297,9 +296,9 @@ const spikeRows = thresholdRows
 
 ## Volume and size mix
 
-<p class="section-intro">Threshold-only volume above; full size composition below.</p>
+<p class="section-intro">Big-trade volume up top; the full size breakdown below.</p>
 
-<div class="instruction-line"><strong>Useful trick:</strong> move from <em>10k+</em> to <em>100k+</em>; if the spike survives, it is true whale flow rather than ordinary block trading.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> move from <em>10k+</em> to <em>100k+</em> — if the spike still holds, it's true whale flow, not just ordinary block trading.</div>
 
 <div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${dateWindowLabel}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total Kalshi volume.</div>
 
@@ -404,7 +403,7 @@ const largeThreshold = view(Inputs.radio(["1k+", "10k+", "50k+", "100k+"], {
 
 ## Large-trade share radar
 
-<p class="section-intro">Flags days where volume was unusually block-heavy, not just high.</p>
+<p class="section-intro">Flags the days when the big-block share ran well above its recent normal — not just busy days, but unusually top-heavy ones.</p>
 
 <div class="plot-shell">
 

@@ -5,8 +5,7 @@ title: Taker P&L
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Taker P&L</h1>
-  <p class="page-lead">Track whether liquidity takers made or lost money after settlement, how much they paid to enter those positions, and which categories drove the result.</p>
-  <div class="page-meta">Negative values mean takers lost money. Top-line ROI uses taker notional paid where available.</div>
+  <p class="page-lead">How Kalshi's aggressive bettors — the takers who cross the spread — did once their markets settled: what they won or lost, what fees cost them, and which categories did the damage.</p>
 </div>
 
 ```js
@@ -64,7 +63,7 @@ const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Gross taker P&L is settlement outcome before fees. Net taker P&L subtracts taker fees. Maker gross P&L is the opposite side of the same settled trades; maker net P&L subtracts maker fees where Kalshi charged them. Overall ROI uses daily taker notional paid: yes takers pay price, no takers pay 100 minus price.</p>
+  <p>Gross P&L shows how settled taker bets performed before fees; net P&L subtracts the fees they paid. Maker P&L is the other side of those same trades. ROI is measured against the taker's entry cost: the yes price for yes bets, and 100 minus the price for no bets.</p>
 </details>
 
 ```js
@@ -188,7 +187,7 @@ const cumulativeTip = Array.from(
 
 ## Cumulative Taker P&L
 
-<p class="section-intro">The gap between the gross and net lines is fee drag. If both lines slope down, takers are losing to outcomes even before fees.</p>
+<p class="section-intro">The gap between the gross and net lines is fee drag. If both lines fall, takers are losing to outcomes before fees even enter the picture.</p>
 
 <div class="plot-shell">
 
@@ -253,7 +252,9 @@ const makerCumulativeTip = Array.from(
 
 ## Cumulative Maker P&L
 
-<p class="section-intro">The maker-side view is the other side of settled trades. The gap between the two lines is maker fees, which only apply to maker-fee markets and changed from flat per-contract pricing to a price-curve fee in July 2025.</p>
+<p class="section-intro">Maker P&L is the other side of those same settled taker trades. The gap between the lines is maker fees, which only apply in maker-fee markets and changed from flat per-contract pricing to a price-curve fee in July 2025.</p>
+
+<div class="instruction-line"><strong>Useful trick:</strong> the maker chart is the taker chart flipped around — a steep taker loss means the market-makers on the other side won big.</div>
 
 <div class="kpi-grid compact-kpis">
   <div class="kpi-card" data-accent="kalshi">
@@ -317,7 +318,7 @@ const dailyBars = filteredDaily
 
 ## Daily Outcome Swings
 
-<p class="section-intro">Daily net P&L, colored by return on taker cost so large days and bad prices are not conflated.</p>
+<p class="section-intro">Each day's net result for takers, colored by return on what they staked — so a big-dollar day isn't mistaken for a high-percentage one.</p>
 
 <div class="plot-shell">
 
@@ -371,7 +372,7 @@ const categoryTop = categoryRows.slice(0, 12);
 
 ## Category Leaderboard
 
-<p class="section-intro">Categories ranked by net dollars won or lost by takers.</p>
+<p class="section-intro">The categories where takers won or lost the most net dollars.</p>
 
 <div class="plot-shell">
 

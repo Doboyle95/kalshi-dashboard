@@ -5,8 +5,7 @@ title: Taker-Side Volume
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Taker-Side Volume</h1>
-  <p class="page-lead">The closest equivalent to sportsbook handle: dollars staked by the participants crossing the spread. Yes-side takers bought upside; no-side takers faded it.</p>
-  <div class="page-meta">Each trade has one taker (the aggressor who crosses the spread) and one maker (the resting order). Taker notional = contracts × price paid. For yes-side: price paid is the yes price. For no-side: price paid is 1 − yes price.</div>
+  <p class="page-lead">The closest thing Kalshi has to sportsbook handle — the dollars staked by the bettor who takes the price on each trade rather than waiting for it. Yes-side takers are buying upside; no-side takers are fading it.</p>
 </div>
 
 ```js
@@ -106,7 +105,9 @@ function makeTakerBrush(defaultStart) {
 
 ## Daily taker notional
 
-<p class="section-intro">Dollars staked by the active side of each trade — the sportsbook handle equivalent. Unlike contract count, this weights each bet by its dollar cost, so a 99¢ YES contract and a 1¢ NO contract on the same market contribute equally.</p>
+<p class="section-intro">Dollars staked by the aggressor on each trade — the handle equivalent. Because it weighs each bet by what it cost, a 99¢ contract counts for far more than a 1¢ one.</p>
+
+<div class="instruction-line"><strong>Useful trick:</strong> when taker dollars spike but contract volume on the Volume page doesn't, the action moved into pricier, higher-conviction contracts — not just more of them.</div>
 
 ```js
 const dr = view(makeTakerBrush(new Date("2025-01-01")));
@@ -164,7 +165,7 @@ Plot.plot({
 
 ## Yes vs No takers
 
-<p class="section-intro">Which direction is the aggressive money flowing? Yes-side takers are buying upside; no-side takers are fading it. A persistent yes-side majority reflects that buyers are more aggressive than sellers across the book.</p>
+<p class="section-intro">Which way the aggressive money is leaning. A steady yes-side majority means buyers are pushing harder than sellers across the board.</p>
 
 ```js
 const drYesNo = view(makeTakerBrush(new Date("2025-01-01")));
