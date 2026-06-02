@@ -4,7 +4,7 @@ title: Parlay P&L
 
 # Parlay P&L
 
-Taker profit/loss on parlay contracts (KXMVE\* and PREPACK\* series). Negative values mean takers (bettors) lost money.
+How parlay bettors on Kalshi actually do. A parlay needs every leg to hit — the payouts are big, but most expire worthless. These are the real dollars won and lost by the people buying them.
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
@@ -24,7 +24,7 @@ display(freshnessPanel({
   items: [
     {label: "Parlay P&L", date: latestDate(raw, d => d.row_label), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_net.csv"), meta: "Settlement-dependent parlay export", tone: "settlement"}
   ],
-  note: "Recent parlay P&L can be incomplete until contracts settle. Subtype labels are usable but should still be treated as taxonomy-dependent."
+  note: "Recent days are still filling in — a parlay only counts here once its markets settle, so today's numbers will keep moving."
 }));
 display(askPageLink({
   question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
@@ -99,8 +99,8 @@ const overallPct = totalNet / totalStakes * 100;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Parlay rows come from settled KXMVE* and PREPACK* taker-side trades in the raw API export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total stakes, while contract counts are shown separately.</p>
-  <p>Read cumulative P&amp;L for the long-run bettor-vs-house picture, then use daily stakes and return charts to separate volume spikes from actual parlay outcome swings. Large negative daily returns are normal when popular parlays expire worthless.</p>
+  <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors staked against what they got back.</p>
+  <p>"Before fees" is their raw trading result; "after fees" is what they kept once Kalshi took its cut, and the gap between the two lines is the fee drag. Use the daily charts to tell a busy day apart from a good — or brutal — one.</p>
 </details>
 
 ```js
@@ -173,7 +173,7 @@ Plot.plot({
 
 ## Daily stakes & return
 
-_Bar height = daily notional staked by takers. Color = taker return that day (green = takers won, red = takers lost). Darker = more extreme. Days with under $1,000 notional hidden (early market, statistically meaningless)._
+_Each bar is the dollars staked on parlays that day; the colour shows how those bets paid off — green for a winning day, red for a losing one, darker for bigger swings. Tiny early-market days are hidden._
 
 ```js
 Plot.plot({
@@ -206,7 +206,7 @@ Plot.plot({
 
 ## Daily taker return (% of stakes)
 
-_Days with under $25,000 notional hidden (early low-volume days had outsized variance). Returns below −100% reflect fees on top of a total loss (mathematically expected). Axis capped at ±150%; hover bars to see exact values._
+_Bettors' return each day as a share of what they staked. Below −100% means a total wipeout plus the fees paid on top — expected on days when the popular parlays all miss. Hover any bar for the exact number._
 
 ```js
 Plot.plot({
@@ -230,4 +230,4 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Taker return = (settlement received − price paid − fees) ÷ stakes. How it's calculated: a winning contract bought at price <em>p</em>¢ returns (100−p)¢ profit; a losing contract loses the full <em>p</em>¢ paid. Sum across all contracts for the day, subtract Kalshi's fee, divide by total stakes. A −100% day means every parlay expired worthless; fees push it to −102% to −107%. A +100%+ day means many low-probability parlays hit — a 5¢ parlay pays back 19× if it wins.</p>
+<p style="font-size:0.82em;color:#888">Return = what each contract settled for, minus what was paid, minus fees, divided by the total staked. A 5¢ parlay that hits pays back about 19×, so one lucky day can spike the line well past +100%. A −100% day means every parlay expired worthless; fees push the real figure to around −102% to −107%.</p>
