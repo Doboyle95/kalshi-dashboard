@@ -2618,7 +2618,7 @@ function getTeamsForMarket(mk) {
   if (/^KXSB-/.test(mk))                       return NFL_TEAMS;
   if (/^KXNCAAF/.test(mk))                     return CFB_TEAMS;
   if (/^KXNBA/.test(mk))                       return NBA_TEAMS;
-  if (/^KXNCAAMB|^KXMARMAD|^KXWMARMAD/.test(mk)) return CBB_TEAMS;
+  if (/^KXNCAAMB|^KXNCAAWB|^KXMARMAD|^KXWMARMAD/.test(mk)) return CBB_TEAMS;
   if (/^KXMLB/.test(mk))                       return MLB_TEAMS;
   if (/^KXNHL/.test(mk))                       return NHL_TEAMS;
   if (/^KXUCL|^KXEPL|^KXLALIGA/.test(mk))      return SOCCER_TEAMS;
@@ -2721,32 +2721,43 @@ function parseTicker(mk) {
   // Kalshi parlays - all start with KXMVE (multi-game extended)
   if (/^KXMVE/.test(mk))             return "Parlay";
   // NFL / NCAAF spread and total markets
-  const nflSpr = mk.match(/^KXNFLSPREAD-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const nflSpr = mk.match(/^KXNFLSPREAD-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (nflSpr) { const g = parseGame(nflSpr[1], NFL_TEAMS); return g ? `${g} (spread)` : null; }
-  const ncaafSpr = mk.match(/^KXNCAAFSPREAD-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const ncaafSpr = mk.match(/^KXNCAAFSPREAD-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (ncaafSpr) { const g = parseGame(ncaafSpr[1], CFB_TEAMS); return g ? `${g} (spread)` : null; }
-  // NBA series
-  const nbaSer = mk.match(/^KXNBASERIES-\d{2}([A-Z]+)$/);
+  const nbaSpr = mk.match(/^KXNBASPREAD-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
+  if (nbaSpr) { const g = parseGame(nbaSpr[1], NBA_TEAMS); return g ? `${g} (spread)` : null; }
+  const ncaaMbSpr = mk.match(/^KXNCAAMBSPREAD-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
+  if (ncaaMbSpr) { const g = parseGame(ncaaMbSpr[1], CBB_TEAMS); return g ? `${g} (spread)` : null; }
+  const nbaTot = mk.match(/^KXNBATOTAL-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
+  if (nbaTot) { const g = parseGame(nbaTot[1], NBA_TEAMS); return g ? `${g} (total)` : null; }
+  const nflTot = mk.match(/^KXNFLTOTAL-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
+  if (nflTot) { const g = parseGame(nflTot[1], NFL_TEAMS); return g ? `${g} (total)` : null; }
+  // Women's college basketball games (same school codes as men's CBB)
+  const ncaaWbM = mk.match(/^KXNCAAWBGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
+  if (ncaaWbM) return parseGame(ncaaWbM[1], CBB_TEAMS) ?? mk;
+  // NBA series (optional trailing round code like R1)
+  const nbaSer = mk.match(/^KXNBASERIES-\d{2}([A-Z]+?)(?:R\d+)?$/);
   if (nbaSer) { const g = parseGame(nbaSer[1], NBA_TEAMS); return g ? `${g} (series)` : null; }
   // NFL / college games
-  const nflM   = mk.match(/^KXNFLGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const nflM   = mk.match(/^KXNFLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (nflM)   return parseGame(nflM[1],   NFL_TEAMS) ?? mk;
-  const ncaafM = mk.match(/^KXNCAAFGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const ncaafM = mk.match(/^KXNCAAFGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (ncaafM) return parseGame(ncaafM[1], CFB_TEAMS) ?? mk;
-  const cbbM   = mk.match(/^KXNCAAMBGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const cbbM   = mk.match(/^KXNCAAMBGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (cbbM)   return parseGame(cbbM[1],   CBB_TEAMS) ?? mk;
-  const nbaM   = mk.match(/^KXNBAGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const nbaM   = mk.match(/^KXNBAGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (nbaM)   return parseGame(nbaM[1],   NBA_TEAMS) ?? mk;
   // MLB / NHL / UCL / IPL / WBC games
-  const mlbGame = mk.match(/^KXMLBGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const mlbGame = mk.match(/^KXMLBGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (mlbGame) return parseGame(mlbGame[1], MLB_TEAMS) ?? mk;
   const mlbSer = mk.match(/^KXMLBSERIES-\d{2}([A-Z]+)$/);
   if (mlbSer) { const g = parseGame(mlbSer[1], MLB_TEAMS); return g ? `${g} (series)` : null; }
-  const nhlGame = mk.match(/^KXNHLGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const nhlGame = mk.match(/^KXNHLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (nhlGame) return parseGame(nhlGame[1], NHL_TEAMS) ?? mk;
-  const uclGame = mk.match(/^KXUCLGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const uclGame = mk.match(/^KXUCLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (uclGame) return parseGame(uclGame[1], SOCCER_TEAMS) ?? mk;
-  const iplGame = mk.match(/^KXIPLGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  const iplGame = mk.match(/^KXIPLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
   if (iplGame) return parseGame(iplGame[1], IPL_TEAMS) ?? mk;
   // WBC fixture format includes a 4-digit time code (e.g. ...152000USADOM)
   const wbcGame = mk.match(/^KXWBCGAME-\d{2}[A-Z]{3}\d{2}\d{4}([A-Z]+)$/);
@@ -2881,6 +2892,11 @@ function fmtWinner(d) {
   if (wt) {
     const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
     const teamMap = getTeamsForMarket(mk);
+    // Spread winners like "SEA10" -> "Seahawks -10"
+    if (/SPREAD/.test(mk)) {
+      const sp = short.match(/^([A-Z]+)(\d+)$/);
+      if (sp) return `${teamMap[sp[1]] ?? sp[1]} -${sp[2]}`;
+    }
     return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
   }
   if (WINNER_BY_MARKET[mk]) return WINNER_BY_MARKET[mk];
@@ -3011,8 +3027,10 @@ const mktRanked = [...mktLeaderboard]
     return {
       ...d,
       rank:           i + 1,
-      display_name:   bestName(d),
-      winner_display: fmtWinner(d),
+      // Prefer the real Kalshi title from the build-time enrichment (display_name /
+      // display_winner columns); fall back to the ticker parser when blank.
+      display_name:   (d.display_name && String(d.display_name).trim()) || bestName(d),
+      winner_display: (d.display_winner && String(d.display_winner).trim()) || fmtWinner(d),
       top_short:      fmtStrike(top, mk),
       display_cat:    getSportDisplayCategory(d)
     };
@@ -3099,6 +3117,12 @@ display(html`<style>
   .mkt-table thead th > span:first-child { display: none; }
   /* Collapse the hidden category-tag column (_c is 3rd child: checkbox, rank, _c, ...) */
   .mkt-table th:nth-child(3), .mkt-table td:nth-child(3) { padding: 0 !important; width: 0; max-width: 0; overflow: hidden; }
+  /* Market column (4th): wider + allow the name to wrap to two lines, then clamp. */
+  .mkt-table td:nth-child(4) { white-space: normal !important; vertical-align: middle; }
+  .mkt-name {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; line-height: 1.2; max-height: 2.4em;
+  }
   ${catCss}
 </style>`);
 
@@ -3182,13 +3206,15 @@ const tbl = Inputs.table(mktDisplay, {
     market_date: d => d ? d.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : "—",
     contracts:  d => "$" + fmtC(d),
     fees_total: d => (d == null || d === 0) ? "N/A" : "$" + fmtC(+d),
+    // Market name: wrap to <=2 lines then ellipsis; full name on hover.
+    display_name: v => html`<div class="mkt-name" title=${v ?? ""}>${v}</div>`,
   },
   align: {
     rank: "right",
     contracts: "right",
     fees_total: "right"
   },
-  width: {rank: 50, _c: 0},
+  width: {rank: 50, _c: 0, display_name: 300},
   sort: "rank",
   reverse: false,
   rows: 50
