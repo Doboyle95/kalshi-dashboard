@@ -148,6 +148,8 @@ const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: 
 
 ## Cumulative taker P&L
 
+_Every parlay bettor's wins and losses, added up over time. The line keeps sinking — in aggregate, parlays lose — and the space between the two lines is what Kalshi takes in fees._
+
 ```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
@@ -173,7 +175,7 @@ Plot.plot({
 
 ## Daily stakes & return
 
-_Each bar is the dollars staked on parlays that day; the colour shows how those bets paid off — green for a winning day, red for a losing one, darker for bigger swings. Tiny early-market days are hidden._
+_Each bar is the money staked on parlays that day; its colour is how the day turned out for bettors — green for a win, red for a loss. The tallest bars are the heavy-action days around big games._
 
 ```js
 Plot.plot({
@@ -206,7 +208,7 @@ Plot.plot({
 
 ## Daily taker return (% of stakes)
 
-_Bettors' return each day as a share of what they staked. Below −100% means a total wipeout plus the fees paid on top — expected on days when the popular parlays all miss. Hover any bar for the exact number._
+_Each day's parlay return for bettors. Mostly red — long-shot parlays usually miss — with the occasional big green day when enough of them cash._
 
 ```js
 Plot.plot({
@@ -230,4 +232,4 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Return = what each contract settled for, minus what was paid, minus fees, divided by the total staked. A 5¢ parlay that hits pays back about 19×, so one lucky day can spike the line well past +100%. A −100% day means every parlay expired worthless; fees push the real figure to around −102% to −107%.</p>
+<p style="font-size:0.82em;color:#888">Return compares what bettors got back to what they staked, after fees. A 5¢ parlay that hits pays back about 19×, which is why one lucky day can send the line far past +100%.</p>
