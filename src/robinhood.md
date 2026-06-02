@@ -75,7 +75,7 @@ Plot.plot({
     Plot.barY(monthlyParsed, {
       x: "month_date",
       y: "rh_est_billions",
-      fill: "#6366f1",
+      fill: "var(--accent-robinhood)",
       fillOpacity: 0.85,
       interval: d3.utcMonth,
       tip: {
@@ -131,7 +131,7 @@ function makeBrush() {
 
   svg.append("path")
     .datum(weekly)
-    .attr("fill", "#6366f1").attr("fill-opacity", 0.2)
+    .attr("fill", "var(--accent-robinhood)").attr("fill-opacity", 0.2)
     .attr("d", d3.area()
       .x(d => x(d.week_start)).y0(h - mb).y1(d => y(d.rh_share_pct))
       .curve(d3.curveBasis));
@@ -152,7 +152,7 @@ function makeBrush() {
     });
 
   svg.append("g").attr("class", "brush").call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill", "#6366f1").style("fill-opacity", 0.8);
+  svg.selectAll(".handle").style("fill", "var(--accent-robinhood)").style("fill-opacity", 0.8);
   svg.property("value", [defaultStart, defaultEnd]);
   return svg.node();
 }
@@ -177,12 +177,12 @@ Plot.plot({
     Plot.ruleY([0]),
     Plot.line(weeklyFiltered, {
       x: "week_start", y: "rh_share_pct",
-      stroke: "#6366f1", strokeWidth: 2,
+      stroke: "var(--accent-robinhood)", strokeWidth: 2,
       curve: "monotone-x"
     }),
     Plot.dot(weeklyFiltered, {
       x: "week_start", y: "rh_share_pct",
-      fill: "#6366f1", r: 3,
+      fill: "var(--accent-robinhood)", r: 3,
       tip: {
         format: {
           x: d => "Week of " + fmtDate(d),

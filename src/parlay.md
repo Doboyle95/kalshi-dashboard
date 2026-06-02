@@ -84,10 +84,10 @@ const overallPct = totalNet / totalStakes * 100;
   <div class="kpi-card">
     <div class="kpi-label">Overall taker ROI</div>
     <div class="kpi-value">${overallPct.toFixed(1)}%</div>
-    <div class="kpi-meta">of total notional staked</div>
+    <div class="kpi-meta">of total stakes</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Total notional staked</div>
+    <div class="kpi-label">Total stakes</div>
     <div class="kpi-value">${fmtUSD(totalStakes)}</div>
   </div>
   <div class="kpi-card">
@@ -99,7 +99,7 @@ const overallPct = totalNet / totalStakes * 100;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Parlay rows come from settled KXMVE* and PREPACK* taker-side trades in the raw API export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total notional staked, while contract counts are shown separately.</p>
+  <p>Parlay rows come from settled KXMVE* and PREPACK* taker-side trades in the raw API export. Net taker P&amp;L is bettor outcome after fees; gross taker P&amp;L adds fees back to separate trading outcome from fee drag. ROI divides net taker P&amp;L by total stakes, while contract counts are shown separately.</p>
   <p>Read cumulative P&amp;L for the long-run bettor-vs-house picture, then use daily stakes and return charts to separate volume spikes from actual parlay outcome swings. Large negative daily returns are normal when popular parlays expire worthless.</p>
 </details>
 
@@ -115,7 +115,7 @@ display(renderDateBrush({
   valueAccessor: d => d.stakes,
   initialRange: [new Date("2025-01-01"), d3.max(pnl, d => d.date)],
   onSelect: r => { parlayDateSel.value = r; },
-  color: "#f4a736",
+  color: "#5FD0C2",
   width
 }));
 ```
@@ -138,8 +138,8 @@ const tidyCumul = [
 
 const cumulativeSeries = ["Before fees (gross)", "After fees (net)"];
 const cumulativeColors = {
-  "Before fees (gross)": "#f4a736",
-  "After fees (net)": "#d7191c"
+  "Before fees (gross)": "#5FD0C2",  // light teal
+  "After fees (net)": "#0A7B6C"       // dark teal
 };
 
 // Pivot for single combined tooltip
@@ -181,7 +181,7 @@ Plot.plot({
   width, height: 300,
   marginLeft: 76,
   x: {type: "utc", label: null},
-  y: {label: "Daily notional staked (USD)", grid: true,
+  y: {label: "Daily stakes (USD)", grid: true,
       tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   color: {
     type: "diverging",
@@ -214,7 +214,7 @@ Plot.plot({
   width, height: 260,
   marginLeft: 76,
   x: {type: "utc", label: null},
-  y: {label: "Taker return (% of notional)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
+  y: {label: "Taker return (% of stakes)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
   marks: [
     Plot.rectY(pnlFiltered.filter(d => d.pct != null && d.stakes >= 25000), {
       x1: d => d.date,
@@ -230,4 +230,4 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#888">Taker return = (settlement received − price paid − fees) ÷ notional. How it's calculated: a winning contract bought at price <em>p</em>¢ returns (100−p)¢ profit; a losing contract loses the full <em>p</em>¢ paid. Sum across all contracts for the day, subtract Kalshi's fee, divide by total notional. A −100% day means every parlay expired worthless; fees push it to −102% to −107%. A +100%+ day means many low-probability parlays hit — a 5¢ parlay pays back 19× if it wins.</p>
+<p style="font-size:0.82em;color:#888">Taker return = (settlement received − price paid − fees) ÷ stakes. How it's calculated: a winning contract bought at price <em>p</em>¢ returns (100−p)¢ profit; a losing contract loses the full <em>p</em>¢ paid. Sum across all contracts for the day, subtract Kalshi's fee, divide by total stakes. A −100% day means every parlay expired worthless; fees push it to −102% to −107%. A +100%+ day means many low-probability parlays hit — a 5¢ parlay pays back 19× if it wins.</p>

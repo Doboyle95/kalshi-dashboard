@@ -483,7 +483,7 @@ function clearPinnedCategories() {
 
 ## All-time leaderboard
 
-<p class="section-intro">This leaderboard is the fastest way to see which report tickers dominate by volume, fees, or notional in the selected window before you drill into the treemap. Drag the brush below to set the window — when it covers the full data range the chart falls back to the all-tickers leaderboard; otherwise it aggregates the top-15-by-day data.</p>
+<p class="section-intro">This leaderboard is the fastest way to see which report tickers dominate by volume or fees in the selected window before you drill into the treemap. Drag the brush below to set the window — when it covers the full data range the chart falls back to the all-tickers leaderboard; otherwise it aggregates the top-15-by-day data.</p>
 
 <div class="control-strip">
 
@@ -3104,14 +3104,14 @@ display(html`<style>
     background: var(--theme-background, #fff);
     z-index: 1;
   }
-  .mkt-table thead th:nth-child(n+4):hover { color: var(--accent-kalshi, #2563eb); }
+  .mkt-table thead th:nth-child(n+4):hover { color: var(--accent-kalshi, #00C2A8); }
   .mkt-table thead th:nth-child(n+4)::after {
     content: " \2195";
     opacity: 0.35;
     font-size: 0.85em;
   }
-  .mkt-table thead th:nth-child(n+4)[aria-sort="ascending"]::after  { content: " \2191"; opacity: 1; color: var(--accent-kalshi, #2563eb); }
-  .mkt-table thead th:nth-child(n+4)[aria-sort="descending"]::after { content: " \2193"; opacity: 1; color: var(--accent-kalshi, #2563eb); }
+  .mkt-table thead th:nth-child(n+4)[aria-sort="ascending"]::after  { content: " \2191"; opacity: 1; color: var(--accent-kalshi, #00C2A8); }
+  .mkt-table thead th:nth-child(n+4)[aria-sort="descending"]::after { content: " \2193"; opacity: 1; color: var(--accent-kalshi, #00C2A8); }
   /* Inputs.table already renders its own ?/? in a leading <span> on the active column;
      hide it so it doesn't double up with our arrows. */
   .mkt-table thead th > span:first-child { display: none; }

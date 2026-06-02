@@ -70,7 +70,7 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_yes / d.notional_total
   <div class="kpi-card">
     <div class="kpi-label">Recent yes-side share</div>
     <div class="kpi-value">${recentPctYes?.toFixed(1)}%</div>
-    <div class="kpi-meta">of notional (30-day avg)</div>
+    <div class="kpi-meta">of taker notional (30-day avg)</div>
   </div>
 </div>
 
@@ -162,7 +162,7 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
-## Yes vs. No notional
+## Yes vs No takers
 
 <p class="section-intro">Which direction is the aggressive money flowing? Yes-side takers are buying upside; no-side takers are fading it. A persistent yes-side majority reflects that buyers are more aggressive than sellers across the book.</p>
 
