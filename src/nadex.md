@@ -4,6 +4,8 @@ title: Crypto.com/Nadex
 
 # Crypto.com/Nadex
 
+<p class="page-lead">Crypto.com's Nadex exchange is small — $1 event binaries that show up in CFTC daily bulletins. One event towers over the whole page: Super Bowl LX.</p>
+
 ```js
 const catDaily  = await FileAttachment("data/nadex_categories_daily.csv").csv({typed: true});
 const split     = await FileAttachment("data/nadex_sports_split_daily.csv").csv({typed: true});
@@ -51,7 +53,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Crypto.com/Nadex views use daily event/category exports rather than trade-level prints. Volume is normalized contract count by day; sports and category splits come from local classification of event names and categories in the Nadex export.</p>
-  <p>Because this page uses daily aggregate source files, it is best for scale and mix rather than trade-level microstructure. Use the category charts to find dominant themes, then compare the all-time breakdown against the brushed time-series view.</p>
+  <p>Built from daily bulletin totals, not trade-level prints, so this is a read on scale and category mix rather than microstructure.</p>
 </details>
 
 ```js
@@ -98,6 +100,8 @@ function makeBrush(data, color) {
 
 ## Daily volume
 
+<p class="section-intro">Daily event-contract volume since Nadex started appearing in CFTC bulletins.</p>
+
 ```js
 const brushVolume = view(makeBrush(split, "#9c27b0"));
 ```
@@ -132,6 +136,8 @@ Plot.plot({
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only (from CFTC daily bulletins). $1 per contract denomination. Data starts Dec 23, 2024 when CFTC bulletins began including Nadex event contract volumes.</p>
 
 ## Sports vs. non-sports
+
+<p class="section-intro">Sports against everything else — and sports usually carries the day here too.</p>
 
 ```js
 const brushSports = view(makeBrush(split, "#9c27b0"));
@@ -172,6 +178,8 @@ Plot.plot({
 ```
 
 ## Volume by category
+
+<p class="section-intro">Where the action concentrates, category by category, over time.</p>
 
 ```js
 const brushCats = view(makeBrush(split, "#9c27b0"));
@@ -222,6 +230,8 @@ Plot.plot({
 ```
 
 ## Category breakdown (all time)
+
+<p class="section-intro">Every category ranked by all-time volume.</p>
 
 ```js
 const catBar = [...catTotals.entries()]

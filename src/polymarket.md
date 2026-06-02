@@ -4,6 +4,8 @@ title: Polymarket US
 
 # Polymarket US
 
+<p class="page-lead">The US-walled-off version of Polymarket, separate from the global site and regulated by the CFTC. It started reporting in late 2025, and it's almost all sports.</p>
+
 ```js
 const catDaily  = await FileAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
 const split     = await FileAttachment("data/polymarket_sports_split_daily.csv").csv({typed: true});
@@ -51,7 +53,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Polymarket US volume comes from public daily market reports normalized into category and sports-split files. Volume is contract count. Category charts use the mapped category attached to each market report row; the sports split sums categories classified as sports versus everything else.</p>
-  <p>Use the top line to understand headline scale, then check sports versus non-sports and category share to see whether growth is broad or concentrated. The brush controls the visible window for every section on the page.</p>
+  <p>Because the source is daily totals rather than individual trades, this page is best for scale and mix, not trade-by-trade detail.</p>
 </details>
 
 ```js
@@ -98,6 +100,8 @@ const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; retu
 
 ## Daily volume
 
+<p class="section-intro">Polymarket US volume since it began reporting in late 2025.</p>
+
 ```js
 const brushVolume = view(makeBrush(split, "#3B7DD8"));
 ```
@@ -132,6 +136,8 @@ Plot.plot({
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">US-accessible Polymarket volume only (separate from global Polymarket). Data from CFTC daily bulletins, starting Oct 30, 2025. Almost entirely sports.</p>
 
 ## Sports vs. non-sports
+
+<p class="section-intro">The book is lopsided: Polymarket US is overwhelmingly sports.</p>
 
 ```js
 const brushSports = view(makeBrush(split, "#3B7DD8"));
@@ -172,6 +178,8 @@ Plot.plot({
 ```
 
 ## Volume by sport
+
+<p class="section-intro">Where the sports money lands, day by day.</p>
 
 ```js
 const brushCats = view(makeBrush(split, "#3B7DD8"));
@@ -222,6 +230,8 @@ Plot.plot({
 ```
 
 ## Sport breakdown (all time)
+
+<p class="section-intro">The all-time pecking order, with every category stacked up.</p>
 
 ```js
 const catBar = [...catTotals.entries()]

@@ -4,10 +4,12 @@ title: Competitors
 
 # Platform Comparison
 
+<p class="page-lead">All four of the US's regulated prediction markets, on one chart. Kalshi is the story; switch to log scale to see Polymarket US, ForecastEx, and Crypto.com/Nadex underneath it.</p>
+
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Kalshi comes from cleaned internal daily aggregates; competitor series come from public daily platform reports normalized into <code>competitor_daily.csv</code>. The metric toggle switches between contracts and fees where available. The brush changes the visible window, not the underlying all-time source data.</p>
-  <p>Use contracts to compare market activity and fees to compare monetization. Start with log scale if you care about smaller platforms, then return to linear scale to see how much Kalshi dominates absolute volume.</p>
+  <p>On a linear scale, Kalshi turns every other platform into a flat line. Log scale is where the smaller-platform race becomes visible.</p>
 </details>
 
 ```js
@@ -108,6 +110,8 @@ function makeDateBrush(defaultStart) {
 }
 ```
 
+<p class="section-intro">Platform volume, day by day. Flip to Fees when the question is who's actually getting paid.</p>
+
 ```js
 const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 ```
@@ -180,6 +184,8 @@ const compLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", labe
 </div>
 
 ## Market share
+
+<p class="section-intro">The US market split over time — and how little of it belongs to anyone but Kalshi.</p>
 
 ```js
 const dr_share = view(makeDateBrush(new Date("2025-01-01")));

@@ -4,6 +4,8 @@ title: ForecastEx
 
 # ForecastEx
 
+<p class="page-lead">ForecastEx briefly ran huge on the 2024 election. Today its core product is daily city-temperature contracts.</p>
+
 ```js
 const catDaily  = await FileAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
 const split     = await FileAttachment("data/forecastex_sports_split_daily.csv").csv({typed: true});
@@ -51,7 +53,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>ForecastEx volume comes from public daily price/pair files normalized into category and sports-split aggregates. Volume is pair quantity or contract count, depending on the source field. Category and sports views use the local market classification rules applied during export.</p>
-  <p>Use the page as a concentration check: compare headline volume with the category and sports split charts to see whether ForecastEx activity is coming from one theme or several. The all-time breakdown is helpful for reading the persistent mix after brushing a noisy date range.</p>
+  <p>Use it as a concentration check: whether ForecastEx is riding one theme or several. The all-time breakdown shows the mix that remains after a noisy stretch is brushed out.</p>
 </details>
 
 ```js
@@ -144,7 +146,7 @@ Plot.plot({
 
 ## Sports vs. non-sports
 
-<p class="section-intro">Independent date selector for this chart.</p>
+<p class="section-intro">How much of ForecastEx is sports versus everything else — once a thin slice, now mostly gone.</p>
 
 ```js
 const brushSports = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
@@ -186,7 +188,7 @@ Plot.plot({
 
 ## Volume by category
 
-<p class="section-intro">Independent date selector for this chart.</p>
+<p class="section-intro">The themes carrying ForecastEx's volume, and the shift from politics toward weather.</p>
 
 ```js
 const brushCats = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
