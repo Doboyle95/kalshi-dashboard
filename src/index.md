@@ -5,7 +5,7 @@ title: Overview
 <div class="page-hero">
   <div class="page-eyebrow">Market Structure</div>
   <h1>US Prediction Market Dashboard</h1>
-  <p class="page-lead">Comparing regulated prediction markets in the United States. Kalshi is the dominant market leader, while ForecastEx, Polymarket US, and Crypto.com/Nadex operate at materially smaller scale.</p>
+  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, and Crypto.com/Nadex remain a small fraction of its scale.</p>
   <div class="page-meta">Data updated nightly from Kalshi trade records plus public competitor sources.</div>
 </div>
 
@@ -74,13 +74,13 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Kalshi volume and fees come from cleaned daily trade aggregates. Competitor lines come from <code>competitor_daily.csv</code>, with platform names normalized for display. Volume is contracts traded, not notional dollars, and the log toggle only changes axis scaling.</p>
-  <p>Start on linear scale to understand absolute market size, then switch to log scale when smaller competitors disappear against Kalshi. Use the brush to compare specific regimes; hover any date to read all platforms from one shared tooltip.</p>
+  <p>Volume here means contracts traded, not dollars: one contract is one yes/no bet. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024.</p>
+  <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
 </details>
 
 ## Platform comparison
 
-<p class="section-intro">This view is meant to set the overall scale of the market. Use the date brush to isolate specific eras, and switch between linear and log to compare absolute size versus relative growth.</p>
+<p class="section-intro">Daily trading volume by platform. Drag the brush to zoom into a stretch; switch to log scale when the smaller platforms vanish against Kalshi.</p>
 
 ```js
 const kalshiTidy = kalshi.map(d => ({
@@ -101,8 +101,6 @@ const competitorTidy = competitor
 
 const allPlatforms = [...kalshiTidy, ...competitorTidy];
 ```
-
-<div class="instruction-line"><strong>How to read this:</strong> Drag the brush to zoom into a regime, hover for a full platform readout on a given date, and use <em>Log</em> when you want smaller platforms to be more legible.</div>
 
 ```js
 const indexBrush = view((() => {
@@ -214,5 +212,3 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
 ```
 
 </div>
-
-<div class="chart-note"><strong>Note:</strong> The shared Y-axis is intentional. Kalshi data comes from trade records; competitor series come from public sources. Crypto.com/Nadex begins in December 2024 from CFTC daily bulletins.</div>
