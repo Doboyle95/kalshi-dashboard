@@ -253,11 +253,18 @@ li {
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-kalshi) 16%, transparent), transparent 38%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--hero-accent, var(--accent-kalshi)) 16%, transparent), transparent 38%),
     linear-gradient(180deg, color-mix(in srgb, var(--theme-background-alt) 86%, var(--theme-background)), var(--theme-background));
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
+
+/* Per-page hero accent (defaults to Kalshi teal; competitor pages override). */
+.page-hero[data-accent="polymarket"] { --hero-accent: var(--accent-polymarket); }
+.page-hero[data-accent="forecastex"] { --hero-accent: var(--accent-forecastex); }
+.page-hero[data-accent="nadex"]      { --hero-accent: var(--accent-nadex); }
+.page-hero[data-accent="robinhood"]  { --hero-accent: var(--accent-robinhood); }
+.page-hero[data-accent="kalshi"]     { --hero-accent: var(--accent-kalshi); }
 
 .page-hero::after {
   content: "";
@@ -275,7 +282,7 @@ li {
 
 .page-eyebrow {
   margin-bottom: var(--space-2);
-  color: var(--accent-kalshi);
+  color: var(--hero-accent, var(--accent-kalshi));
   font-size: var(--text-label);
   font-weight: 700;
   letter-spacing: 0.08em;

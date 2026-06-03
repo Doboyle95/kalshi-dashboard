@@ -2,9 +2,11 @@
 title: ForecastEx
 ---
 
-# ForecastEx
-
-<p class="page-lead">ForecastEx briefly ran huge on the 2024 election. Today its core product is daily city-temperature contracts.</p>
+<div class="page-hero" data-accent="forecastex">
+  <div class="page-eyebrow">ForecastEx</div>
+  <h1>ForecastEx</h1>
+  <p class="page-lead">ForecastEx briefly ran huge on the 2024 election. Today its core product is daily city-temperature contracts.</p>
+</div>
 
 ```js
 const catDaily  = await FileAttachment("data/forecastex_categories_daily.csv").csv({typed: true});

@@ -2,9 +2,11 @@
 title: Competitors
 ---
 
-# Platform Comparison
-
-<p class="page-lead">All four of the US's regulated prediction markets, on one chart. Kalshi is the story; switch to log scale to see Polymarket US, ForecastEx, and Crypto.com/Nadex underneath it.</p>
+<div class="page-hero" data-accent="kalshi">
+  <div class="page-eyebrow">Comparison</div>
+  <h1>Platform Comparison</h1>
+  <p class="page-lead">All four of the US's regulated prediction markets, on one chart. Kalshi is the story; switch to log scale to see Polymarket US, ForecastEx, and Crypto.com/Nadex underneath it.</p>
+</div>
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>

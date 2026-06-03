@@ -2,9 +2,11 @@
 title: Polymarket US
 ---
 
-# Polymarket US
-
-<p class="page-lead">The US-walled-off version of Polymarket, separate from the global site and regulated by the CFTC. It started reporting in late 2025, and it's almost all sports.</p>
+<div class="page-hero" data-accent="polymarket">
+  <div class="page-eyebrow">Polymarket US</div>
+  <h1>Polymarket US</h1>
+  <p class="page-lead">The US-walled-off version of Polymarket, separate from the global site and regulated by the CFTC. It started reporting in late 2025, and it's almost all sports.</p>
+</div>
 
 ```js
 const catDaily  = await FileAttachment("data/polymarket_categories_daily.csv").csv({typed: true});

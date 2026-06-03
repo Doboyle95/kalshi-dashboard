@@ -2,9 +2,11 @@
 title: Crypto.com/Nadex
 ---
 
-# Crypto.com/Nadex
-
-<p class="page-lead">Crypto.com's Nadex exchange is small — $1 event binaries that show up in CFTC daily bulletins. One event towers over the whole page: Super Bowl LX.</p>
+<div class="page-hero" data-accent="nadex">
+  <div class="page-eyebrow">Crypto.com · Nadex</div>
+  <h1>Crypto.com/Nadex</h1>
+  <p class="page-lead">Crypto.com's Nadex exchange is small — $1 event binaries that show up in CFTC daily bulletins. One event towers over the whole page: Super Bowl LX.</p>
+</div>
 
 ```js
 const catDaily  = await FileAttachment("data/nadex_categories_daily.csv").csv({typed: true});

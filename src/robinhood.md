@@ -2,7 +2,7 @@
 title: Robinhood on Kalshi
 ---
 
-<div class="page-hero">
+<div class="page-hero" data-accent="robinhood">
   <div class="page-eyebrow">Robinhood</div>
   <h1>Robinhood on Kalshi</h1>
   <p class="page-lead">How big is Robinhood's event-contract business? Using daily CFTC filings and Kalshi open interest data, we estimate monthly volume and track Robinhood's declining share of a fast-growing platform.</p>
