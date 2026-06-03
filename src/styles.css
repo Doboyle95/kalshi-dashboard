@@ -2133,3 +2133,36 @@ svg[class^="plot-"] g[aria-label="tip"] text {
     transform: translateY(-1px);
   }
 }
+
+/* ============================================================
+   Sidebar nav polish (Tier 3) — quieter inactive links, a tinted
+   active item with an accent rail, smooth hover. Enhances the
+   Framework sidebar structure without changing navigation.
+   ============================================================ */
+#observablehq-sidebar .observablehq-link a {
+  border-radius: 6px;
+  color: var(--theme-foreground-muted);
+  transition: background-color 130ms ease, color 130ms ease;
+}
+#observablehq-sidebar .observablehq-link:not(.observablehq-link-active) a:hover {
+  background: rgba(127, 127, 127, 0.10);
+  color: var(--theme-foreground);
+}
+#observablehq-sidebar .observablehq-link-active {
+  position: relative;
+}
+#observablehq-sidebar .observablehq-link-active a {
+  color: var(--theme-foreground);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent-primary) 13%, transparent);
+}
+#observablehq-sidebar .observablehq-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--accent-primary);
+}
+#observablehq-sidebar .observablehq-secondary-link a {
+  color: var(--theme-foreground-faint);
+}
