@@ -112,8 +112,8 @@ const cashoutRateKpi = totalCashoutNotionalKpi / (totalHandle + totalCashoutNoti
 const isProv = d => d.is_provisional === true || String(d.is_provisional).toLowerCase() === "true";
 // Cumulative realized (after cash-outs) and hold-to-settlement (if everyone held).
 const uniSorted = uni.slice().sort((a, b) => a.date - b.date);
-let _r = 0, _h = 0, _e = 0;
-const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; return {date: d.date, realized: _r, hold: _h, prov: isProv(d)}; });
+let _r = 0, _h = 0, _e = 0, _rg = 0;
+const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; _rg += d.realized_net + d.fees_total; return {date: d.date, realized: _r, realized_gross: _rg, hold: _h, prov: isProv(d)}; });
 const coSorted = cashoutDaily.slice().sort((a, b) => a.date - b.date);
 const cumCo = coSorted.map(d => { _e += d.cashout_edge_gross; return {date: d.date, edge: _e, prov: isProv(d)}; });
 // Provisional (unsealed) days — settlements still arriving; shown distinctly.
@@ -128,20 +128,26 @@ const provNote = provDays.length
 
 ## What parlay bettors actually lost (after cash-outs)
 
-_Realized P&L for parlay bettors, net of fees — and **after** accounting for everyone who cashed out early. This is the real money won and lost, including positions sold back before settlement. Settled parlays only; recent days fill in as their markets resolve._
+_Realized P&L for parlay bettors — and **after** accounting for everyone who cashed out early. This is the real money won and lost, including positions sold back before settlement. The two lines show it **before** Kalshi's fees and **after** fees; the gap between them is the fee drag. Settled parlays only; recent days fill in as their markets resolve._
 
 ```js
+const cumRealized = cumU.flatMap(d => [
+  {date: d.date, v: d.realized_gross, s: "Before fees", prov: d.prov},
+  {date: d.date, v: d.realized,       s: "After fees",  prov: d.prov}
+]);
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
   marks: [
-    Plot.areaY(cumU, {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.12, curve: "monotone-x"}),
-    Plot.lineY(cumU, {x: "date", y: "realized", stroke: "#0A7B6C", strokeWidth: 2, curve: "monotone-x"}),
-    // Provisional (unsealed) tail: hollow marker so it reads as "not final yet".
+    Plot.areaY(cumU, {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumRealized, {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
+    // Provisional (unsealed) tail: hollow markers so it reads as "not final yet".
+    Plot.dot(provDays, {x: "date", y: "realized_gross", r: 4, fill: "var(--theme-background)", stroke: "#5FD0C2", strokeWidth: 2}),
     Plot.dot(provDays, {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
+    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 })
 ```
