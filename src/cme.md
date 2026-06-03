@@ -72,7 +72,7 @@ display(renderDateBrush({
 
 ## Daily volume
 
-<p class="section-intro">Each bar is one collected trading day's total event-contract volume (FanDuel + DraftKings combined). Gaps are days we couldn't collect — not zero-volume days. Mondays and big sports dates (the first Monday of April, June 1) stand out.</p>
+<p class="section-intro">Each bar is one CME Daily Bulletin (FanDuel + DraftKings combined), shown exactly as CME publishes it. <strong>Mondays look huge because CME reports the whole weekend in the Monday bulletin</strong> — Saturday, Sunday and Monday volume all land on Monday (holiday weekends like Good Friday bundle in even more). Gaps are days we couldn't collect, not zero-volume days. On the <a href="./competitors">Platform Comparison</a> chart we spread those weekend lumps back across the days they actually traded; here we keep the raw bulletin figures.</p>
 
 ```js
 const inRange = rows.filter(d => d.date >= cmeDateSel[0] && d.date <= cmeDateSel[1]);
