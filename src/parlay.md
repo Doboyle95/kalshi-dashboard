@@ -203,27 +203,6 @@ const dailyDetail = uniSorted.map(d => {
   return {date: d.date, stakes, net, gross, gross_cumul: _g, net_cumul: _n,
           ret: stakes ? net / stakes * 100 : 0, prov: isProv(d)};
 });
-const cumGrossNet = dailyDetail.flatMap(d => [
-  {date: d.date, value: d.gross_cumul, series: "Before fees"},
-  {date: d.date, value: d.net_cumul,   series: "After fees"}
-]);
-```
-
-## Cumulative P&L — before and after fees
-
-_The realized result split into raw trading P&L and what bettors kept after Kalshi's cut. The gap between the lines is the fee drag._
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
-  x: {type: "utc", label: null},
-  y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
-  color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
-  marks: [
-    Plot.lineY(cumGrossNet, {x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
-  ]
-})
 ```
 
 ## Daily stakes & return
