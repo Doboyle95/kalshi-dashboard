@@ -20,7 +20,7 @@ const heRaw   = await FileAttachment("data/parlay_house_edge_by_legs.csv").csv({
 const timeRaw = await FileAttachment("data/parlay_legs_over_time.csv").csv({typed: true});
 const gamesRaw= await FileAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
 const mispRaw = await FileAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
-const pnlRaw  = await FileAttachment("data/parlay_pnl_daily_by_corr.csv").csv({typed: true});
+const pnlRaw  = await FileAttachment("data/parlay_pnl_daily_by_corr_v2.csv").csv({typed: true});
 const mixRaw  = await FileAttachment("data/parlay_sportsmix_monthly.csv").csv({typed: true});
 const popDailyRaw = await FileAttachment("data/parlay_popular_daily.csv").csv({typed: true});
 const popMetaRaw  = await FileAttachment("data/parlay_popular_meta.csv").csv({typed: true});
@@ -226,9 +226,11 @@ prop, all in the same game), so the leg outcomes are not statistically
 independent. A parlay is <em>non-correlated</em> if every leg is from a
 different game (or different futures market) and the legs can be priced by
 simply multiplying the individual win probabilities. Kalshi labels correlated
-parlays as <em>SGP</em> (same-game parlay); we use <em>correlated</em> /
-<em>non-correlated</em> as the editorial framing because Kalshi has launched
-new SGP-style series under varying ticker prefixes, and the correlation-based
+parlays as <em>SGP</em> (same-game parlay); we currently split on that product
+family (single-game / SGP series count as correlated, everything else as
+non-correlated) rather than re-deriving correlation leg by leg. We use
+<em>correlated</em> / <em>non-correlated</em> as the editorial framing because
+Kalshi has launched new SGP-style series under varying ticker prefixes, and the correlation-based
 classification is what determines the pricing math.
 </div>
 

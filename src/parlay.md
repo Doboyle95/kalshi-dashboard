@@ -14,6 +14,8 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 
 ```js
 const raw = await FileAttachment("data/parlay_pnl_net.csv").csv({typed: true});
+const uni = await FileAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
+const cashoutDaily = await FileAttachment("data/parlay_cashout_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
@@ -62,174 +64,110 @@ const pnl = raw
 ```
 
 ```js
-// All-time KPIs (unaffected by date range)
-const lastRow   = pnl[pnl.length - 1];
-const totalNet  = lastRow?.net_cumul  ?? 0;
-const totalGross = lastRow?.gross_cumul ?? 0;
-const totalFees = totalGross - totalNet;
-const totalStakes = d3.sum(pnl, d => d.stakes);
-const totalContracts = d3.sum(pnl, d => d.contracts);
-const overallPct = totalNet / totalStakes * 100;
+// All-time KPIs from the unified trade-level engine (realized = after cash-outs).
+const totalNet       = d3.sum(uni, d => d.realized_net);
+const totalHoldNet   = d3.sum(uni, d => d.hold_to_settlement_net);
+const totalFees      = d3.sum(uni, d => d.fees_total);
+const totalHandle    = d3.sum(uni, d => d.handle_yes);
+const overallPct     = totalNet / totalHandle * 100;
+const totalCashoutNotionalKpi = d3.sum(cashoutDaily, d => d.cashout_notional);
+const cashoutRateKpi = totalCashoutNotionalKpi / (totalHandle + totalCashoutNotionalKpi) * 100;
 ```
 
 <div class="kpi-grid">
   <div class="kpi-card">
-    <div class="kpi-label">Cumulative taker P&L (net)</div>
+    <div class="kpi-label">Realized P&L (after cash-outs)</div>
     <div class="kpi-value">${fmtUSD(totalNet)}</div>
+    <div class="kpi-meta">net of fees</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">All-time fees paid</div>
-    <div class="kpi-value">${fmtUSD(totalFees)}</div>
+    <div class="kpi-label">If held to settlement</div>
+    <div class="kpi-value">${fmtUSD(totalHoldNet)}</div>
+    <div class="kpi-meta">no cash-outs</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Overall taker ROI</div>
+    <div class="kpi-label">ROI on yes-entry handle</div>
     <div class="kpi-value">${overallPct.toFixed(1)}%</div>
-    <div class="kpi-meta">of total stakes</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Total stakes</div>
-    <div class="kpi-value">${fmtUSD(totalStakes)}</div>
+    <div class="kpi-label">Yes-entry handle</div>
+    <div class="kpi-value">${fmtUSD(totalHandle)}</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Settled parlay contracts</div>
-    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-label">Cash-out rate</div>
+    <div class="kpi-value">${cashoutRateKpi.toFixed(0)}%</div>
+    <div class="kpi-meta">of taker money</div>
   </div>
 </div>
 
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors staked against what they got back.</p>
-  <p>"Before fees" is their raw trading result; "after fees" is what they kept once Kalshi took its cut, and the gap between the two lines is the fee drag. Use the daily charts to tell a busy day apart from a good — or brutal — one.</p>
+  <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors actually won and lost, settled parlays only, computed trade by trade.</p>
+  <p>The headline is <em>realized</em> P&L — net of fees and after cash-outs (parlay positions sold back before settlement). The second chart shows the counterfactual where everyone held to the end; the gap between them is what cashing out did to bettors. "Handle" means yes-side entry stakes — what was actually wagered.</p>
 </details>
 
 ```js
-// Mutable + brush rendered in the SAME cell so the brush callback closes over
-// the Mutable wrapper. Observable Framework yields the unwrapped value (not
-// the wrapper) to consuming cells, so a setter defined in another cell would
-// only see the array and `.value = X` would be a no-op.
-const parlayDateSel = Mutable([new Date("2025-01-01"), d3.max(pnl, d => d.date)]);
-display(renderDateBrush({
-  data: pnl,
-  dateAccessor: d => d.date,
-  valueAccessor: d => d.stakes,
-  initialRange: [new Date("2025-01-01"), d3.max(pnl, d => d.date)],
-  onSelect: r => { parlayDateSel.value = r; },
-  color: "#5FD0C2",
-  width
-}));
+// Cumulative realized (after cash-outs) and hold-to-settlement (if everyone held).
+const uniSorted = uni.slice().sort((a, b) => a.date - b.date);
+let _r = 0, _h = 0, _e = 0;
+const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; return {date: d.date, realized: _r, hold: _h}; });
+const coSorted = cashoutDaily.slice().sort((a, b) => a.date - b.date);
+const cumCo = coSorted.map(d => { _e += d.cashout_edge_gross; return {date: d.date, edge: _e}; });
 ```
 
-```js
-const [pStart, pEnd] = parlayDateSel;
-const pnlFiltered = pnl.filter(d => d.date >= pStart && d.date <= pEnd);
+## What parlay bettors actually lost (after cash-outs)
 
-// Recompute cumulative from filtered window start
-let gr = 0, nr = 0;
-const pnlCumul = pnlFiltered.map(d => {
-  gr += d.daily_gross; nr += d.daily_net;
-  return {...d, gross_cumul_w: gr, net_cumul_w: nr};
-});
-
-const tidyCumul = [
-  ...pnlCumul.map(d => ({date: d.date, value: d.gross_cumul_w, series: "Before fees (gross)"})),
-  ...pnlCumul.map(d => ({date: d.date, value: d.net_cumul_w,   series: "After fees (net)"}))
-];
-
-const cumulativeSeries = ["Before fees (gross)", "After fees (net)"];
-const cumulativeColors = {
-  "Before fees (gross)": "#5FD0C2",  // light teal
-  "After fees (net)": "#0A7B6C"       // dark teal
-};
-
-// Pivot for single combined tooltip
-const cumPivot = pnlCumul.map(d => ({date: d.date, gross: d.gross_cumul_w, net: d.net_cumul_w}));
-```
-
-## Cumulative taker P&L
-
-_Every parlay bettor's wins and losses, added up over time. The line keeps sinking — in aggregate, parlays lose — and the space between the two lines is what Kalshi takes in fees._
+_Realized P&L for parlay bettors, net of fees — and **after** accounting for everyone who cashed out early. This is the real money won and lost, including positions sold back before settlement. Settled parlays only; recent days fill in as their markets resolve._
 
 ```js
 Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 340,
-  marginLeft: 76,
+  style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
   x: {type: "utc", label: null},
-  y: {label: "Cumulative P&L (USD)", grid: true,
-      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
-  color: {legend: true, domain: cumulativeSeries, range: cumulativeSeries.map(label => cumulativeColors[label])},
+  y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   marks: [
-    Plot.lineY(tidyCumul, {
-      x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"
-    }),
-    Plot.ruleX(cumPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(cumPivot, Plot.pointerX({
-      x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore fees: $${d.gross.toLocaleString(undefined,{maximumFractionDigits:0})}\nAfter fees: $${d.net.toLocaleString(undefined,{maximumFractionDigits:0})}`
-    })),
+    Plot.areaY(cumU, {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.12, curve: "monotone-x"}),
+    Plot.lineY(cumU, {x: "date", y: "realized", stroke: "#0A7B6C", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleY([0], {stroke: "#ccc"}),
+    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}`}))
+  ]
+})
+```
+
+## If every parlay were held to settlement
+
+_The same bettors' P&L in the counterfactual where **nobody cashed out** — every yes-side position held to the end. The gap between this line and the one above is the net effect of cashing out._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {legend: true, domain: ["Realized (after cash-outs)", "Held to settlement"], range: ["#0A7B6C", "#5FD0C2"]},
+  marks: [
+    Plot.lineY(cumU.flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
+      {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "#ccc"})
   ]
 })
 ```
 
-## Daily stakes & return
+## Cash-outs
 
-_Each bar is the money staked on parlays that day; its colour is how the day turned out for bettors — green for a win, red for a loss. The tallest bars are the heavy-action days around big games._
+<p class="section-intro">About <strong>${cashoutRateKpi.toFixed(0)}%</strong> of all the money takers put through parlays is someone <em>cashing out</em> — selling a live parlay back before it settles, rather than opening a new bet. This tracks whether those cash-outs paid off.</p>
 
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 300,
-  marginLeft: 76,
-  x: {type: "utc", label: null},
-  y: {label: "Daily stakes (USD)", grid: true,
-      tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
-  color: {
-    type: "diverging",
-    scheme: "RdYlGn",
-    domain: [-50, 50],
-    label: "Taker return %",
-    legend: true
-  },
-  marks: [
-    Plot.rectY(pnlFiltered.filter(d => d.stakes >= 1000), {
-      x1: d => d.date,
-      x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => d.stakes,
-      fill: d => d.pct != null ? Math.max(-50, Math.min(50, d.pct)) : 0,
-      tip: true,
-      title: d => `${fmtDate(d.date)}\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nContracts: ${d.contracts.toLocaleString(undefined,{maximumFractionDigits:0})}\nTaker return: ${d.pct != null ? d.pct.toFixed(1)+"%" : "n/a"}\nNet P&L: $${d.daily_net.toLocaleString(undefined,{maximumFractionDigits:0})}`
-    }),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-## Daily taker return (% of stakes)
-
-_Each day's parlay return for bettors. Mostly red — long-shot parlays usually miss — with the occasional big green day when enough of them cash._
+_Cumulative cash-out edge: how much bettors gained or lost by cashing out versus holding to the end. Below zero means they left money on the table — selling winners back too cheaply outweighs the busts they dodged._
 
 ```js
 Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 260,
-  marginLeft: 76,
+  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 76,
   x: {type: "utc", label: null},
-  y: {label: "Taker return (% of stakes)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
+  y: {label: "Cumulative cash-out edge (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
   marks: [
-    Plot.rectY(pnlFiltered.filter(d => d.pct != null && d.stakes >= 25000), {
-      x1: d => d.date,
-      x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => Math.max(-110, Math.min(150, d.pct)),
-      fill: d => d.pct >= 0 ? "#1a9641" : "#d7191c",
-      fillOpacity: 0.75,
-      tip: true,
-      title: d => `${fmtDate(d.date)}\nReturn: ${d.pct.toFixed(1)}%\nStakes: $${d.stakes.toLocaleString(undefined,{maximumFractionDigits:0})}\nContracts: ${d.contracts.toLocaleString(undefined,{maximumFractionDigits:0})}`
-    }),
-    Plot.ruleY([0])
+    Plot.areaY(cumCo, {x: "date", y: "edge", fill: "#d7191c", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumCo, {x: "date", y: "edge", stroke: "#d7191c", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleY([0], {stroke: "#ccc"}),
+    Plot.tip(cumCo, Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
   ]
 })
 ```
-
-<p style="font-size:0.82em;color:#888">Return compares what bettors got back to what they staked, after fees. A 5¢ parlay that hits pays back about 19×, which is why one lucky day can send the line far past +100%.</p>
