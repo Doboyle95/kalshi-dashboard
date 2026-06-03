@@ -36,6 +36,7 @@
   --accent-forecastex:   #E53535;
   --accent-nadex:        #9c27b0;
   --accent-robinhood:    #5FB81E;
+  --accent-cme:          #9A6D1F;
 
   /* Semantic accents */
   --accent-primary:      var(--accent-kalshi);
@@ -151,6 +152,7 @@ html[data-theme="light"] {
   --accent-forecastex:   #E53535;
   --accent-nadex:        #9c27b0;
   --accent-robinhood:    #5FB81E;
+  --accent-cme:          #9A6D1F;
 }
 
 html[data-theme="dark"] {
@@ -264,6 +266,7 @@ li {
 .page-hero[data-accent="forecastex"] { --hero-accent: var(--accent-forecastex); }
 .page-hero[data-accent="nadex"]      { --hero-accent: var(--accent-nadex); }
 .page-hero[data-accent="robinhood"]  { --hero-accent: var(--accent-robinhood); }
+.page-hero[data-accent="cme"]        { --hero-accent: var(--accent-cme); }
 .page-hero[data-accent="kalshi"]     { --hero-accent: var(--accent-kalshi); }
 
 .page-hero::after {
@@ -950,6 +953,8 @@ table,
 .kpi-card[data-accent="polymarket"] { --kpi-accent: var(--accent-polymarket); }
 .kpi-card[data-accent="forecastex"] { --kpi-accent: var(--accent-forecastex); }
 .kpi-card[data-accent="nadex"]      { --kpi-accent: var(--accent-nadex); }
+.kpi-card[data-accent="cme"]        { --kpi-accent: var(--accent-cme); }
+.kpi-card[data-accent="robinhood"]  { --kpi-accent: var(--accent-robinhood); }
 .kpi-card[data-accent="secondary"]  { --kpi-accent: var(--accent-secondary); }
 .kpi-card[data-accent="tertiary"]   { --kpi-accent: var(--accent-tertiary); }
 .kpi-card[data-accent="warning"]    { --kpi-accent: var(--accent-warning); }

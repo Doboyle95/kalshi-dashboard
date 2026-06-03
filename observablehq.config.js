@@ -58,6 +58,7 @@ export default {
     {name: "Polymarket US", path: "/polymarket"},
     {name: "ForecastEx", path: "/forecastex"},
     {name: "Crypto.com/Nadex", path: "/nadex"},
+    {name: "CME (FanDuel/DraftKings)", path: "/cme"},
   ],
   footer: "Data: Kalshi trade records and public competitor sources via Daniel O'Boyle. Freshness varies by page; see each page's data status panel.",
 };
