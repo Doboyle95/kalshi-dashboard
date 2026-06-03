@@ -237,7 +237,7 @@ Plot.plot({
         }),
         Plot.dot([todayRow], {
           x: "date", y: d => d.contracts_total,
-          fill: "#ff8c00", r: 4, stroke: "white", strokeWidth: 1.5
+          fill: "#ff8c00", r: 4, stroke: "var(--theme-background)", strokeWidth: 1.5
         })
       ];
     })()),

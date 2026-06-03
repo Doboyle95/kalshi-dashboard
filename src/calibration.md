@@ -50,7 +50,7 @@ Plot.plot({
     // Perfect calibration diagonal
     Plot.line([{x:0,y:0},{x:1,y:1}], {
       x: "x", y: "y",
-      stroke: "#ccc", strokeDasharray: "4,3", strokeWidth: 1.5
+      stroke: "var(--theme-foreground-fainter)", strokeDasharray: "4,3", strokeWidth: 1.5
     }),
     // Data points
     Plot.dot(data, {
@@ -81,7 +81,7 @@ Plot.plot({
   x: {label: "Contract price (¢)", domain: [0, 100]},
   y: {label: "Calibration error (actual − implied)", grid: true, tickFormat: d => (d*100).toFixed(1) + "%"},
   marks: [
-    Plot.ruleY([0], {stroke: "#ccc"}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.rectY(data, {
       x1: d => +d.price_bin - 2.5,
       x2: d => +d.price_bin + 2.5,

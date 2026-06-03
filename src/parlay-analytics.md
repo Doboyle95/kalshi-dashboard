@@ -59,7 +59,7 @@ Plot.plot({
     Plot.dot(he, {x: "legsLabel", y: "house_edge", fill: "kind", r: 4}),
     Plot.tip(he, Plot.pointer({x: "legsLabel", y: "house_edge",
       title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtUSD(d.total_vol)}`})),
-    Plot.ruleY([0], {stroke: "#ccc"})
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 })
 ```
@@ -78,7 +78,7 @@ Plot.plot({
     Plot.dot(he, {x: "legsLabel", y: "win_rate", fill: "kind", r: 4}),
     Plot.tip(he, Plot.pointer({x: "legsLabel", y: "win_rate",
       title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}`})),
-    Plot.ruleY([0], {stroke: "#ccc"})
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 })
 ```
@@ -205,7 +205,7 @@ Plot.plot({
   color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
   marks: [
     Plot.line(pnlCum, {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "#999"}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
     Plot.ruleX(pnlCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(pnlCum, Plot.pointer({x: "date", y: "cum_pnl",
       title: d => `${fmtDay(d.date)}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
@@ -450,8 +450,8 @@ Plot.plot({
   y: {label: "Actual win %", domain: [0, 100], grid: true, tickFormat: d => d + "%"},
   color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
   marks: [
-    Plot.line([[0,0],[100,100]], {stroke: "#999", strokeDasharray: "4 4"}),
-    Plot.dot(misp, {x: "implied", y: "actual", fill: "kind", r: d => Math.sqrt(d.n_parlays)/120 + 4, fillOpacity: 0.75, stroke: "white",
+    Plot.line([[0,0],[100,100]], {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
+    Plot.dot(misp, {x: "implied", y: "actual", fill: "kind", r: d => Math.sqrt(d.n_parlays)/120 + 4, fillOpacity: 0.75, stroke: "var(--theme-background)",
       tip: true, title: d => `${kindShort(d.kind)} · ${d.bucket}\nImplied: ${pct1(d.implied)}\nActual: ${pct1(d.actual)}\nGap: ${d.gap > 0 ? "+" : ""}${pct1(d.gap)}\nParlays: ${d.n_parlays.toLocaleString()}`})
   ]
 })

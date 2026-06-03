@@ -128,7 +128,7 @@ Plot.plot({
   marks: [
     Plot.areaY(cumU, {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.12, curve: "monotone-x"}),
     Plot.lineY(cumU, {x: "date", y: "realized", stroke: "#0A7B6C", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "#ccc"}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}`}))
   ]
 })
@@ -147,7 +147,7 @@ Plot.plot({
   marks: [
     Plot.lineY(cumU.flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
       {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "#ccc"})
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 })
 ```
@@ -166,7 +166,7 @@ Plot.plot({
   marks: [
     Plot.areaY(cumCo, {x: "date", y: "edge", fill: "#d7191c", fillOpacity: 0.1, curve: "monotone-x"}),
     Plot.lineY(cumCo, {x: "date", y: "edge", stroke: "#d7191c", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "#ccc"}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.tip(cumCo, Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
   ]
 })
@@ -199,7 +199,7 @@ Plot.plot({
   color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
   marks: [
     Plot.lineY(cumGrossNet, {x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "#ccc"})
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 })
 ```
