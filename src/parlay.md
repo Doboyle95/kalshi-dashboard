@@ -108,12 +108,22 @@ const cashoutRateKpi = totalCashoutNotionalKpi / (totalHandle + totalCashoutNoti
 </details>
 
 ```js
+// d3.autoType leaves "true"/"false" as strings — coerce robustly.
+const isProv = d => d.is_provisional === true || String(d.is_provisional).toLowerCase() === "true";
 // Cumulative realized (after cash-outs) and hold-to-settlement (if everyone held).
 const uniSorted = uni.slice().sort((a, b) => a.date - b.date);
 let _r = 0, _h = 0, _e = 0;
-const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; return {date: d.date, realized: _r, hold: _h}; });
+const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; return {date: d.date, realized: _r, hold: _h, prov: isProv(d)}; });
 const coSorted = cashoutDaily.slice().sort((a, b) => a.date - b.date);
-const cumCo = coSorted.map(d => { _e += d.cashout_edge_gross; return {date: d.date, edge: _e}; });
+const cumCo = coSorted.map(d => { _e += d.cashout_edge_gross; return {date: d.date, edge: _e, prov: isProv(d)}; });
+// Provisional (unsealed) days — settlements still arriving; shown distinctly.
+const provDays = cumU.filter(d => d.prov);
+const provSpan = provDays.length === 1
+  ? fmtDate(provDays[0].date)
+  : (provDays.length ? `${fmtDate(provDays[0].date)}–${fmtDate(provDays[provDays.length-1].date)}` : "");
+const provNote = provDays.length
+  ? html`<p class="chart-note">○ The most recent ${provDays.length === 1 ? "day" : provDays.length + " days"} (<strong>${provSpan}</strong>) ${provDays.length === 1 ? "is" : "are"} <strong>provisional</strong> — covering only the parlays that have settled so far. Numerator and denominator move together, so the win rate stays honest; the figures fill in as the rest resolve.</p>`
+  : html``;
 ```
 
 ## What parlay bettors actually lost (after cash-outs)
@@ -128,10 +138,16 @@ Plot.plot({
   marks: [
     Plot.areaY(cumU, {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.12, curve: "monotone-x"}),
     Plot.lineY(cumU, {x: "date", y: "realized", stroke: "#0A7B6C", strokeWidth: 2, curve: "monotone-x"}),
+    // Provisional (unsealed) tail: hollow marker so it reads as "not final yet".
+    Plot.dot(provDays, {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}`}))
+    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 })
+```
+
+```js
+display(provNote);
 ```
 
 ## If every parlay were held to settlement
@@ -179,7 +195,7 @@ const dailyDetail = uniSorted.map(d => {
   const stakes = d.handle_yes, net = d.realized_net, gross = d.realized_net + d.fees_total;
   _g += gross; _n += net;
   return {date: d.date, stakes, net, gross, gross_cumul: _g, net_cumul: _n,
-          ret: stakes ? net / stakes * 100 : 0};
+          ret: stakes ? net / stakes * 100 : 0, prov: isProv(d)};
 });
 const cumGrossNet = dailyDetail.flatMap(d => [
   {date: d.date, value: d.gross_cumul, series: "Before fees"},
@@ -218,8 +234,11 @@ Plot.plot({
     Plot.rectY(dailyDetail.filter(d => d.stakes >= 1000), {
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "stakes",
       fill: d => Math.max(-50, Math.min(50, d.ret)),
+      fillOpacity: d => d.prov ? 0.45 : 1,           // provisional day reads as faded
+      stroke: d => d.prov ? "var(--theme-foreground-fainter)" : null,
+      strokeDasharray: d => d.prov ? "2,2" : null,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nStakes: ${fmtUSD(d.stakes)}\nReturn: ${d.ret.toFixed(1)}%\nNet P&L: ${fmtUSD(d.net)}`
+      title: d => `${fmtDate(d.date)}\nStakes: ${fmtUSD(d.stakes)}\nReturn: ${d.ret.toFixed(1)}%\nNet P&L: ${fmtUSD(d.net)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`
     }),
     Plot.ruleY([0])
   ]
