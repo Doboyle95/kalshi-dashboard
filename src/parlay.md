@@ -171,3 +171,81 @@ Plot.plot({
   ]
 })
 ```
+
+```js
+// Daily + cumulative series for the detail charts below (realized basis, net of fees).
+let _g = 0, _n = 0;
+const dailyDetail = uniSorted.map(d => {
+  const stakes = d.handle_yes, net = d.realized_net, gross = d.realized_net + d.fees_total;
+  _g += gross; _n += net;
+  return {date: d.date, stakes, net, gross, gross_cumul: _g, net_cumul: _n,
+          ret: stakes ? net / stakes * 100 : 0};
+});
+const cumGrossNet = dailyDetail.flatMap(d => [
+  {date: d.date, value: d.gross_cumul, series: "Before fees"},
+  {date: d.date, value: d.net_cumul,   series: "After fees"}
+]);
+```
+
+## Cumulative P&L — before and after fees
+
+_The realized result split into raw trading P&L and what bettors kept after Kalshi's cut. The gap between the lines is the fee drag._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
+  marks: [
+    Plot.lineY(cumGrossNet, {x: "date", y: "value", stroke: "series", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleY([0], {stroke: "#ccc"})
+  ]
+})
+```
+
+## Daily stakes & return
+
+_Each bar is the money staked on parlays that day; its colour is how the day turned out for bettors — green for a win, red for a loss. The tallest bars are the heavy-action days around big games._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Daily stakes (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {type: "diverging", scheme: "RdYlGn", domain: [-50, 50], label: "Return %", legend: true},
+  marks: [
+    Plot.rectY(dailyDetail.filter(d => d.stakes >= 1000), {
+      x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "stakes",
+      fill: d => Math.max(-50, Math.min(50, d.ret)),
+      tip: true,
+      title: d => `${fmtDate(d.date)}\nStakes: ${fmtUSD(d.stakes)}\nReturn: ${d.ret.toFixed(1)}%\nNet P&L: ${fmtUSD(d.net)}`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+## Daily return (% of stakes)
+
+_Each day's parlay return for bettors. Mostly red — long-shot parlays usually miss — with the occasional big green day when enough of them cash._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 260, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Return (% of stakes)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
+  marks: [
+    Plot.rectY(dailyDetail.filter(d => d.stakes >= 25000), {
+      x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => Math.max(-110, Math.min(150, d.ret)),
+      fill: d => d.ret >= 0 ? "#1a9641" : "#d7191c", fillOpacity: 0.75,
+      tip: true,
+      title: d => `${fmtDate(d.date)}\nReturn: ${d.ret.toFixed(1)}%\nStakes: ${fmtUSD(d.stakes)}`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+<p style="font-size:0.82em;color:#888">Return compares what bettors got back to what they staked, after fees. A 5¢ parlay that hits pays back about 19×, which is why one lucky day can send the line far past +100%.</p>
