@@ -30,6 +30,37 @@ import * as d3 from "npm:d3";
 const fmtDay = d3.utcFormat("%Y-%m-%d");
 const toUTCDate = (s) => { const [y, m, d] = String(s).split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 
+// Inject the date-range control styles once per document.
+function ensureBrushStyles() {
+  if (document.getElementById("kd-daterange-styles")) return;
+  const css = `
+.kd-daterange { margin-bottom: 1.25rem; }
+.kd-dr-bar { display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+.kd-seg { display:inline-flex; gap:2px; padding:2px; border-radius:999px;
+  background:var(--theme-background-alt); border:1px solid var(--card-border, var(--theme-foreground-faint)); }
+.kd-seg button { appearance:none; border:0; background:transparent; cursor:pointer;
+  display:inline-flex; align-items:center; gap:5px; padding:3px 11px; border-radius:999px;
+  font:550 11.5px/1.5 var(--sans-serif, system-ui); letter-spacing:.2px;
+  color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
+.kd-seg button svg { opacity:.9; }
+.kd-seg button:hover { color:var(--theme-foreground); background:rgba(127,127,127,.12); }
+.kd-seg button.active { color:#23170a; background:#f4a736; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.kd-seg button.active:hover { background:#f3b357; }
+.kd-dr-inputs { display:none; align-items:center; gap:7px;
+  font:12px/1.4 var(--sans-serif, system-ui); color:var(--theme-foreground-muted); }
+.kd-dr-lbl { letter-spacing:.3px; text-transform:uppercase; font-size:10.5px; opacity:.75; }
+.kd-dr-dash { opacity:.6; }
+.kd-dr-inputs input[type=date] { font:inherit; padding:3px 7px; color:var(--theme-foreground);
+  background:var(--theme-background); border:1px solid var(--card-border, var(--theme-foreground-faint));
+  border-radius:6px; transition:border-color .15s, box-shadow .15s; }
+.kd-dr-inputs input[type=date]:hover { border-color:var(--theme-foreground-muted); }
+.kd-dr-inputs input[type=date]:focus { outline:none; border-color:#f4a736; box-shadow:0 0 0 3px rgba(244,167,54,.22); }
+`;
+  const s = document.createElement("style");
+  s.id = "kd-daterange-styles"; s.textContent = css;
+  document.head.appendChild(s);
+}
+
 export function renderDateBrush({
   data,
   dateAccessor = d => d.date,
@@ -101,37 +132,38 @@ export function renderDateBrush({
   brushG.call(brush.move, [defStart, defEnd].map(x));
 
   // ── Compact toggle + date inputs ────────────────────────────────────────────
+  ensureBrushStyles();
   const container = document.createElement("div");
   container.className = "kd-daterange";
-  container.style.marginBottom = "1.25rem";
 
   const bar = document.createElement("div");
-  bar.style.cssText = "display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px;";
+  bar.className = "kd-dr-bar";
 
-  // segmented toggle
+  // segmented pill toggle with icons
+  const ICON_BRUSH = `<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="8" x2="14" y2="8"/><rect x="4" y="4.5" width="2.6" height="7" rx="1.1" fill="currentColor" stroke="none"/><rect x="9.4" y="4.5" width="2.6" height="7" rx="1.1" fill="currentColor" stroke="none"/></svg>`;
+  const ICON_CAL = `<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="2.5" y="3.6" width="11" height="9.9" rx="1.6"/><line x1="2.5" y1="6.6" x2="13.5" y2="6.6"/><line x1="5.4" y1="2.2" x2="5.4" y2="4.4"/><line x1="10.6" y1="2.2" x2="10.6" y2="4.4"/></svg>`;
   const seg = document.createElement("div");
-  seg.style.cssText = "display:inline-flex;border:1px solid var(--card-border);border-radius:4px;overflow:hidden;";
-  const mkBtn = (label) => {
+  seg.className = "kd-seg";
+  const mkBtn = (icon, label) => {
     const b = document.createElement("button");
-    b.type = "button"; b.textContent = label;
-    b.style.cssText = "border:0;background:transparent;color:inherit;padding:2px 9px;font-size:12px;cursor:pointer;line-height:1.6;";
+    b.type = "button"; b.innerHTML = `${icon}<span>${label}</span>`;
     return b;
   };
-  const btnBrush = mkBtn("Brush"), btnDates = mkBtn("Dates");
+  const btnBrush = mkBtn(ICON_BRUSH, "Brush"), btnDates = mkBtn(ICON_CAL, "Dates");
   seg.append(btnBrush, btnDates);
 
   // date inputs (hidden until "Dates" mode)
   const inputs = document.createElement("div");
-  inputs.style.cssText = "display:none;align-items:center;gap:6px;color:var(--theme-foreground-muted);";
+  inputs.className = "kd-dr-inputs";
   const mkDate = () => {
     const i = document.createElement("input");
     i.type = "date"; i.min = fmtDay(domainStart); i.max = fmtDay(domainEnd);
-    i.style.cssText = "font:inherit;padding:1px 4px;border:1px solid var(--card-border);border-radius:3px;background:var(--theme-background);color:inherit;";
     return i;
   };
   const inFrom = mkDate(), inTo = mkDate();
-  const dash = document.createElement("span"); dash.textContent = "–";
-  inputs.append(document.createTextNode("From "), inFrom, dash, inTo);
+  const lblFrom = document.createElement("span"); lblFrom.className = "kd-dr-lbl"; lblFrom.textContent = "From";
+  const dash = document.createElement("span"); dash.className = "kd-dr-dash"; dash.textContent = "to";
+  inputs.append(lblFrom, inFrom, dash, inTo);
 
   bar.append(seg, inputs);
   container.append(bar, svg.node());
@@ -139,10 +171,8 @@ export function renderDateBrush({
   function syncInputs() { inFrom.value = fmtDay(curStart); inTo.value = fmtDay(curEnd); }
   function setMode(mode) {
     const dates = mode === "dates";
-    btnBrush.style.background = dates ? "transparent" : "var(--theme-foreground-focus, #3b5bdb)";
-    btnBrush.style.color = dates ? "inherit" : "#fff";
-    btnDates.style.background = dates ? "var(--theme-foreground-focus, #3b5bdb)" : "transparent";
-    btnDates.style.color = dates ? "#fff" : "inherit";
+    btnBrush.classList.toggle("active", !dates);
+    btnDates.classList.toggle("active", dates);
     inputs.style.display = dates ? "inline-flex" : "none";
     svg.style("display", dates ? "none" : "block");
     if (dates) syncInputs();
