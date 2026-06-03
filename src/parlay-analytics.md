@@ -21,7 +21,7 @@ const timeRaw = await FileAttachment("data/parlay_legs_over_time.csv").csv({type
 const gamesRaw= await FileAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
 const mispRaw = await FileAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
 const pnlRaw  = await FileAttachment("data/parlay_pnl_daily_by_corr_v2.csv").csv({typed: true});
-const mixRaw  = await FileAttachment("data/parlay_sportsmix_monthly.csv").csv({typed: true});
+const mixRaw  = await FileAttachment("data/parlay_sportsmix_v2.csv").csv({typed: true});
 const popDailyRaw = await FileAttachment("data/parlay_popular_daily.csv").csv({typed: true});
 const popMetaRaw  = await FileAttachment("data/parlay_popular_meta.csv").csv({typed: true});
 ```
@@ -234,9 +234,46 @@ Kalshi has launched new SGP-style series under varying ticker prefixes, and the 
 classification is what determines the pricing math.
 </div>
 
+## How much sports dominates parlays
+
+<p class="section-intro">Almost every parlay dollar is a pure-sports parlay. Each month's bar is split by mix — the green is all-sports, and the thin slivers on top are cross-category "mixed" and all-non-sports parlays.</p>
+
+```js
+// All three sport-mix categories, monthly, for the 100%-stacked dominance view.
+const mixAll = mixRaw
+  .map(d => ({date: d3.utcParse("%Y-%m")(String(d.month)), month: String(d.month),
+              sportmix: String(d.sportmix), total_vol: +d.total_vol}))
+  .filter(d => d.date).sort((a, b) => a.date - b.date);
+const SHARE_DOMAIN = ["all-sports", "mixed", "all-nonsports"];
+const SHARE_COLORS = ["#1a9641", "#7048e8", "#00C2A8"];
+const shareLabel = k => k === "all-sports" ? "All-sports" : k === "mixed" ? "Mixed" : "All non-sports";
+const sportsShareAll = (() => {
+  const tot = d3.sum(mixAll, d => d.total_vol);
+  const sports = d3.sum(mixAll.filter(d => d.sportmix === "all-sports"), d => d.total_vol);
+  return tot ? sports / tot * 100 : 0;
+})();
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 240, marginLeft: 60,
+  x: {type: "utc", label: null},
+  y: {label: "Share of monthly volume", percent: true, grid: true},
+  color: {legend: true, domain: SHARE_DOMAIN, range: SHARE_COLORS, tickFormat: shareLabel},
+  marks: [
+    Plot.rectY(mixAll, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix",
+                        offset: "expand", order: SHARE_DOMAIN}),
+    Plot.ruleY([0, 1])
+  ]
+})
+```
+
+<p class="chart-note">All-sports parlays are <strong>${sportsShareAll.toFixed(1)}%</strong> of all parlay volume. The chart below zooms into the rest — the cross-category and all-non-sports sliver.</p>
+
 ## Mixed and non-sports parlays over time
 
-_Every chart above is dominated by all-sports parlays — they're 99.81% of all parlay volume. The remaining 0.19% (all-non-sports + cross-category mixed) sits below. Mixed parlays only appeared in March 2026, when Kalshi enabled cross-category combos._
+<p class="section-intro">The slice that isn't pure sports: parlays mixing sports with non-sports legs, and all-non-sports parlays. These only really appeared once Kalshi enabled cross-category combos.</p>
 
 ```js
 const mixMonthly = mixRaw
@@ -321,7 +358,7 @@ Plot.plot({
 
 ## The most popular parlays
 
-_The 30 most-**traded** parlay tickets (by number of trades, not contracts) in the window you pick below. **Avg price** is the volume-weighted yes-side entry price — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
+_The 30 most-**traded** parlay tickets (by number of trades, not contracts) in the window you pick below. **Avg price** is the volume-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
 
 ```js
 const popDmin = d3.min(popDailyRaw, d => d.date);

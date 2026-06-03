@@ -86,11 +86,11 @@ const cashoutRateKpi = totalCashoutNotionalKpi / (totalHandle + totalCashoutNoti
     <div class="kpi-meta">no cash-outs</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">ROI on yes-entry handle</div>
+    <div class="kpi-label">Return on stakes</div>
     <div class="kpi-value">${overallPct.toFixed(1)}%</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Yes-entry handle</div>
+    <div class="kpi-label">Total staked</div>
     <div class="kpi-value">${fmtUSD(totalHandle)}</div>
   </div>
   <div class="kpi-card">
@@ -104,7 +104,7 @@ const cashoutRateKpi = totalCashoutNotionalKpi / (totalHandle + totalCashoutNoti
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors actually won and lost, settled parlays only, computed trade by trade.</p>
-  <p>The headline is <em>realized</em> P&L — net of fees and after cash-outs (parlay positions sold back before settlement). The second chart shows the counterfactual where everyone held to the end; the gap between them is what cashing out did to bettors. "Handle" means yes-side entry stakes — what was actually wagered.</p>
+  <p>The headline is <em>realized</em> P&L — net of fees and after cash-outs (parlay positions sold back before settlement). The second chart shows the counterfactual where everyone held to the end; the gap between them is what cashing out did to bettors. "Staked" counts only the money bettors put in to <em>open</em> parlays — cashing out isn't counted as a new stake.</p>
 </details>
 
 ```js
