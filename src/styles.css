@@ -2063,3 +2063,73 @@ form input[type="submit"]:hover {
 .kd-treemap-tooltip .kd-tt-row span:last-child {
   font-variant-numeric: tabular-nums;
 }
+
+/* ============================================================
+   Tier 1 polish (2026-06-03) — global chart refinement.
+   Targets Observable Plot's runtime SVG (class begins "plot-")
+   so it applies to every chart with no per-page edits. Does NOT
+   touch the brush sparkline (.kd-brush) or inline icon SVGs.
+   ============================================================ */
+
+/* Tabular, lining figures in all chart text (axes, legends, tips). */
+svg[class^="plot-"] text { font-variant-numeric: tabular-nums lining-nums; }
+
+/* Muted axis tick labels (the :not([fill]) guard leaves intentionally-colored
+   labels alone — only default labels are softened). */
+svg[class^="plot-"] [aria-label$="tick label"] text:not([fill]) {
+  fill: var(--theme-foreground-muted);
+}
+/* Muted axis titles. */
+svg[class^="plot-"] [aria-label$="axis label"] text:not([fill]) {
+  fill: var(--theme-foreground-faint);
+}
+/* Faint tick marks + domain lines (:not([stroke]) preserves any chart that sets
+   its own axis color via mark options). */
+svg[class^="plot-"] [aria-label$="axis tick"] line:not([stroke]),
+svg[class^="plot-"] [aria-label$="axis"] path:not([stroke]) {
+  stroke: color-mix(in srgb, var(--theme-foreground) 16%, transparent);
+}
+/* Faint gridlines (the biggest de-clutter win). */
+svg[class^="plot-"] [aria-label$="grid"] line:not([stroke]) {
+  stroke: color-mix(in srgb, var(--theme-foreground) 9%, transparent);
+}
+
+/* Unified Plot tooltip box: card surface, border, soft shadow, tabular text.
+   Cooperate with Plot's own --plot-background var (resilient across releases);
+   > path targets the box, not any nested glyph paths. */
+svg[class^="plot-"] g[aria-label="tip"] > path {
+  --plot-background: var(--card-bg, var(--theme-background));
+  stroke: var(--card-border);
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
+}
+svg[class^="plot-"] g[aria-label="tip"] text {
+  fill: var(--theme-foreground);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Consistent focus ring on every interactive control. */
+.ui-button:focus-visible,
+.ui-chip:focus-visible,
+.legend-chip:focus-visible,
+.theme-toggle button:focus-visible,
+.kd-seg button:focus-visible,
+.kd-dr-inputs input:focus-visible,
+.compact-details > summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(244, 167, 54, 0.28);
+}
+
+/* Subtle hover lift on chips/buttons — motion-safe. */
+@media (prefers-reduced-motion: no-preference) {
+  .ui-chip,
+  .ui-button,
+  .legend-chip {
+    transition: transform 140ms ease, box-shadow 140ms ease,
+                background-color 140ms ease, border-color 140ms ease;
+  }
+  .ui-chip:hover,
+  .ui-button:hover,
+  .legend-chip:hover {
+    transform: translateY(-1px);
+  }
+}
