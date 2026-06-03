@@ -5,7 +5,7 @@ title: Competitors
 <div class="page-hero" data-accent="kalshi">
   <div class="page-eyebrow">Comparison</div>
   <h1>Platform Comparison</h1>
-  <p class="page-lead">All four of the US's regulated prediction markets, on one chart. Kalshi is the story; switch to log scale to see Polymarket US, ForecastEx, and Crypto.com/Nadex underneath it.</p>
+  <p class="page-lead">Every US regulated prediction-market venue on one chart — Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, and CME (where FanDuel and DraftKings clear). Kalshi is the story; switch to log scale to see the rest underneath it. CME is collected by hand from daily bulletins, so its line is sparse.</p>
 </div>
 
 <details class="surface-card compact-details">
@@ -17,6 +17,7 @@ title: Competitors
 ```js
 const kalshi     = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
+const cme        = await FileAttachment("data/cme_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -59,6 +60,11 @@ const platforms = [
     name: "Crypto.com/Nadex", color: "#9c27b0",
     data: competitor.filter(d => d.platform === "Crypto.com/Nadex")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: +d.fees}))
+  },
+  {
+    name: "CME (FanDuel + DraftKings)", color: "#9A6D1F",
+    data: cme.filter(d => d.cme_total_vol > 0)
+      .map(d => ({date: d.date, contracts: +d.cme_total_vol, fees: null}))
   }
 ];
 
@@ -174,7 +180,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived).</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived). CME = FanDuel + DraftKings combined event-contract volume (both clear through CME), hand-collected from daily bulletins so the line is sparse; no fee series.</p>
 
 <div class="control-strip">
 
