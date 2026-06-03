@@ -241,7 +241,7 @@ classification is what determines the pricing math.
 ```js
 // All three sport-mix categories, monthly, for the 100%-stacked dominance view.
 const mixAll = mixRaw
-  .map(d => ({date: d3.utcParse("%Y-%m")(String(d.month)), month: String(d.month),
+  .map(d => ({date: d3.utcParse("%Y-%m")(monthStr(d.month)), month: monthStr(d.month),
               sportmix: String(d.sportmix), total_vol: +d.total_vol}))
   .filter(d => d.date).sort((a, b) => a.date - b.date);
 const SHARE_DOMAIN = ["all-sports", "mixed", "all-nonsports"];
@@ -279,8 +279,8 @@ Plot.plot({
 const mixMonthly = mixRaw
   .filter(d => d.sportmix !== "all-sports")
   .map(d => ({
-    date: d3.utcParse("%Y-%m")(String(d.month)),
-    month: String(d.month),
+    date: d3.utcParse("%Y-%m")(monthStr(d.month)),
+    month: monthStr(d.month),
     sportmix: d.sportmix,
     n_parlays: +d.n_parlays,
     total_vol: +d.total_vol
