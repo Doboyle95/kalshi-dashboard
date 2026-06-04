@@ -370,7 +370,7 @@ function getTmRange(period) {
 const FALLBACK_THRESHOLD = 5_000_000;
 const FALLBACK_NOTIONAL_THRESHOLD = 15_000_000;
 const allTimeContractsMap = new Map(leaderboard.map(d => [d.report_ticker, +d.contracts || 0]));
-const allTimeNotionalMap = new Map(leaderboard.map(d => [d.report_ticker, +d.notional || 0]));
+const allTimeNotionalMap = new Map(leaderboard.map(d => [d.report_ticker, +d.yes_side_notional_volume || 0]));
 // Phase 24 — R-as-single-brain: authoritative classification per report_ticker,
 // computed by R/classify_market.R (1:1 port of the JS rules below) and emitted
 // by R/build_leaderboard_from_duckdb.R into the leaderboard CSV. Used as a
