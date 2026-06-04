@@ -135,7 +135,7 @@ const cumRealized = cumU.flatMap(d => [
   {date: d.date, v: d.realized_gross, s: "Before fees", prov: d.prov},
   {date: d.date, v: d.realized,       s: "After fees",  prov: d.prov}
 ]);
-Plot.plot({
+display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
@@ -149,7 +149,7 @@ Plot.plot({
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
-})
+}))
 ```
 
 ```js
