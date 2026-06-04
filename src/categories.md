@@ -2339,7 +2339,7 @@ Plot.plot({
 
 ## Sports market type breakdown
 
-_How sports volume is split between market types across all sports tickers. Moneylines = individual game winners. Futures/Award = season champions, conference winners, awards, tournament brackets. Parlay (multi-game) = cross-game combos. Parlay (single-game) = same-game parlays._
+_How sports volume is split between market types across all sports tickers. Moneylines = individual game winners. Futures/Award = season champions, conference winners, awards, tournament brackets. **Parlay (correlated)** = at least two legs are in the same game, so the legs aren't independent and the odds aren't a simple product of the leg prices. **Parlay (independent)** = every leg is a different game. (Classified from the actual legs, not the ticker name.)_
 
 ```js
 const marketTypeRaw = await FileAttachment("data/sports_market_type_daily.csv").csv({typed: true});
@@ -2348,8 +2348,14 @@ const marketTypeRaw = await FileAttachment("data/sports_market_type_daily.csv").
 ```js
 // Consolidate minor categories for cleaner display
 const MT_REMAP = {
-  "Parlay (multi-game)": "Parlay (multi-game)",
-  "Parlay (single-game)": "Parlay (SGP)",
+  "Parlay (correlated)": "Parlay (correlated)",
+  "Parlay (independent)": "Parlay (independent)",
+  "Parlay (pending)": "Parlay (pending)",
+  // Defensive: the near-live updater may emit the legacy multi/single labels for the
+  // current in-flight day before the full rebuild reclassifies it by leg correlation.
+  // Route them to "pending" so today's parlays never fall into "Other".
+  "Parlay (multi-game)": "Parlay (pending)",
+  "Parlay (single-game)": "Parlay (pending)",
   "Moneyline": "Moneyline",
   "Spread": "Spread",
   "Over/Under": "Over/Under",
@@ -2365,11 +2371,11 @@ const MT_REMAP = {
 
 const mtOrder = [
   "Moneyline", "Futures/Award", "Spread", "Over/Under",
-  "Parlay (multi-game)", "Parlay (SGP)", "Player Prop", "Game Prop", "Other"
+  "Parlay (correlated)", "Parlay (independent)", "Parlay (pending)", "Player Prop", "Game Prop", "Other"
 ];
 const mtColors = [
   "#4e79a7", "#76b7b2", "#f28e2b", "#e15759",
-  "#b07aa1", "#d4a0c7", "#59a14f", "#8cd17d", "#bab0ac"
+  "#b07aa1", "#d4a0c7", "#e8d0e0", "#59a14f", "#8cd17d", "#bab0ac"
 ];
 
 // Roll up tidy data to consolidated categories
