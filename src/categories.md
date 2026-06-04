@@ -2269,10 +2269,6 @@ if (!compareSeries.length) {
 _Monthly contract volume for the ten all-time biggest individual report tickers — what was the dominant market in each month. Complements the wide-category trends above by surfacing the specific tickers (NFL game line vs March Madness vs Bitcoin etc.) instead of category bins._
 
 ```js
-const monthlyTop = await FileAttachment("data/monthly_top_categories.csv").csv({typed: true});
-```
-
-```js
 // Map raw tickers to display names + colors. Keep ordering deterministic so
 // stack order is stable month to month.
 const MTC_LABELS = {
@@ -2290,12 +2286,26 @@ const MTC_LABELS = {
 const MTC_ORDER  = ["NFL","College football","NBA","College basketball","MLB","ATP tennis","ATP Challenger","Bitcoin (daily)","Sports parlay","Cross-category parlay"];
 const MTC_COLORS = ["#A30000","#FF7043","#1F4E96","#42A5F5","#2E7D32","#7CB342","#C5E1A5","#FFB300","#9C27B0","#CE93D8"];
 
-const mtcTidy = monthlyTop.flatMap(row => {
-  const date = new Date(Date.UTC(+row.year, +row.month - 1, 1));
-  return Object.entries(MTC_LABELS).map(([t, label]) => ({
-    date, month_label: row.month_label, category: label, contracts: +row[t] || 0
-  }));
-}).filter(d => d.contracts > 0);
+// Roll the FRESH daily file up to monthly for these 10 series, so this chart inherits
+// near-live freshness and we retire the frozen monthly_top_categories.csv. Verified to
+// reproduce the old monthly figures exactly (e.g. Apr 2026 KXBTCD/parlay series match).
+const mtcMonthLabel = d => d.toLocaleDateString("en-US", {month: "short", year: "numeric", timeZone: "UTC"});
+const mtcMonthly = (() => {
+  const m = new Map();
+  for (const row of topDaily) {
+    const dt = row.date instanceof Date ? row.date : new Date(row.date);
+    const y = dt.getUTCFullYear(), mo = dt.getUTCMonth(), key = `${y}-${mo}`;
+    if (!m.has(key)) m.set(key, {date: new Date(Date.UTC(y, mo, 1))});
+    const o = m.get(key);
+    for (const t of Object.keys(MTC_LABELS)) o[t] = (o[t] || 0) + (+row[t] || 0);
+  }
+  return [...m.values()].sort((a, b) => a.date - b.date);
+})();
+const mtcTidy = mtcMonthly.flatMap(row =>
+  Object.entries(MTC_LABELS).map(([t, label]) => ({
+    date: row.date, month_label: mtcMonthLabel(row.date), category: label, contracts: row[t] || 0
+  }))
+).filter(d => d.contracts > 0);
 
 const mtcTipData = (() => {
   const m = new Map();
