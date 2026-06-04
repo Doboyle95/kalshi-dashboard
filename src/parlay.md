@@ -221,8 +221,10 @@ Plot.plot({
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "stakes",
       fill: d => Math.max(-50, Math.min(50, d.ret)),
       fillOpacity: d => d.prov ? 0.45 : 1,           // provisional day reads as faded
-      stroke: d => d.prov ? "var(--theme-foreground-fainter)" : null,
-      strokeDasharray: d => d.prov ? "2,2" : null,
+      // NOTE: do NOT add a string-valued `stroke` channel here — a per-datum stroke that
+      // returns CSS strings collides with the continuous diverging `color` scale that `fill`
+      // uses (continuous vs ordinal) and silently blanks the WHOLE chart. The provisional day
+      // stays distinguished by the faded fillOpacity above. (This is exactly what broke it.)
       tip: true,
       title: d => `${fmtDate(d.date)}\nStakes: ${fmtUSD(d.stakes)}\nReturn: ${d.ret.toFixed(1)}%\nNet P&L: ${fmtUSD(d.net)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`
     }),
