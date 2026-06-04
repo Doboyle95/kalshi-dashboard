@@ -169,7 +169,8 @@ Plot.plot({
   marks: [
     Plot.lineY(cumU.flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
       {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
+    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}\nCash-out effect: ${fmtUSD(d.realized - d.hold)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 })
 ```
