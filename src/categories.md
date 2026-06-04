@@ -3042,7 +3042,7 @@ const mktRanked = [...mktLeaderboard]
 // Top-20 bar chart - use fill:"display_cat" so Plot's color scale drives the legend
 const mktTop20 = mktRanked.slice(0, 20);
 const mktCatDomain = Object.keys(CAT_COLORS).filter(c => mktTop20.some(d => d.display_cat === c));
-Plot.plot({
+display(Plot.plot({
   width,
   height: mktTop20.length * 24 + 60,  // extra space for the color legend
   marginLeft: 240,
@@ -3064,7 +3064,7 @@ Plot.plot({
     }),
     Plot.ruleX([0])
   ]
-})
+}))
 ```
 
 ```js

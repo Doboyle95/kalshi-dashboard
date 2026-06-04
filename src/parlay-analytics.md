@@ -147,7 +147,7 @@ const compTidy = [
   ...tline.map(d => ({date: d.date, month: d.month, value: d.pct_vol_4plus,   series: "% volume in 4+-leg"})),
   ...tline.map(d => ({date: d.date, month: d.month, value: d.pct_correlated,  series: "% same-game (correlated)"}))
 ];
-Plot.plot({
+display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 260, marginLeft: 56,
   x: {type: "utc", label: null},
@@ -159,7 +159,7 @@ Plot.plot({
     Plot.tip(compTidy, Plot.pointer({x: "date", y: "value",
       title: d => `${d.month}\n${d.series}: ${pct1(d.value)}`}))
   ]
-})
+}))
 ```
 
 ```js
