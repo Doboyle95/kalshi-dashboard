@@ -1746,6 +1746,25 @@ function wideCategoryForTicker(ticker) {
   return wideMap[ticker];
 }
 
+// Leg-based parlay split (correlated / independent / pending) for the Detailed view.
+const parlayByType = await FileAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const PARLAY_CLASS_TO_CAT = {
+  "same-game (correlated)":      "Parlay (correlated)",
+  "multi-game (independent)":    "Parlay (independent)",
+  "unclassified (pending legs)": "Parlay (pending)"
+};
+// ISO day -> {Parlay (correlated/independent/pending), total} (summed over n_legs_bucket + sportmix).
+const parlayTypeByDate = d3.rollup(
+  parlayByType,
+  rs => {
+    const o = {"Parlay (correlated)": 0, "Parlay (independent)": 0, "Parlay (pending)": 0};
+    for (const r of rs) o[PARLAY_CLASS_TO_CAT[r.parlay_class] || "Parlay (pending)"] += +r.contracts || 0;
+    o.total = o["Parlay (correlated)"] + o["Parlay (independent)"] + o["Parlay (pending)"];
+    return o;
+  },
+  r => (r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date))
+);
+
 // Build wide-category daily totals
 const wideDaily = topDaily.map(row => {
   const sp = sportsSplit.find(s => +s.date === +row.date) || {};
@@ -1767,10 +1786,26 @@ const wideDaily = topDaily.map(row => {
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
     groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
+  // Leg-based parlay split for this day, rescaled to the authoritative contracts_parlay total
+  // so Detailed and General views stay the same height. Pre-2025-09 (no leg data): all -> pending.
+  const dayKey = row.date.toISOString().slice(0, 10);
+  const pt = parlayTypeByDate.get(dayKey);
+  let pCorr = 0, pIndep = 0, pPend = 0;
+  if (pt && pt.total > 0) {
+    const k = parlay / pt.total;
+    pCorr  = pt["Parlay (correlated)"]  * k;
+    pIndep = pt["Parlay (independent)"] * k;
+    pPend  = pt["Parlay (pending)"]     * k;
+  } else {
+    pPend = parlay;
+  }
   return {
     date: row.date,
     ...groups,
     Parlay: parlay,
+    "Parlay (correlated)":  pCorr,
+    "Parlay (independent)": pIndep,
+    "Parlay (pending)":     pPend,
     "Other sports":     Math.max(0, totSports    - parlay - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
@@ -1784,7 +1819,7 @@ const wideOrder = [
   "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
   "College football", "NFL",
   "College basketball", "NBA",
-  "Parlay"
+  "Parlay (correlated)", "Parlay (independent)", "Parlay (pending)"
 ];
 
 // Color map - subcategory pairs share hue family
@@ -1798,8 +1833,8 @@ const wideColors = {
   "College football": "#ffcc80", "NFL": "#bf360c",
   // Basketball family - blue pair
   "College basketball": "#90caf9", "NBA": "#0d47a1",
-  // Parlay - top, prominent
-  "Parlay": "#7b1fa2"
+  // Parlay family - top, prominent (leg-based: correlated / independent / pending)
+  "Parlay (correlated)": "#7b1fa2", "Parlay (independent)": "#b07aa1", "Parlay (pending)": "#e8d0e0"
 };
 ```
 
@@ -1857,6 +1892,7 @@ const generalMap = {
   "Hockey": "Other sports", "Golf": "Other sports", "Tennis": "Other sports",
   "Soccer": "Other sports", "Combat sports": "Other sports", "Other sports": "Other sports",
   "Parlay": "Parlay",
+  "Parlay (correlated)": "Parlay", "Parlay (independent)": "Parlay", "Parlay (pending)": "Parlay",
   "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
   "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
 };
@@ -1920,6 +1956,12 @@ const monthlyHoverFocus = tmHoveredCategory ? mapCategoryForCurrentDetail(tmHove
 const monthlyPinned = tmPinnedCategories.map(mapCategoryForCurrentDetail);
 
 const monthlyFocusSet = new Set([monthlyHoverFocus || monthlyPrimaryFocus, ...monthlyPinned].filter(Boolean));
+// Detailed view splits "Parlay" into three leg-based buckets; expand a treemap "Parlay" focus to all three.
+if (monthlyFocusSet.has("Parlay")) {
+  monthlyFocusSet.add("Parlay (correlated)");
+  monthlyFocusSet.add("Parlay (independent)");
+  monthlyFocusSet.add("Parlay (pending)");
+}
 
 const monthTipData = Array.from(
   d3.rollup(
