@@ -24,6 +24,7 @@ const pnlRaw  = await FileAttachment("data/parlay_pnl_daily_by_corr_v2.csv").csv
 const mixRaw  = await FileAttachment("data/parlay_sportsmix_v2.csv").csv({typed: true});
 const popDailyRaw = await FileAttachment("data/parlay_popular_daily.csv").csv({typed: true});
 const popMetaRaw  = await FileAttachment("data/parlay_popular_meta.csv").csv({typed: true});
+const volTypeRaw  = await FileAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
 ```
 
 ```js
@@ -190,6 +191,41 @@ const pnlEnd = {
 const pnlDataRange = {start: d3.min(pnlRaw, d => d.date), end: d3.max(pnlRaw, d => d.date)};
 const fmtSignedUSD = n => n < 0 ? "-$" + fmtCount(-n) : "$" + fmtCount(n);
 const fmtDay = d => (d instanceof Date ? d : new Date(d)).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
+```
+
+## Parlay volume: correlated vs non-correlated over time
+
+_Monthly parlay volume (contracts), split by **leg-level** correlation — **same-game (correlated)** tickets versus **multi-game (independent)** ones. Classified from the actual legs, not the ticker name; brand-new tickers still awaiting leg-mapping sit in a small "unclassified" band._
+
+```js
+const VT_DOMAIN = ["same-game (correlated)", "multi-game (independent)", "unclassified (pending legs)"];
+const VT_COLORS = ["#e4572e", "#5b8def", "#adb5bd"];
+const vtMonthly = (() => {
+  const agg = d3.rollup(
+    volTypeRaw,
+    v => d3.sum(v, d => +d.contracts),
+    d => d.date instanceof Date ? d3.utcFormat("%Y-%m")(d.date) : String(d.date).slice(0, 7),
+    d => d.parlay_class
+  );
+  const rows = [];
+  for (const [ms, byClass] of agg)
+    for (const [cls, c] of byClass)
+      rows.push({date: d3.utcParse("%Y-%m")(ms), month: ms, parlay_class: cls, contracts: c});
+  return rows.sort((a, b) => a.date - b.date);
+})();
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 320, marginLeft: 64,
+  x: {type: "utc", label: null},
+  y: {label: "Monthly parlay volume (contracts)", grid: true, tickFormat: fmtCount},
+  color: {legend: true, domain: VT_DOMAIN, range: VT_COLORS},
+  marks: [
+    Plot.rectY(vtMonthly, {x: "date", interval: d3.utcMonth, y: "contracts", fill: "parlay_class",
+      order: VT_DOMAIN, tip: true,
+      title: d => `${d.month} · ${d.parlay_class}\nVolume: ${fmtCount(d.contracts)} contracts`}),
+    Plot.ruleY([0])
+  ]
+}))
 ```
 
 ## Cumulative bettor P&L: correlated vs non-correlated
