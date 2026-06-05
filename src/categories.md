@@ -17,6 +17,11 @@ title: Categories
 const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
 const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
+// Leg-based parlay correlation by (date, report_ticker): lets the treemap split each
+// parlay series' windowed volume into correlated / independent / pending by what the legs
+// actually were, instead of the ticker-name-derived Same-game/Multi-game mtype (which is
+// wrong — e.g. KXMVESPORTSMULTIGAMEEXTENDED is ~46% correlated / ~54% independent).
+const parlayCorrByTicker = await FileAttachment("data/parlay_corr_by_ticker_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
@@ -1045,13 +1050,52 @@ const tmActiveMarketRowsByTicker = d3.group(
 
   // -- Build nested totals ---------------------------------------------------
   const isZoomed = !!tmActiveCategory && tmActiveTickerRows.length > 0;
+  // Windowed leg-kind split for parlays: sum parlay_corr_by_ticker over the SAME
+  // brushed window as tmData, per report_ticker -> {correlated, independent, pending}.
+  // Each parlay series' treemap volume is then divided by these shares (leg-truth)
+  // instead of bucketed by its single ticker-name mtype (Same-game/Multi-game).
+  const parlayKindShare = (() => {
+    const [s, e] = tmDateSel;
+    const m = new Map();
+    for (const r of parlayCorrByTicker) {
+      if (!(r.date >= s && r.date <= e)) continue;
+      const c = +r.contracts || 0;
+      if (!c) continue;
+      let o = m.get(r.report_ticker);
+      if (!o) { o = {correlated: 0, independent: 0, pending: 0, total: 0}; m.set(r.report_ticker, o); }
+      if (r.kind === "correlated") o.correlated += c;
+      else if (r.kind === "independent") o.independent += c;
+      else o.pending += c;
+      o.total += c;
+    }
+    return m;
+  })();
   const nest = {};
   for (const row of tmData) {
     const v = row.value || 0;
     if (!v) continue;
     const {grp, cat, mtype} = classify(row.report_ticker, row.is_sports);
-    if (!nest[grp])             nest[grp] = {};
-    if (!nest[grp][cat])        nest[grp][cat] = {};
+    if (!nest[grp])      nest[grp] = {};
+    if (!nest[grp][cat]) nest[grp][cat] = {};
+    if (cat === "Parlay") {
+      // Split this series' windowed volume across leg-kind tiles by its in-window
+      // shares; preserves the series total (shares sum to 1). No leg data for the
+      // window -> all volume falls to "Pending" (honest + lossless, never dropped).
+      const k = parlayKindShare.get(row.report_ticker);
+      const addKind = (label, amt) => {
+        if (amt <= 0) return;
+        if (!nest[grp][cat][label]) nest[grp][cat][label] = 0;
+        nest[grp][cat][label] += amt;
+      };
+      if (k && k.total > 0) {
+        addKind("Correlated",  v * (k.correlated  / k.total));
+        addKind("Independent", v * (k.independent / k.total));
+        addKind("Pending",     v * (k.pending     / k.total));
+      } else {
+        addKind("Pending", v);
+      }
+      continue;
+    }
     if (!nest[grp][cat][mtype]) nest[grp][cat][mtype] = 0;
     nest[grp][cat][mtype] += v;
   }
