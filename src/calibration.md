@@ -83,8 +83,8 @@ Plot.plot({
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.rectY(data, {
-      x1: d => +d.price_bin - 2.5,
-      x2: d => +d.price_bin + 2.5,
+      x1: d => +d.price_bin,
+      x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
       fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
       fillOpacity: 0.75,

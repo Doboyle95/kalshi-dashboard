@@ -1850,7 +1850,7 @@ const wideDaily = topDaily.map(row => {
     "Parlay (correlated)":  pCorr,
     "Parlay (independent)": pIndep,
     "Parlay (pending)":     pPend,
-    "Other sports":     Math.max(0, totSports    - parlay - knownSports),
+    "Other sports":     Math.max(0, totSports    - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
@@ -2850,6 +2850,9 @@ const MKT_NAME_OVERRIDES = {
 // -- Shared winner-display logic -----------------------------------------------
 // Hard overrides for winner display, keyed on winner_ticker.
 const WINNER_OVERRIDES = {
+  // A6 fix: the -NO suffix (New Orleans) spuriously trips isBinaryOutcome (/-(YES|NO)$/i),
+  // returning bare "yes" instead of decoding the team. Override the one affected market.
+  "KXNFLGAME-25OCT05NYGNO-NO": "Saints",
   "PRES-2024-DJT":        "Trump",
   "POPVOTE-24-R":         "Trump",
   "ECMOV-24-R":           "Trump",

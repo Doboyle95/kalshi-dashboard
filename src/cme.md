@@ -62,12 +62,14 @@ const totalAll = d3.sum(rows, d => d.total);
 </div>
 
 ```js
-const cmeDateSel = Mutable([rows[0].date, rows[rows.length - 1].date]);
-display(renderDateBrush({
+// A5 fix: guard against an empty/header-only cme_daily.csv -- rows[0].date would throw and take
+// down the brush + both Plot blocks below. Behaviour unchanged for the normal populated case.
+const cmeDateSel = Mutable(rows.length ? [rows[0].date, rows[rows.length - 1].date] : [new Date(), new Date()]);
+display(rows.length ? renderDateBrush({
   data: rows, dateAccessor: d => d.date, valueAccessor: d => d.total,
   initialRange: [rows[0].date, rows[rows.length - 1].date],
   onSelect: r => { cmeDateSel.value = r; }, width
-}));
+}) : html`<p>No CME data available.</p>`);
 ```
 
 ## Daily volume

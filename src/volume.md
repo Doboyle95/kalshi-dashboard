@@ -546,5 +546,5 @@ Plot.plot({
 
 <details class="surface-card compact-details">
 <summary>What this measures</summary>
-<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot isn't running live right now, so the chart ends ${fmtDate(oiLast.date)} and lags by a few weeks.</p>
+<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot updates on a periodic schedule rather than live, so the chart ends ${fmtDate(oiLast.date)} and may lag the other charts by a day or two.</p>
 </details>

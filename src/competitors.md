@@ -203,7 +203,10 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
 {
   const [s, e] = dr_share;
 
-  const shareTidy = platforms.flatMap(p =>
+  // A3 fix: exclude CME from the 100%-stacked share denominator. CME is sparse (~57 days) and is
+  // omitted from the legend `order` + caption, so including it normalized every other platform's
+  // share downward on CME's days only (inconsistent denominator). Share chart only; tooltips derive.
+  const shareTidy = platforms.filter(p => !p.name.includes("CME")).flatMap(p =>
     p.data
       .filter(d => d.date >= s && d.date <= e && d.contracts != null && d.contracts > 0)
       .map(d => ({date: d.date, platform: p.name, contracts: d.contracts}))
