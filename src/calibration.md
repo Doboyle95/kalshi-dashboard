@@ -96,11 +96,10 @@ Plot.plot({
 ```
 
 ```js
-// Filter to the groups actually present in the CSV. R/calibration_three_way.R
-// declares 5 group aggregates (ALL, NON_PARLAY, PARLAY, SPORTS_NON_PARLAY,
-// NON_SPORTS) but the deployed CSV only carries the first three — the
-// sports/non-sports split needs the script re-run after the recent enrich
-// changes. Until that lands, hide options that would produce an empty chart.
+// Defensively show only the market groups actually present in the CSV, so a
+// partial producer run can never render an empty chart. R/calibration_three_way.R
+// emits all five aggregates (ALL, NON_PARLAY, PARLAY, SPORTS_NON_PARLAY,
+// NON_SPORTS) and the deployed CSV currently carries all five.
 const calibGroups = Array.from(new Set(calib.map(d => d.group)));
 const groupOrder = ["ALL", "NON_PARLAY", "PARLAY", "SPORTS_NON_PARLAY", "NON_SPORTS"];
 const availableGroups = groupOrder.filter(g => calibGroups.includes(g));
