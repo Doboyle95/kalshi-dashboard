@@ -518,8 +518,10 @@ const oi = oiRaw
   }))
   .filter(d => d.date && d.total_oi_contracts > 0)
   .sort((a, b) => a.date - b.date);
-const oiPeak = oi.reduce((a, b) => (b.total_oi_contracts > a.total_oi_contracts ? b : a), oi[0]);
-const oiLast = oi[oi.length - 1];
+// Guard against an empty/missing OI CSV (the OI snapshot producer can stall) — without
+// this, the inline stats + prose below dereference undefined and throw on the page.
+const oiPeak = oi.length ? oi.reduce((a, b) => (b.total_oi_contracts > a.total_oi_contracts ? b : a), oi[0]) : null;
+const oiLast = oi.length ? oi[oi.length - 1] : null;
 ```
 
 ```js
@@ -539,13 +541,17 @@ Plot.plot({
 })
 ```
 
-<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 18px 0;font-size:13px;color:var(--theme-foreground-muted);">
-  <div><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
-  <div><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
-  <div><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
-</div>
+```js
+display(oiPeak && oiLast
+  ? html`<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 18px 0;font-size:13px;color:var(--theme-foreground-muted);">
+      <div><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
+      <div><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
+      <div><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
+    </div>`
+  : html`<p class="chart-note">Open-interest data is not currently available.</p>`);
+```
 
 <details class="surface-card compact-details">
 <summary>What this measures</summary>
-<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot updates on a periodic schedule rather than live, so the chart ends ${fmtDate(oiLast.date)} and may lag the other charts by a day or two.</p>
+<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot updates on a periodic schedule rather than live, so the chart ends ${oiLast ? fmtDate(oiLast.date) : "—"} and may lag the other charts by a day or two.</p>
 </details>
