@@ -567,7 +567,7 @@ Plot.plot({
   width,
   height: filtered.length * 22 + 40,
   marginLeft: 220,
-  x: {label: metric === "contracts" ? "Volume ($)" : "Fees ($)", grid: true},
+  x: {label: metric === "contracts" ? "Volume (contracts)" : "Fees ($)", grid: true},
   y: {label: null},
   marks: [
     Plot.barX(filtered, {
@@ -576,7 +576,7 @@ Plot.plot({
       fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#00C2A8",
       sort: {y: "-x"},
       tip: true,
-      title: d => `${d.report_ticker}\n$${fmtCount(d[metric])}\nSports: ${d.is_sports}`
+      title: d => `${d.report_ticker}\n${metric === "contracts" ? fmtCount(d[metric]) + " contracts" : "$" + fmtCount(d[metric])}\nSports: ${d.is_sports}`
     }),
     Plot.ruleX([0])
   ]
@@ -1524,7 +1524,7 @@ const tmActiveMarketRowsByTicker = d3.group(
   // pageX/pageY-driven; the tooltip is page-fixed and cleaned up when this
   // cell re-runs because it's appended to the same wrapper as the SVG.
   leafSel.append("title")
-    .text(d => `${displayTreemapCategory(d.parent.parent.data.name)} - ${displayTreemapCategory(d.parent.data.name)} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees" : "Volume"}: $${fmtCount(d.value)}`);
+    .text(d => `${displayTreemapCategory(d.parent.parent.data.name)} - ${displayTreemapCategory(d.parent.data.name)} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees: $" + fmtCount(d.value) : "Volume: " + fmtCount(d.value) + " contracts"}`);
 
   const tooltip = document.createElement("div");
   tooltip.className = "kd-treemap-tooltip";
@@ -1540,7 +1540,7 @@ const tmActiveMarketRowsByTicker = d3.group(
     return `
       <div class="kd-tt-title">${headline}</div>
       <div class="kd-tt-sub">${grp}</div>
-      <div class="kd-tt-row"><span>${metricLabel}</span><span>$${fmtCount(d.value)}</span></div>
+      <div class="kd-tt-row"><span>${metricLabel}</span><span>${tmMetric === "Fees" ? "$" + fmtCount(d.value) : fmtCount(d.value) + " contracts"}</span></div>
       <div class="kd-tt-row"><span>Share of view</span><span>${pct.toFixed(2)}%</span></div>
     `;
   };
@@ -1624,7 +1624,7 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 1 : 0.45)
     .attr("font-size","10px")
     .attr("pointer-events", "none")
-    .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? `$${fmtCount(d.value)}` : "");
+    .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? (tmMetric === "Fees" ? `$${fmtCount(d.value)}` : `${fmtCount(d.value)}`) : "");
 
   // -- Market-type labels on large enough leaf tiles -------------------------
   const SKIP_LABEL = new Set(isZoomed ? [] : [
@@ -1734,7 +1734,7 @@ const tmActiveMarketRowsByTicker = d3.group(
         border-color:${color};
         background:${active ? color + "2e" : color + "14"};
         color:${active ? "var(--theme-foreground)" : "inherit"};
-      ">${displayTreemapCategory(category)} | $${fmtCount(value)}</button>`;
+      ">${displayTreemapCategory(category)} | ${tmMetric === "Fees" ? "$" + fmtCount(value) : fmtCount(value)}</button>`;
       btn.addEventListener("click", () => { setSelectedCategory(category); });
       row.append(btn);
     }
@@ -2055,11 +2055,11 @@ Plot.plot({
     tickRotate: monthLabels.length > 18 ? -45 : 0
   },
   y: {
-    label: chartScale === "Normalized" ? "Share of monthly volume" : "Monthly volume ($)",
+    label: chartScale === "Normalized" ? "Share of monthly volume" : "Monthly volume (contracts)",
     grid: true,
     tickFormat: chartScale === "Normalized"
       ? d => (d * 100).toFixed(0) + "%"
-      : d => "$"+(d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
+      : d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
   },
   marks: [
     Plot.barY(plotTidy, {
@@ -2078,13 +2078,13 @@ Plot.plot({
         d.month,
         chartScale === "Normalized"
           ? "Total: 100% of month"
-          : `Total: $${fmtCount(d.total || 0)}`,
+          : `Total: ${fmtCount(d.total || 0)} contracts`,
         ...activeOrder
           .filter(cat => (d[cat] || 0) > 0)
           .sort((a, b) => (d[b] || 0) - (d[a] || 0))
           .map(cat => chartScale === "Normalized"
             ? `${cat}: ${((d[cat] || 0) * 100).toFixed(1)}%`
-            : `${cat}: $${fmtCount(d[cat] || 0)}`)
+            : `${cat}: ${fmtCount(d[cat] || 0)}`)
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -2273,9 +2273,9 @@ if (compareSummary.length) {
   display(html`<div class="comparison-card-grid">
     ${compareSummary.map(d => html`<div class="comparison-card" style="--series-color:${wideColors[d.category] || "#666"}">
       <div class="comparison-card-title">${d.category}</div>
-      <div class="comparison-card-main">$${fmtCount(d.total)}</div>
+      <div class="comparison-card-main">${fmtCount(d.total)} <span style="font-size:0.5em;font-weight:400;opacity:0.7">contracts</span></div>
       <div class="comparison-card-row"><span>Comparison share</span><strong>${(d.share * 100).toFixed(1)}%</strong></div>
-      <div class="comparison-card-row"><span>Peak month</span><strong>${d.peakMonth || "-"} · $${fmtCount(d.peakContracts)}</strong></div>
+      <div class="comparison-card-row"><span>Peak month</span><strong>${d.peakMonth || "-"} · ${fmtCount(d.peakContracts)}</strong></div>
       <div class="comparison-card-row"><span>Latest indexed</span><strong>${d.indexedLatest == null ? "-" : d.indexedLatest.toFixed(0) + "%"}</strong></div>
     </div>`)}
   </div>`);
@@ -2299,9 +2299,9 @@ if (!compareSeries.length) {
     color: {legend: true, domain: compareSeries, range: compareSeries.map(cat => wideColors[cat] || "#666")},
     x: {type: "band", domain: monthLabels, label: null, tickFormat: monthTickFormat},
     y: {
-      label: compareMode === "Market share" ? "Share of monthly volume" : compareMode === "Indexed growth" ? "Indexed to first nonzero month = 100" : "Monthly volume ($)",
+      label: compareMode === "Market share" ? "Share of monthly volume" : compareMode === "Indexed growth" ? "Indexed to first nonzero month = 100" : "Monthly volume (contracts)",
       grid: true,
-      tickFormat: compareMode === "Market share" ? d => (d * 100).toFixed(0) + "%" : compareMode === "Indexed growth" ? d => d.toFixed(0) : d => "$" + fmtCount(d)
+      tickFormat: compareMode === "Market share" ? d => (d * 100).toFixed(0) + "%" : compareMode === "Indexed growth" ? d => d.toFixed(0) : d => fmtCount(d)
     },
     marks: [
       Plot.lineY(compareSecondaryTidy, {
@@ -2339,7 +2339,7 @@ if (!compareSeries.length) {
             ? `${cat}: ${((d[cat] || 0) * 100).toFixed(1)}%`
             : compareMode === "Indexed growth"
             ? `${cat}: ${(d[cat] || 0).toFixed(0)}`
-            : `${cat}: $${fmtCount(d[cat] || 0)}`)
+            : `${cat}: ${fmtCount(d[cat] || 0)} contracts`)
         ].join("\n")
       })),
       Plot.ruleY([0])
@@ -2453,7 +2453,7 @@ Plot.plot({
   marginLeft: 70,
   color: {legend: true, domain: mtOrder, range: mtColors},
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true},
+  y: {label: "Volume (contracts)", grid: true},
   marks: [
     Plot.areaY(mtTidy, {
       x: "date",
@@ -2466,7 +2466,7 @@ Plot.plot({
     Plot.ruleX(mtTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(mtTipData, Plot.pointerX({
       x: "date",
-      title: d => [fmtDate(d.date), ...mtOrder.map(t => d[t] > 0 ? `${t}: $${fmtCount(d[t])}` : null).filter(Boolean)].join("\n")
+      title: d => [fmtDate(d.date), ...mtOrder.map(t => d[t] > 0 ? `${t}: ${fmtCount(d[t])}` : null).filter(Boolean)].join("\n")
     })),
     Plot.ruleY([0])
   ]
@@ -3073,7 +3073,7 @@ display(Plot.plot({
     domain: mktCatDomain,
     range: mktCatDomain.map(c => CAT_COLORS[c])
   },
-  x: {label: "Volume ($)", grid: true, tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
+  x: {label: "Volume (contracts)", grid: true, tickFormat: d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   y: {label: null},
   marks: [
     Plot.barX(mktTop20, {
@@ -3082,7 +3082,7 @@ display(Plot.plot({
       fill: "display_cat",  // use the named color scale so legend renders
       sort: {y: "-x"},
       tip: true,
-      title: d => `${d.display_name}\n$${fmtC(d.contracts)} volume\nFees: $${fmtC(+d.fees_total||0)}\nWinner: ${d.winner_display}`
+      title: d => `${d.display_name}\n${fmtC(d.contracts)} contracts\nFees: $${fmtC(+d.fees_total||0)}\nWinner: ${d.winner_display}`
     }),
     Plot.ruleX([0])
   ]
@@ -3213,7 +3213,7 @@ const tbl = Inputs.table(mktDisplay, {
     _c:            "",
     display_name:  "Market",
     market_date:   "Date",
-    contracts:     "Volume",
+    contracts:     "Volume (contracts)",
     fees_total:    "Kalshi fees",
     winner_display:"Winner",
     top_short:     "Highest-vol. strike"
@@ -3226,7 +3226,7 @@ const tbl = Inputs.table(mktDisplay, {
       return el;
     },
     market_date: d => d ? d.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : "—",
-    contracts:  d => "$" + fmtC(d),
+    contracts:  d => fmtC(d),
     fees_total: d => (d == null || d === 0) ? "N/A" : "$" + fmtC(+d),
     // Market name: wrap to <=2 lines then ellipsis; full name on hover.
     display_name: v => html`<div class="mkt-name" title=${v ?? ""}>${v}</div>`,

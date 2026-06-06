@@ -128,7 +128,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 {
   const [s, e] = dr_abs;
   const fmt = metric === "contracts"
-    ? d => "$"+(d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
+    ? d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
     : d => "$"+(d >= 1e6 ? (d/1e6).toFixed(1)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toFixed(0));
 
   const filteredAll = all.filter(d => d.date >= s && d.date <= e);
@@ -150,7 +150,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
     x: {type: "utc", label: null},
     y: {
       type: compLogScale === "Log" ? "log" : "linear",
-      label: metric === "contracts" ? "Daily volume ($)" : "Daily fees ($)",
+      label: metric === "contracts" ? "Daily volume (contracts)" : "Daily fees ($)",
       grid: true,
       tickFormat: fmt
     },

@@ -53,7 +53,8 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Kalshi all-time volume</div>
-    <div class="kpi-value">${fmtUSD(totalContracts)}</div>
+    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-meta">contracts</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Kalshi all-time fee revenue</div>
@@ -66,8 +67,8 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Kalshi peak single day volume</div>
-    <div class="kpi-value">${fmtUSD(peakDay?.contracts_total)}</div>
-    <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
+    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
   </div>
 </div>
 
@@ -147,7 +148,7 @@ const indexBrush = view((() => {
 ```js
 {
   const [s, e] = indexBrush;
-  const fmt = d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
+  const fmt = d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
   const pColors = {
     Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
     ForecastEx: "#E53535", "Crypto.com/Nadex": "#9c27b0"
@@ -176,7 +177,7 @@ const indexBrush = view((() => {
     marginLeft: 70,
     marginRight: 16,
     x: {type: "utc", label: null, domain: [s, e]},
-    y: {type: indexLogScale === "Log" ? "log" : "linear", label: "Daily volume ($)", grid: true, tickFormat: fmt},
+    y: {type: indexLogScale === "Log" ? "log" : "linear", label: "Daily volume (contracts)", grid: true, tickFormat: fmt},
     color: {legend: true, domain: Object.keys(pColors), range: Object.values(pColors)},
     marks: [
       Plot.areaY(kalshiTidy.filter(d => d.date >= s && d.date <= e), {

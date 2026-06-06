@@ -43,12 +43,13 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="forecastex">
     <div class="kpi-label">All-time volume</div>
-    <div class="kpi-value">${fmtUSD(totalContracts)}</div>
+    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-meta">contracts</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtUSD(peakDay?.contracts_total)}</div>
-    <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
+    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
   </div>
 </div>
 
@@ -129,7 +130,7 @@ Plot.plot({
   height: 300,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
     Plot.rectY(splitFVolume, {
       x1: d => d.date,
@@ -137,7 +138,7 @@ Plot.plot({
       y: d => d.contracts_total || 0,
       fill: "#E53535", fillOpacity: 0.85,
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${fmtUSD(d.contracts_total||0)}`
+      title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)}`
     }),
     Plot.ruleY([0])
   ]
@@ -170,7 +171,7 @@ Plot.plot({
   height: 240,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#E53535", "#00C2A8"]},
   marks: [
     Plot.areaY(tidySplit, {
@@ -181,7 +182,7 @@ Plot.plot({
     Plot.ruleX(splitFSports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(splitFSports, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nSports: ${fmtUSD(d.contracts_sports||0)}\nNon-sports: ${fmtUSD(d.contracts_nonsports||0)}`
+      title: d => `${fmtDate(d.date)}\nSports: ${fmtCount(d.contracts_sports||0)}\nNon-sports: ${fmtCount(d.contracts_nonsports||0)}`
     })),
     Plot.ruleY([0])
   ]
@@ -222,7 +223,7 @@ Plot.plot({
   height: 280,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
     Plot.areaY(catFiltered, {
@@ -233,7 +234,7 @@ Plot.plot({
     Plot.ruleX(catTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(catTipData, Plot.pointerX({
       x: "date",
-      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtUSD(d[c])}` : null).filter(Boolean)].join("\n")
+      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtCount(d[c])}` : null).filter(Boolean)].join("\n")
     })),
     Plot.ruleY([0])
   ]
@@ -262,7 +263,7 @@ Plot.plot({
       sort: {y: "x", reverse: true},
       fill: "#E53535", fillOpacity: 0.7,
       tip: true,
-      title: d => `${d.category}: ${fmtUSD(d.contracts)}`
+      title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),
     Plot.ruleX([0])
   ]

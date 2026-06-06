@@ -51,12 +51,13 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">All-time volume</div>
-    <div class="kpi-value">${fmtUSD(totalContracts)}</div>
+    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-meta">contracts</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtUSD(peakDay?.contracts_total)}</div>
-    <div class="kpi-meta">${fmtDate(peakDay?.date)}</div>
+    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
   </div>
 </div>
 
@@ -213,7 +214,7 @@ Plot.plot({
   height: 380,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  y: {type: yScaleType === "Log" ? "log" : "linear", label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
     Plot.rectY(fd1, {
       x1: d => d.date,
@@ -247,9 +248,9 @@ Plot.plot({
       title: d => [
         fmtDate(d.date),
         isPartial(d) ? "Partial day — updating live" : null,
-        `Daily: ${fmtUSD(d.contracts_total||0)}`,
+        `Daily: ${fmtCount(d.contracts_total||0)} contracts`,
         `Fees: ${fmtUSD(d.fees_total||0)}`,
-        d.ma7_contracts != null ? `7-day avg: ${fmtUSD(Math.round(d.ma7_contracts))}` : null
+        d.ma7_contracts != null ? `7-day avg: ${fmtCount(Math.round(d.ma7_contracts))} contracts` : null
       ].filter(Boolean).join("\n")
     })),
     ...(volumeEventMode === "On" ? [
@@ -329,7 +330,7 @@ Plot.plot({
       title: d => [
         fmtDate(d.date),
         `Trades: ${(d.trades || 0).toLocaleString()}`,
-        `Volume: ${fmtUSD(d.contracts_total || 0)}`,
+        `Volume: ${fmtCount(d.contracts_total || 0)} contracts`,
         `Contracts per trade: ${((d.contracts_total || 0) / Math.max(1, d.trades || 0)).toFixed(1)}`
       ].join("\n")
     })),
@@ -464,7 +465,7 @@ Plot.plot({
   height: 280,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume ($)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
     : {legend: true, domain: ["Non-sports", "Sports", "Parlay"], range: ["#00C2A8", "#1a9641", "#ff8c00"]},
@@ -476,7 +477,7 @@ Plot.plot({
     Plot.ruleX(sportsTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(sportsTipData, Plot.pointerX({
       x: "date",
-      title: d => [fmtDate(d.date), ...subOrder.map(c => (d[c] || 0) > 0 ? `${c}: ${fmtUSD(d[c])}` : null).filter(Boolean)].join("\n")
+      title: d => [fmtDate(d.date), ...subOrder.map(c => (d[c] || 0) > 0 ? `${c}: ${sportsMetric === "Fees" ? fmtUSD(d[c]) : fmtCount(d[c]) + " contracts"}` : null).filter(Boolean)].join("\n")
     })),
     ...(useTableau ? [Plot.lineY(sportsMA, {
       x: "date", y: "ma",
