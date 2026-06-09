@@ -3118,7 +3118,7 @@ display(html`<style>
   .mkt-table td, .mkt-table th { padding: 0.65em 0.8em; }
   .mkt-table tr { height: 2.7em; }
   /* Sortable headers - Observable Inputs.table sorts on click; surface the affordance.
-     Column layout: 1=checkbox, 2=rank, 3=_c(hidden), 4=market, 5=volume, 6=fees, 7=winner, 8=strike */
+     Column layout: 1=checkbox, 2=rank, 3=_c(hidden), 4=market, 5=date, 6=volume, 7=fees, 8=winner, 9=strike */
   .mkt-table thead th:nth-child(n+2):not(:nth-child(3)) {
     cursor: pointer;
     user-select: none;
@@ -3145,6 +3145,10 @@ display(html`<style>
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; line-height: 1.2; max-height: 2.4em;
   }
+  /* Rank column (2nd child): tighter padding so "#" stays narrow. */
+  .mkt-table td:nth-child(2), .mkt-table th:nth-child(2) { padding-left: 0.45em; padding-right: 0.45em; }
+  /* Date column (5th child): keep YYYY/MM/DD on one line so it can't be clipped. */
+  .mkt-table td:nth-child(5), .mkt-table th:nth-child(5) { white-space: nowrap; }
   ${catCss}
 </style>`);
 
@@ -3225,7 +3229,15 @@ const tbl = Inputs.table(mktDisplay, {
       el.setAttribute("data-mkt-cat", cat);
       return el;
     },
-    market_date: d => d ? d.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) : "—",
+    // YYYY/MM/DD - uniform width (no variable-length month names) so the column
+    // stays narrow and the date never gets clipped. UTC to match the parsed game date.
+    market_date: d => {
+      if (!d) return "—";
+      const y = d.getUTCFullYear();
+      const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const da = String(d.getUTCDate()).padStart(2, "0");
+      return `${y}/${mo}/${da}`;
+    },
     contracts:  d => fmtC(d),
     fees_total: d => (d == null || d === 0) ? "N/A" : "$" + fmtC(+d),
     // Market name: wrap to <=2 lines then ellipsis; full name on hover.
@@ -3236,7 +3248,7 @@ const tbl = Inputs.table(mktDisplay, {
     contracts: "right",
     fees_total: "right"
   },
-  width: {rank: 50, _c: 0, display_name: 300},
+  width: {rank: 40, _c: 0, display_name: 300, market_date: 96},
   sort: "rank",
   reverse: false,
   rows: 50
