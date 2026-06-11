@@ -28,7 +28,30 @@ $files = @(
   "taker_category_summary.csv",
   "taker_category_daily.csv",
   "taker_sports_daily.csv",
-  "trade_size_daily.csv"
+  "trade_size_daily.csv",
+  # 2026-06-11 full review: these 18 are referenced by dashboard pages but were
+  # absent from this list, so the freshness manifest never tracked them (their
+  # fileUpdatedAt badges were blind) and a manual `npm run data:sync` published
+  # a partial set. The canonical cadence copier already moved them; this list
+  # now matches the full reader-facing surface.
+  "cme_daily.csv",
+  "cme_daily_distributed.csv",
+  "kalshi_oi_daily.csv",
+  "nadex_events_daily.csv",
+  "parlay_cashout_daily.csv",
+  "parlay_corr_by_ticker_daily.csv",
+  "parlay_house_edge_by_legs.csv",
+  "parlay_legs_over_time.csv",
+  "parlay_mispricing_by_correlation.csv",
+  "parlay_pnl_daily_by_corr_v2.csv",
+  "parlay_pnl_unified_daily.csv",
+  "parlay_popular_daily.csv",
+  "parlay_popular_meta.csv",
+  "parlay_sportsmix_v2.csv",
+  "parlay_top_games_by_volume.csv",
+  "parlay_volume_by_type_daily.csv",
+  "rh_monthly_estimates.csv",
+  "rh_weekly_estimates.csv"
 )
 
 $resolvedSource = Resolve-Path -LiteralPath $SourceDir
