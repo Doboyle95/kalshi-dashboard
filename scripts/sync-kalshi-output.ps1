@@ -65,7 +65,13 @@ foreach ($file in $files) {
 }
 
 if ($missing.Count -gt 0) {
-  Write-Warning ("Missing from source output: " + ($missing -join ", "))
+  # 2026-06-11 full review: this used to be a Write-Warning, and the manifest
+  # below FELL BACK to the stale dashboard copy's mtime for missing sources —
+  # a silently-incomplete publish set that still looked fresh. All files in
+  # $files are required dashboard inputs; fail the sync so the caller's step
+  # gate throws (task RED) and no partial set publishes.
+  Write-Error ("FATAL: missing from source output: " + ($missing -join ", "))
+  exit 1
 }
 
 $manifestFiles = @{}
