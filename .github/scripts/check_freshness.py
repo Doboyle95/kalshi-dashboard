@@ -61,7 +61,9 @@ THRESHOLDS = {
     "forecastex_sports_split_daily.csv": 24,
     # weekly
     "calibration_three_way.csv": 192,    # 8 days
-    "monthly_top_categories.csv": 168,
+    # monthly_top_categories.csv removed 2026-06-12: no dashboard page reads
+    # it (grep src/*.md), it was never in the publisher's sync list, and it
+    # produced a permanent "missing from manifest" alert.
     "kalshi_oi_daily.csv": 24,
 }
 
