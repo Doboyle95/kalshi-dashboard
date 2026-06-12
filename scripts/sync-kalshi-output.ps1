@@ -118,10 +118,65 @@ foreach ($file in $files) {
   }
 }
 
+# --- Local pipeline alerts (2026-06-12) -------------------------------------
+# The laptop-side monitors write output/task_health.json (check_task_results.ps1,
+# every 4h) and output/freshness_alert.txt (freshness_check.ps1, hourly), but
+# nothing READS them - the GitHub freshness-monitor issue is the only push
+# channel that reaches a human. Embed a compact local_alerts block into the
+# manifest (which the publisher already stages + pushes every iteration) so
+# .github/scripts/check_freshness.py can include them in the alert issue.
+# Best-effort BY DESIGN: this script gates the publish step (exit 1 fails the
+# cycle), so a malformed/missing alert source must never throw - it becomes an
+# alert line itself instead.
+$localAlerts = @()
+$localAlertsMeta = [ordered]@{
+  task_health_generated      = $null
+  freshness_report_mtime_utc = $null
+}
+try {
+  $thPath = Join-Path $resolvedSource "task_health.json"
+  if (Test-Path -LiteralPath $thPath) {
+    $th = Get-Content -LiteralPath $thPath -Raw | ConvertFrom-Json
+    $localAlertsMeta["task_health_generated"] = "$($th.generated)"
+    foreach ($a in @($th.alerts)) {
+      if ($a) { $localAlerts += "task_health: $a" }
+    }
+  }
+} catch {
+  $localAlerts += "task_health: UNREADABLE - $($_.Exception.Message)"
+}
+try {
+  $faPath = Join-Path $resolvedSource "freshness_alert.txt"
+  if (Test-Path -LiteralPath $faPath) {
+    $localAlertsMeta["freshness_report_mtime_utc"] = (Get-Item -LiteralPath $faPath).LastWriteTimeUtc.ToString("o")
+    # Alert lines start at column 0 with an ALL-CAPS tag (STALE, MISSING,
+    # BAD_CONTENT, SEAL_BLOCKED, SHARD_PILEUP, PARLAY_BACKLOG, GATE_HEADROOM,
+    # STALE_CONTEXT, REGRESSION, ...). Indented detail lines, "ok" lines and
+    # section headers do not match. -cmatch is REQUIRED (PS -match is
+    # case-insensitive and would also pick up the "ok" lines). TASK_ALERTS is
+    # excluded: it only points at task_health.json, whose alerts are embedded
+    # verbatim above.
+    $alertLines = Get-Content -LiteralPath $faPath -ErrorAction Stop |
+      Where-Object { $_ -cmatch '^[A-Z][A-Z_]{2,}\s' -and $_ -cnotmatch '^TASK_ALERTS' }
+    foreach ($l in $alertLines) { $localAlerts += "freshness_check: $($l.Trim())" }
+  }
+} catch {
+  $localAlerts += "freshness_check: UNREADABLE - $($_.Exception.Message)"
+}
+# Cap so a pathological report can't bloat the (public, every-iteration) manifest.
+$maxLocalAlerts = 40
+if ($localAlerts.Count -gt $maxLocalAlerts) {
+  $overflow = $localAlerts.Count - $maxLocalAlerts
+  $localAlerts = @($localAlerts | Select-Object -First $maxLocalAlerts) + @("(+$overflow more local alerts truncated)")
+}
+Write-Host ("  local_alerts: {0} entries embedded in manifest" -f $localAlerts.Count)
+
 $manifest = [pscustomobject]@{
   generated_at      = (Get-Date).ToString("o")
   generated_at_utc  = (Get-Date).ToUniversalTime().ToString("o")
   source_dir        = $resolvedSource.Path
+  local_alerts      = @($localAlerts)
+  local_alerts_meta = [pscustomobject]$localAlertsMeta
   files             = $manifestFiles
 }
 

@@ -4,6 +4,14 @@ Runs from GitHub Actions on a 30-min schedule. Reads
 src/data/freshness_manifest.json and alerts when any tracked dashboard CSV
 exceeds its freshness threshold.
 
+Also relays "local pipeline alerts" (2026-06-12): the laptop-side monitors
+(task_health.json from check_task_results.ps1, freshness_alert.txt from
+freshness_check.ps1) have no push channel of their own — the publisher embeds
+their alert lines into the manifest as `local_alerts`, and this watchdog
+carries them into the same alert issue. That means the issue can be open while
+every tracked CSV is fresh (e.g. a producer task is red but yesterday's CSV is
+still within threshold).
+
 Alerting:
   - GitHub Issue: opens or updates a single "Dashboard freshness alert"
     issue labeled `stale`. Closes the issue automatically when freshness
@@ -24,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -81,6 +90,11 @@ THRESHOLDS = {
 ISSUE_TITLE = "Dashboard freshness alert"
 ISSUE_LABEL = "stale"
 
+# If the local alert SOURCES themselves are older than this, the local monitors
+# are probably dead — which would otherwise read as "no local alerts". Both
+# sources rerun at least every 4h, so 26h is permissive.
+LOCAL_SOURCE_STALE_H = 26
+
 
 def load_manifest(path: str) -> dict:
     # utf-8-sig handles the BOM that the cadence's manifest writer (a PS1
@@ -135,6 +149,55 @@ def check_freshness(manifest: dict) -> tuple[list[dict], list[dict]]:
     return stale, missing
 
 
+def _parse_manifest_ts(value: str) -> datetime | None:
+    """Parse a .NET round-trip ("o") timestamp, local-offset or Z-suffixed.
+
+    PowerShell writes 7 fractional digits; Pythons before 3.11 only accept 6
+    in fromisoformat, so fall back to trimming the fraction.
+    """
+    candidate = value.replace("Z", "+00:00")
+    for attempt in (candidate, re.sub(r"(\.\d{6})\d+", r"\1", candidate)):
+        try:
+            dt = datetime.fromisoformat(attempt)
+        except ValueError:
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    return None
+
+
+def check_local_alerts(manifest: dict) -> list[str]:
+    """Return local pipeline alerts relayed through the manifest.
+
+    sync-kalshi-output.ps1 embeds `local_alerts` (task_health.json alert lines
+    + freshness_alert.txt stale lines) and `local_alerts_meta` (source
+    timestamps). Also flags the sources going stale: a dead local monitor
+    produces no alerts, which must not read as "all healthy".
+    """
+    alerts = [str(a) for a in (manifest.get("local_alerts") or []) if str(a).strip()]
+    meta = manifest.get("local_alerts_meta") or {}
+    now = datetime.now(timezone.utc)
+    for key, label in (
+        ("task_health_generated", "task_health.json (task-results watcher)"),
+        ("freshness_report_mtime_utc", "freshness_alert.txt (local freshness check)"),
+    ):
+        ts = meta.get(key)
+        if not ts:
+            continue
+        parsed = _parse_manifest_ts(str(ts))
+        if parsed is None:
+            alerts.append(f"local-monitor: unparseable timestamp for {label}: {ts}")
+            continue
+        age_h = (now - parsed).total_seconds() / 3600
+        if age_h > LOCAL_SOURCE_STALE_H:
+            alerts.append(
+                f"local-monitor: {label} is {age_h:.1f}h old "
+                f"(threshold {LOCAL_SOURCE_STALE_H}h) — the local monitor itself may be down"
+            )
+    return alerts
+
+
 def gh_request(method: str, endpoint: str, body: dict | None = None) -> dict:
     """Minimal GitHub API client using the GH_TOKEN env var."""
     token = os.environ["GH_TOKEN"]
@@ -160,7 +223,8 @@ def find_open_issue() -> dict | None:
     return None
 
 
-def render_body(stale: list[dict], missing: list[dict], manifest: dict) -> str:
+def render_body(stale: list[dict], missing: list[dict],
+                local_alerts: list[str], manifest: dict) -> str:
     now = datetime.now(timezone.utc).isoformat()
     parts = [
         f"**Detected at:** {now}",
@@ -180,16 +244,28 @@ def render_body(stale: list[dict], missing: list[dict], manifest: dict) -> str:
         for m in missing:
             parts.append(f"- `{m['name']}` — {m['reason']}")
         parts.append("")
+    if local_alerts:
+        parts.append(f"### Local pipeline alerts ({len(local_alerts)})")
+        parts.append(
+            "_Relayed from the laptop-side monitors via the manifest. The "
+            "published CSVs may still be fresh — these flag failing producer "
+            "tasks / local staleness before it reaches the dashboard._"
+        )
+        for a in local_alerts:
+            parts.append(f"- `{a}`")
+        parts.append("")
     parts.append("---")
     parts.append(
         "_This issue is opened/updated automatically by the "
         "`freshness_monitor` workflow. It closes automatically when "
-        "all tracked CSVs return to freshness._"
+        "all tracked CSVs return to freshness AND the local pipeline "
+        "alerts clear._"
     )
     return "\n".join(parts)
 
 
-def post_slack(stale: list[dict], missing: list[dict]) -> None:
+def post_slack(stale: list[dict], missing: list[dict],
+               local_alerts: list[str]) -> None:
     webhook = os.environ.get("SLACK_WEBHOOK_URL")
     if not webhook:
         return
@@ -203,6 +279,9 @@ def post_slack(stale: list[dict], missing: list[dict]) -> None:
     if missing:
         text_parts.append(f"*Missing from manifest ({len(missing)}):*")
         text_parts.extend(f"  • `{m['name']}` ({m['reason']})" for m in missing)
+    if local_alerts:
+        text_parts.append(f"*Local pipeline alerts ({len(local_alerts)}):*")
+        text_parts.extend(f"  • `{a}`" for a in local_alerts)
     payload = {"text": "\n".join(text_parts)}
     req = urllib.request.Request(
         webhook,
@@ -230,26 +309,28 @@ def main() -> int:
         return 2
 
     stale, missing = check_freshness(manifest)
+    local_alerts = check_local_alerts(manifest)
 
-    if not stale and not missing:
-        print("All tracked CSVs fresh.")
+    if not stale and not missing and not local_alerts:
+        print("All tracked CSVs fresh; no local pipeline alerts.")
         if not args.dry_run:
             existing = find_open_issue()
             if existing:
                 gh_request("PATCH", f"/issues/{existing['number']}", {
                     "state": "closed",
-                    "body": existing["body"] + "\n\n---\n**Resolved: all CSVs returned to freshness.**",
+                    "body": existing["body"] + "\n\n---\n**Resolved: all CSVs fresh and local alerts clear.**",
                 })
                 print(f"Closed previously-open issue #{existing['number']}.")
         return 0
 
-    body = render_body(stale, missing, manifest)
+    body = render_body(stale, missing, local_alerts, manifest)
     print("=" * 60)
     print(body)
     print("=" * 60)
 
     if args.dry_run:
-        print(f"\n[DRY RUN] would have alerted: {len(stale)} stale, {len(missing)} missing")
+        print(f"\n[DRY RUN] would have alerted: {len(stale)} stale, "
+              f"{len(missing)} missing, {len(local_alerts)} local")
         return 1
 
     existing = find_open_issue()
@@ -264,7 +345,7 @@ def main() -> int:
         })
         print(f"Created issue #{new['number']}.")
 
-    post_slack(stale, missing)
+    post_slack(stale, missing, local_alerts)
 
     # Exit 0 even when stale (2026-06-12): the GitHub ISSUE is the alert
     # channel - it notifies once when a staleness episode opens and once when
@@ -273,7 +354,8 @@ def main() -> int:
     # condition - the Jun 3-12 frozen-manifest incident sent hundreds).
     # Unexpected script crashes still exit non-zero via the normal exception
     # path, so genuine workflow breakage still surfaces as a failed run.
-    print(f"STALE: {len(stale)} stale, {len(missing)} missing - tracked in the alert issue.")
+    print(f"ALERT: {len(stale)} stale, {len(missing)} missing, "
+          f"{len(local_alerts)} local - tracked in the alert issue.")
     return 0
 
 
