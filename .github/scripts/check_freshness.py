@@ -65,6 +65,16 @@ THRESHOLDS = {
     # it (grep src/*.md), it was never in the publisher's sync list, and it
     # produced a permanent "missing from manifest" alert.
     "kalshi_oi_daily.csv": 24,
+    # parlay anatomy + cashout set (added 2026-06-12: these six were in the
+    # manifest since 06-11 but watched by NO staleness monitor; their producer
+    # froze silently for ~5 days in early June). Producers run daily (anatomy)
+    # or every 30-min v3 cycle (popular_meta); 48h is the permissive bound.
+    "parlay_house_edge_by_legs.csv": 48,
+    "parlay_legs_over_time.csv": 48,
+    "parlay_mispricing_by_correlation.csv": 48,
+    "parlay_top_games_by_volume.csv": 48,
+    "parlay_sportsmix_v2.csv": 48,
+    "parlay_popular_meta.csv": 48,
 }
 
 
