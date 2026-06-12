@@ -367,17 +367,76 @@ title: Ask Data
         insightsBtn.addEventListener("click", async () => {
           insightsBtn.disabled = true;
           insightsBtn.textContent = "Running deeper analysis...";
-          const pending = html`<div class="chart-note chat-insights-pending">Running deeper analysis with the primary model. This can take 20-60 seconds for context queries.</div>`;
+          const pending = html`<div class="chart-note chat-insights-pending">Running deeper analysis with the primary model. Context queries take a few seconds; the analysis streams in as it's written.</div>`;
           insightsBtn.after(pending);
+
+          // Streaming path (2026-06-12): /insights/stream sends SSE deltas so the
+          // analysis appears as it's written (first words in ~2-3s) instead of one
+          // blob after 10-20s. Renders plain text while streaming, then swaps to
+          // sanitized markdown at completion. Any stream failure falls back to the
+          // original one-shot /insights below.
+          let streamed = null; // {text, meta} on success
           try {
-            const insResp = await fetch(`${apiUrl.replace("/ask", "/insights")}`, {
+            const resp = await fetch(`${apiUrl.replace("/ask", "/insights/stream")}`, {
               method: "POST",
               headers: {...authHeader, "Content-Type": "application/json"},
               body: JSON.stringify({question, sql: data.sql, rows: data.rows, columns: data.columns})
             });
-            if (!insResp.ok) throw new Error(`HTTP ${insResp.status}`);
-            const ins = await insResp.json();
-            if (ins.error) throw new Error(ins.error);
+            if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+            const liveEl = html`<div class="chat-deep-insights"></div>`;
+            const reader = resp.body.getReader();
+            const dec = new TextDecoder();
+            let buf = "", text = "", meta = null, streamErr = null;
+            for (;;) {
+              const {done, value} = await reader.read();
+              if (done) break;
+              buf += dec.decode(value, {stream: true});
+              let idx;
+              while ((idx = buf.indexOf("\n\n")) >= 0) {
+                const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
+                let ev = "message", dataLine = "";
+                for (const line of frame.split("\n")) {
+                  if (line.startsWith("event:")) ev = line.slice(6).trim();
+                  else if (line.startsWith("data:")) dataLine += line.slice(5).trim();
+                }
+                if (!dataLine || dataLine === "[DONE]") continue;
+                let obj; try { obj = JSON.parse(dataLine); } catch { continue; }
+                if (ev === "error") { streamErr = obj.error || "stream error"; }
+                else if (ev === "meta") { meta = obj; }
+                else if (obj.delta) {
+                  text += obj.delta;
+                  if (!liveEl.isConnected) pending.after(liveEl);
+                  liveEl.textContent = text;
+                }
+              }
+            }
+            if (streamErr && !text) throw new Error(streamErr);
+            if (!text) throw new Error("empty stream");
+            liveEl.remove();
+            streamed = {text, meta};
+          } catch (e) {
+            streamed = null; // fall through to the one-shot endpoint
+          }
+
+          try {
+            let ins;
+            if (streamed) {
+              ins = {
+                insights: streamed.text,
+                evidence: streamed.meta?.evidence,
+                context_sql: streamed.meta?.context_sql,
+                elapsed_ms: streamed.meta?.elapsed_ms
+              };
+            } else {
+              const insResp = await fetch(`${apiUrl.replace("/ask", "/insights")}`, {
+                method: "POST",
+                headers: {...authHeader, "Content-Type": "application/json"},
+                body: JSON.stringify({question, sql: data.sql, rows: data.rows, columns: data.columns})
+              });
+              if (!insResp.ok) throw new Error(`HTTP ${insResp.status}`);
+              ins = await insResp.json();
+              if (ins.error) throw new Error(ins.error);
+            }
             const insightEl = html`<div class="chat-deep-insights"></div>`;
             insightEl.innerHTML = sanitizeMarkdown(ins.insights);
             if (ins.elapsed_ms != null) {
