@@ -256,8 +256,15 @@ def main() -> int:
 
     post_slack(stale, missing)
 
-    print(f"FAILED: {len(stale)} stale, {len(missing)} missing.")
-    return 1
+    # Exit 0 even when stale (2026-06-12): the GitHub ISSUE is the alert
+    # channel - it notifies once when a staleness episode opens and once when
+    # it closes. Returning 1 here made every 30-min scheduled run send a
+    # "Run failed" email for the entire episode (48 emails/day for one known
+    # condition - the Jun 3-12 frozen-manifest incident sent hundreds).
+    # Unexpected script crashes still exit non-zero via the normal exception
+    # path, so genuine workflow breakage still surfaces as a failed run.
+    print(f"STALE: {len(stale)} stale, {len(missing)} missing - tracked in the alert issue.")
+    return 0
 
 
 if __name__ == "__main__":
