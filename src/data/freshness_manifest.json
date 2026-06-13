@@ -1,14 +1,14 @@
 ﻿{
-    "generated_at":  "2026-06-12T21:45:48.1500534-04:00",
-    "generated_at_utc":  "2026-06-13T01:45:48.1520512Z",
+    "generated_at":  "2026-06-12T21:52:24.4809045-04:00",
+    "generated_at_utc":  "2026-06-13T01:52:24.4829029Z",
     "source_dir":  "C:\\Users\\doboy\\OneDrive\\Documents\\KalshiData\\output",
     "local_alerts":  [
                          "task_health: KalshiDashboard-MetadataCsvExport: LastTaskResult=1 (0x1), state=Ready, lastRun=6/12/2026 5:00:01 AM",
                          "task_health: KalshiDashboard-OISnapshot: LastTaskResult=1 (0x1), state=Ready, lastRun=6/12/2026 2:00:01 PM",
+                         "task_health: KalshiDashboard-ParlayLive: LastTaskResult=1 (0x1), state=Ready, lastRun=6/12/2026 8:26:11 PM",
                          "task_health: KalshiDashboard-WeeklyRebuild: LastTaskResult=1 (0x1), state=Ready, lastRun=6/7/2026 3:00:00 AM",
                          "task_health: KalshiRebuild-LaptopWeeklyBatch: LastTaskResult=1 (0x1), state=Ready, lastRun=6/7/2026 4:00:00 AM",
-                         "task_health: KalshiV3-CollectSettledMode1: LastTaskResult=2 (0x2), state=Ready, lastRun=6/12/2026 5:37:55 PM",
-                         "task_health: KalshiV3-MaterializeExport: LastTaskResult=267014 (0x41306), state=Ready, lastRun=6/12/2026 5:22:07 PM",
+                         "task_health: KalshiV3-CollectSettledMode1: LastTaskResult=2 (0x2), state=Ready, lastRun=6/12/2026 9:37:55 PM",
                          "freshness_check: STALE    taker_pnl_daily.csv - 27 h old (threshold 6 h) - settlement (~4 hr)",
                          "freshness_check: STALE    maker_pnl_daily.csv - 27 h old (threshold 6 h) - settlement (~4 hr)",
                          "freshness_check: STALE    parlay_pnl_net.csv - 27 h old (threshold 6 h) - settlement (~4 hr)",
@@ -31,7 +31,7 @@
                          "freshness_check: REGRESSION chatbot suite shows 19 HIGH drift(s) vs golden - read C:\\Users\\doboy\\OneDrive\\Documents\\KalshiData\\output\\adversarial_regression_report.txt"
                      ],
     "local_alerts_meta":  {
-                              "task_health_generated":  "2026-06-12T17:50:03.8052086-04:00",
+                              "task_health_generated":  "2026-06-12T21:50:04.4461472-04:00",
                               "freshness_report_mtime_utc":  "2026-06-13T00:57:20.9733237Z"
                           },
     "files":  {
@@ -86,8 +86,8 @@
                                                    "size_bytes":  533
                                                },
                   "daily_top_categories.csv":  {
-                                                   "last_write_time":  "2026-06-12T21:45:47.4308099-04:00",
-                                                   "last_write_time_utc":  "2026-06-13T01:45:47.4308099Z",
+                                                   "last_write_time":  "2026-06-12T21:52:23.1943288-04:00",
+                                                   "last_write_time_utc":  "2026-06-13T01:52:23.1943288Z",
                                                    "size_bytes":  4645137
                                                },
                   "calibration_three_way.csv":  {
@@ -126,8 +126,8 @@
                                                             "size_bytes":  14062
                                                         },
                   "daily_overall.csv":  {
-                                            "last_write_time":  "2026-06-12T21:45:47.3092867-04:00",
-                                            "last_write_time_utc":  "2026-06-13T01:45:47.3092867Z",
+                                            "last_write_time":  "2026-06-12T21:52:23.0292244-04:00",
+                                            "last_write_time_utc":  "2026-06-13T01:52:23.0292244Z",
                                             "size_bytes":  146516
                                         },
                   "parlay_pnl_daily_by_corr_v2.csv":  {
@@ -161,8 +161,8 @@
                                                    "size_bytes":  75996
                                                },
                   "competitor_daily.csv":  {
-                                               "last_write_time":  "2026-06-12T21:24:07.4509820-04:00",
-                                               "last_write_time_utc":  "2026-06-13T01:24:07.4509820Z",
+                                               "last_write_time":  "2026-06-12T21:50:18.3387802-04:00",
+                                               "last_write_time_utc":  "2026-06-13T01:50:18.3387802Z",
                                                "size_bytes":  112177
                                            },
                   "parlay_legs_over_time.csv":  {
@@ -176,9 +176,9 @@
                                                      "size_bytes":  1089
                                                  },
                   "daily_sports_vs_nonsports.csv":  {
-                                                        "last_write_time":  "2026-06-12T21:45:47.4198095-04:00",
-                                                        "last_write_time_utc":  "2026-06-13T01:45:47.4198095Z",
-                                                        "size_bytes":  155338
+                                                        "last_write_time":  "2026-06-12T21:52:23.1797914-04:00",
+                                                        "last_write_time_utc":  "2026-06-13T01:52:23.1797914Z",
+                                                        "size_bytes":  155337
                                                     },
                   "category_leaderboard.csv":  {
                                                    "last_write_time":  "2026-06-12T11:18:57.8879424-04:00",
@@ -216,8 +216,8 @@
                                                           "size_bytes":  225564
                                                       },
                   "sports_market_type_daily.csv":  {
-                                                       "last_write_time":  "2026-06-12T21:45:47.4358100-04:00",
-                                                       "last_write_time_utc":  "2026-06-13T01:45:47.4358100Z",
+                                                       "last_write_time":  "2026-06-12T21:52:23.2023493-04:00",
+                                                       "last_write_time_utc":  "2026-06-13T01:52:23.2023493Z",
                                                        "size_bytes":  141176
                                                    },
                   "nadex_categories_daily.csv":  {
