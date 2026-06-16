@@ -212,3 +212,45 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
 ```
 
 </div>
+
+## Recent daily volume
+
+<p class="section-intro">Exact daily volume (contracts traded) by platform for the last two weeks — for when you want the number, not the trend. The newest row (bold) is a partial, in-progress day, and the competitor sources lag 1–3 days behind Kalshi.</p>
+
+<div class="surface-card" style="overflow-x:auto">
+
+```js
+display((() => {
+  const platforms = [
+    {key: "Kalshi", color: "#00C2A8"},
+    {key: "Polymarket US", color: "#3B7DD8"},
+    {key: "ForecastEx", color: "#E53535"},
+    {key: "Crypto.com/Nadex", color: "#9c27b0"}
+  ];
+  // platform -> (epoch-date -> contracts), from the same tidy data the chart uses
+  const lookup = new Map(platforms.map(p => [p.key, new Map()]));
+  for (const r of allPlatforms) {
+    if (r.contracts != null && lookup.has(r.platform)) lookup.get(r.platform).set(+r.date, r.contracts);
+  }
+  // last 14 calendar days, newest first (Kalshi is the most complete date axis)
+  const dates = Array.from(new Set(kalshiTidy.map(d => +d.date))).sort((a, b) => b - a).slice(0, 14);
+  const fmtDay = dk => new Date(dk).toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"});
+  const cell = n => n == null ? html`<span style="color:var(--theme-foreground-muted)">—</span>` : fmtCount(n);
+  return html`<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:0.92rem">
+    <thead><tr style="border-bottom:2px solid var(--card-border)">
+      <th style="text-align:left;padding:0.45rem 0.7rem">Date</th>
+      ${platforms.map(p => html`<th style="text-align:right;padding:0.45rem 0.7rem;color:${p.color}">${p.key}</th>`)}
+    </tr></thead>
+    <tbody>
+      ${dates.map((dk, i) => html`<tr style="border-bottom:1px solid var(--theme-background-alt)${i === 0 ? ";font-weight:600" : ""}">
+        <td style="text-align:left;padding:0.38rem 0.7rem;white-space:nowrap">${fmtDay(dk)}</td>
+        ${platforms.map(p => html`<td style="text-align:right;padding:0.38rem 0.7rem">${cell(lookup.get(p.key).get(dk))}</td>`)}
+      </tr>`)}
+    </tbody>
+  </table>`;
+})());
+```
+
+</div>
+
+<p class="section-intro" style="font-size:0.8rem;opacity:0.7">Volume is contracts traded (one contract = one yes/no bet), not dollars. "—" means that platform has no figure for that day yet.</p>
