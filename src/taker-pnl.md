@@ -25,7 +25,7 @@ display(freshnessPanel({
   items: [
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
-    {label: "Taker notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
+    {label: "Taker-side notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
     {label: "Category P&L", date: latestDate(categoryDaily), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
   ],
   note: "Recent dates can look incomplete until markets settle. Open interest is not part of the fast window refresh because it requires full rolling position state."
@@ -141,12 +141,12 @@ const makerTotals = {
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Taker fees paid</div>
     <div class="kpi-value">${fmtUSD(totals.fees)}</div>
-    <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of taker notional</div>
+    <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of taker-side notional</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Net ROI on taker cost</div>
     <div class="kpi-value">${fmtROI(totals.netRoi)}</div>
-    <div class="kpi-meta">${fmtUSD(totals.notional)} taker notional</div>
+    <div class="kpi-meta">${fmtUSD(totals.notional)} taker-side notional</div>
   </div>
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Settled coverage</div>
@@ -215,7 +215,7 @@ Plot.plot({
     Plot.ruleX(cumulativeTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(cumulativeTip, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])}\nAfter fees: ${fmtUSD(d["After fees"])}\nTaker notional: ${fmtUSD(d.notional)}\nNet ROI: ${fmtROI(d.netRoi)}`
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])}\nAfter fees: ${fmtUSD(d["After fees"])}\nTaker-side notional: ${fmtUSD(d.notional)}\nNet ROI: ${fmtROI(d.netRoi)}`
     })),
     Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.35})
   ]
@@ -343,7 +343,7 @@ Plot.plot({
       x2: d => new Date(d.date.getTime() + 864e5),
       y: "pnl_net",
       fill: d => Math.max(-20, Math.min(20, d.netRoi)),
-      title: d => `${fmtDate(d.date)}\nNet taker P&L: ${fmtUSD(d.pnl_net)}\nGross: ${fmtUSD(d.pnl_gross)}\nFees: ${fmtUSD(d.fees_taker)}\nTaker notional: ${fmtUSD(d.notional_total)}\nNet ROI: ${fmtROI(d.netRoi)}\nSettled contracts: ${fmtCount(d.contracts_settled)}`,
+      title: d => `${fmtDate(d.date)}\nNet taker P&L: ${fmtUSD(d.pnl_net)}\nGross: ${fmtUSD(d.pnl_gross)}\nFees: ${fmtUSD(d.fees_taker)}\nTaker-side notional: ${fmtUSD(d.notional_total)}\nNet ROI: ${fmtROI(d.netRoi)}\nSettled contracts: ${fmtCount(d.contracts_settled)}`,
       tip: true
     }),
     Plot.ruleY([0])

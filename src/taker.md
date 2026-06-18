@@ -22,7 +22,7 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 ```js
 display(freshnessPanel({
   items: [
-    {label: "Taker notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"}
+    {label: "Taker-side notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
 }));
@@ -52,7 +52,7 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_yes / d.notional_total
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">All-time taker notional</div>
+    <div class="kpi-label">All-time taker-side notional</div>
     <div class="kpi-value">${fmtUSD(totalNotional)}</div>
     <div class="kpi-meta">dollars staked by takers</div>
   </div>
@@ -69,7 +69,7 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_yes / d.notional_total
   <div class="kpi-card">
     <div class="kpi-label">Recent yes-side share</div>
     <div class="kpi-value">${recentPctYes?.toFixed(1)}%</div>
-    <div class="kpi-meta">of taker notional (30-day avg)</div>
+    <div class="kpi-meta">of taker-side notional (30-day avg)</div>
   </div>
 </div>
 
@@ -103,7 +103,7 @@ function makeTakerBrush(defaultStart) {
 }
 ```
 
-## Daily taker notional
+## Daily taker-side notional
 
 <p class="section-intro">Dollars staked by the aggressor on each trade — the handle equivalent. Because it weighs each bet by what it cost, a 99¢ contract counts for far more than a 1¢ one.</p>
 
@@ -128,7 +128,7 @@ Plot.plot({
   height: 360,
   marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker notional ($)", grid: true},
+  y: {label: "Taker-side notional ($)", grid: true},
   marks: [
     Plot.rectY(fd, {
       x1: d => d.date,
@@ -159,7 +159,7 @@ Plot.plot({
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker notional</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker-side notional</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
@@ -193,7 +193,7 @@ Plot.plot({
   height: 300,
   marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker notional ($)", grid: true},
+  y: {label: "Taker-side notional ($)", grid: true},
   color: {domain: ["Yes", "No"], range: ["#00C2A8", "#e15759"], legend: false},
   marks: [
     Plot.rectY(fdStack, {
@@ -226,6 +226,6 @@ Plot.plot({
 </div>
 
 <details class="surface-card compact-details">
-  <summary>How taker notional is calculated</summary>
-  <p>Every matched trade has an aggressor (taker) who crosses the spread and a liquidity provider (maker) who rests. The taker's cost depends on which side they take: a yes-side taker pays the yes price per contract; a no-side taker pays <em>1 − yes price</em> per contract. Summing those dollar amounts across all takers gives total taker notional — the prediction-market equivalent of handle in sports betting. Unlike raw contract count, notional is unaffected by artificial inflation from high-frequency trading in near-certain contracts.</p>
+  <summary>How taker-side notional is calculated</summary>
+  <p>Every matched trade has an aggressor (taker) who crosses the spread and a liquidity provider (maker) who rests. The taker's cost depends on which side they take: a yes-side taker pays the yes price per contract; a no-side taker pays <em>1 − yes price</em> per contract. Summing those dollar amounts across all takers gives total taker-side notional — the prediction-market equivalent of handle in sports betting. Unlike raw contract count, taker-side notional is unaffected by artificial inflation from high-frequency trading in near-certain contracts.</p>
 </details>
