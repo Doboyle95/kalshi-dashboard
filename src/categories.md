@@ -408,7 +408,9 @@ function categoryFromKalshiCategory(rawCategory) {
   if (!c) return null;
   if (c.includes("mention")) return "Mention";
   if (c.includes("election") || c.includes("politic")) return "Politics";
-  if (c.includes("economic") || c.includes("financial") || c.includes("companie")) return "Finance";
+  // "commodit" added 2026-06-19: Kalshi tags KXBRENT/KXGOLD/KXNATGAS/etc. as "Commodities";
+  // without it they fall to Other Non-sports. Mirrors R classify_market.R category_from_kalshi_category.
+  if (c.includes("economic") || c.includes("financial") || c.includes("companie") || c.includes("commodit")) return "Finance";
   if (c.includes("entertainment")) return "Entertainment";
   if (c.includes("crypto")) return "Crypto";
   if (c.includes("weather") || c.includes("climate")) return "Weather";
