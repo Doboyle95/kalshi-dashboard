@@ -57,6 +57,36 @@ $files = @(
 $resolvedSource = Resolve-Path -LiteralPath $SourceDir
 $resolvedTarget = Resolve-Path -LiteralPath $TargetDir
 
+# Parlay-popular pair-integrity gate (Layer B, Gate #1 - the canonical chokepoint that all
+# 'npm run data:sync' callers funnel through). export_popular_parlays.py writes the meta+daily
+# pair (joined by an integer pid) as two separate files plus parlay_popular.manifest.json LAST
+# (md5 of each CSV) as a commit point. Publish the pair only when BOTH source md5s match the
+# manifest; on mismatch skip BOTH (keep the prior published pair) regardless of -ForceAll, and
+# report the DESTINATION mtime for their freshness entry so the badge never advances on a torn
+# pair. Fail-OPEN if the manifest is missing/unreadable (Layer A's stable pid backstops any
+# residual tear). $ErrorActionPreference is 'Stop', so wrap the read+hash in try/catch.
+$popPair = @("parlay_popular_daily.csv", "parlay_popular_meta.csv")
+$popPairOk = $true
+try {
+  $popManifestPath = Join-Path $resolvedSource "parlay_popular.manifest.json"
+  if (Test-Path -LiteralPath $popManifestPath) {
+    $popManifest = Get-Content -LiteralPath $popManifestPath -Raw | ConvertFrom-Json
+    foreach ($pf in $popPair) {
+      $pfSrc = Join-Path $resolvedSource $pf
+      $expectedMd5 = $popManifest.files.$pf.md5
+      if ((-not (Test-Path -LiteralPath $pfSrc)) -or (-not $expectedMd5)) { $popPairOk = $false; break }
+      $actualMd5 = (Get-FileHash -LiteralPath $pfSrc -Algorithm MD5).Hash.ToLower()
+      if ($actualMd5 -ne ([string]$expectedMd5).ToLower()) { $popPairOk = $false; break }
+    }
+  }
+} catch {
+  $popPairOk = $true   # unreadable/malformed manifest -> fail-open
+  Write-Host "  parlay_popular manifest unreadable - fail-open ($($_.Exception.Message))"
+}
+if (-not $popPairOk) {
+  Write-Host "  parlay_popular pair FAILED manifest md5 check - skipping the pair (keeping prior published pair)"
+}
+
 Write-Host "Syncing dashboard CSVs"
 Write-Host "  From: $resolvedSource"
 Write-Host "  To:   $resolvedTarget"
@@ -66,6 +96,10 @@ $skippedOlder = 0
 $missing = @()
 
 foreach ($file in $files) {
+  if ((-not $popPairOk) -and ($popPair -contains $file)) {
+    Write-Host ("  skipped {0} (parlay_popular pair failed manifest check)" -f $file)
+    continue
+  }
   $src = Join-Path $resolvedSource $file
   $dst = Join-Path $resolvedTarget $file
 
@@ -101,7 +135,12 @@ $manifestFiles = @{}
 foreach ($file in $files) {
   $src = Join-Path $resolvedSource $file
   $dst = Join-Path $resolvedTarget $file
-  $item = if (Test-Path -LiteralPath $src) {
+  # A parlay_popular file we skipped (failed manifest check): report the DESTINATION (prior
+  # published) file so the freshness badge reflects the live pair, not the torn source.
+  $preferDst = ((-not $popPairOk) -and ($popPair -contains $file))
+  $item = if ($preferDst -and (Test-Path -LiteralPath $dst)) {
+    Get-Item -LiteralPath $dst
+  } elseif (Test-Path -LiteralPath $src) {
     Get-Item -LiteralPath $src
   } elseif (Test-Path -LiteralPath $dst) {
     Get-Item -LiteralPath $dst
