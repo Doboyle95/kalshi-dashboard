@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-20T01:57:07.810864-04:00",
-  "generated_at_utc": "2026-06-20T05:57:07.810864+00:00",
+  "generated_at": "2026-06-20T01:59:11.784976-04:00",
+  "generated_at_utc": "2026-06-20T05:59:11.784976+00:00",
   "source_dir": "C:\\Users\\doboy\\OneDrive\\Documents\\KalshiData\\output",
   "local_alerts": [
     "task_health: KalshiDashboard-MetadataCsvExport: LastTaskResult=1 (0x1), state=Ready, lastRun=6/19/2026 5:00:01 AM",
@@ -9,49 +9,51 @@
     "task_health: KalshiV3-DirtyQueueHealth: LastTaskResult=1 (0x1), state=Ready, lastRun=6/20/2026 1:08:31 AM",
     "task_health: KalshiV3-MaterializeExport: LastTaskResult=267014 (0x41306), state=Ready, lastRun=6/20/2026 1:22:07 AM",
     "task_health: KalshiV3-SettlementApiBackstop: LastTaskResult=1 (0x1), state=Ready, lastRun=6/19/2026 4:35:01 AM",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-01.txt - gate blocking for 432.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-02.txt - gate blocking for 408.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-03.txt - gate blocking for 384.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-04.txt - gate blocking for 360.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-05.txt - gate blocking for 336.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-06.txt - gate blocking for 312.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-07.txt - gate blocking for 289 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-09.txt - gate blocking for 240.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-10.txt - gate blocking for 216.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-11.txt - gate blocking for 192.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-12.txt - gate blocking for 168.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-13.txt - gate blocking for 140.3 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-14.txt - gate blocking for 120.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-15.txt - gate blocking for 96.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-16.txt - gate blocking for 72.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-17.txt - gate blocking for 48.9 h (shards accumulating; investigate seal_gate)",
-    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-18.txt - gate blocking for 24.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: STALE    taker_sports_daily.csv - 6.9 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    taker_notional_daily.csv - 6.9 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-01.txt - gate blocking for 433.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-02.txt - gate blocking for 409.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-03.txt - gate blocking for 385.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-04.txt - gate blocking for 361.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-05.txt - gate blocking for 337.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-06.txt - gate blocking for 313.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-07.txt - gate blocking for 290 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-09.txt - gate blocking for 241.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-10.txt - gate blocking for 217.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-11.txt - gate blocking for 193.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-12.txt - gate blocking for 169.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-13.txt - gate blocking for 141.3 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-14.txt - gate blocking for 121.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-15.txt - gate blocking for 97.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-16.txt - gate blocking for 73.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-17.txt - gate blocking for 49.9 h (shards accumulating; investigate seal_gate)",
+    "freshness_check: SEAL_BLOCKED .seal_blocked_2026-06-18.txt - gate blocking for 25.9 h (shards accumulating; investigate seal_gate)",
     "freshness_check: STALE_CONTEXT chatbot context has superseded record claims:",
     "freshness_check: REGRESSION chatbot suite shows 19 HIGH drift(s) vs golden - read C:\\Users\\doboy\\OneDrive\\Documents\\KalshiData\\output\\adversarial_regression_report.txt"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-06-20T01:50:03.1813614-04:00",
-    "freshness_report_mtime_utc": "2026-06-20T04:57:21.196802+00:00"
+    "freshness_report_mtime_utc": "2026-06-20T05:57:19.049984+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-06-20T01:57:07.458410-04:00",
-      "last_write_time_utc": "2026-06-20T05:57:07.458410+00:00",
-      "size_bytes": 145440
+      "last_write_time": "2026-06-20T01:59:11.355433-04:00",
+      "last_write_time_utc": "2026-06-20T05:59:11.355433+00:00",
+      "size_bytes": 145439
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-06-20T01:57:07.532412-04:00",
-      "last_write_time_utc": "2026-06-20T05:57:07.532412+00:00",
-      "size_bytes": 154673
+      "last_write_time": "2026-06-20T01:59:11.434946-04:00",
+      "last_write_time_utc": "2026-06-20T05:59:11.434946+00:00",
+      "size_bytes": 154664
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-06-20T01:57:07.540419-04:00",
-      "last_write_time_utc": "2026-06-20T05:57:07.540419+00:00",
-      "size_bytes": 4671363
+      "last_write_time": "2026-06-20T01:59:11.444946-04:00",
+      "last_write_time_utc": "2026-06-20T05:59:11.444946+00:00",
+      "size_bytes": 4671366
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-06-20T01:57:07.543418-04:00",
-      "last_write_time_utc": "2026-06-20T05:57:07.543418+00:00",
+      "last_write_time": "2026-06-20T01:59:11.450947-04:00",
+      "last_write_time_utc": "2026-06-20T05:59:11.450947+00:00",
       "size_bytes": 139466
     },
     "calibration_three_way.csv": {
