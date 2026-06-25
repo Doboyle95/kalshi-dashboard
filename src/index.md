@@ -30,9 +30,9 @@ display(askPageLink({
 ```
 
 ```js
-const fmtCount    = n => n >= 1e9 ? (n/1e9).toFixed(1)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
+const fmtCount    = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
 const fmtUSD      = n => "$" + fmtCount(n);
-const fmtUSDWhole = n => "$" + (n >= 1e9 ? (n/1e9).toFixed(1)+"B" : Math.round(n/1e6)+"M");
+const fmtUSDWhole = n => "$" + (n >= 1e9 ? (n/1e9).toFixed(2)+"B" : Math.round(n/1e6)+"M");
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -53,21 +53,21 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Kalshi all-time volume</div>
-    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-value" title="${totalContracts.toLocaleString()} contracts">${fmtCount(totalContracts)}</div>
     <div class="kpi-meta">contracts</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Kalshi all-time fee revenue</div>
-    <div class="kpi-value">${fmtUSD(totalFees)}</div>
+    <div class="kpi-value" title="$${totalFees.toLocaleString()}">${fmtUSD(totalFees)}</div>
   </div>
   <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Kalshi annualized revenue run rate</div>
-    <div class="kpi-value">${fmtUSDWhole(annualizedFees)}/yr</div>
+    <div class="kpi-value" title="$${annualizedFees.toLocaleString()}/yr">${fmtUSDWhole(annualizedFees)}/yr</div>
     <div class="kpi-meta">based on trailing 30 days</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Kalshi peak single day volume</div>
-    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-value" title="${(peakDay?.contracts_total ?? 0).toLocaleString()} contracts">${fmtCount(peakDay?.contracts_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
   </div>
 </div>
@@ -195,7 +195,7 @@ const indexBrush = view((() => {
       Plot.ruleX(tipPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
       Plot.tip(tipPivot, Plot.pointerX({
         x: "date",
-        title: d => [fmtDate(d.date), ...Object.keys(pColors).map(p => d[p] != null ? `${p}: ${fmt(d[p])}` : null).filter(Boolean)].join("\n")
+        title: d => [fmtDate(d.date), ...Object.keys(pColors).map(p => d[p] != null ? `${p}: ${fmt(d[p])} (${d[p].toLocaleString()})` : null).filter(Boolean)].join("\n")
       })),
       ...(indexLogScale === "Log" ? [] : [Plot.ruleY([0])])
     ]
@@ -235,7 +235,7 @@ display((() => {
   // last 14 calendar days, newest first (Kalshi is the most complete date axis)
   const dates = Array.from(new Set(kalshiTidy.map(d => +d.date))).sort((a, b) => b - a).slice(0, 14);
   const fmtDay = dk => new Date(dk).toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"});
-  const cell = n => n == null ? html`<span style="color:var(--theme-foreground-muted)">—</span>` : fmtCount(n);
+  const cell = n => n == null ? html`<span style="color:var(--theme-foreground-muted)">—</span>` : html`<span title="${n.toLocaleString()}">${fmtCount(n)}</span>`;
   return html`<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:0.92rem">
     <thead><tr style="border-bottom:2px solid var(--card-border)">
       <th style="text-align:left;padding:0.45rem 0.7rem">Date</th>

@@ -9,7 +9,7 @@ title: Trade Size Mix
 </div>
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 const fmtPct = n => `${((n ?? 0) * 100).toFixed((n ?? 0) >= 0.1 ? 1 : 2)}%`;
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
@@ -188,17 +188,17 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Selected contracts</div>
-    <div class="kpi-value">${fmtCount(selectedTotalContracts)}</div>
+    <div class="kpi-value" title="${(selectedTotalContracts ?? 0).toLocaleString()} contracts">${fmtCount(selectedTotalContracts)}</div>
     <div class="kpi-meta">${optionLabel(selectedSegmentKey)}</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Trades</div>
-    <div class="kpi-value">${fmtCount(selectedTotalTrades)}</div>
+    <div class="kpi-value" title="${(selectedTotalTrades ?? 0).toLocaleString()} trades">${fmtCount(selectedTotalTrades)}</div>
     <div class="kpi-meta">Avg size ${fmtCount(selectedTotalContracts / selectedTotalTrades)} contracts</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Largest trade</div>
-    <div class="kpi-value">${fmtCount(selectedMaxTrade)}</div>
+    <div class="kpi-value" title="${(selectedMaxTrade ?? 0).toLocaleString()} contracts">${fmtCount(selectedMaxTrade)}</div>
     <div class="kpi-meta">Single print in selected segment</div>
   </div>
 </div>
@@ -332,11 +332,11 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `${largeThreshold} contracts: ${fmtCount(d.large_contracts)}`,
-        `${largeThreshold} trades: ${fmtCount(d.large_trades)}`,
+        `${largeThreshold} contracts: ${fmtCount(d.large_contracts)} (${(d.large_contracts ?? 0).toLocaleString()})`,
+        `${largeThreshold} trades: ${fmtCount(d.large_trades)} (${(d.large_trades ?? 0).toLocaleString()})`,
         `Share of total: ${fmtPct(d.share)}`,
-        `Total contracts: ${fmtCount(d.total_contracts)}`,
-        `Largest trade: ${fmtCount(d.max_trade_size)}`
+        `Total contracts: ${fmtCount(d.total_contracts)} (${(d.total_contracts ?? 0).toLocaleString()})`,
+        `Largest trade: ${fmtCount(d.max_trade_size)} (${(d.max_trade_size ?? 0).toLocaleString()})`
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -377,10 +377,10 @@ Plot.plot({
       title: d => [
         fmtDate(d.date),
         `${d.size_bucket}: ${fmtPct(d.share)} of contracts`,
-        `Bucket contracts: ${fmtCount(d.contracts)}`,
-        `Bucket trades: ${fmtCount(d.trade_count)}`,
-        `Total contracts: ${fmtCount(d.total_contracts)}`,
-        `Largest trade: ${fmtCount(d.max_trade_size)}`
+        `Bucket contracts: ${fmtCount(d.contracts)} (${(d.contracts ?? 0).toLocaleString()})`,
+        `Bucket trades: ${fmtCount(d.trade_count)} (${(d.trade_count ?? 0).toLocaleString()})`,
+        `Total contracts: ${fmtCount(d.total_contracts)} (${(d.total_contracts ?? 0).toLocaleString()})`,
+        `Largest trade: ${fmtCount(d.max_trade_size)} (${(d.max_trade_size ?? 0).toLocaleString()})`
       ].join("\n")
     })),
     Plot.ruleY([0, 1])
@@ -463,9 +463,9 @@ Plot.plot({
         `${largeThreshold} share: ${fmtPct(d.share)}`,
         d.baseline != null ? `30-day baseline: ${fmtPct(d.baseline)}` : null,
         d.lift != null ? `Lift: ${d.lift.toFixed(1)}x` : null,
-        `${largeThreshold} contracts: ${fmtCount(d.large_contracts)}`,
-        `${largeThreshold} trades: ${fmtCount(d.large_trades)}`,
-        `Largest trade: ${fmtCount(d.max_trade_size)}`
+        `${largeThreshold} contracts: ${fmtCount(d.large_contracts)} (${(d.large_contracts ?? 0).toLocaleString()})`,
+        `${largeThreshold} trades: ${fmtCount(d.large_trades)} (${(d.large_trades ?? 0).toLocaleString()})`,
+        `Largest trade: ${fmtCount(d.max_trade_size)} (${(d.max_trade_size ?? 0).toLocaleString()})`
       ].filter(Boolean).join("\n")
     })),
     Plot.ruleY([0])
@@ -488,8 +488,8 @@ const topSpikes = spikeRows.slice(0, 8).map(d => ({
   share: fmtPct(d.share),
   baseline: fmtPct(d.baseline),
   lift: `${d.lift.toFixed(1)}x`,
-  contracts: fmtCount(d.large_contracts),
-  max_trade: fmtCount(d.max_trade_size)
+  contracts: (d.large_contracts ?? 0).toLocaleString(),
+  max_trade: (d.max_trade_size ?? 0).toLocaleString()
 }));
 ```
 

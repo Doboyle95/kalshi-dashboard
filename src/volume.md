@@ -9,7 +9,7 @@ title: Kalshi Volume
 </div>
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
 // Short axis format (no $ prefix): "400M" instead of "400,000,000"
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
 const fmtUSD   = n => "$" + fmtCount(n);
@@ -51,12 +51,12 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">All-time volume</div>
-    <div class="kpi-value">${fmtCount(totalContracts)}</div>
+    <div class="kpi-value" title="${(totalContracts ?? 0).toLocaleString()} contracts">${fmtCount(totalContracts)}</div>
     <div class="kpi-meta">contracts</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak single day</div>
-    <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
+    <div class="kpi-value" title="${(peakDay?.contracts_total ?? 0).toLocaleString()} contracts">${fmtCount(peakDay?.contracts_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
   </div>
 </div>
@@ -252,7 +252,7 @@ Plot.plot({
       title: d => [
         fmtDate(d.date),
         isPartial(d) ? "Partial day — updating live" : null,
-        `Daily: ${fmtCount(d.contracts_total||0)} contracts`,
+        `Daily: ${fmtCount(d.contracts_total||0)} contracts (${(d.contracts_total||0).toLocaleString()})`,
         `Fees: ${fmtUSD(d.fees_total||0)}`,
         d.ma7_contracts != null ? `7-day avg: ${fmtCount(Math.round(d.ma7_contracts))} contracts` : null
       ].filter(Boolean).join("\n")
@@ -481,7 +481,7 @@ Plot.plot({
     Plot.ruleX(sportsTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(sportsTipData, Plot.pointerX({
       x: "date",
-      title: d => [fmtDate(d.date), ...subOrder.map(c => (d[c] || 0) > 0 ? `${c}: ${sportsMetric === "Fees" ? fmtUSD(d[c]) : fmtCount(d[c]) + " contracts"}` : null).filter(Boolean)].join("\n")
+      title: d => [fmtDate(d.date), ...subOrder.map(c => (d[c] || 0) > 0 ? `${c}: ${sportsMetric === "Fees" ? fmtUSD(d[c]) : fmtCount(d[c]) + " contracts (" + Math.round(d[c]).toLocaleString() + ")"}` : null).filter(Boolean)].join("\n")
     })),
     ...(useTableau ? [Plot.lineY(sportsMA, {
       x: "date", y: "ma",
@@ -540,7 +540,7 @@ Plot.plot({
     Plot.ruleY([0]),
     Plot.ruleX(oi, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(oi, Plot.pointerX({x: "date", y: "total_oi_contracts",
-      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.total_oi_contracts)} contracts\n${fmtCount(d.n_with_oi)} markets with open positions`}))
+      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.total_oi_contracts)} contracts (${(d.total_oi_contracts||0).toLocaleString()})\n${fmtCount(d.n_with_oi)} markets with open positions`}))
   ]
 })
 ```
@@ -548,9 +548,9 @@ Plot.plot({
 ```js
 display(oiPeak && oiLast
   ? html`<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 18px 0;font-size:13px;color:var(--theme-foreground-muted);">
-      <div><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
-      <div><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
-      <div><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
+      <div title="${(oiPeak.total_oi_contracts ?? 0).toLocaleString()} contracts"><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
+      <div title="${(oiLast.total_oi_contracts ?? 0).toLocaleString()} contracts"><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
+      <div title="${(oiLast.n_with_oi ?? 0).toLocaleString()} markets"><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
     </div>`
   : html`<p class="chart-note">Open-interest data is not currently available.</p>`);
 ```
