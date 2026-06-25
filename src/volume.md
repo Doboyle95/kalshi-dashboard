@@ -130,7 +130,11 @@ const VOLUME_EVENTS = [
   {date: new Date("2025-09-07"), label: "NFL season '25", tier: 1},
   {date: new Date("2025-09-27"), label: "Parlays launch", tier: 2},
   {date: new Date("2026-02-08"), label: "Super Bowl LX", tier: 1},
-  {date: new Date("2026-03-19"), label: "March Madness '26", tier: 2}
+  {date: new Date("2026-03-19"), label: "March Madness '26", tier: 2},
+  // Dates below are approximate / pending Daniel's confirmation.
+  // NBA Finals Game 1 date is NOT officially fixed yet (~2026-06-04 estimate).
+  {date: new Date("2026-06-04"), label: "NBA Finals '26", tier: 1},
+  {date: new Date("2026-06-11"), label: "World Cup '26", tier: 0}
 ];
 
 ```

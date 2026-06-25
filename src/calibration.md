@@ -33,6 +33,27 @@ display(askPageLink({
 ```
 
 ```js
+// Defensively show only the market groups actually present in the CSV, so a
+// partial producer run can never render an empty chart. R/calibration_three_way.R
+// emits all five aggregates (ALL, NON_PARLAY, PARLAY, SPORTS_NON_PARLAY,
+// NON_SPORTS) and the deployed CSV currently carries all five.
+const calibGroups = Array.from(new Set(calib.map(d => d.group)));
+const groupOrder = ["ALL", "NON_PARLAY", "PARLAY", "SPORTS_NON_PARLAY", "NON_SPORTS"];
+const availableGroups = groupOrder.filter(g => calibGroups.includes(g));
+const group = view(Inputs.select(availableGroups, {
+  label: "Market group",
+  value: "ALL",
+  format: g => ({
+    "ALL":               "All markets",
+    "SPORTS_NON_PARLAY": "Sports (non-parlay)",
+    "NON_SPORTS":        "Non-sports",
+    "PARLAY":            "Parlay only",
+    "NON_PARLAY":        "All non-parlay (sports + non-sports)"
+  })[g] ?? g
+}));
+```
+
+```js
 const data = calib.filter(d => d.group === group && +d.price_bin >= 5 && +d.price_bin <= 95);
 ```
 
@@ -93,27 +114,6 @@ Plot.plot({
     })
   ]
 })
-```
-
-```js
-// Defensively show only the market groups actually present in the CSV, so a
-// partial producer run can never render an empty chart. R/calibration_three_way.R
-// emits all five aggregates (ALL, NON_PARLAY, PARLAY, SPORTS_NON_PARLAY,
-// NON_SPORTS) and the deployed CSV currently carries all five.
-const calibGroups = Array.from(new Set(calib.map(d => d.group)));
-const groupOrder = ["ALL", "NON_PARLAY", "PARLAY", "SPORTS_NON_PARLAY", "NON_SPORTS"];
-const availableGroups = groupOrder.filter(g => calibGroups.includes(g));
-const group = view(Inputs.select(availableGroups, {
-  label: "Market group",
-  value: "ALL",
-  format: g => ({
-    "ALL":               "All markets",
-    "SPORTS_NON_PARLAY": "Sports (non-parlay)",
-    "NON_SPORTS":        "Non-sports",
-    "PARLAY":            "Parlay only",
-    "NON_PARLAY":        "All non-parlay (sports + non-sports)"
-  })[g] ?? g
-}));
 ```
 
 ```js

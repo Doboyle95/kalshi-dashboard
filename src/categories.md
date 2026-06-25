@@ -1885,39 +1885,29 @@ const wideColors = {
 ```
 
 ```js
-// Mutable date range - default to 2025 onwards (earlier has near-zero sports volume)
-const catDateSel = Mutable([new Date("2025-01-01"), d3.max(topDaily, d => d.date)]);
-```
-
-```js
-{
-  const h = 60, mt = 4, mb = 22, ml = 8, mr = 8, w = width;
-  const x = d3.scaleUtc().domain(d3.extent(topDaily, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(wideDaily, d => wideOrder.reduce((s, g) => s + (d[g]||0), 0));
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-
-  const svg = d3.create("svg").attr("width", w).attr("height", h)
-    .style("display","block").style("background","#fafafa")
-    .style("border","1px solid #e8e8e8").style("border-radius","4px").style("margin-bottom","1.5rem");
-
-  // Total volume sparkline
-  svg.append("path").datum(wideDaily)
-    .attr("fill","#1a9641").attr("fill-opacity",0.2)
-    .attr("d", d3.area()
-      .x(d => x(d.date)).y0(h-mb).y1(d => y(wideOrder.reduce((s,g) => s+(d[g]||0),0)))
-      .curve(d3.curveBasis));
-
-  svg.append("g").attr("transform",`translate(0,${h-mb})`)
-    .call(d3.axisBottom(x).ticks(6).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke","#ccc"))
-    .call(g => g.selectAll("text").style("font-size","10px").attr("fill","#888"));
-
-  const [ds, de] = catDateSel;
-  const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
-    .on("brush end", (event) => { if (!event.sourceEvent) return; if (event.selection) catDateSel.value = event.selection.map(x.invert); });
-  svg.append("g").call(brush).call(brush.move, [ds, de].map(x));
-  display(svg.node());
-}
+// Date range - default to 2025 onwards (earlier has near-zero sports volume).
+// The Mutable AND the renderDateBrush() call live in the SAME cell so the
+// onSelect callback closes over the actual Mutable wrapper. The previous inline
+// d3.brushX lived in a separate cell from `const catDateSel = Mutable(...)`, so
+// Observable Framework auto-unwrapped the Mutable to its array value before the
+// brush handler ran — `catDateSel.value = ...` then assigned `.value` onto a
+// plain array and silently no-opped, so dragging never updated the chart.
+// renderDateBrush also provides the Brush<->Dates toggle (the date-dropdown).
+const catChartMaxDate = d3.max(topDaily, d => d.date);
+const catDateSel = Mutable([new Date("2025-01-01"), catChartMaxDate]);
+const catSparkData = wideDaily.map(d => ({
+  date: d.date,
+  value: wideOrder.reduce((s, g) => s + (d[g] || 0), 0)
+}));
+display(renderDateBrush({
+  data: catSparkData,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.value,
+  initialRange: [new Date("2025-01-01"), catChartMaxDate],
+  onSelect: r => { catDateSel.value = r; },
+  color: "#1a9641",
+  width
+}));
 ```
 
 <div class="control-strip">
@@ -2076,18 +2066,30 @@ Plot.plot({
     Plot.ruleX(monthTipData, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
     Plot.tip(monthTipData, Plot.pointerX({
       x: "month",
-      title: d => [
-        d.month,
-        chartScale === "Normalized"
-          ? "Total: 100% of month"
-          : `Total: ${fmtCount(d.total || 0)} contracts`,
-        ...activeOrder
+      fontSize: 11,
+      lineHeight: 1.1,
+      // Detailed mode has up to ~21 categories; listing every nonzero one made
+      // the tip taller than the chart. Plot text tips can't scroll, so cap the
+      // rows to the top contributors and fold the rest into a "+N more" line.
+      // Presentation only — bars and underlying data are unchanged.
+      title: d => {
+        const TIP_MAX_ROWS = 12;
+        const rows = activeOrder
           .filter(cat => (d[cat] || 0) > 0)
-          .sort((a, b) => (d[b] || 0) - (d[a] || 0))
-          .map(cat => chartScale === "Normalized"
-            ? `${cat}: ${((d[cat] || 0) * 100).toFixed(1)}%`
-            : `${cat}: ${fmtCount(d[cat] || 0)}`)
-      ].join("\n")
+          .sort((a, b) => (d[b] || 0) - (d[a] || 0));
+        const shown = rows.slice(0, TIP_MAX_ROWS).map(cat => chartScale === "Normalized"
+          ? `${cat}: ${((d[cat] || 0) * 100).toFixed(1)}%`
+          : `${cat}: ${fmtCount(d[cat] || 0)}`);
+        const hidden = rows.length - shown.length;
+        return [
+          d.month,
+          chartScale === "Normalized"
+            ? "Total: 100% of month"
+            : `Total: ${fmtCount(d.total || 0)} contracts`,
+          ...shown,
+          ...(hidden > 0 ? [`+${hidden} more categories`] : [])
+        ].join("\n");
+      }
     })),
     Plot.ruleY([0])
   ]
