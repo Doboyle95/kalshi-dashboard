@@ -30,7 +30,7 @@ display(askPageLink({
 ```
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
 const fmtUSD   = n => "$" + fmtCount(n);
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
@@ -55,16 +55,16 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">All-time fee revenue</div>
-    <div class="kpi-value">${fmtUSD(totalFees)}</div>
+    <div class="kpi-value" title="$${totalFees.toLocaleString()}">${fmtUSD(totalFees)}</div>
   </div>
   <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Annualized run rate</div>
-    <div class="kpi-value">${fmtUSD(annualizedFees)}/yr</div>
+    <div class="kpi-value" title="$${annualizedFees.toLocaleString()}/yr">${fmtUSD(annualizedFees)}/yr</div>
     <div class="kpi-meta">based on trailing 30 days</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak fee day</div>
-    <div class="kpi-value">${fmtUSD(peakFeeDay?.fees_total||0)}</div>
+    <div class="kpi-value" title="$${(peakFeeDay?.fees_total||0).toLocaleString()}">${fmtUSD(peakFeeDay?.fees_total||0)}</div>
     <div class="kpi-meta">${fmtDate(peakFeeDay?.date)}</div>
   </div>
   <div class="kpi-card" data-accent="kalshi">

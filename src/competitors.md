@@ -127,9 +127,14 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 ```js
 {
   const [s, e] = dr_abs;
+  // Axis ticks stay coarse (.toFixed(1) billions)
   const fmt = metric === "contracts"
     ? d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
     : d => "$"+(d >= 1e6 ? (d/1e6).toFixed(1)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toFixed(0));
+  // #94: finer billions for the hover tip (.toFixed(2) → "2.91B" not "2.9B")
+  const fmtFine = metric === "contracts"
+    ? d => (d >= 1e9 ? (d/1e9).toFixed(2)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")
+    : d => "$"+(d >= 1e6 ? (d/1e6).toFixed(2)+"M" : d >= 1e3 ? (d/1e3).toFixed(0)+"k" : d.toFixed(0));
 
   const filteredAll = all.filter(d => d.date >= s && d.date <= e);
 
@@ -172,7 +177,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
       Plot.ruleX(tipPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
       Plot.tip(tipPivot, Plot.pointerX({
         x: "date",
-        title: d => [fmtDate(d.date), ...colorDomain.map(p => d[p] != null ? `${p}: ${fmt(d[p])}` : null).filter(Boolean)].join("\n")
+        title: d => [fmtDate(d.date), ...colorDomain.map(p => d[p] != null ? `${p}: ${fmtFine(d[p])} (${d[p].toLocaleString()})` : null).filter(Boolean)].join("\n")
       })),
       ...(compLogScale === "Log" ? [] : [Plot.ruleY([0])])
     ]

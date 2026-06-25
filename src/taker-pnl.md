@@ -39,7 +39,7 @@ display(askPageLink({
 ```js
 const fmtCount = n => {
   const a = Math.abs(n ?? 0), s = n < 0 ? "-" : "";
-  return s + (a >= 1e9 ? (a / 1e9).toFixed(1) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : String(Math.round(a)));
+  return s + (a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : String(Math.round(a)));
 };
 const fmtUSD = n => (n < 0 ? "-$" : "$") + fmtCount(Math.abs(n ?? 0));
 const fmtPct = n => `${(n ?? 0).toFixed(1)}%`;
@@ -136,22 +136,22 @@ const makerTotals = {
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="negative">
     <div class="kpi-label">Net taker P&L</div>
-    <div class="kpi-value">${fmtUSD(totals.net)}</div>
+    <div class="kpi-value" title="$${totals.net.toLocaleString()}">${fmtUSD(totals.net)}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Taker fees paid</div>
-    <div class="kpi-value">${fmtUSD(totals.fees)}</div>
+    <div class="kpi-value" title="$${totals.fees.toLocaleString()}">${fmtUSD(totals.fees)}</div>
     <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of taker-side notional</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Net ROI on taker cost</div>
     <div class="kpi-value">${fmtROI(totals.netRoi)}</div>
-    <div class="kpi-meta">${fmtUSD(totals.notional)} taker-side notional</div>
+    <div class="kpi-meta" title="$${totals.notional.toLocaleString()} taker-side notional">${fmtUSD(totals.notional)} taker-side notional</div>
   </div>
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Settled coverage</div>
     <div class="kpi-value">${fmtPct(totals.coverage)}</div>
-    <div class="kpi-meta">${fmtCount(totals.settled)} settled contracts</div>
+    <div class="kpi-meta" title="${totals.settled.toLocaleString()} settled contracts">${fmtCount(totals.settled)} settled contracts</div>
   </div>
 </div>
 
@@ -215,7 +215,7 @@ Plot.plot({
     Plot.ruleX(cumulativeTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(cumulativeTip, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])}\nAfter fees: ${fmtUSD(d["After fees"])}\nTaker-side notional: ${fmtUSD(d.notional)}\nNet ROI: ${fmtROI(d.netRoi)}`
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])} ($${d["Before fees"].toLocaleString()})\nAfter fees: ${fmtUSD(d["After fees"])} ($${d["After fees"].toLocaleString()})\nTaker-side notional: ${fmtUSD(d.notional)} ($${d.notional.toLocaleString()})\nNet ROI: ${fmtROI(d.netRoi)}`
     })),
     Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.35})
   ]
@@ -259,15 +259,15 @@ const makerCumulativeTip = Array.from(
 <div class="kpi-grid compact-kpis">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Net maker P&L</div>
-    <div class="kpi-value">${fmtUSD(makerTotals.net)}</div>
+    <div class="kpi-value" title="$${makerTotals.net.toLocaleString()}">${fmtUSD(makerTotals.net)}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Maker fees paid</div>
-    <div class="kpi-value">${fmtUSD(makerTotals.fees)}</div>
+    <div class="kpi-value" title="$${makerTotals.fees.toLocaleString()}">${fmtUSD(makerTotals.fees)}</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Gross maker P&L</div>
-    <div class="kpi-value">${fmtUSD(makerTotals.gross)}</div>
+    <div class="kpi-value" title="$${makerTotals.gross.toLocaleString()}">${fmtUSD(makerTotals.gross)}</div>
   </div>
 </div>
 
@@ -297,7 +297,7 @@ Plot.plot({
     Plot.ruleX(makerCumulativeTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(makerCumulativeTip, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore maker fees: ${fmtUSD(d["Before maker fees"])}\nAfter maker fees: ${fmtUSD(d["After maker fees"])}\nDaily gross maker P&L: ${fmtUSD(d.dailyGross)}\nDaily net maker P&L: ${fmtUSD(d.dailyNet)}\nMaker fees: ${fmtUSD(d.fees)}\nSettled contracts: ${fmtCount(d.contracts)}`
+      title: d => `${fmtDate(d.date)}\nBefore maker fees: ${fmtUSD(d["Before maker fees"])} ($${d["Before maker fees"].toLocaleString()})\nAfter maker fees: ${fmtUSD(d["After maker fees"])} ($${d["After maker fees"].toLocaleString()})\nDaily gross maker P&L: ${fmtUSD(d.dailyGross)}\nDaily net maker P&L: ${fmtUSD(d.dailyNet)}\nMaker fees: ${fmtUSD(d.fees)}\nSettled contracts: ${fmtCount(d.contracts)} (${d.contracts.toLocaleString()})`
     })),
     Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.35})
   ]
@@ -517,10 +517,10 @@ Plot.plot({
 ```js
 Inputs.table(categoryRows.map(d => ({
   Category: d.category,
-  "Net taker P&L": fmtUSD(d.net),
-  "Gross taker P&L": fmtUSD(d.gross),
-  "Fees": fmtUSD(d.fees),
-  "Settled contracts": fmtCount(d.settled),
+  "Net taker P&L": "$" + Math.round(d.net).toLocaleString(),
+  "Gross taker P&L": "$" + Math.round(d.gross).toLocaleString(),
+  "Fees": "$" + Math.round(d.fees).toLocaleString(),
+  "Settled contracts": Math.round(d.settled).toLocaleString(),
   "Net cents / $1 settled": d.netPerFace.toFixed(2),
   "Active days": d.n_days
 })), {

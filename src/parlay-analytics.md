@@ -10,7 +10,7 @@ money, and whether the implied odds match what actually happens — split by
 **same-game (correlated)** vs **multi-game (independent)** tickets.
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
 const fmtUSD   = n => "$" + fmtCount(n);
 const pct1     = n => (n == null ? "n/a" : n.toFixed(1) + "%");
 ```
@@ -59,7 +59,7 @@ Plot.plot({
     Plot.line(he, {x: "legsLabel", y: "house_edge", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.dot(he, {x: "legsLabel", y: "house_edge", fill: "kind", r: 4}),
     Plot.tip(he, Plot.pointer({x: "legsLabel", y: "house_edge",
-      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtUSD(d.total_vol)}`})),
+      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})`})),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 })
@@ -118,7 +118,7 @@ Plot.plot({
   y: {label: "Monthly parlay volume", grid: true, tickFormat: d => "$" + (d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")},
   marks: [
     Plot.rectY(tline, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
-      tip: true, title: d => `${d.month}\nVolume: ${fmtUSD(d.total_vol)}\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
+      tip: true, title: d => `${d.month}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
     Plot.ruleY([0])
   ]
 })
@@ -386,7 +386,7 @@ Plot.plot({
   y: {label: null, domain: games.map(d=>d.label)},
   marks: [
     Plot.barX(games, {x: "parlay_vol", y: "label", fill: "#3b82a0",
-      tip: true, title: d => `${d.label}\n(${d.game_key})\nParlay volume: ${fmtUSD(d.parlay_vol)}\nParlays touching: ${d.n_parlays.toLocaleString()}`}),
+      tip: true, title: d => `${d.label}\n(${d.game_key})\nParlay volume: ${fmtUSD(d.parlay_vol)} ($${d.parlay_vol.toLocaleString()})\nParlays touching: ${d.n_parlays.toLocaleString()}`}),
     Plot.ruleX([0])
   ]
 })
