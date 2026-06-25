@@ -36,9 +36,17 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```
 
 ```js
-// All-time fee KPIs
+// Fee KPIs
 const totalFees      = d3.sum(daily, d => d.fees_total);
-const annualizedFees = totalFees / daily.length * 365;
+// "Run rate" reflects the *current* pace, not the all-time average. Use the trailing
+// 30 COMPLETED days of fee data (excluding today if partial). Matches the calc on
+// index.md; the old all-time-average method understated this ~10x because of the
+// years of sparse, near-zero pre-2024 days dragging the mean down.
+const isPartialFee    = d => d.is_partial === true || d.is_partial === "TRUE";
+const completedDaily  = daily.filter(d => !isPartialFee(d));
+const recent30Fees    = completedDaily.slice(-30);
+const recentDailyFees = recent30Fees.length > 0 ? d3.mean(recent30Fees, d => d.fees_total) : 0;
+const annualizedFees  = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 const peakFeeDay     = daily.reduce((best, d) => (d.fees_total||0) > (best.fees_total||0) ? d : best, daily[0]);
 const totalContracts = d3.sum(daily, d => d.contracts_total);
 const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
@@ -52,6 +60,7 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
   <div class="kpi-card" data-accent="tertiary">
     <div class="kpi-label">Annualized run rate</div>
     <div class="kpi-value">${fmtUSD(annualizedFees)}/yr</div>
+    <div class="kpi-meta">based on trailing 30 days</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Peak fee day</div>
