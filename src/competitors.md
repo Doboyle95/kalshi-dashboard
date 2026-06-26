@@ -5,7 +5,7 @@ title: Competitors
 <div class="page-hero" data-accent="kalshi">
   <div class="page-eyebrow">Comparison</div>
   <h1>Platform Comparison</h1>
-  <p class="page-lead">Every US regulated prediction-market venue on one chart — Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, and CME (where FanDuel and DraftKings clear). Kalshi is the story; switch to log scale to see the rest underneath it. CME is collected by hand from daily bulletins, so its line is sparse.</p>
+  <p class="page-lead">Every US regulated prediction-market venue on one chart — Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, CME (where FanDuel and DraftKings clear), and Rothera (Robinhood's own exchange). Kalshi is the story; switch to log scale to see the rest underneath it. CME is collected by hand from daily bulletins, so its line is sparse.</p>
 </div>
 
 <details class="surface-card compact-details">
@@ -28,10 +28,10 @@ display(freshnessPanel({
     {label: "Kalshi", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
     {label: "Competitors", date: latestDate(competitor.filter(d => d.platform !== "Kalshi")), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public platform files/scrapes", tone: "competitor"}
   ],
-  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, and Crypto.com/Nadex update when their external files are downloaded and rebuilt."
+  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, Crypto.com/Nadex, and Rothera update when their external files are downloaded and rebuilt."
 }));
 display(askPageLink({
-  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, and Crypto.com/Nadex, noting any freshness caveats.",
+  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, Crypto.com/Nadex, and Rothera, noting any freshness caveats.",
   context: "Platform Comparison page using daily_overall.csv and competitor_daily.csv."
 }));
 ```
@@ -65,6 +65,11 @@ const platforms = [
     name: "CME (FanDuel + DraftKings)", color: "#9A6D1F",
     data: cme.filter(d => d.cme_total_vol > 0)
       .map(d => ({date: d.date, contracts: +d.cme_total_vol, fees: null}))
+  },
+  {
+    name: "Rothera", color: "#F2792B",
+    data: competitor.filter(d => d.platform === "Rothera")
+      .map(d => ({date: d.date, contracts: +d.contracts, fees: d.fees === "" || d.fees == null ? null : +d.fees}))
   }
 ];
 
@@ -243,7 +248,7 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
         y: "contracts",
         fill: "platform",
         offset: "expand",
-        order: ["Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
+        order: ["Rothera", "Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
         curve: "monotone-x",
         fillOpacity: 0.85
       }),
