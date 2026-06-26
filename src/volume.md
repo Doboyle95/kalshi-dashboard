@@ -472,7 +472,7 @@ Plot.plot({
   y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
-    : {legend: true, domain: ["Non-sports", "Sports", "Parlay"], range: ["#00C2A8", "#1a9641", "#ff8c00"]},
+    : {legend: true, domain: ["Non-sports", "Sports", "Parlay"], range: ["#5b8def", "#1a9641", "#74c476"]},  // Non-sports = distinct blue; Sports + Parlay = one green family (parlays are sports-dominated)
   marks: [
     Plot.areaY(tidySports, {
       x: "date", y: "value", fill: "category",
