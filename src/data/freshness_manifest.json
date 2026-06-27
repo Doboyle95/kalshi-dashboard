@@ -1,44 +1,47 @@
 {
-  "generated_at": "2026-06-27T15:05:50.860165-04:00",
-  "generated_at_utc": "2026-06-27T19:05:50.860165+00:00",
+  "generated_at": "2026-06-27T15:20:19.776409-04:00",
+  "generated_at_utc": "2026-06-27T19:20:19.776409+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'inscrutable-mushroom' ended FAILED at 2026-06-27T06:35:00.010156+00:00",
     "task_health: prod-metadata-refresh: last run 'pistachio-loon' ended FAILED at 2026-06-27T15:53:40.544498+00:00",
     "task_health: prod-parlay-anatomy: last run 'outrageous-penguin' ended FAILED at 2026-06-27T07:33:52.784587+00:00",
+    "task_health: prod-parlay-collector: last run 'interesting-locust' ended FAILED at 2026-06-27T18:44:41.137258+00:00",
     "task_health: prod-settlement-cycle: last run 'orchid-pony' ended FAILED at 2026-06-27T12:51:56.777655+00:00",
     "task_health: prod-volume-topup-recon: last run 'jovial-rat' ended CRASHED at 2026-06-27T16:14:49.528341+00:00",
-    "freshness_check: STALE    taker_pnl_daily.csv - 25.0 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    maker_pnl_daily.csv - 25.0 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    parlay_pnl_net.csv - 25.0 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    taker_notional_daily.csv - 6.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    trade_size_daily.csv - 6.5 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    parlay_volume_by_type_daily.csv - 39.6 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_corr_by_ticker_daily.csv - 39.6 h old (threshold 36 h) - parlay anatomy (daily 03:00)"
+    "freshness_check: STALE    taker_pnl_daily.csv - 25.2 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    maker_pnl_daily.csv - 25.2 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    parlay_pnl_net.csv - 25.2 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    taker_notional_daily.csv - 6.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    trade_size_daily.csv - 6.8 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    market_leaderboard.csv - 6.3 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    category_leaderboard.csv - 6.3 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    parlay_volume_by_type_daily.csv - 39.8 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_corr_by_ticker_daily.csv - 39.8 h old (threshold 36 h) - parlay anatomy (daily 03:00)"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-06-27T18:40:11.752382+00:00",
-    "freshness_report_mtime_utc": "2026-06-27T18:52:00.136246+00:00"
+    "task_health_generated": "2026-06-27T19:10:13.423535+00:00",
+    "freshness_report_mtime_utc": "2026-06-27T19:07:00.216010+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-06-27T15:05:50.118115-04:00",
-      "last_write_time_utc": "2026-06-27T19:05:50.118115+00:00",
-      "size_bytes": 146082
+      "last_write_time": "2026-06-27T15:20:19.075310-04:00",
+      "last_write_time_utc": "2026-06-27T19:20:19.075310+00:00",
+      "size_bytes": 146079
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-06-27T15:05:50.316112-04:00",
-      "last_write_time_utc": "2026-06-27T19:05:50.316112+00:00",
-      "size_bytes": 155659
+      "last_write_time": "2026-06-27T15:20:19.228308-04:00",
+      "last_write_time_utc": "2026-06-27T19:20:19.228308+00:00",
+      "size_bytes": 155653
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-06-27T15:05:50.349111-04:00",
-      "last_write_time_utc": "2026-06-27T19:05:50.349111+00:00",
-      "size_bytes": 4696228
+      "last_write_time": "2026-06-27T15:20:19.262307-04:00",
+      "last_write_time_utc": "2026-06-27T19:20:19.262307+00:00",
+      "size_bytes": 4696233
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-06-27T15:05:50.363111-04:00",
-      "last_write_time_utc": "2026-06-27T19:05:50.363111+00:00",
+      "last_write_time": "2026-06-27T15:20:19.279307-04:00",
+      "last_write_time_utc": "2026-06-27T19:20:19.279307+00:00",
       "size_bytes": 144165
     },
     "calibration_three_way.csv": {
@@ -187,8 +190,8 @@
       "size_bytes": 1076
     },
     "parlay_pnl_daily_by_corr_v2.csv": {
-      "last_write_time": "2026-06-27T14:45:40.146320-04:00",
-      "last_write_time_utc": "2026-06-27T18:45:40.146320+00:00",
+      "last_write_time": "2026-06-27T15:12:16.470209-04:00",
+      "last_write_time_utc": "2026-06-27T19:12:16.470209+00:00",
       "size_bytes": 43372
     },
     "parlay_pnl_unified_daily.csv": {
