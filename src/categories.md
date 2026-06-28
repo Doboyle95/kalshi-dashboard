@@ -2114,7 +2114,14 @@ const dailyWindow = wideDaily.filter(d => d.date >= dayStart && d.date <= dayEnd
 const dailyTidy = dailyWindow.flatMap(d => {
   if (effectiveChartDetail === "General") {
     const gen = Object.fromEntries(generalOrder.map(g => [g, 0]));
-    for (const [det, gname] of Object.entries(generalMap)) gen[gname] += d[det] || 0;
+    // wideDaily carries BOTH the "Parlay" total AND its 3 leg-splits (correlated/independent/
+    // pending), which already sum to that total. generalMap maps all four to "Parlay", so summing
+    // the raw row would double-count parlays. Skip the total — the monthly chart avoids this
+    // because monthRolled only sums wideOrder, which omits the "Parlay" total.
+    for (const [det, gname] of Object.entries(generalMap)) {
+      if (det === "Parlay") continue;
+      gen[gname] += d[det] || 0;
+    }
     return generalOrder.map(g => ({date: d.date, category: g, contracts: gen[g]}));
   } else {
     return wideOrder.map(g => ({date: d.date, category: g, contracts: d[g] || 0}));
