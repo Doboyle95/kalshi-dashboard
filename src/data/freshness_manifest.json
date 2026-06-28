@@ -1,38 +1,41 @@
 {
-  "generated_at": "2026-06-28T19:30:19.528951-04:00",
-  "generated_at_utc": "2026-06-28T23:30:19.528951+00:00",
+  "generated_at": "2026-06-28T19:51:39.838543-04:00",
+  "generated_at_utc": "2026-06-28T23:51:39.838543+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-competitor-sync: last run 'melodic-vulture' ended FAILED at 2026-06-28T22:51:15.459142+00:00",
     "task_health: prod-leaderboard-refresh: last run 'colossal-horse' ended FAILED at 2026-06-28T06:27:37.615696+00:00",
+    "task_health: prod-metadata-refresh: last run 'melodic-mastodon' ended CRASHED at 2026-06-28T23:39:06.088611+00:00",
     "task_health: prod-parlay-compact: last run 'vigorous-skylark' ended FAILED at 2026-06-28T22:31:33.924687+00:00",
+    "task_health: prod-parlay-partitioner: last run 'private-vicugna' ended CRASHED at 2026-06-28T23:39:05.687129+00:00",
     "task_health: prod-settlement-cycle: last run 'rustling-kestrel' ended FAILED at 2026-06-28T20:25:08.072486+00:00",
-    "task_health: prod-trade-collector: last run 'prompt-yak' ended FAILED at 2026-06-28T23:10:00.825158+00:00",
+    "task_health: prod-trade-collector: last run 'super-bonobo' ended CRASHED at 2026-06-28T23:39:05.991983+00:00",
+    "task_health: prod-v3-pnl-cycle: last run 'hypersonic-chowchow' ended CRASHED at 2026-06-28T23:39:05.901146+00:00",
     "task_health: prod-weekly-rebuild: last run 'meteoric-beluga' ended FAILED at 2026-06-28T20:51:34.506511+00:00"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-06-28T23:10:07.235424+00:00",
-    "freshness_report_mtime_utc": "2026-06-28T23:22:00.190585+00:00"
+    "task_health_generated": "2026-06-28T23:40:04.330306+00:00",
+    "freshness_report_mtime_utc": "2026-06-28T23:36:59.914652+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-06-28T19:30:18.838852-04:00",
-      "last_write_time_utc": "2026-06-28T23:30:18.838852+00:00",
-      "size_bytes": 146176
+      "last_write_time": "2026-06-28T19:51:39.252775-04:00",
+      "last_write_time_utc": "2026-06-28T23:51:39.252775+00:00",
+      "size_bytes": 146172
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-06-28T19:30:18.967850-04:00",
-      "last_write_time_utc": "2026-06-28T23:30:18.967850+00:00",
-      "size_bytes": 152663
+      "last_write_time": "2026-06-28T19:51:39.372773-04:00",
+      "last_write_time_utc": "2026-06-28T23:51:39.372773+00:00",
+      "size_bytes": 152668
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-06-28T19:30:19.003850-04:00",
-      "last_write_time_utc": "2026-06-28T23:30:19.003850+00:00",
-      "size_bytes": 5164085
+      "last_write_time": "2026-06-28T19:51:39.397773-04:00",
+      "last_write_time_utc": "2026-06-28T23:51:39.397773+00:00",
+      "size_bytes": 5164092
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-06-28T19:30:19.011849-04:00",
-      "last_write_time_utc": "2026-06-28T23:30:19.011849+00:00",
+      "last_write_time": "2026-06-28T19:51:39.405772-04:00",
+      "last_write_time_utc": "2026-06-28T23:51:39.405772+00:00",
       "size_bytes": 144578
     },
     "calibration_three_way.csv": {
@@ -156,8 +159,8 @@
       "size_bytes": 1625852
     },
     "parlay_cashout_daily.csv": {
-      "last_write_time": "2026-06-28T18:30:53.234579-04:00",
-      "last_write_time_utc": "2026-06-28T22:30:53.234579+00:00",
+      "last_write_time": "2026-06-28T19:34:48.504683-04:00",
+      "last_write_time_utc": "2026-06-28T23:34:48.504683+00:00",
       "size_bytes": 25062
     },
     "parlay_corr_by_ticker_daily.csv": {
@@ -186,8 +189,8 @@
       "size_bytes": 43562
     },
     "parlay_pnl_unified_daily.csv": {
-      "last_write_time": "2026-06-28T18:30:47.786656-04:00",
-      "last_write_time_utc": "2026-06-28T22:30:47.786656+00:00",
+      "last_write_time": "2026-06-28T19:34:42.656773-04:00",
+      "last_write_time_utc": "2026-06-28T23:34:42.656773+00:00",
       "size_bytes": 22194
     },
     "parlay_popular_daily.csv": {
