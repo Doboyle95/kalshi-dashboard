@@ -47,7 +47,7 @@ const totalNotional = d3.sum(taker, d => d.notional_total);
 const peakDay       = taker.reduce((b, d) => d.notional_total > b.notional_total ? d : b, taker[0]);
 const recentRows    = taker.slice(-30);
 const recentAvg     = d3.mean(recentRows, d => d.notional_total);
-const recentPctYes  = d3.mean(recentRows, d => d.notional_yes / d.notional_total * 100);
+const recentPctYes  = d3.mean(recentRows, d => d.notional_total ? d.notional_yes / d.notional_total * 100 : 0);
 ```
 
 <div class="kpi-grid">
@@ -147,8 +147,8 @@ Plot.plot({
       title: d => [
         fmtDate(d.date),
         `Total: ${fmtUSD(d.notional_total)}`,
-        `Yes-side: ${fmtUSD(d.notional_yes)} (${(d.notional_yes/d.notional_total*100).toFixed(1)}%)`,
-        `No-side:  ${fmtUSD(d.notional_no)}  (${(d.notional_no/d.notional_total*100).toFixed(1)}%)`
+        `Yes-side: ${fmtUSD(d.notional_yes)} (${(d.notional_total ? d.notional_yes/d.notional_total*100 : 0).toFixed(1)}%)`,
+        `No-side:  ${fmtUSD(d.notional_no)}  (${(d.notional_total ? d.notional_no/d.notional_total*100 : 0).toFixed(1)}%)`
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -209,8 +209,8 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Yes: ${fmtUSD(d.notional_yes)} (${(d.notional_yes/d.notional_total*100).toFixed(1)}%)`,
-        `No:  ${fmtUSD(d.notional_no)}  (${(d.notional_no/d.notional_total*100).toFixed(1)}%)`
+        `Yes: ${fmtUSD(d.notional_yes)} (${(d.notional_total ? d.notional_yes/d.notional_total*100 : 0).toFixed(1)}%)`,
+        `No:  ${fmtUSD(d.notional_no)}  (${(d.notional_total ? d.notional_no/d.notional_total*100 : 0).toFixed(1)}%)`
       ].join("\n")
     })),
     Plot.ruleY([0])

@@ -10,6 +10,7 @@ $files = @(
   "daily_overall.csv",
   "daily_sports_vs_nonsports.csv",
   "daily_top_categories.csv",
+  "daily_top_categories_fees.csv",
   "sports_market_type_daily.csv",
   "calibration_three_way.csv",
   "category_leaderboard.csv",

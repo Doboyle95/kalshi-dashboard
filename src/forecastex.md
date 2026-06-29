@@ -255,7 +255,7 @@ Plot.plot({
   width,
   height: catBar.length * 28 + 40,
   marginLeft: 160,
-  x: {label: "Contracts (all time)", grid: true},
+  x: {label: "Contracts (all time)", grid: true, tickFormat: d => fmtAxisNum(d)},
   y: {label: null},
   marks: [
     Plot.barX(catBar, {

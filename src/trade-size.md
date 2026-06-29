@@ -194,7 +194,7 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Trades</div>
     <div class="kpi-value" title="${(selectedTotalTrades ?? 0).toLocaleString()} trades">${fmtCount(selectedTotalTrades)}</div>
-    <div class="kpi-meta">Avg size ${fmtCount(selectedTotalContracts / selectedTotalTrades)} contracts</div>
+    <div class="kpi-meta">Avg size ${selectedTotalTrades > 0 ? fmtCount(selectedTotalContracts / selectedTotalTrades) : "0"} contracts</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Largest trade</div>
