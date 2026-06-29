@@ -214,7 +214,7 @@ Plot.plot({
   height: 300,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume (contracts)", grid: true},
+  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
     Plot.areaY(catFiltered, {
@@ -248,7 +248,7 @@ Plot.plot({
   width,
   height: catBar.length * 28 + 40,
   marginLeft: 170,
-  x: {label: "Contracts (all time)", grid: true},
+  x: {label: "Contracts (all time)", grid: true, tickFormat: d => fmtAxisNum(d)},
   y: {label: null},
   marks: [
     Plot.barX(catBar, {
