@@ -88,10 +88,21 @@ function makeBrush(data, color) {
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", event => {
       if (!event.sourceEvent) return;
-      if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
+      if (!event.selection) {
+        // Clearing the brush (a bare click) now means "show everything": reset to
+        // the full domain and redraw the selection so the visuals match the filter.
+        svg.property("value", x.domain());
+        brushG.call(brush.move, x.domain().map(x));   // programmatic move — guarded above, no re-fire
+        svg.dispatch("input");
+        return;
+      }
+      svg.property("value", event.selection.map(x.invert)); svg.dispatch("input");
     });
 
-  svg.append("g").call(brush).call(brush.move, [start, end].map(x));
+  const brushG = svg.append("g");
+
+
+  brushG.call(brush).call(brush.move, [start, end].map(x));
   svg.selectAll(".handle").style("display", "block").style("fill", color).style("fill-opacity", 0.9);
   svg.selectAll(".selection").style("stroke", color).style("stroke-width", "2px").style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
