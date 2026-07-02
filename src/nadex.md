@@ -10,7 +10,13 @@ title: Crypto.com/Nadex
 
 ```js
 const catDaily  = await FileAttachment("data/nadex_categories_daily.csv").csv({typed: true});
-const split     = await FileAttachment("data/nadex_sports_split_daily.csv").csv({typed: true});
+// nadex_sports_split_daily.csv's upstream builder has appended a second,
+// out-of-chronological-order block of rows (backfilled weekends + the most
+// recent days) rather than merging them in sorted - without this sort, the
+// area chart and brush sparkline (which connect points in array order, not
+// x order) draw a line that zigzags backward through time.
+const split     = (await FileAttachment("data/nadex_sports_split_daily.csv").csv({typed: true}))
+  .sort((a, b) => a.date - b.date);
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
