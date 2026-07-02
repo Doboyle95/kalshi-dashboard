@@ -2814,6 +2814,8 @@ const SOCCER_TEAMS = {
   BAY:"Bayern", BVB:"Dortmund", PSG:"PSG", JUV:"Juventus", INT:"Inter",
   ACM:"AC Milan", NAP:"Napoli", POR:"Porto", BEN:"Benfica", SPOR:"Sporting CP",
   AJAX:"Ajax",
+  // BMU = alternate 3-letter code Kalshi uses for Bayern in some UCL game tickers
+  BMU:"Bayern",
 };
 // FIFA World Cup 2026 national-team codes, used by KXWCGAME / KXWCADVANCE /
 // KXWCSPREAD / KXWCSCORE (all 48 tournament teams; distinct dict from
@@ -2865,6 +2867,10 @@ const TENNIS_PLAYERS = {
   SAB:"Sabalenka", SWI:"Swiatek", GAU:"Gauff", PEG:"Pegula",
   // 4-letter disambiguation forms sometimes used by Kalshi
   CALC:"Alcaraz", NDJO:"Djokovic", JSIN:"Sinner",
+  // Added in leaderboard cleanup - confirmed against real market_key data
+  ARN:"Arnaldi", FON:"Fonseca", PAU:"Paul", AUG:"Auger-Aliassime",
+  COB:"Cobolli", MEN:"Mensik", CER:"Cerundolo", ALT:"Altmaier",
+  SHN:"Shnaider",
 };
 const CFB_TEAMS = {
   // 4-letter first
@@ -2890,6 +2896,10 @@ const CFB_TEAMS = {
   // 2-letter
   GT:"Georgia Tech", ND:"Notre Dame", NW:"Northwestern", VT:"Virginia Tech",
   LT:"Louisiana Tech", FL:"Florida",
+  // Added in leaderboard cleanup - confirmed against real market_key data
+  PITT:"Pittsburgh", TROY:"Troy", JVST:"Jacksonville St.", KENT:"Kent State",
+  UCLA:"UCLA", UCF:"UCF", USF:"South Florida", UNT:"North Texas",
+  TOL:"Toledo", AKR:"Akron", BAY:"Baylor", ILL:"Illinois",
 };
 const CBB_TEAMS = {
   ...CFB_TEAMS,
@@ -2967,6 +2977,91 @@ const PGA_EVENTS = {
   ARPIPBM: "Arnold Palmer Invitational",
   COCITPB: "Cognizant Classic in the Palm Beaches",
   FSJC:    "FedEx St. Jude Championship",
+  // Added in leaderboard cleanup - best-effort identification from ticker code
+  PGC:     "PGA Championship",
+  USO:     "U.S. Open Championship",
+  TRAV:    "Travelers Championship",
+  RBBCAN:  "RBC Canadian Open",
+  CHSC:    "Charles Schwab Challenge",
+  THMTPBW: "The Memorial Tournament",
+  THCCBN:  "CJ Cup Byron Nelson",
+  WMPO:    "WM Phoenix Open",
+  "3O":    "3M Open",
+  TECHO:   "Texas Children's Houston Open",
+  JODC:    "John Deere Classic",
+  TOC:     "Tournament of Champions",
+  BC:      "Barracuda Championship",
+  ZUCONO:  "Zurich Classic of New Orleans",
+  FAIO:    "Farmers Insurance Open",
+  THAE:    "The American Express",
+  WC:      "Wyndham Championship",
+  SOOIH:   "Sony Open in Hawaii",
+  ONMBC:   "Myrtle Beach Classic",
+};
+
+// Roman numeral converter, used only for the Super Bowl year fallback below
+// (small numbers only - plenty for Super Bowl LX and beyond).
+function toRoman(num) {
+  const vals = [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],
+    [50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+  let n = num, out = "";
+  for (const [v, sym] of vals) { while (n >= v) { out += sym; n -= v; } }
+  return out;
+}
+
+// USPS 2-letter state codes, used by the PRESPARTY<ST>/GOVPARTY<ST>-style
+// per-state election tickers below.
+const STATE_NAMES = {
+  AL:"Alabama", AK:"Alaska", AZ:"Arizona", AR:"Arkansas", CA:"California",
+  CO:"Colorado", CT:"Connecticut", DE:"Delaware", FL:"Florida", GA:"Georgia",
+  HI:"Hawaii", ID:"Idaho", IL:"Illinois", IN:"Indiana", IA:"Iowa",
+  KS:"Kansas", KY:"Kentucky", LA:"Louisiana", ME:"Maine", MD:"Maryland",
+  MA:"Massachusetts", MI:"Michigan", MN:"Minnesota", MS:"Mississippi", MO:"Missouri",
+  MT:"Montana", NE:"Nebraska", NV:"Nevada", NH:"New Hampshire", NJ:"New Jersey",
+  NM:"New Mexico", NY:"New York", NC:"North Carolina", ND:"North Dakota", OH:"Ohio",
+  OK:"Oklahoma", OR:"Oregon", PA:"Pennsylvania", RI:"Rhode Island", SC:"South Carolina",
+  SD:"South Dakota", TN:"Tennessee", TX:"Texas", UT:"Utah", VT:"Vermont",
+  VA:"Virginia", WA:"Washington", WV:"West Virginia", WI:"Wisconsin", WY:"Wyoming",
+  DC:"D.C.",
+};
+
+// Year-suffix futures markets: ticker (with or without "KX") + bare "-YY" ->
+// "20YY <Event>". Dict-based (not a growing regex alternation) so a newly-seen
+// code is a one-line addition. Add here whenever a fresh single-outcome
+// futures/award ticker shows up with no dedicated parser below.
+const FUTURES_YEAR_EVENTS = {
+  NBA: "NBA Finals", MLB: "World Series", NHL: "Stanley Cup",
+  NCAAF: "CFP National Championship", MARMAD: "NCAA Men's Basketball Tournament",
+  WMARMAD: "Women's NCAA Basketball Tournament",
+  MASTERS: "Masters Tournament", USOPEN: "US Open (Tennis)",
+  WMENSINGLES: "Wimbledon Men's Singles", WMENDOUBLES: "Wimbledon Men's Doubles",
+  WWOMENSINGLES: "Wimbledon Women's Singles",
+  MENSINGLES: "Australian/French Open Men's Singles", MENDOUBLES: "Australian/French Open Men's Doubles",
+  FOMEN: "French Open Men's Singles", FOWOMEN: "French Open Women's Singles",
+  FOMENSINGLES: "French Open Men's Singles", FOWOMENSINGLES: "French Open Women's Singles",
+  AOMEN: "Australian Open Men's Singles", AOWOMEN: "Australian Open Women's Singles",
+  USOMENSINGLES: "US Open Men's Singles (Tennis)", USOWOMENSINGLES: "US Open Women's Singles (Tennis)",
+  NFLSBMVP: "Super Bowl MVP", NBACUP: "NBA Cup",
+  MLBWORLD: "World Baseball Classic", T20WORLDCUP: "ICC Men's T20 World Cup",
+  NBAWEST: "NBA Western Conference Champion", NBAEAST: "NBA Eastern Conference Champion",
+  NBAMVP: "NBA MVP", NBAROY: "NBA Rookie of the Year", NBACOY: "NBA Coach of the Year",
+  NBAFINALSMVP: "NBA Finals MVP", NBAFINMVP: "NBA Finals MVP", NBAALLSTARMVP: "NBA All-Star MVP",
+  NFLMVP: "NFL MVP", HEISMAN: "Heisman Trophy",
+  MLBAL: "MLB American League Champion", MLBNL: "MLB National League Champion",
+  MLBHRDERBY: "MLB Home Run Derby",
+  UCL: "Champions League", IPL: "IPL", PREMIERLEAGUE: "Premier League",
+  PGA: "PGA Tour Player of the Year", THEOPEN: "The Open Championship",
+  NCAABASEBALL: "College World Series",
+  NCAAMBBIG10: "Big Ten Men's Basketball Champion", NCAAMBACC: "ACC Men's Basketball Champion",
+  MAYORLA: "LA Mayor", GOVCA: "California Governor", PRESPERSON: "President",
+  TIME: "TIME Person of the Year", NOBELPEACE: "Nobel Peace Prize",
+  GOVTCUTS: "Government Spending Cuts",
+  // Non-"KX" legacy-style tickers (2024 election family)
+  POPVOTEMOV: "Popular Vote Margin", ECMOV: "Electoral College Margin",
+  POPVOTEMOVSMALL: "Popular Vote Margin (narrow range)",
+  POPVOTEMOVSMALLER: "Popular Vote Margin (narrower range)",
+  SENATEAZ: "Arizona Senate Race", POWER: "Control of Congress",
+  HOUSEMOV: "House Margin", CLOSESTSTATE: "Closest State (Presidential)",
 };
 
 function parseTicker(mk) {
@@ -2977,20 +3072,16 @@ function parseTicker(mk) {
     const yy = fedM[1], mon = fedM[2];
     return `${mon[0]+mon.slice(1).toLowerCase()} '${yy} Fed rate decision`;
   }
-  // Year-suffix sport futures: KX<SPORT>-YY → "<YYYY> <Event>"
-  // YY=26 means the season ending in 2026 (NBA/NHL playoffs, World Series, etc.)
-  const sportFut = mk.match(/^KX(NBA|MLB|NHL|NCAAF|MARMAD|MASTERS|USOPEN|WMENSINGLES|WMENDOUBLES|MENSINGLES|MENDOUBLES|NFLSBMVP|NBACUP|MLBWORLD|T20WORLDCUP)-(\d{2})$/);
-  if (sportFut) {
-    const map = {
-      NBA: "NBA Finals", MLB: "World Series", NHL: "Stanley Cup",
-      NCAAF: "CFP National Championship", MARMAD: "NCAA Men's Basketball Tournament",
-      MASTERS: "Masters Tournament", USOPEN: "US Open (Tennis)",
-      WMENSINGLES: "Wimbledon Men's Singles", WMENDOUBLES: "Wimbledon Men's Doubles",
-      MENSINGLES: "Australian/French Open Men's Singles", MENDOUBLES: "Australian/French Open Men's Doubles",
-      NFLSBMVP: "Super Bowl MVP", NBACUP: "NBA Cup",
-      MLBWORLD: "World Baseball Classic", T20WORLDCUP: "ICC Men's T20 World Cup"
-    };
-    return `20${sportFut[2]} ${map[sportFut[1]]}`;
+  // Super Bowl for any year not already hard-coded in MKT_NAME_FORCE (which uses
+  // the exact "Super Bowl LX" style name for the two most recent games). SB I
+  // was Jan 1967 (season 1966), so ticker year YY -> roman numeral (2000+YY-1966).
+  const sbFutM = mk.match(/^KXSB-(\d{2})$/);
+  if (sbFutM) return `Super Bowl ${toRoman(2000 + +sbFutM[1] - 1966)}`;
+  // Year-suffix futures: KX<CODE>-YY → "<YYYY> <Event>". Dict-based (not a giant
+  // regex alternation) so adding a newly-seen code is a one-line addition.
+  const futYearM = mk.match(/^(?:KX)?([A-Z0-9]+)-(\d{2})$/);
+  if (futYearM && FUTURES_YEAR_EVENTS[futYearM[1]]) {
+    return `20${futYearM[2]} ${FUTURES_YEAR_EVENTS[futYearM[1]]}`;
   }
   // Politics futures: KXPRESNOMD-YY, KXPRESNOMR-YY → "<YYYY> Dem/Rep Pres. nominee"
   const presNom = mk.match(/^KXPRESNOM([DR])-(\d{2})$/);
@@ -3000,8 +3091,9 @@ function parseTicker(mk) {
   // NYC Mayor: KXMAYORNYCPARTY-YY → "<YYYY> NYC Mayor (party)"
   const nycMP = mk.match(/^KXMAYORNYCPARTY-(\d{2})$/);
   if (nycMP) return `20${nycMP[1]} NYC Mayor (party winner)`;
-  // Gov shutdown length: KXGOVSHUTLENGTH-YYMMMDD → "Gov shutdown length (started Mon DD, 'YY)"
-  const govShL = mk.match(/^KXGOVSHUTLENGTH-(\d{2})([A-Z]{3})(\d{2})$/);
+  // Gov shutdown length: KX(GOV|GOVT)SHUTLENGTH-YYMMMDD → "Gov shutdown length (started Mon DD, 'YY)"
+  // Kalshi has used both the "GOV" and "GOVT" spelling for this family.
+  const govShL = mk.match(/^KXGOVT?SHUTLENGTH-(\d{2})([A-Z]{3})(\d{2})$/);
   if (govShL) {
     const mo = govShL[2]; const m = mo[0] + mo.slice(1).toLowerCase();
     return `Gov shutdown length (started ${m} ${parseInt(govShL[3])}, '${govShL[1]})`;
@@ -3020,7 +3112,7 @@ function parseTicker(mk) {
   if (/^KXUFCFIGHT/.test(mk))        return "UFC fight";
   // PGA Tour event: KXPGATOUR-<EVENT_CODE><YY>. We map common event codes;
   // unknown codes fall through to the raw ticker so they're visible for triage.
-  const pgaM = mk.match(/^KXPGATOUR-([A-Z]+)(\d{2})$/);
+  const pgaM = mk.match(/^KXPGATOUR-([A-Z0-9]+?)(\d{2})$/);
   if (pgaM) {
     const code = pgaM[1], yy = pgaM[2];
     const evt = PGA_EVENTS[code];
@@ -3043,42 +3135,99 @@ function parseTicker(mk) {
   if (nflTot) { const g = parseGame(nflTot[1], NFL_TEAMS); return g ? `${g} (total)` : null; }
   // Women's college basketball games (same school codes as men's CBB)
   const ncaaWbM = mk.match(/^KXNCAAWBGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (ncaaWbM) return parseGame(ncaaWbM[1], CBB_TEAMS) ?? mk;
+  if (ncaaWbM) return parseGame(ncaaWbM[1], CBB_TEAMS) ?? null;
   // NBA series (optional trailing round code like R1)
   const nbaSer = mk.match(/^KXNBASERIES-\d{2}([A-Z]+?)(?:R\d+)?$/);
   if (nbaSer) { const g = parseGame(nbaSer[1], NBA_TEAMS); return g ? `${g} (series)` : null; }
   // NFL / college games
   const nflM   = mk.match(/^KXNFLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (nflM)   return parseGame(nflM[1],   NFL_TEAMS) ?? mk;
+  if (nflM)   return parseGame(nflM[1],   NFL_TEAMS) ?? null;
   const ncaafM = mk.match(/^KXNCAAFGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (ncaafM) return parseGame(ncaafM[1], CFB_TEAMS) ?? mk;
+  if (ncaafM) return parseGame(ncaafM[1], CFB_TEAMS) ?? null;
   const cbbM   = mk.match(/^KXNCAAMBGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (cbbM)   return parseGame(cbbM[1],   CBB_TEAMS) ?? mk;
+  if (cbbM)   return parseGame(cbbM[1],   CBB_TEAMS) ?? null;
   const nbaM   = mk.match(/^KXNBAGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (nbaM)   return parseGame(nbaM[1],   NBA_TEAMS) ?? mk;
+  if (nbaM)   return parseGame(nbaM[1],   NBA_TEAMS) ?? null;
   // MLB / NHL / UCL / IPL / WBC games
   const mlbGame = mk.match(/^KXMLBGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (mlbGame) return parseGame(mlbGame[1], MLB_TEAMS) ?? mk;
+  if (mlbGame) return parseGame(mlbGame[1], MLB_TEAMS) ?? null;
   const mlbSer = mk.match(/^KXMLBSERIES-\d{2}([A-Z]+)$/);
   if (mlbSer) { const g = parseGame(mlbSer[1], MLB_TEAMS); return g ? `${g} (series)` : null; }
   const nhlGame = mk.match(/^KXNHLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (nhlGame) return parseGame(nhlGame[1], NHL_TEAMS) ?? mk;
+  if (nhlGame) return parseGame(nhlGame[1], NHL_TEAMS) ?? null;
   const uclGame = mk.match(/^KXUCLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (uclGame) return parseGame(uclGame[1], SOCCER_TEAMS) ?? mk;
+  if (uclGame) return parseGame(uclGame[1], SOCCER_TEAMS) ?? null;
   const iplGame = mk.match(/^KXIPLGAME-\d{2}[A-Z]{3}\d{2}(?:\d{3,4})?([A-Z]+)$/);
-  if (iplGame) return parseGame(iplGame[1], IPL_TEAMS) ?? mk;
+  if (iplGame) return parseGame(iplGame[1], IPL_TEAMS) ?? null;
   // WBC fixture format includes a 4-digit time code (e.g. ...152000USADOM)
   const wbcGame = mk.match(/^KXWBCGAME-\d{2}[A-Z]{3}\d{2}\d{4}([A-Z]+)$/);
-  if (wbcGame) return parseGame(wbcGame[1], CRICKET_TEAMS) ?? mk;
+  if (wbcGame) return parseGame(wbcGame[1], CRICKET_TEAMS) ?? null;
   // World Cup 2026: match winner (3-way incl. draw), advance-round, spread, exact-score
   const wcGame = mk.match(/^KXWCGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
-  if (wcGame) return parseGame(wcGame[1], WC_TEAMS) ?? mk;
+  if (wcGame) return parseGame(wcGame[1], WC_TEAMS) ?? null;
   const wcAdvance = mk.match(/^KXWCADVANCE-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
   if (wcAdvance) { const g = parseGame(wcAdvance[1], WC_TEAMS); return g ? `${g} (advances)` : null; }
   const wcSpread = mk.match(/^KXWCSPREAD-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
   if (wcSpread) { const g = parseGame(wcSpread[1], WC_TEAMS); return g ? `${g} (spread)` : null; }
   const wcScore = mk.match(/^KXWCSCORE-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
   if (wcScore) { const g = parseGame(wcScore[1], WC_TEAMS); return g ? `${g} (exact score)` : null; }
+  // ATP/WTA singles matches and T20 cricket matches
+  const atpM = mk.match(/^KXATPMATCH-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (atpM) return parseGame(atpM[1], TENNIS_PLAYERS) ?? null;
+  const wtaM = mk.match(/^KXWTAMATCH-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (wtaM) return parseGame(wtaM[1], TENNIS_PLAYERS) ?? null;
+  const t20M = mk.match(/^KXT20MATCH-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (t20M) return parseGame(t20M[1], CRICKET_TEAMS) ?? null;
+  // PGA round-1 leader - reuses the PGA_EVENTS event-code lookup above
+  const pgaR1 = mk.match(/^KXPGAR1LEAD-([A-Z]+)(\d{2})$/);
+  if (pgaR1) {
+    const evt = PGA_EVENTS[pgaR1[1]];
+    return evt ? `20${pgaR1[2]} ${evt} - Round 1 Leader` : null;
+  }
+  // Recurring dated "will Trump be mentioned" market
+  const trumpMentionM = mk.match(/^KXTRUMPMENTION-(\d{2})([A-Z]{3})(\d{2})$/);
+  if (trumpMentionM) {
+    const mon = trumpMentionM[2];
+    return `Trump mention (${mon[0]+mon.slice(1).toLowerCase()} ${parseInt(trumpMentionM[3],10)}, 20${trumpMentionM[1]})`;
+  }
+  // Per-state presidential-party-winner / popular-vote-margin tickers
+  const presPartyStateM = mk.match(/^PRESPARTY([A-Z]{2})-(\d{2})$/);
+  if (presPartyStateM) {
+    const state = STATE_NAMES[presPartyStateM[1]];
+    return state ? `20${presPartyStateM[2]} Presidential Winner (${state})` : null;
+  }
+  const popVoteStateM = mk.match(/^POPVOTEMOV([A-Z]{2})-(\d{2})$/);
+  if (popVoteStateM) {
+    const state = STATE_NAMES[popVoteStateM[1]];
+    return state ? `20${popVoteStateM[2]} Popular Vote Margin (${state})` : null;
+  }
+  const govPartyStateM = mk.match(/^GOVPARTY([A-Z]{2})-(\d{2})$/);
+  if (govPartyStateM) {
+    const state = STATE_NAMES[govPartyStateM[1]];
+    return state ? `20${govPartyStateM[2]} Governor's Race (${state})` : null;
+  }
+  // Per-state Senate primary/race by party, e.g. KXSENATETXR-26 (R), KXSENATETXD-26 (D)
+  const senatePartyM = mk.match(/^KXSENATE([A-Z]{2})([RD])-(\d{2})$/);
+  if (senatePartyM) {
+    const state = STATE_NAMES[senatePartyM[1]];
+    const party = senatePartyM[2] === "R" ? "Republican" : "Democratic";
+    return state ? `20${senatePartyM[3]} ${state} Senate - ${party}` : null;
+  }
+  // NFL anytime-touchdown-scorer prop for a specific game
+  const nflAnyTdM = mk.match(/^KXNFLANYTD-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (nflAnyTdM) { const g = parseGame(nflAnyTdM[1], NFL_TEAMS); return g ? `${g} - Anytime TD scorer` : null; }
+  // NBA Finals series-score prediction, e.g. KXNBASERIESSCORE-26NYKSASFIN
+  const nbaSeriesScoreM = mk.match(/^KXNBASERIESSCORE-\d{2}([A-Z]+)FIN$/);
+  if (nbaSeriesScoreM) { const g = parseGame(nbaSeriesScoreM[1], NBA_TEAMS); return g ? `${g} (Finals series score)` : null; }
+  // March Madness by round/game, e.g. KXMARMAD-25R4G2 (round is the number of
+  // teams left: 4 = Final Four, 8 = Elite Eight, etc.)
+  const marMadRoundM = mk.match(/^KXW?MARMAD-(\d{2})R(\d+)G(\d+)$/);
+  if (marMadRoundM) {
+    const roundNames = {"4": "Final Four", "8": "Elite Eight", "16": "Sweet 16", "32": "Round of 32", "64": "Round of 64"};
+    const roundLabel = roundNames[marMadRoundM[2]] || `Round of ${marMadRoundM[2]}`;
+    const women = mk.startsWith("KXWMARMAD") ? "Women's " : "";
+    return `20${marMadRoundM[1]} ${women}NCAA Tournament - ${roundLabel} Game ${marMadRoundM[3]}`;
+  }
   return null;
 }
 
@@ -3143,6 +3292,41 @@ const MKT_NAME_OVERRIDES = {
   "KXLAYOFFSYINFO-26-494000":   "Tech layoffs in 2026 = 494,000",
   "KXCITRINI-28JUL01":          "Citrini macro call by July 2028",
   "KXALIENS-27":                "Alien/UAP disclosure by 2027",
+  // Added in full leaderboard cleanup - one-off tickers with no reusable pattern
+  "KXMENWORLDCUP-26":           "2026 Men's World Cup",
+  "KXNEXTTEAMNBA-26LJAM":       "LeBron James's next team (2026)",
+  "KXNEXTTEAMGIANNIS-26GANT":   "Giannis Antetokounmpo's next team (2026)",
+  "KXBTCMAX150-25":             "Bitcoin reaches $150,000 (2025)",
+  "KXBTCMAX125-1":              "Bitcoin reaches $125,000",
+  "KXBTCMAXY-25":               "Bitcoin max price (2025)",
+  "KXBTCMINY-25-2":             "Bitcoin min price (2025)",
+  "KXBTCY-27JAN0100":           "Bitcoin price (Jan 1, 2027)",
+  "KXETHMAXY-25DEC31":          "Ethereum max price (2025)",
+  "KXETHY-27JAN0100":           "Ethereum price (Jan 1, 2027)",
+  "KXSURVIVOR-26DEC31":         "Survivor winner (2026 season)",
+  "KXHORMUZNORM-26MAR17":       "Strait of Hormuz normalizes by Mar 17, 2026",
+  "KXOSCARACTO-26":             "2026 Oscar - Best Actor",
+  "KXOSCARPIC-26":              "2026 Oscar - Best Picture",
+  "KXTEAMSINSB-26":             "Teams in Super Bowl LX",
+  "KXKY4R-26":                  "Kentucky's 4th District race (2026)",
+  "INXD-24DEC31":               "S&P 500 level (Dec 31, 2024)",
+  "INXY-23DEC29":               "S&P 500 level (Dec 29, 2023)",
+  "NASDAQ100Y-24DEC31":         "Nasdaq-100 level (Dec 31, 2024)",
+  "KXWOHOCKEY-MEN26CGOLD":      "2026 Winter Olympics - Men's Hockey Gold",
+  "KXRATECUTCOUNT-25DEC31":     "Number of Fed rate cuts in 2025",
+  "KXLLM1-25DEC31":             "Top AI model (as of Dec 31, 2025)",
+  "KXDHSFUND":                  "DHS funding",
+  "KXATTENDSOTU":               "State of the Union attendance",
+  "KXELECTIONMOVZOHRAN-25":     "Zohran Mamdani election movement (2025)",
+  "KXELECTIONMOVNJGOV-25NOV04": "NJ Governor election movement (Nov 4, 2025)",
+  "KXUSAIRANAGREEMENT-27":      "US-Iran agreement by 2027",
+  "KXMICHCOACH-26":             "2026 Michigan head coach",
+  "CONTROLH-2026":              "Control of the House (2026)",
+  "KXUFCMOV-26JUN14TOPGAE":     "Topuria vs. Gaethje - method of victory",
+  "KXPGARYDER-RC25":            "2025 Ryder Cup",
+  "KXDJTJOINTSESSION-25MAR04":  "Trump joint session address (Mar 4, 2025)",
+  "KXCANADAPM-45":              "Canadian Prime Minister (45th Parliament)",
+  "KXNASCARRACE-DAY26":         "2026 Daytona 500",
 };
 
 // -- Shared winner-display logic -----------------------------------------------
@@ -3205,11 +3389,13 @@ function fmtWinner(d) {
   // code (e.g. KXSB-26-SEA). Only return the raw winner for true binary markets
   // whose ticker ends in -YES or -NO.
   if (w && !w.startsWith("::")) {
-    const isBinaryOutcome = wt && /-(YES|NO)$/i.test(wt);
+    // A winner_ticker identical to the market_key (single-outcome market, no
+    // -YES/-NO or team suffix) means the plain yes/no *is* the full answer.
+    const isBinaryOutcome = wt && (wt === mk || /-(YES|NO)$/i.test(wt));
     if (isBinaryOutcome || !/^(yes|no)$/i.test(w)) return w;
   }
   if (w.startsWith("::")) { const a = w.replace(/^::\s*/, "").trim(); if (a) return a; }
-  if (wt) {
+  if (wt && wt !== mk) {
     const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
     // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
     if (short === "TIE") return "Draw";
@@ -3230,6 +3416,87 @@ function fmtWinner(d) {
   return "-";
 }
 
+// -- Last-resort generic fallback ----------------------------------------------
+// Reached only when MKT_NAME_FORCE/market_name/MKT_NAME_OVERRIDES/parseTicker
+// all fail to produce a name - i.e. a ticker family or team/player code we've
+// never seen before. Rather than showing the raw ticker, greedily tokenize the
+// prefix against known sport/market vocabulary (same longest-match strategy as
+// parseGame) and append any parseable date/year, so a brand-new ticker still
+// reads as words. This is a readability safety net, not a precise parser -
+// unrecognized chunks are shown as-is (upper case) rather than blocking the
+// whole label. Extend TICKER_VOCAB (not this function) as new vocabulary shows up.
+const TICKER_VOCAB = {
+  // Leagues / tours / orgs
+  NFL: "NFL", NBA: "NBA", WNBA: "WNBA", MLB: "MLB", NHL: "NHL",
+  NCAAF: "NCAAF", NCAAMB: "NCAA Men's Basketball", NCAAWB: "NCAA Women's Basketball",
+  NCAAB: "NCAA Basketball", NCAABASEBALL: "NCAA Baseball", MARMAD: "March Madness",
+  WMARMAD: "Women's March Madness", PGATOUR: "PGA Tour", PGA: "PGA", LPGA: "LPGA",
+  ATP: "ATP", WTA: "WTA", UFC: "UFC", MMA: "MMA", BOXING: "Boxing", NASCAR: "NASCAR",
+  INDY: "IndyCar", F1: "F1", IPL: "IPL", T20: "T20", WBC: "World Baseball Classic",
+  UCL: "Champions League", EPL: "Premier League", LALIGA: "La Liga", FIFA: "FIFA",
+  WORLDCUP: "World Cup", OLYMPICS: "Olympics", ESPORTS: "Esports", WO: "Olympics",
+  // Common market-type / award suffixes
+  GAME: "Game", MATCH: "Match", SPREAD: "Spread", TOTAL: "Total", SERIES: "Series",
+  SERIESSCORE: "Series Score", MVP: "MVP", FINALSMVP: "Finals MVP", ALLSTARMVP: "All-Star MVP",
+  ROY: "Rookie of the Year", COY: "Coach of the Year", CHAMP: "Championship",
+  CHAMPS: "Champions", FINALS: "Finals", PLAYOFF: "Playoff", PLAYOFFS: "Playoffs",
+  WEST: "West", EAST: "East", NORTH: "North", SOUTH: "South", DIVISION: "Division",
+  CONFERENCE: "Conference", DERBY: "Derby", OPEN: "Open", TOUR: "Tour", CUP: "Cup",
+  BOWL: "Bowl", DRAFT: "Draft", MENTION: "Mention", MENTIONS: "Mentions",
+  RACE: "Race", FIGHT: "Fight", MOV: "Movement", NOM: "Nominee", NOMINEE: "Nominee",
+  COACH: "Coach", ADVANCE: "Advance", SCORE: "Score", ANYTD: "Anytime TD",
+  // Frequently-seen abbreviations in one-off futures/props
+  DHS: "DHS", SOTU: "State of the Union", FUND: "Funding", GOV: "Governor",
+  GOVT: "Government", SHUT: "Shutdown", SHUTDOWN: "Shutdown", LENGTH: "Length",
+  SENATE: "Senate", HOUSE: "House", MAYOR: "Mayor", PRES: "President",
+  PARTY: "Party", ELECTION: "Election", VOTE: "Vote", CONTROL: "Control",
+  BTC: "Bitcoin", ETH: "Ethereum", MAX: "Max", MIN: "Min", RATECUT: "Rate Cut",
+  RATECUTCOUNT: "Rate Cut Count", OSCAR: "Oscar", GRAM: "Grammy", EMMY: "Emmy",
+  GOLDENGLOBE: "Golden Globe", NOBEL: "Nobel", NOBELPEACE: "Nobel Peace Prize",
+  SURVIVOR: "Survivor", TIME: "Time", HEISMAN: "Heisman", LLM: "AI Model",
+  NEXTTEAM: "Next Team", AGREEMENT: "Agreement",
+};
+
+function tokenizeVocab(prefix) {
+  const keys = Object.keys(TICKER_VOCAB).sort((a, b) => b.length - a.length);
+  const out = [];
+  let rem = prefix;
+  while (rem.length) {
+    const hit = keys.find(k => rem.startsWith(k));
+    if (hit) { out.push(TICKER_VOCAB[hit]); rem = rem.slice(hit.length); continue; }
+    // No recognized token at the current position - consume up to the next
+    // spot where one starts (or the rest of the string) as an as-is chunk.
+    let cut = rem.length;
+    for (const k of keys) {
+      const idx = rem.indexOf(k, 1);
+      if (idx !== -1 && idx < cut) cut = idx;
+    }
+    out.push(rem.slice(0, cut));
+    rem = rem.slice(cut);
+  }
+  return out;
+}
+
+function humanizeUnresolved(mk) {
+  if (!mk) return null;
+  const dashIdx = mk.indexOf("-");
+  const prefix = (dashIdx === -1 ? mk : mk.slice(0, dashIdx)).replace(/^KX/, "");
+  const rest = dashIdx === -1 ? "" : mk.slice(dashIdx + 1);
+  if (!prefix) return null;
+  const words = tokenizeVocab(prefix);
+  let label = words.join(" ");
+  // Append a human date or year from the remainder, if present, for context.
+  const dateM = rest.match(/(\d{2})([A-Z]{3})(\d{2})/);
+  const yearM = rest.match(/^(\d{2})(?:$|[^0-9])/);
+  if (dateM) {
+    const mon = dateM[2];
+    label += ` (${mon[0]+mon.slice(1).toLowerCase()} ${parseInt(dateM[3],10)}, 20${dateM[1]})`;
+  } else if (yearM) {
+    label += ` (20${yearM[1]})`;
+  }
+  return label || null;
+}
+
 function bestName(d) {
   const mk = (d.market_key ?? "").trim();
   if (MKT_NAME_FORCE[mk]) return MKT_NAME_FORCE[mk];
@@ -3238,7 +3505,7 @@ function bestName(d) {
   if (mn && mn !== mk) return mn;
   const imn = (d["i.market_name"] || "").trim();
   if (imn && imn !== mk) return imn;
-  return MKT_NAME_OVERRIDES[mk] || parseTicker(mk) || mk;
+  return MKT_NAME_OVERRIDES[mk] || parseTicker(mk) || humanizeUnresolved(mk) || mk;
 }
 
 const fmtC = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B"
@@ -3334,6 +3601,9 @@ function fmtStrike(top_outcome, market_key) {
       return `${teamMap[sc[1]] ?? sc[1]} ${sc[2]}-${sc[4]} ${teamMap[sc[3]] ?? sc[3]}`;
     }
   }
+  // top_outcome identical to market_key (single-outcome market, nothing to
+  // strip) - there's no code left to decode, so don't leak the raw ticker.
+  if (short === mk) return "-";
   // Sport-aware team / player fallback
   const teamMap = getTeamsForMarket(mk);
   return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
