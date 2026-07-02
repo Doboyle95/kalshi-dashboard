@@ -150,10 +150,21 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     // "end" only — see components/date-brush.js for why.
     .on("end", event => {
       if (!event.sourceEvent) return;
-      if (event.selection) { svg.property("value", event.selection.map(x.invert)); svg.dispatch("input"); }
+      if (!event.selection) {
+        // Clearing the brush (a bare click) now means "show everything": reset to
+        // the full domain and redraw the selection so the visuals match the filter.
+        svg.property("value", x.domain());
+        brushG.call(brush.move, x.domain().map(x));   // programmatic move — guarded above, no re-fire
+        svg.dispatch("input");
+        return;
+      }
+      svg.property("value", event.selection.map(x.invert)); svg.dispatch("input");
     });
 
-  svg.append("g").attr("class", "brush").call(brush).call(brush.move, [clampedStart, defaultEnd].map(x));
+  const brushG = svg.append("g").attr("class", "brush");
+
+
+  brushG.call(brush).call(brush.move, [clampedStart, defaultEnd].map(x));
 
   // d3 v7 hides .handle by default - force visible so users can see the draggable edges.
   svg.selectAll(".handle")

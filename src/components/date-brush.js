@@ -124,7 +124,13 @@ export function renderDateBrush({
     .on("end", (event) => {
       if (!event.sourceEvent) return;          // ignore programmatic brush.move
       const sel = event.selection;
-      if (!sel) return;
+      if (!sel) {
+        // Clearing the brush (a bare click outside the selection) now means
+        // "show everything" — previously the rectangle vanished while the charts
+        // silently kept the old range. applyRange redraws the selection too.
+        applyRange(domainStart, domainEnd, {moveBrush: true, fire: true});
+        return;
+      }
       const [a, b] = sel.map(x.invert);
       applyRange(a, b, {moveBrush: false, fire: true});
     });
