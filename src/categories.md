@@ -2815,6 +2815,23 @@ const SOCCER_TEAMS = {
   ACM:"AC Milan", NAP:"Napoli", POR:"Porto", BEN:"Benfica", SPOR:"Sporting CP",
   AJAX:"Ajax",
 };
+// FIFA World Cup 2026 national-team codes, used by KXWCGAME / KXWCADVANCE /
+// KXWCSPREAD / KXWCSCORE (all 48 tournament teams; distinct dict from
+// SOCCER_TEAMS's club codes to avoid collisions, e.g. club COL vs country COL).
+const WC_TEAMS = {
+  ARG:"Argentina", AUS:"Australia", AUT:"Austria", BEL:"Belgium",
+  BIH:"Bosnia & Herzegovina", BRA:"Brazil", CAN:"Canada", CIV:"Ivory Coast",
+  COD:"DR Congo", COL:"Colombia", CPV:"Cabo Verde", CRO:"Croatia",
+  CUW:"Curacao", CZE:"Czechia", DZA:"Algeria", ECU:"Ecuador",
+  EGY:"Egypt", ENG:"England", ESP:"Spain", FRA:"France",
+  GER:"Germany", GHA:"Ghana", HTI:"Haiti", IRI:"Iran",
+  IRQ:"Iraq", JOR:"Jordan", JPN:"Japan", KOR:"South Korea",
+  KSA:"Saudi Arabia", MAR:"Morocco", MEX:"Mexico", NED:"Netherlands",
+  NOR:"Norway", NZL:"New Zealand", PAN:"Panama", PAR:"Paraguay",
+  POR:"Portugal", QAT:"Qatar", RSA:"South Africa", SCO:"Scotland",
+  SEN:"Senegal", SUI:"Switzerland", SWE:"Sweden", TUN:"Tunisia",
+  TUR:"Turkey", URU:"Uruguay", USA:"USA", UZB:"Uzbekistan",
+};
 const CRICKET_TEAMS = {
   // International teams (T20 World Cup, WBC, etc.)
   IND:"India", PAK:"Pakistan", AUS:"Australia", ENG:"England", SA:"South Africa",
@@ -2912,6 +2929,7 @@ function getTeamsForMarket(mk) {
   if (/^KXMLB/.test(mk))                       return MLB_TEAMS;
   if (/^KXNHL/.test(mk))                       return NHL_TEAMS;
   if (/^KXUCL|^KXEPL|^KXLALIGA/.test(mk))      return SOCCER_TEAMS;
+  if (/^KXWCGAME|^KXWCADVANCE|^KXWCSPREAD|^KXWCSCORE/.test(mk)) return WC_TEAMS;
   if (/^KXT20|^KXICC|^KXWBC/.test(mk))         return CRICKET_TEAMS;
   if (/^KXIPL/.test(mk))                       return IPL_TEAMS;
   if (/^KXATP|^KXWTA|^KXWMEN|^KXFOMEN|^KXUSOMEN|^KXAOMEN|^KXAUSOPEN/.test(mk)) return TENNIS_PLAYERS;
@@ -3052,6 +3070,15 @@ function parseTicker(mk) {
   // WBC fixture format includes a 4-digit time code (e.g. ...152000USADOM)
   const wbcGame = mk.match(/^KXWBCGAME-\d{2}[A-Z]{3}\d{2}\d{4}([A-Z]+)$/);
   if (wbcGame) return parseGame(wbcGame[1], CRICKET_TEAMS) ?? mk;
+  // World Cup 2026: match winner (3-way incl. draw), advance-round, spread, exact-score
+  const wcGame = mk.match(/^KXWCGAME-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (wcGame) return parseGame(wcGame[1], WC_TEAMS) ?? mk;
+  const wcAdvance = mk.match(/^KXWCADVANCE-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (wcAdvance) { const g = parseGame(wcAdvance[1], WC_TEAMS); return g ? `${g} (advances)` : null; }
+  const wcSpread = mk.match(/^KXWCSPREAD-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (wcSpread) { const g = parseGame(wcSpread[1], WC_TEAMS); return g ? `${g} (spread)` : null; }
+  const wcScore = mk.match(/^KXWCSCORE-\d{2}[A-Z]{3}\d{2}([A-Z]+)$/);
+  if (wcScore) { const g = parseGame(wcScore[1], WC_TEAMS); return g ? `${g} (exact score)` : null; }
   return null;
 }
 
@@ -3184,11 +3211,18 @@ function fmtWinner(d) {
   if (w.startsWith("::")) { const a = w.replace(/^::\s*/, "").trim(); if (a) return a; }
   if (wt) {
     const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
+    // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
+    if (short === "TIE") return "Draw";
     const teamMap = getTeamsForMarket(mk);
     // Spread winners like "SEA10" -> "Seahawks -10"
     if (/SPREAD/.test(mk)) {
       const sp = short.match(/^([A-Z]+)(\d+)$/);
       if (sp) return `${teamMap[sp[1]] ?? sp[1]} -${sp[2]}`;
+    }
+    // World Cup exact-score outcomes like "MEX2ECU0" -> "Mexico 2-0 Ecuador"
+    if (/^KXWCSCORE/.test(mk)) {
+      const sc = short.match(/^([A-Z]{3})(\d+)([A-Z]{3})(\d+)$/);
+      if (sc) return `${teamMap[sc[1]] ?? sc[1]} ${sc[2]}-${sc[4]} ${teamMap[sc[3]] ?? sc[3]}`;
     }
     return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
   }
@@ -3256,6 +3290,8 @@ function fmtStrike(top_outcome, market_key) {
   const short = mk
     ? top_outcome.replace(mk + "-", "")
     : top_outcome.split("-").pop();
+  // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
+  if (short === "TIE") return "Draw";
   // Fed rate outcomes
   if (short === "H0") return "Hold";
   if (/^H(\d+)$/.test(short)) return `+${short.slice(1)} bps (hike)`;
@@ -3290,6 +3326,14 @@ function fmtStrike(top_outcome, market_key) {
     return short;
   }
   if (/^B[0-9]/.test(short)) return short.slice(1);
+  // World Cup exact-score outcomes like "MEX2ECU0" -> "Mexico 2-0 Ecuador"
+  if (/^KXWCSCORE/.test(mk)) {
+    const sc = short.match(/^([A-Z]{3})(\d+)([A-Z]{3})(\d+)$/);
+    if (sc) {
+      const teamMap = getTeamsForMarket(mk);
+      return `${teamMap[sc[1]] ?? sc[1]} ${sc[2]}-${sc[4]} ${teamMap[sc[3]] ?? sc[3]}`;
+    }
+  }
   // Sport-aware team / player fallback
   const teamMap = getTeamsForMarket(mk);
   return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
