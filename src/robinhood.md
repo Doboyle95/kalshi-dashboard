@@ -26,6 +26,8 @@ const weekly  = await FileAttachment("data/rh_weekly_estimates.csv").csv({typed:
 const fmtB    = n => (n ?? 0).toFixed(2) + "B";
 const fmtPct  = n => (n ?? 0).toFixed(1) + "%";
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", year: "numeric", timeZone: "UTC"}) ?? "";
+// Weeks need the day — "Week of Apr 2026" is ambiguous across 4-5 weeks.
+const fmtWeek = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 
 // Parse month strings ("2025-04") into Date objects
 const monthlyParsed = monthly.map(d => ({
@@ -63,7 +65,10 @@ Plot.plot({
   height: 320,
   x: {
     label: null,
-    tickFormat: d => d3.timeFormat("%b '%y")(d),
+    // utcFormat, not timeFormat: the ticks are UTC month boundaries, and formatting
+    // them in local time shifts every label one month early for US viewers
+    // ("Mar '25" under the April bar) while the tooltips (UTC) say the right month.
+    tickFormat: d => d3.utcFormat("%b '%y")(d),
     tickRotate: -35
   },
   y: {
@@ -100,12 +105,12 @@ Plot.plot({
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Peak weekly share (estimated)</div>
     <div class="kpi-value">${fmtPct(peakShare?.rh_share_pct)}</div>
-    <div class="kpi-meta">Week of ${fmtDate(peakShare?.week_start)}</div>
+    <div class="kpi-meta">Week of ${fmtWeek(peakShare?.week_start)}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Latest weekly share (estimated)</div>
     <div class="kpi-value">${fmtPct(latestShare?.rh_share_pct)}</div>
-    <div class="kpi-meta">Week of ${fmtDate(latestShare?.week_start)}</div>
+    <div class="kpi-meta">Week of ${fmtWeek(latestShare?.week_start)}</div>
   </div>
 </div>
 
@@ -185,7 +190,7 @@ Plot.plot({
       fill: "var(--accent-robinhood)", r: 3,
       tip: {
         format: {
-          x: d => "Week of " + fmtDate(d),
+          x: d => "Week of " + fmtWeek(d),
           y: d => fmtPct(d) + " of Kalshi"
         }
       }

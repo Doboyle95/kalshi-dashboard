@@ -124,16 +124,16 @@ const maxNeg = data.reduce((worst, d) => +d.calib_error < +worst.calib_error ? d
 ```
 
 <div style="display:flex;gap:2rem;margin-top:1rem;flex-wrap:wrap">
-  <div style="background:#f8f8f8;border-radius:8px;padding:0.8rem 1.2rem">
-    <div style="font-size:0.78em;color:#666;text-transform:uppercase">Mean absolute error</div>
+  <div style="background:var(--theme-background-alt);border:1px solid var(--card-border, var(--theme-foreground-faint));border-radius:8px;padding:0.8rem 1.2rem">
+    <div style="font-size:0.78em;color:var(--theme-foreground-muted);text-transform:uppercase">Mean absolute error</div>
     <div style="font-size:1.5em;font-weight:700">${(mae*100).toFixed(2)}%</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:0.8rem 1.2rem">
-    <div style="font-size:0.78em;color:#666;text-transform:uppercase">Most underpriced bin</div>
+  <div style="background:var(--theme-background-alt);border:1px solid var(--card-border, var(--theme-foreground-faint));border-radius:8px;padding:0.8rem 1.2rem">
+    <div style="font-size:0.78em;color:var(--theme-foreground-muted);text-transform:uppercase">Most underpriced bin</div>
     <div style="font-size:1.5em;font-weight:700;color:#1a9641">${maxPos?.price_bin}¢ (+${(+maxPos?.calib_error*100).toFixed(2)}%)</div>
   </div>
-  <div style="background:#f8f8f8;border-radius:8px;padding:0.8rem 1.2rem">
-    <div style="font-size:0.78em;color:#666;text-transform:uppercase">Most overpriced bin</div>
+  <div style="background:var(--theme-background-alt);border:1px solid var(--card-border, var(--theme-foreground-faint));border-radius:8px;padding:0.8rem 1.2rem">
+    <div style="font-size:0.78em;color:var(--theme-foreground-muted);text-transform:uppercase">Most overpriced bin</div>
     <div style="font-size:1.5em;font-weight:700;color:#d7191c">${maxNeg?.price_bin}¢ (${(+maxNeg?.calib_error*100).toFixed(2)}%)</div>
   </div>
 </div>

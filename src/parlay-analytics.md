@@ -429,7 +429,7 @@ const popTop = Array.from(popAgg, ([pid, a]) => {
 const popFmtPrice = c => c == null ? "—" : c >= 1 ? c.toFixed(1) + "¢" : c >= 0.1 ? c.toFixed(2) + "¢" : c.toFixed(3) + "¢";
 const popResult = r => r === "hit" ? html`<span style="color:#1a9641;font-weight:600;">✓ hit</span>`
   : r === "miss" ? html`<span style="color:#d7191c;">✗ miss</span>`
-  : html`<span style="color:#999;">pending</span>`;
+  : html`<span style="color:var(--theme-foreground-muted, #999);">pending</span>`;
 const popLabel = d => {
   let s = d.label;
   if (!s) s = (d.family ? d.family + " · " : "") + d.ticker.split("-").slice(1).join("-");
@@ -439,9 +439,9 @@ const popLegs = d => Number.isFinite(d.n_legs) ? d.n_legs : "—";
 ```
 
 ```js
-html`<div style="font-size:13px;color:#666;margin:2px 0 8px;">Top ${popTop.length} of ${popAgg.size.toLocaleString()} parlays traded in range</div>
+html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin:2px 0 8px;">Top ${popTop.length} of ${popAgg.size.toLocaleString()} parlays traded in range</div>
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
-  <thead><tr style="text-align:left;border-bottom:2px solid #ccc;">
+  <thead><tr style="text-align:left;border-bottom:2px solid var(--card-border, #ccc);">
     <th style="padding:5px 6px;width:26px;">#</th>
     <th style="padding:5px 6px;">Parlay</th>
     <th style="padding:5px 6px;text-align:right;width:46px;">Legs</th>
@@ -449,8 +449,8 @@ html`<div style="font-size:13px;color:#666;margin:2px 0 8px;">Top ${popTop.lengt
     <th style="padding:5px 6px;text-align:right;width:74px;">Avg price</th>
     <th style="padding:5px 6px;width:72px;">Result</th>
   </tr></thead>
-  <tbody>${popTop.map(d => html`<tr style="border-bottom:1px solid #eee;">
-    <td style="padding:5px 6px;color:#999;">${d.rank}</td>
+  <tbody>${popTop.map(d => html`<tr style="border-bottom:1px solid var(--theme-background-alt, #eee);">
+    <td style="padding:5px 6px;color:var(--theme-foreground-muted, #999);">${d.rank}</td>
     <td style="padding:5px 6px;" title=${d.label}><span style="display:inline-block;font-size:11px;color:#3b82a0;background:rgba(59,130,160,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">${d.family}</span>${popLabel(d)}</td>
     <td style="padding:5px 6px;text-align:right;">${popLegs(d)}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.trades.toLocaleString()}</td>

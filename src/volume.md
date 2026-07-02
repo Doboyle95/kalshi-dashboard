@@ -179,11 +179,19 @@ const volWideDaily = topDaily.map(row => {
   const parlay       = +sp.contracts_parlay    || 0;
   const totSports    = +sp.contracts_sports    || 0;
   const totNonSports = +sp.contracts_nonsports || 0;
+  // Regime detection, same rule as the "Both (stacked)" view below: pre-May-2026 rows
+  // count contracts_parlay INSIDE contracts_sports (shares sum to ~1 + share_parlay);
+  // from 2026-05-01 parlay is a disjoint third bucket (shares sum to ~1.00). Subtract
+  // parlay from the sports remainder only in the overlap regime — always subtracting
+  // (the old behavior) erased up to the full parlay volume from "Other sports" on
+  // disjoint rows (~318M contracts on 2026-06-15), or clamped it to zero.
+  const shareSum = (+sp.share_sports || 0) + (+sp.share_nonsports || 0) + (+sp.share_parlay || 0);
+  const parlayInSports = shareSum > 1.01;
   const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date, ...groups, Parlay: parlay,
-    "Other sports":     Math.max(0, totSports    - parlay - knownSports),
+    "Other sports":     Math.max(0, totSports - (parlayInSports ? parlay : 0) - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
@@ -485,10 +493,12 @@ Plot.plot({
     })),
     ...(useTableau ? [Plot.lineY(sportsMA, {
       x: "date", y: "ma",
-      stroke: "#111", strokeWidth: 1.8, strokeDasharray: "4,2",
+      stroke: "var(--theme-foreground)", strokeWidth: 1.8, strokeDasharray: "4,2",
       curve: "monotone-x",
       tip: true,
-      title: d => `7-day avg: $${Math.round(d.ma||0).toLocaleString()}`
+      title: d => `7-day avg: ${sportsMetric === "Fees"
+        ? "$" + Math.round(d.ma||0).toLocaleString()
+        : fmtCount(Math.round(d.ma||0)) + " contracts"}`
     })] : []),
     Plot.ruleY([0])
   ]

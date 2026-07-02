@@ -569,7 +569,8 @@ Plot.plot({
   width,
   height: filtered.length * 22 + 40,
   marginLeft: 220,
-  x: {label: metric === "contracts" ? "Volume (contracts)" : "Fees ($)", grid: true},
+  x: {label: metric === "contracts" ? "Volume (contracts)" : "Fees ($)", grid: true,
+      tickFormat: d => (metric === "fees" ? "$" : "") + fmtCount(d)},
   y: {label: null},
   marks: [
     Plot.barX(filtered, {
@@ -1552,9 +1553,13 @@ const tmActiveMarketRowsByTicker = d3.group(
       tooltip.style.opacity = "1";
     })
     .on("mousemove.kdtt", function(event) {
-      // pageX/pageY work whether the SVG is scrolled or transformed
-      const x = event.pageX + 14;
-      const y = event.pageY + 14;
+      // clientX/clientY, NOT pageX/pageY: the tooltip is position:fixed (viewport
+      // coordinates). pageX adds the scroll offset, which pushed the tooltip
+      // scroll-distance below the cursor — off-screen whenever the page was
+      // scrolled down to the treemap, i.e. always. (The native <title> fallback
+      // masked this.)
+      const x = event.clientX + 14;
+      const y = event.clientY + 14;
       tooltip.style.left = x + "px";
       tooltip.style.top  = y + "px";
     })
@@ -1845,6 +1850,14 @@ const wideDaily = topDaily.map(row => {
   } else {
     pPend = parlay;
   }
+  // Regime detection (same rule as volume.md's "Both" view): pre-May-2026 rows count
+  // contracts_parlay INSIDE contracts_sports (shares sum to ~1 + share_parlay); from
+  // 2026-05-01 parlay is disjoint (shares sum to ~1.00). In the overlap regime the
+  // parlay volume must be subtracted from the sports remainder, because Parlay is
+  // ALSO stacked as its own band here — the old always-disjoint assumption double-
+  // counted parlay for Oct 2025→Apr 2026 (stack total +23% on 2026-04-30).
+  const shareSum = (+sp.share_sports || 0) + (+sp.share_nonsports || 0) + (+sp.share_parlay || 0);
+  const parlayInSports = shareSum > 1.01;
   return {
     date: row.date,
     ...groups,
@@ -1852,7 +1865,7 @@ const wideDaily = topDaily.map(row => {
     "Parlay (correlated)":  pCorr,
     "Parlay (independent)": pIndep,
     "Parlay (pending)":     pPend,
-    "Other sports":     Math.max(0, totSports    - knownSports),
+    "Other sports":     Math.max(0, totSports - (parlayInSports ? parlay : 0) - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
@@ -2060,7 +2073,7 @@ Plot.plot({
       fill: "category",
       order: activeOrder,
       fillOpacity: d => !monthlyFocusSet.size || monthlyFocusSet.has(d.category) ? 0.88 : 0.18,
-      stroke: d => monthlyPrimaryFocus && d.category === monthlyPrimaryFocus ? "#111" : "none",
+      stroke: d => monthlyPrimaryFocus && d.category === monthlyPrimaryFocus ? "var(--theme-foreground)" : "none",
       strokeWidth: d => monthlyPrimaryFocus && d.category === monthlyPrimaryFocus ? 1.1 : 0
     }),
     Plot.ruleX(monthTipData, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
@@ -3210,7 +3223,8 @@ const TOP_OUTCOME_NAMES = {
   "KXNFLNFCCHAMP-25-LA":              "Rams",
   "KXFIRSTSUPERBOWLSONG-26FEB09-TIT": "Titi Me Pregunto",
   "KXBOXING-25DEC19JPAUAJOS-JPAU":    "Jake Paul",
-  "KXBOXING-25SEP13CALVTCRA-TCRA":    "Terrazas",
+  // -TCRA = Terence Crawford (Canelo–Crawford, Sep 13 2025); matches WINNER_OVERRIDES.
+  "KXBOXING-25SEP13CALVTCRA-TCRA":    "Crawford",
   // Added in cleanup
   "KXKHAMENEIOUT-AKHA-26MAR01":       "by March 1",
   "KXALIENS-27":                      "before 2027",
@@ -3244,7 +3258,7 @@ function fmtStrike(top_outcome, market_key) {
     : top_outcome.split("-").pop();
   // Fed rate outcomes
   if (short === "H0") return "Hold";
-  if (/^H(\d+)$/.test(short)) return `-${short.slice(1)}.25 bps`;
+  if (/^H(\d+)$/.test(short)) return `+${short.slice(1)} bps (hike)`;
   if (/^C(\d+)$/.test(short)) return `-${short.slice(1)} bps (cut)`;
   // Shutdown length - e.g. "42D" -> "42 days"
   const daysM = short.match(/^(\d+)D$/);
@@ -3368,7 +3382,7 @@ const mktFiltered = mktSearch
 // no JS DOM timing issues; survives table sort/pagination automatically.
 const catCss = Object.entries(CAT_COLORS).map(([cat, color]) =>
   `.mkt-table tr:has([data-mkt-cat="${cat}"]) { background: ${color}38 !important; }
-.mkt-table tr:has([data-mkt-cat="${cat}"]): hover { background: ${color}55 !important; }`
+.mkt-table tr:has([data-mkt-cat="${cat}"]):hover { background: ${color}55 !important; }`
 ).join("\n");
 
 display(html`<style>
