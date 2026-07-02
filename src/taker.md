@@ -16,16 +16,18 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numer
 
 ```js
 const taker = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
-const takerCat = await FileAttachment("data/taker_category_daily.csv").csv({typed: true});
+const takerVolByTicker = await FileAttachment("data/taker_volume_by_ticker_daily.csv").csv({typed: true});
+const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {hashGet, hashInput} from "./components/hash-state.js";
 ```
 
 ```js
 display(freshnessPanel({
   items: [
     {label: "Taker-side notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
-    {label: "Taker volume by category", date: latestDate(takerCat), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Contract volume, not notional - see note below"}
+    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Contract volume, not notional - see note below"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
 }));
@@ -117,26 +119,65 @@ function makeTakerBrush(defaultStart) {
 ```
 
 ```js
-const TAKER_CAT_COLORS = {
-  "Non-parlay sports":     "#1a9641",
-  "Parlays":               "#66bd63",
-  "Crypto":                "#0D47A1",
-  "Elections":             "#1A237E",
-  "Politics":              "#3949AB",
-  "Mentions":              "#546E7A",
-  "Climate and Weather":   "#4FC3F7",
-  "Companies":             "#8D6E63",
-  "Economics":             "#00838F",
-  "Entertainment":         "#0097A7",
-  "Financials":            "#1E88E5",
-  "Other non-sports":      "#7986CB",
-  "Science and Technology":"#8E24AA",
-  "Unknown":               "#9E9E9E",
+// ── Category classification: report_ticker -> cat, read straight from
+// category_leaderboard.csv (the same per-ticker classification categories.md's
+// classByReportTicker uses) instead of Kalshi's own kalshi_category. Kalshi's
+// taxonomy dumps every sport into one "Sports" bucket that swamps the other ~13
+// categories down to a few percent combined - not useful for a volume breakdown.
+const reportTickerToCat = new Map(
+  categoryLeaderboard.filter(d => d.report_ticker && d.cat).map(d => [d.report_ticker, d.cat])
+);
+
+// Detailed (sport-by-sport) order/palette - mirrors categories.md's Detailed view,
+// extended with Cricket/Racing/Esports (real `cat` values not carried by categories.md's
+// older wideOrder) plus an "Uncategorized" catch-all so a future report_ticker not yet in
+// the leaderboard is still visible instead of silently dropped from the stack.
+const TAKER_DETAIL_ORDER = [
+  "Other Non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
+  "Other Sports", "Esports", "Racing", "Cricket", "Combat Sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
+  "College Football", "NFL", "College Basketball", "NBA", "Parlay", "Uncategorized"
+];
+const TAKER_DETAIL_COLORS = {
+  "Other Non-sports": "#e8eaf0", "Weather": "#b0bec5", "Entertainment": "#90a4ae",
+  "Mention": "#78909c", "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
+  "Other Sports": "#c8e6c9", "Esports": "#BCAAA4", "Racing": "#A1887F", "Cricket": "#FA8072",
+  "Combat Sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
+  "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
+  "College Football": "#ffcc80", "NFL": "#bf360c",
+  "College Basketball": "#90caf9", "NBA": "#0d47a1",
+  "Parlay": "#7b1fa2",
+  "Uncategorized": "#9E9E9E"
 };
-const TAKER_CAT_ORDER = Object.keys(TAKER_CAT_COLORS);
+
+// Broad (default) grouping - mirrors categories.md's generalMap/generalOrder/generalColors.
+const TAKER_GENERAL_MAP = {
+  "NFL": "Football", "College Football": "Football",
+  "NBA": "Basketball", "College Basketball": "Basketball",
+  "Baseball": "Baseball",
+  "Hockey": "Other sports", "Golf": "Other sports", "Tennis": "Other sports",
+  "Soccer": "Other sports", "Combat Sports": "Other sports", "Other Sports": "Other sports",
+  "Cricket": "Other sports", "Racing": "Other sports", "Esports": "Other sports",
+  "Parlay": "Parlay",
+  "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
+  "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other Non-sports": "Non-sports",
+  "Uncategorized": "Uncategorized"
+};
+const TAKER_GENERAL_ORDER  = ["Non-sports", "Other sports", "Baseball", "Basketball", "Football", "Parlay", "Uncategorized"];
+const TAKER_GENERAL_COLORS = {
+  "Non-sports": "#78909c", "Other sports": "#a5d6a7", "Baseball": "#880e4f",
+  "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2",
+  "Uncategorized": "#9E9E9E"
+};
+
+// Reclassify the per-ticker daily volume rows into detailed categories once, up front.
+const takerCatRows = takerVolByTicker.map(d => ({
+  date: d.date,
+  category: reportTickerToCat.get(d.report_ticker) || "Uncategorized",
+  value: +d.contracts_settled || 0
+}));
 
 const takerCatDaily = Array.from(
-  d3.rollup(takerCat, rows => d3.sum(rows, r => +r.contracts_settled || 0), d => +d.date),
+  d3.rollup(takerCatRows, rows => d3.sum(rows, r => r.value), d => +d.date),
   ([t, value]) => ({date: new Date(t), value})
 ).sort((a, b) => a.date - b.date);
 
@@ -301,30 +342,46 @@ Plot.plot({
 
 ## Volume by category
 
-<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into. This is <strong>contract volume</strong>, not notional dollars — the category breakdown isn't priced out to a dollar figure upstream, so it can't yet be weighted the same way as the charts above.</p>
+<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into. This is <strong>contract volume</strong>, not notional dollars — the category breakdown isn't priced out to a dollar figure upstream, so it can't yet be weighted the same way as the charts above. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
 
 ```js
 const drCat = view(makeTakerCatBrush(new Date("2025-01-01")));
 ```
 
+<div class="control-strip">
+
+```js
+const takerCatDetail = view(hashInput("takerCatDetail", Inputs.radio(["General", "Detailed"], {value: hashGet("takerCatDetail", "General"), label: "Categories"})));
+```
+
+</div>
+
 ```js
 const [sCat, eCat] = drCat;
-const fdCat = takerCat.filter(d => d.date >= sCat && d.date <= eCat);
-const tidyCat = fdCat.map(d => ({date: d.date, category: d.kalshi_category, value: +d.contracts_settled || 0}));
+const activeCatOrder  = takerCatDetail === "Detailed" ? TAKER_DETAIL_ORDER  : TAKER_GENERAL_ORDER;
+const activeCatColors = takerCatDetail === "Detailed" ? TAKER_DETAIL_COLORS : TAKER_GENERAL_COLORS;
+
+const fdCat = takerCatRows
+  .filter(d => d.date >= sCat && d.date <= eCat)
+  .map(d => ({date: d.date, category: takerCatDetail === "Detailed" ? d.category : (TAKER_GENERAL_MAP[d.category] || "Uncategorized"), value: d.value}));
+
 const catTotalsInRange = Array.from(
-  d3.rollup(tidyCat, rows => d3.sum(rows, r => r.value), d => d.category),
+  d3.rollup(fdCat, rows => d3.sum(rows, r => r.value), d => d.category),
   ([category, value]) => ({category, value})
 ).sort((a, b) => b.value - a.value);
 
 // Manual cumulative stack (mirrors the Yes/No section above) rather than relying on an
 // implicit mark-level stack transform, since this needs one bar segment per category
-// per day, in a fixed draw order, skipping zero/missing categories cleanly.
-const catByDate = d3.group(tidyCat, d => +d.date);
+// per day, in a fixed draw order, skipping zero/missing categories cleanly. Grouping by
+// date first, then re-summing per category, correctly merges rows that collapse onto the
+// same General bucket (e.g. NFL + College Football -> Football).
+const catByDate = d3.group(fdCat, d => +d.date);
 const stackedCat = [];
 for (const [t, rowsForDate] of catByDate) {
-  const byCategory = new Map(rowsForDate.map(r => [r.category, r.value]));
+  const byCategory = new Map();
+  for (const r of rowsForDate) byCategory.set(r.category, (byCategory.get(r.category) || 0) + r.value);
   let cum = 0;
-  for (const cat of TAKER_CAT_ORDER) {
+  for (const cat of activeCatOrder) {
     const v = byCategory.get(cat) || 0;
     if (v <= 0) continue;
     stackedCat.push({date: new Date(+t), category: cat, y1: cum, y2: cum + v, value: v});
@@ -343,7 +400,7 @@ Plot.plot({
   marginLeft: 80,
   x: {type: "utc", label: null},
   y: {label: "Contracts settled", grid: true, tickFormat: d => fmtCount(d)},
-  color: {legend: true, domain: TAKER_CAT_ORDER, range: TAKER_CAT_ORDER.map(c => TAKER_CAT_COLORS[c])},
+  color: {legend: true, domain: activeCatOrder, range: activeCatOrder.map(c => activeCatColors[c])},
   marks: [
     Plot.rectY(stackedCat, {
       x1: d => d.date,
