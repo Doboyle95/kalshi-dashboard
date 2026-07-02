@@ -84,6 +84,34 @@ THRESHOLDS = {
     "parlay_top_games_by_volume.csv": 48,
     "parlay_sportsmix_v2.csv": 48,
     "parlay_popular_meta.csv": 48,
+    # 2026-07-02 coverage backfill — published files that had NO threshold here
+    # (the check_coverage() gap alert below now catches this class of drift):
+    "daily_top_categories_fees.csv": 36,     # daily 07:00 producer; froze at 06-26 unnoticed
+    "rothera_categories_daily.csv": 24,
+    "rothera_sports_split_daily.csv": 24,
+    "nadex_events_daily.csv": 48,             # the 06-28 weekend-data-loss file
+    "parlay_pnl_unified_daily.csv": 24,       # the parlay page's primary chart source
+    "parlay_cashout_daily.csv": 48,
+    "parlay_pnl_daily_by_corr_v2.csv": 48,
+    "parlay_corr_by_ticker_daily.csv": 48,
+    "parlay_volume_by_type_daily.csv": 48,
+    "parlay_popular_daily.csv": 48,
+    "taker_sports_daily.csv": 240,            # weekly v3 taker-category reconcile
+    "dkex_daily.csv": 36,
+    "dkex_categories_daily.csv": 36,
+    "dkex_sports_split_daily.csv": 36,
+    "dkex_market_daily.csv": 36,
+    "dkex_settlement_daily.csv": 36,
+}
+
+# Published files deliberately NOT threshold-monitored here: CME is hand-collected
+# from 24h-window bulletins (legitimately sparse/irregular — an mtime threshold would
+# false-alarm), and the RH estimate files are rewritten every competitor cycle even
+# when their manual FCM input hasn't advanced (mtime is meaningless; the VM-side
+# keystone's STALE_TAIL content check owns their staleness).
+KNOWN_UNMONITORED = {
+    "cme_daily.csv", "cme_daily_distributed.csv",
+    "rh_monthly_estimates.csv", "rh_weekly_estimates.csv",
 }
 
 
@@ -184,6 +212,13 @@ def check_local_alerts(manifest: dict) -> list[str]:
     ):
         ts = meta.get(key)
         if not ts:
+            # A missing/null source timestamp must not read as "all healthy" — it
+            # means the publisher stopped embedding the local-monitor relay (or the
+            # monitor never ran), which is exactly when we'd otherwise go blind.
+            alerts.append(
+                f"local-monitor: no timestamp for {label} in the manifest — "
+                "the local-alert relay may be broken"
+            )
             continue
         parsed = _parse_manifest_ts(str(ts))
         if parsed is None:
@@ -196,6 +231,24 @@ def check_local_alerts(manifest: dict) -> list[str]:
                 f"(threshold {LOCAL_SOURCE_STALE_H}h) — the local monitor itself may be down"
             )
     return alerts
+
+
+def check_coverage(manifest: dict) -> list[str]:
+    """Published-but-unmonitored drift alarm.
+
+    The publish surface is defined in four places (VM copier FILES, laptop .ps1
+    $files, this THRESHOLDS dict, the VM keystone CHECKS) and they have drifted
+    before — daily_top_categories_fees.csv shipped for days with no watcher.
+    Any file present in the manifest but absent from both THRESHOLDS and
+    KNOWN_UNMONITORED gets an alert line until someone classifies it.
+    """
+    files = set((manifest.get("files") or {}).keys())
+    gaps = sorted(files - set(THRESHOLDS) - KNOWN_UNMONITORED)
+    return [
+        f"`{name}` is published (present in the manifest) but has no freshness "
+        "threshold in check_freshness.py — add one, or list it in KNOWN_UNMONITORED"
+        for name in gaps
+    ]
 
 
 def gh_request(method: str, endpoint: str, body: dict | None = None) -> dict:
@@ -310,6 +363,10 @@ def main() -> int:
 
     stale, missing = check_freshness(manifest)
     local_alerts = check_local_alerts(manifest)
+    # Coverage-drift alarms ride the local_alerts channel: same severity class
+    # (ops gap, CSVs may still be fresh) and it flows through the issue body,
+    # Slack, and the open/close gate without new plumbing.
+    local_alerts += check_coverage(manifest)
 
     if not stale and not missing and not local_alerts:
         print("All tracked CSVs fresh; no local pipeline alerts.")
