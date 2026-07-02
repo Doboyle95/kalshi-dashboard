@@ -367,7 +367,11 @@ const categoryRows = categorySummary
   }))
   .sort((a, b) => d3.ascending(a.net, b.net));
 
-const categoryTop = categoryRows.slice(0, 12);
+// Top 12 by |net| — categoryRows is sorted ascending (most negative first), so a bare
+// slice could never show a category where takers WON if one ever goes positive.
+const categoryTop = [...categoryRows]
+  .sort((a, b) => d3.descending(Math.abs(a.net), Math.abs(b.net)))
+  .slice(0, 12);
 ```
 
 ## Category Leaderboard

@@ -204,8 +204,8 @@ Plot.plot({
       fill: "side",
       fillOpacity: 0.75
     }),
-    Plot.ruleX(fd, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(fd, Plot.pointerX({
+    Plot.ruleX(fdYesNo, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(fdYesNo, Plot.pointerX({
       x: "date",
       title: d => [
         fmtDate(d.date),

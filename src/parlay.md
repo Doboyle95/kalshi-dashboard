@@ -13,7 +13,6 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```
 
 ```js
-const raw = await FileAttachment("data/parlay_pnl_net.csv").csv({typed: true});
 const uni = await FileAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
 const cashoutDaily = await FileAttachment("data/parlay_cashout_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
@@ -24,7 +23,7 @@ import {renderDateBrush} from "./components/date-brush.js";
 ```js
 display(freshnessPanel({
   items: [
-    {label: "Parlay P&L", date: latestDate(raw, d => d.row_label), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_net.csv"), meta: "Settlement-dependent parlay export", tone: "settlement"}
+    {label: "Parlay P&L", date: latestDate(uni), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_unified_daily.csv"), meta: "Settlement-dependent parlay export", tone: "settlement"}
   ],
   note: "Recent days are still filling in — a parlay only counts here once its markets settle, so today's numbers will keep moving."
 }));
@@ -32,35 +31,6 @@ display(askPageLink({
   question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
   context: "Parlay P&L page using parlay_pnl_net.csv."
 }));
-```
-
-```js
-// Build per-day series with cumulative P&L
-let grossRunning = 0, netRunning = 0;
-const pnl = raw
-  .filter(d => d.row_label && d.row_label !== "TOTAL")
-  .map(d => {
-    const dailyNet   = +d.net_pnl_ALL_PARLAYS || 0;
-    const dailyFees  = +d.fees_ALL_PARLAYS || 0;
-    const dailyGross = dailyNet + dailyFees;
-    const stakes     = +d.ALL_PARLAYS || 0;       // notional (USD at stake)
-    const contracts  = +d.contracts_ALL_PARLAYS || 0;
-    const pct        = +d.net_pnl_pct_ALL_PARLAYS || null; // P&L as % of stakes
-    grossRunning += dailyGross;
-    netRunning   += dailyNet;
-    return {
-      date: new Date(d.row_label),
-      gross_cumul: grossRunning,
-      net_cumul:   netRunning,
-      daily_net:   dailyNet,
-      daily_gross: dailyGross,
-      daily_fees:  dailyFees,
-      stakes,
-      contracts,
-      pct
-    };
-  })
-  .filter(d => !isNaN(d.date.getTime()));
 ```
 
 ```js

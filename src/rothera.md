@@ -106,7 +106,7 @@ function makeBrush(data, color) {
 <p class="section-intro">Daily event-contract volume on Rothera since the clearing files began.</p>
 
 ```js
-const brushVolume = view(makeBrush(split, "#F2792B"));
+const brushVolume = view(makeBrush(split, "#00C805"));
 ```
 
 ```js
@@ -127,7 +127,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#F2792B", fillOpacity: 0.85,
+      fill: "#00C805", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)}`
     }),
@@ -143,7 +143,7 @@ Plot.plot({
 <p class="section-intro">Sports against everything else — and on Rothera, sports carries the day overwhelmingly.</p>
 
 ```js
-const brushSports = view(makeBrush(split, "#F2792B"));
+const brushSports = view(makeBrush(split, "#00C805"));
 ```
 
 ```js
@@ -187,7 +187,7 @@ Plot.plot({
 <p class="section-intro">Where the action concentrates, category by category, over time.</p>
 
 ```js
-const brushCats = view(makeBrush(split, "#F2792B"));
+const brushCats = view(makeBrush(split, "#00C805"));
 ```
 
 ```js
@@ -250,13 +250,13 @@ Plot.plot({
   width,
   height: catBar.length * 28 + 40,
   marginLeft: 160,
-  x: {label: "Contracts (all time)", grid: true},
+  x: {label: "Contracts (all time)", grid: true, tickFormat: d => fmtAxisNum(d)},
   y: {label: null},
   marks: [
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#F2792B", fillOpacity: 0.7,
+      fill: "#00C805", fillOpacity: 0.7,
       tip: true,
       title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),
