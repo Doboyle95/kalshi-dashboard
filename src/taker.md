@@ -10,11 +10,13 @@ title: Taker-Side Volume
 
 ```js
 const fmtUSD  = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-$" : "$"; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : a.toFixed(0)); };
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
 ```js
 const taker = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerCat = await FileAttachment("data/taker_category_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -22,7 +24,8 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 ```js
 display(freshnessPanel({
   items: [
-    {label: "Taker-side notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"}
+    {label: "Taker-side notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
+    {label: "Taker volume by category", date: latestDate(takerCat), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Contract volume, not notional - see note below"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
 }));
@@ -108,6 +111,67 @@ function makeTakerBrush(defaultStart) {
 
   brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
   svg.selectAll(".handle").style("fill","#00C2A8").style("fill-opacity",0.8);
+  svg.property("value", [defaultStart, defaultEnd]);
+  return svg.node();
+}
+```
+
+```js
+const TAKER_CAT_COLORS = {
+  "Non-parlay sports":     "#1a9641",
+  "Parlays":               "#66bd63",
+  "Crypto":                "#0D47A1",
+  "Elections":             "#1A237E",
+  "Politics":              "#3949AB",
+  "Mentions":              "#546E7A",
+  "Climate and Weather":   "#4FC3F7",
+  "Companies":             "#8D6E63",
+  "Economics":             "#00838F",
+  "Entertainment":         "#0097A7",
+  "Financials":            "#1E88E5",
+  "Other non-sports":      "#7986CB",
+  "Science and Technology":"#8E24AA",
+  "Unknown":               "#9E9E9E",
+};
+const TAKER_CAT_ORDER = Object.keys(TAKER_CAT_COLORS);
+
+const takerCatDaily = Array.from(
+  d3.rollup(takerCat, rows => d3.sum(rows, r => +r.contracts_settled || 0), d => +d.date),
+  ([t, value]) => ({date: new Date(t), value})
+).sort((a, b) => a.date - b.date);
+
+function makeTakerCatBrush(defaultStart) {
+  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8, w = width;
+  const x = d3.scaleUtc().domain(d3.extent(takerCatDaily, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(takerCatDaily, d => d.value) || 1;
+  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
+  const svg = d3.create("svg").attr("width", w).attr("height", h)
+    .style("display","block").style("background","var(--theme-background-alt)")
+    .style("border","1px solid var(--card-border)").style("border-radius","4px")
+    .style("margin-bottom","1.5rem");
+  svg.append("path").datum(takerCatDaily)
+    .attr("fill","#8E24AA").attr("fill-opacity",0.2)
+    .attr("d", d3.area().x(d => x(d.date)).y0(h-mb).y1(d => y(d.value)).curve(d3.curveBasis));
+  svg.append("g").attr("transform",`translate(0,${h-mb})`)
+    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
+    .call(g => g.select(".domain").attr("stroke","#ccc"))
+    .call(g => g.selectAll("text").style("font-size","10px").attr("fill","#888"));
+  const defaultEnd = d3.max(takerCatDaily, d => d.date);
+  const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
+    .on("brush end", event => {
+      if (!event.sourceEvent) return;
+      if (!event.selection) {
+        svg.property("value", x.domain());
+        brushG.call(brush.move, x.domain().map(x));
+        svg.dispatch("input");
+        return;
+      }
+      svg.property("value", event.selection.map(x.invert)); svg.dispatch("input");
+    });
+  const brushG = svg.append("g").attr("class","brush");
+
+  brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  svg.selectAll(".handle").style("fill","#8E24AA").style("fill-opacity",0.8);
   svg.property("value", [defaultStart, defaultEnd]);
   return svg.node();
 }
@@ -234,6 +298,70 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Yes-side takers</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#e15759"></span>No-side takers</span>
 </div>
+
+## Volume by category
+
+<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into. This is <strong>contract volume</strong>, not notional dollars — the category breakdown isn't priced out to a dollar figure upstream, so it can't yet be weighted the same way as the charts above.</p>
+
+```js
+const drCat = view(makeTakerCatBrush(new Date("2025-01-01")));
+```
+
+```js
+const [sCat, eCat] = drCat;
+const fdCat = takerCat.filter(d => d.date >= sCat && d.date <= eCat);
+const tidyCat = fdCat.map(d => ({date: d.date, category: d.kalshi_category, value: +d.contracts_settled || 0}));
+const catTotalsInRange = Array.from(
+  d3.rollup(tidyCat, rows => d3.sum(rows, r => r.value), d => d.category),
+  ([category, value]) => ({category, value})
+).sort((a, b) => b.value - a.value);
+
+// Manual cumulative stack (mirrors the Yes/No section above) rather than relying on an
+// implicit mark-level stack transform, since this needs one bar segment per category
+// per day, in a fixed draw order, skipping zero/missing categories cleanly.
+const catByDate = d3.group(tidyCat, d => +d.date);
+const stackedCat = [];
+for (const [t, rowsForDate] of catByDate) {
+  const byCategory = new Map(rowsForDate.map(r => [r.category, r.value]));
+  let cum = 0;
+  for (const cat of TAKER_CAT_ORDER) {
+    const v = byCategory.get(cat) || 0;
+    if (v <= 0) continue;
+    stackedCat.push({date: new Date(+t), category: cat, y1: cum, y2: cum + v, value: v});
+    cum += v;
+  }
+}
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 380,
+  marginLeft: 80,
+  x: {type: "utc", label: null},
+  y: {label: "Contracts settled", grid: true, tickFormat: d => fmtCount(d)},
+  color: {legend: true, domain: TAKER_CAT_ORDER, range: TAKER_CAT_ORDER.map(c => TAKER_CAT_COLORS[c])},
+  marks: [
+    Plot.rectY(stackedCat, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y1: "y1",
+      y2: "y2",
+      fill: "category",
+      tip: true,
+      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtCount(d.value)} contracts`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<p class="chart-note">Top categories in the brushed window: ${catTotalsInRange.slice(0, 5).map(d => `${d.category} (${fmtCount(d.value)})`).join(", ")}.</p>
 
 <details class="surface-card compact-details">
   <summary>How taker-side notional is calculated</summary>
