@@ -1,36 +1,36 @@
 {
-  "generated_at": "2026-07-02T11:21:29.033371-04:00",
-  "generated_at_utc": "2026-07-02T15:21:29.033371+00:00",
+  "generated_at": "2026-07-02T11:52:21.692707-04:00",
+  "generated_at_utc": "2026-07-02T15:52:21.692707+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'white-vicugna' ended FAILED at 2026-07-02T08:21:14.177365+00:00",
     "task_health: prod-parlay-anatomy: last run 'hidden-myna' ended FAILED at 2026-07-02T10:19:28.820163+00:00",
-    "task_health: prod-trade-collector: last run 'lavender-mink' ended FAILED at 2026-07-02T15:01:41.439399+00:00",
-    "freshness_check: STALE    parlay_house_edge_by_legs.csv - 59.2 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_legs_over_time.csv - 59.2 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_mispricing_by_correlation.csv - 59.2 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_top_games_by_volume.csv - 59.2 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "task_health: prod-trade-collector: last run 'faithful-bee' ended CRASHED at 2026-07-02T15:32:04.105152+00:00",
+    "freshness_check: STALE    parlay_house_edge_by_legs.csv - 60.0 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_legs_over_time.csv - 60.0 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_mispricing_by_correlation.csv - 60.0 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_top_games_by_volume.csv - 60.0 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
     "freshness_check: STALE_TAIL rh_weekly_estimates.csv - newest data row 2026-04-20 is 73d behind today (allowance 21d) - RH estimates (weekly; manual FCM input)"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-02T15:10:26.235683+00:00",
-    "freshness_report_mtime_utc": "2026-07-02T15:07:07.025748+00:00"
+    "task_health_generated": "2026-07-02T15:40:19.856801+00:00",
+    "freshness_report_mtime_utc": "2026-07-02T15:52:07.549014+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-02T11:21:26.614388-04:00",
-      "last_write_time_utc": "2026-07-02T15:21:26.614388+00:00",
-      "size_bytes": 146553
+      "last_write_time": "2026-07-02T11:52:20.965734-04:00",
+      "last_write_time_utc": "2026-07-02T15:52:20.965734+00:00",
+      "size_bytes": 146554
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-02T11:21:27.458373-04:00",
-      "last_write_time_utc": "2026-07-02T15:21:27.458373+00:00",
-      "size_bytes": 156444
+      "last_write_time": "2026-07-02T11:52:21.122731-04:00",
+      "last_write_time_utc": "2026-07-02T15:52:21.122731+00:00",
+      "size_bytes": 156453
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-02T11:21:27.549371-04:00",
-      "last_write_time_utc": "2026-07-02T15:21:27.549371+00:00",
-      "size_bytes": 5275868
+      "last_write_time": "2026-07-02T11:52:21.173730-04:00",
+      "last_write_time_utc": "2026-07-02T15:52:21.173730+00:00",
+      "size_bytes": 5275900
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-02T07:27:25.810215-04:00",
@@ -38,9 +38,9 @@
       "size_bytes": 9576423
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-02T11:21:27.704369-04:00",
-      "last_write_time_utc": "2026-07-02T15:21:27.704369+00:00",
-      "size_bytes": 146322
+      "last_write_time": "2026-07-02T11:52:21.189729-04:00",
+      "last_write_time_utc": "2026-07-02T15:52:21.189729+00:00",
+      "size_bytes": 146323
     },
     "calibration_three_way.csv": {
       "last_write_time": "2026-06-28T22:16:43.068994-04:00",
@@ -168,14 +168,14 @@
       "size_bytes": 7734651
     },
     "cme_daily.csv": {
-      "last_write_time": "2026-06-22T10:21:37.253178-04:00",
-      "last_write_time_utc": "2026-06-22T14:21:37.253178+00:00",
-      "size_bytes": 2197
+      "last_write_time": "2026-07-02T11:49:30.756418-04:00",
+      "last_write_time_utc": "2026-07-02T15:49:30.756418+00:00",
+      "size_bytes": 2960
     },
     "cme_daily_distributed.csv": {
-      "last_write_time": "2026-06-22T10:21:37.253178-04:00",
-      "last_write_time_utc": "2026-06-22T14:21:37.253178+00:00",
-      "size_bytes": 3019
+      "last_write_time": "2026-07-02T11:49:30.959413-04:00",
+      "last_write_time_utc": "2026-07-02T15:49:30.959413+00:00",
+      "size_bytes": 4095
     },
     "kalshi_oi_daily.csv": {
       "last_write_time": "2026-07-02T07:16:10.965921-04:00",
