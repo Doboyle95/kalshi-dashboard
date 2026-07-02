@@ -55,6 +55,7 @@ THRESHOLDS = {
     "taker_category_daily.csv": 12,
     "taker_category_summary.csv": 12,
     "taker_notional_daily.csv": 12,
+    "taker_volume_by_ticker_daily.csv": 12,
     "maker_pnl_daily.csv": 12,
     "market_leaderboard.csv": 12,
     "category_leaderboard.csv": 12,
