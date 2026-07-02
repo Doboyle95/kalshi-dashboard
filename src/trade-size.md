@@ -24,7 +24,7 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Trade-size mix", date: latestDate(tradeSizeRaw), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Kalshi can be within 15 minutes locally; competitors follow public files"},
-    {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
+    {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx, DKeX", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
   ],
   note: "Competitor rows update when their public trade files are downloaded and rebuilt."
 }));
@@ -52,7 +52,7 @@ const latestTradeSizeDate = d3.max(tradeSizeRaw, d => d.date);
 ```
 
 ```js
-const platformOptions = ["Kalshi", "Polymarket US", "ForecastEx"]
+const platformOptions = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX"]
   .filter(platform => tradeSizeRaw.some(d => d.platform === platform));
 
 ```
@@ -264,23 +264,32 @@ const mixRows = dailyTotals.flatMap(day => {
 
 ```js
 const thresholdOrder = largeThreshold === "100k+" ? 7 : largeThreshold === "50k+" ? 6 : largeThreshold === "10k+" ? 5 : 4;
+// Precompute each day's large-bucket sums once (Map keyed by epoch date), then take the
+// trailing-30 baseline from the per-day share array. The old shape refiltered ALL of
+// mixRows 30x per day on every brush/threshold change — O(days² × buckets), multi-second
+// freezes on an all-time brush. Semantics unchanged.
+const largeByDate = new Map();
+for (const d of mixRows) {
+  if (d.bucket_order < thresholdOrder) continue;
+  const k = +d.date;
+  const agg = largeByDate.get(k) || {contracts: 0, trades: 0};
+  agg.contracts += d.contracts;
+  agg.trades += d.trade_count;
+  largeByDate.set(k, agg);
+}
+const shareByIndex = dailyTotals.map(day =>
+  day.contracts ? ((largeByDate.get(+day.date)?.contracts || 0) / day.contracts) : 0
+);
 const thresholdRows = dailyTotals.map((day, i) => {
-  const bucketRows = mixRows.filter(d => +d.date === +day.date);
-  const largeContracts = d3.sum(bucketRows.filter(d => d.bucket_order >= thresholdOrder), d => d.contracts);
-  const largeTrades = d3.sum(bucketRows.filter(d => d.bucket_order >= thresholdOrder), d => d.trade_count);
-  const share = day.contracts ? largeContracts / day.contracts : 0;
-  const prior = dailyTotals.slice(Math.max(0, i - 30), i);
-  const priorRows = prior.map(p => {
-    const pr = mixRows.filter(d => +d.date === +p.date && d.bucket_order >= thresholdOrder);
-    const pc = d3.sum(pr, d => d.contracts);
-    return p.contracts ? pc / p.contracts : 0;
-  }).filter(Number.isFinite);
-  const baseline = priorRows.length >= 14 ? d3.mean(priorRows) : null;
+  const agg = largeByDate.get(+day.date) || {contracts: 0, trades: 0};
+  const share = shareByIndex[i];
+  const prior = shareByIndex.slice(Math.max(0, i - 30), i).filter(Number.isFinite);
+  const baseline = prior.length >= 14 ? d3.mean(prior) : null;
   return {
     date: day.date,
     share,
-    large_contracts: largeContracts,
-    large_trades: largeTrades,
+    large_contracts: agg.contracts,
+    large_trades: agg.trades,
     baseline,
     lift: baseline ? share / baseline : null,
     total_contracts: day.contracts,

@@ -58,6 +58,7 @@ export default {
     {name: "Platform Comparison", path: "/competitors"},
     {name: "Polymarket US", path: "/polymarket"},
     {name: "ForecastEx", path: "/forecastex"},
+    {name: "DKeX (DraftKings)", path: "/dkex"},
     {name: "Crypto.com/Nadex", path: "/nadex"},
     {name: "CME (FanDuel/DraftKings)", path: "/cme"},
   ],

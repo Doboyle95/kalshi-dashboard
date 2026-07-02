@@ -5,7 +5,7 @@ title: Overview
 <div class="page-hero">
   <div class="page-eyebrow">Market Structure</div>
   <h1>US Prediction Market Dashboard</h1>
-  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, and Crypto.com/Nadex remain a small fraction of its scale.</p>
+  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, and Crypto.com/Nadex remain a small fraction of its scale.</p>
 </div>
 
 ```js
@@ -74,7 +74,7 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Volume here means contracts traded, not dollars: one contract is one yes/no bet. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024.</p>
+  <p>Volume here means contracts traded, not dollars: one contract is one yes/no bet. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026.</p>
   <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
 </details>
 
@@ -151,13 +151,14 @@ const indexBrush = view((() => {
   const fmt = d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
   const pColors = {
     Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
-    ForecastEx: "#E53535", "Crypto.com/Nadex": "#9c27b0"
+    ForecastEx: "#E53535", DKeX: "#F97316", "Crypto.com/Nadex": "#9c27b0"
   };
 
   const byPlatform = {
     Kalshi:             kalshiTidy,
     "Polymarket US":    competitorTidy.filter(d => d.platform === "Polymarket US"),
     ForecastEx:         competitorTidy.filter(d => d.platform === "ForecastEx"),
+    DKeX:               competitorTidy.filter(d => d.platform === "DKeX"),
     "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
   };
 
@@ -225,6 +226,7 @@ display((() => {
     {key: "Kalshi", color: "#00C2A8"},
     {key: "Polymarket US", color: "#3B7DD8"},
     {key: "ForecastEx", color: "#E53535"},
+    {key: "DKeX", color: "#F97316"},
     {key: "Crypto.com/Nadex", color: "#9c27b0"}
   ];
   // platform -> (epoch-date -> contracts), from the same tidy data the chart uses
