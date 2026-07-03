@@ -12,12 +12,14 @@ title: Taker P&L
 const daily = await FileAttachment("data/taker_pnl_daily.csv").csv({typed: true});
 const makerDaily = await FileAttachment("data/maker_pnl_daily.csv").csv({typed: true});
 const notionalDaily = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
-const categorySummary = await FileAttachment("data/taker_category_summary.csv").csv({typed: true});
-const categoryDaily = await FileAttachment("data/taker_category_daily.csv").csv({typed: true});
+const pnlByTicker = await FileAttachment("data/taker_pnl_by_ticker_daily.csv").csv({typed: true});
+const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const sportsDaily = await FileAttachment("data/taker_sports_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
+import {hashGet, hashInput} from "./components/hash-state.js";
+import {buildReportTickerToCat, TAKER_GENERAL_MAP} from "./components/taker-categories.js";
 ```
 
 ```js
@@ -26,13 +28,13 @@ display(freshnessPanel({
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Taker-side notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
-    {label: "Category P&L", date: latestDate(categoryDaily), updatedAt: fileUpdatedAt(freshness, "taker_category_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
+    {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
   ],
   note: "Recent dates can look incomplete until markets settle. Open interest is not part of the fast window refresh because it requires full rolling position state."
 }));
 display(askPageLink({
   question: "Explain recent taker P&L, including whether results are complete enough to interpret and which categories drove the result.",
-  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_category_daily.csv, and taker_sports_daily.csv."
+  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_pnl_by_ticker_daily.csv, and taker_sports_daily.csv."
 }));
 ```
 
@@ -354,29 +356,72 @@ Plot.plot({
 </div>
 
 ```js
-const categoryRows = categorySummary
-  .filter(d => d.contracts_settled > 0)
+// ── Category classification: report_ticker -> cat, sport-by-sport instead of Kalshi's own
+// coarse kalshi_category (see components/taker-categories.js, shared with taker.md).
+const reportTickerToCat = buildReportTickerToCat(categoryLeaderboard);
+```
+
+<div class="control-strip">
+
+```js
+const pnlCatDetail = view(hashInput("pnlCatDetail", Inputs.radio(["General", "Detailed"], {value: hashGet("pnlCatDetail", "General"), label: "Categories"})));
+```
+
+</div>
+
+```js
+// Reclassify the per-ticker DAILY P&L into detailed categories once, then collapse to General if
+// that's the active toggle. Shared by the leaderboard below (summed to all-time) and the Focus
+// category detail section further down (kept at daily grain there).
+const pnlByTickerCatDaily = pnlByTicker.map(d => {
+  const detailCat = reportTickerToCat.get(d.report_ticker) || "Uncategorized";
+  return {
+    date: d.date,
+    category: pnlCatDetail === "Detailed" ? detailCat : (TAKER_GENERAL_MAP[detailCat] || "Uncategorized"),
+    pnl_gross: d.pnl_gross || 0,
+    pnl_net: d.pnl_net || 0,
+    fees_taker: d.fees_taker || 0,
+    fees_maker: d.fees_maker || 0,
+    contracts_settled: d.contracts_settled || 0
+  };
+});
+
+const pnlSummaryByCat = new Map();
+for (const d of pnlByTickerCatDaily) {
+  if (!(d.contracts_settled > 0)) continue;
+  const acc = pnlSummaryByCat.get(d.category) || {category: d.category, gross: 0, net: 0, fees: 0, feesMaker: 0, settled: 0, days: new Set()};
+  acc.gross += d.pnl_gross;
+  acc.net += d.pnl_net;
+  acc.fees += d.fees_taker;
+  acc.feesMaker += d.fees_maker;
+  acc.settled += d.contracts_settled;
+  acc.days.add(+d.date);
+  pnlSummaryByCat.set(d.category, acc);
+}
+
+const categoryRows = Array.from(pnlSummaryByCat.values())
   .map(d => ({
-    category: d.kalshi_category || "Unknown",
-    gross: d.pnl_gross || 0,
-    net: d.pnl_net || 0,
-    fees: d.fees_taker || 0,
-    settled: d.contracts_settled || 0,
-    n_days: d.n_days || 0,
-    netPerFace: d.contracts_settled ? d.pnl_net / d.contracts_settled * 100 : 0
+    category: d.category,
+    gross: d.gross,
+    net: d.net,
+    fees: d.fees,
+    feesMaker: d.feesMaker,
+    settled: d.settled,
+    n_days: d.days.size,
+    netPerFace: d.settled ? d.net / d.settled * 100 : 0
   }))
   .sort((a, b) => d3.ascending(a.net, b.net));
 
-// Top 12 by |net| — categoryRows is sorted ascending (most negative first), so a bare
+// Top by |net| — categoryRows is sorted ascending (most negative first), so a bare
 // slice could never show a category where takers WON if one ever goes positive.
 const categoryTop = [...categoryRows]
   .sort((a, b) => d3.descending(Math.abs(a.net), Math.abs(b.net)))
-  .slice(0, 12);
+  .slice(0, pnlCatDetail === "Detailed" ? 15 : 7);
 ```
 
 ## Category Leaderboard
 
-<p class="section-intro">The categories where takers won or lost the most net dollars.</p>
+<p class="section-intro">The categories where takers won or lost the most net dollars — sports broken out sport-by-sport rather than lumped into one Kalshi "Sports" bucket. Switch to Detailed for the sport-by-sport split.</p>
 
 <div class="plot-shell">
 
@@ -394,7 +439,7 @@ Plot.plot({
       y: "category",
       fill: d => d.net >= 0 ? positive : negative,
       sort: {y: "x"},
-      title: d => `${d.category}\nNet: ${fmtUSD(d.net)}\nGross: ${fmtUSD(d.gross)}\nFees: ${fmtUSD(d.fees)}\nNet per $1 settled: ${d.netPerFace.toFixed(2)}c\nSettled contracts: ${fmtCount(d.settled)}`,
+      title: d => `${d.category}\nNet: ${fmtUSD(d.net)}\nGross: ${fmtUSD(d.gross)}\nTaker fees: ${fmtUSD(d.fees)}\nMaker fees: ${fmtUSD(d.feesMaker)}\nNet per $1 settled: ${d.netPerFace.toFixed(2)}c\nSettled contracts: ${fmtCount(d.settled)}`,
       tip: true
     }),
     Plot.ruleX([0])
@@ -403,6 +448,47 @@ Plot.plot({
 ```
 
 </div>
+
+<details class="surface-card compact-details secondary-section">
+  <summary>Maker fee revenue by category</summary>
+  <p>The other side of the same trades: which categories generate the most fee revenue from market-makers, not just takers. Maker-fee markets are a small subset of Kalshi's book, so most categories show little or nothing here even when taker activity is high.</p>
+
+```js
+const makerFeeTop = [...categoryRows]
+  .filter(d => d.feesMaker > 0)
+  .sort((a, b) => d3.descending(a.feesMaker, b.feesMaker))
+  .slice(0, pnlCatDetail === "Detailed" ? 15 : 7);
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: Math.max(makerFeeTop.length, 1) * 30 + 44,
+  marginLeft: 170,
+  x: {label: "Maker fees (USD)", grid: true, tickFormat: d => fmtUSD(d)},
+  y: {label: null},
+  marks: [
+    Plot.barX(makerFeeTop, {
+      x: "feesMaker",
+      y: "category",
+      fill: makerGrossColor,
+      sort: {y: "x"},
+      title: d => `${d.category}\nMaker fees: ${fmtUSD(d.feesMaker)}\nSettled contracts: ${fmtCount(d.settled)}`,
+      tip: true
+    }),
+    Plot.ruleX([0])
+  ]
+})
+```
+
+</div>
+
+<p class="chart-note">${makerFeeTop.length === 0 ? "No maker-fee revenue in any category for the current toggle." : `${makerFeeTop.length} of ${categoryRows.length} categories have maker-fee revenue.`}</p>
+
+</details>
 
 ```js
 const sportsRows = sportsDaily
@@ -472,9 +558,20 @@ const focusCategory = view(Inputs.select(categoryRows.map(d => d.category), {
 </div>
 
 ```js
-const focusRows = categoryDaily
-  .filter(d => d.kalshi_category === focusCategory && d.date >= startDate && d.date <= endDate)
-  .sort((a, b) => a.date - b.date);
+// pnlByTickerCatDaily (defined above, next to the leaderboard) already has every report_ticker
+// reclassified into the active toggle's categories - sum across every one that lands in
+// focusCategory (a General bucket like "Football" spans multiple report_tickers).
+const focusRows = Array.from(
+  d3.rollup(
+    pnlByTickerCatDaily.filter(d => d.category === focusCategory && d.date >= startDate && d.date <= endDate),
+    rows => ({
+      pnl_net: d3.sum(rows, r => r.pnl_net),
+      contracts_settled: d3.sum(rows, r => r.contracts_settled)
+    }),
+    d => +d.date
+  ),
+  ([t, v]) => ({date: new Date(t), ...v})
+).sort((a, b) => a.date - b.date);
 
 let focusRunning = 0;
 const focusCumulative = focusRows.map(d => {
@@ -523,7 +620,8 @@ Inputs.table(categoryRows.map(d => ({
   Category: d.category,
   "Net taker P&L": "$" + Math.round(d.net).toLocaleString(),
   "Gross taker P&L": "$" + Math.round(d.gross).toLocaleString(),
-  "Fees": "$" + Math.round(d.fees).toLocaleString(),
+  "Taker fees": "$" + Math.round(d.fees).toLocaleString(),
+  "Maker fees": "$" + Math.round(d.feesMaker).toLocaleString(),
   "Settled contracts": Math.round(d.settled).toLocaleString(),
   "Net cents / $1 settled": d.netPerFace.toFixed(2),
   "Active days": d.n_days
