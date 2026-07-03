@@ -35,6 +35,9 @@ $files = @(
   "taker_category_daily.csv",
   "taker_sports_daily.csv",
   "taker_volume_by_ticker_daily.csv",
+  "taker_volume_by_ticker_side_daily.csv",
+  "taker_pnl_by_ticker_daily.csv",
+  "taker_pnl_by_ticker_summary.csv",
   "trade_size_daily.csv",
   # 2026-06-11 full review: these 18 are referenced by dashboard pages but were
   # absent from this list, so the freshness manifest never tracked them (their

@@ -2367,6 +2367,71 @@ Plot.plot({
 
 </div>
 
+### Fee rate by category
+
+<p class="section-intro">Effective fee rate (¢ per contract charged) by category — the same per-category split as the fees chart above, but as a rate instead of a dollar total, so a category can be flagged as expensive-per-contract even if its total fee dollars are small. Kalshi's fee formula peaks at the 50¢ strike and falls off toward 1¢/99¢, so this mostly reflects each category's typical contract price. Same window/toggle/colors as the fees charts above.</p>
+
+```js
+// wideDaily already carries a plain "Parlay" total (pre-3-way leg split) matching
+// feesWideOrder's exact category grain, so no extra reconciliation is needed here.
+const volWindowRowsForRate = wideDaily.filter(d => d.date >= feeStart && d.date <= feeEnd);
+const volMonthlyForRate = d3.rollup(
+  volWindowRowsForRate,
+  rs => { const o = {}; for (const g of feesWideOrder) o[g] = d3.sum(rs, d => d[g] || 0); return o; },
+  d => d.date.toISOString().slice(0, 7)
+);
+
+const feeRateTidy = feeMonthly.sorted.flatMap(([mo, feeVals]) => {
+  const volVals = volMonthlyForRate.get(mo) || {};
+  if (feeDetail === "General") {
+    const genFees = Object.fromEntries(generalOrder.map(g => [g, 0]));
+    const genVol  = Object.fromEntries(generalOrder.map(g => [g, 0]));
+    for (const [det, gname] of Object.entries(generalMap)) {
+      genFees[gname] += feeVals[det] || 0;
+      genVol[gname]  += volVals[det] || 0;
+    }
+    return generalOrder.map(g => ({month: mo, category: g, rate: genVol[g] > 0 ? genFees[g] / genVol[g] * 100 : null}));
+  }
+  return feesWideOrder.map(g => ({month: mo, category: g, rate: (volVals[g] || 0) > 0 ? (feeVals[g] || 0) / volVals[g] * 100 : null}));
+});
+const feeRateTip = Array.from(
+  d3.rollup(feeRateTidy, rs => {
+    const o = {month: rs[0].month};
+    for (const r of rs) o[r.category] = r.rate;
+    return o;
+  }, d => d.month)
+).map(([, v]) => v).sort((a, b) => a.month < b.month ? -1 : 1);
+const feeRateTipRows = d => {
+  const rows = feeActiveOrder.filter(c => d[c] != null).sort((a, b) => (d[b] ?? 0) - (d[a] ?? 0));
+  const shown = rows.slice(0, 12).map(c => `${c}: ${d[c].toFixed(2)}¢`);
+  const hidden = rows.length - shown.length;
+  return [d.month, ...shown, ...(hidden > 0 ? [`+${hidden} more`] : [])].join("\n");
+};
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  width, height: 340, marginLeft: 60,
+  marginBottom: feeMonthLabels.length > 18 ? 50 : 40,
+  color: {legend: true, domain: feeActiveOrder, range: feeActiveOrder.map(g => feeActiveColorMap[g])},
+  x: {type: "band", domain: feeMonthLabels, label: null, tickFormat: feeMonthTickFmt, tickRotate: feeMonthLabels.length > 18 ? -45 : 0},
+  y: {label: "Fee rate (¢ / contract)", grid: true, tickFormat: d => d.toFixed(1) + "¢"},
+  marks: [
+    Plot.lineY(feeRateTidy, {x: "month", y: "rate", stroke: "category", z: "category",
+      curve: "monotone-x", strokeWidth: 2, defined: d => d.rate != null}),
+    Plot.ruleX(feeRateTip, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
+    Plot.tip(feeRateTip, Plot.pointerX({x: "month", fontSize: 11, lineHeight: 1.1, title: feeRateTipRows})),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note"><strong>Reading note:</strong> a month with zero contracts for a category is left as a gap in that line rather than a misleading 0¢ rate. <em>General</em>/<em>Detailed</em> match the toggle above; this chart ignores the <em>Normalized</em> scale control (a rate is already normalized).</div>
+
 ```js
 if (hasCategoryFocus) {
   const note = html`<div class="chart-note focus-mode-note">
