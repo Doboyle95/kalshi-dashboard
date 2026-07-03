@@ -10,7 +10,6 @@ title: Taker-Side Volume
 
 ```js
 const fmtUSD  = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-$" : "$"; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : a.toFixed(0)); };
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -21,13 +20,14 @@ const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv"
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
+import {renderDateBrush} from "./components/date-brush.js";
 ```
 
 ```js
 display(freshnessPanel({
   items: [
     {label: "Taker-side notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
-    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Contract volume, not notional - see note below"}
+    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Taker-side notional dollars, broken out by category"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
 }));
@@ -79,43 +79,7 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_total ? d.notional_yes
 </div>
 
 ```js
-function makeTakerBrush(defaultStart) {
-  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8, w = width;
-  const x = d3.scaleUtc().domain(d3.extent(taker, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(taker, d => d.notional_total) || 1;
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-  const svg = d3.create("svg").attr("width", w).attr("height", h)
-    .style("display","block").style("background","var(--theme-background-alt)")
-    .style("border","1px solid var(--card-border)").style("border-radius","4px")
-    .style("margin-bottom","1.5rem");
-  svg.append("path").datum(taker)
-    .attr("fill","#00C2A8").attr("fill-opacity",0.2)
-    .attr("d", d3.area().x(d => x(d.date)).y0(h-mb).y1(d => y(d.notional_total)).curve(d3.curveBasis));
-  svg.append("g").attr("transform",`translate(0,${h-mb})`)
-    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke","#ccc"))
-    .call(g => g.selectAll("text").style("font-size","10px").attr("fill","#888"));
-  const defaultEnd = d3.max(taker, d => d.date);
-  const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
-    .on("brush end", event => {
-      if (!event.sourceEvent) return;
-      if (!event.selection) {
-        // Clearing the brush (a bare click) now means "show everything": reset to
-        // the full domain and redraw the selection so the visuals match the filter.
-        svg.property("value", x.domain());
-        brushG.call(brush.move, x.domain().map(x));   // programmatic move — guarded above, no re-fire
-        svg.dispatch("input");
-        return;
-      }
-      svg.property("value", event.selection.map(x.invert)); svg.dispatch("input");
-    });
-  const brushG = svg.append("g").attr("class","brush");
-
-  brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill","#00C2A8").style("fill-opacity",0.8);
-  svg.property("value", [defaultStart, defaultEnd]);
-  return svg.node();
-}
+const takerMaxDate = d3.max(taker, d => d.date);
 ```
 
 ```js
@@ -170,52 +134,20 @@ const TAKER_GENERAL_COLORS = {
 };
 
 // Reclassify the per-ticker daily volume rows into detailed categories once, up front.
+// value = taker-side notional DOLLARS (not contracts) - Kalshi contracts price 1-99 cents, so a
+// "taker volume" chart plotted in raw contract counts isn't comparable to this page's other
+// dollar-denominated charts and overweights categories full of cheap, high-count contracts.
 const takerCatRows = takerVolByTicker.map(d => ({
   date: d.date,
   category: reportTickerToCat.get(d.report_ticker) || "Uncategorized",
-  value: +d.contracts_settled || 0
+  value: +d.notional_settled || 0
 }));
 
 const takerCatDaily = Array.from(
   d3.rollup(takerCatRows, rows => d3.sum(rows, r => r.value), d => +d.date),
   ([t, value]) => ({date: new Date(t), value})
 ).sort((a, b) => a.date - b.date);
-
-function makeTakerCatBrush(defaultStart) {
-  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8, w = width;
-  const x = d3.scaleUtc().domain(d3.extent(takerCatDaily, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(takerCatDaily, d => d.value) || 1;
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-  const svg = d3.create("svg").attr("width", w).attr("height", h)
-    .style("display","block").style("background","var(--theme-background-alt)")
-    .style("border","1px solid var(--card-border)").style("border-radius","4px")
-    .style("margin-bottom","1.5rem");
-  svg.append("path").datum(takerCatDaily)
-    .attr("fill","#8E24AA").attr("fill-opacity",0.2)
-    .attr("d", d3.area().x(d => x(d.date)).y0(h-mb).y1(d => y(d.value)).curve(d3.curveBasis));
-  svg.append("g").attr("transform",`translate(0,${h-mb})`)
-    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke","#ccc"))
-    .call(g => g.selectAll("text").style("font-size","10px").attr("fill","#888"));
-  const defaultEnd = d3.max(takerCatDaily, d => d.date);
-  const brush = d3.brushX().extent([[ml,mt],[w-mr,h-mb]])
-    .on("brush end", event => {
-      if (!event.sourceEvent) return;
-      if (!event.selection) {
-        svg.property("value", x.domain());
-        brushG.call(brush.move, x.domain().map(x));
-        svg.dispatch("input");
-        return;
-      }
-      svg.property("value", event.selection.map(x.invert)); svg.dispatch("input");
-    });
-  const brushG = svg.append("g").attr("class","brush");
-
-  brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill","#8E24AA").style("fill-opacity",0.8);
-  svg.property("value", [defaultStart, defaultEnd]);
-  return svg.node();
-}
+const takerCatMaxDate = d3.max(takerCatDaily, d => d.date);
 ```
 
 ## Daily taker-side notional
@@ -225,7 +157,13 @@ function makeTakerCatBrush(defaultStart) {
 <div class="instruction-line"><strong>Useful trick:</strong> when taker dollars spike but contract volume on the Volume page doesn't, the action moved into pricier, higher-conviction contracts — not just more of them.</div>
 
 ```js
-const dr = view(makeTakerBrush(new Date("2025-01-01")));
+const dr = Mutable([new Date("2025-01-01"), takerMaxDate]);
+display(renderDateBrush({
+  data: taker, dateAccessor: d => d.date, valueAccessor: d => d.notional_total,
+  initialRange: [new Date("2025-01-01"), takerMaxDate],
+  onSelect: r => { dr.value = r; },
+  color: "#00C2A8", width
+}));
 ```
 
 ```js
@@ -283,7 +221,13 @@ Plot.plot({
 <p class="section-intro">Which way the aggressive money is leaning. A steady yes-side majority means buyers are pushing harder than sellers across the board.</p>
 
 ```js
-const drYesNo = view(makeTakerBrush(new Date("2025-01-01")));
+const drYesNo = Mutable([new Date("2025-01-01"), takerMaxDate]);
+display(renderDateBrush({
+  data: taker, dateAccessor: d => d.date, valueAccessor: d => d.notional_total,
+  initialRange: [new Date("2025-01-01"), takerMaxDate],
+  onSelect: r => { drYesNo.value = r; },
+  color: "#00C2A8", width
+}));
 ```
 
 ```js
@@ -342,10 +286,16 @@ Plot.plot({
 
 ## Volume by category
 
-<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into. This is <strong>contract volume</strong>, not notional dollars — the category breakdown isn't priced out to a dollar figure upstream, so it can't yet be weighted the same way as the charts above. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
+<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into, in the same taker-side notional dollars as the chart above — just broken out by category. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
 
 ```js
-const drCat = view(makeTakerCatBrush(new Date("2025-01-01")));
+const drCat = Mutable([new Date("2025-01-01"), takerCatMaxDate]);
+display(renderDateBrush({
+  data: takerCatDaily, dateAccessor: d => d.date, valueAccessor: d => d.value,
+  initialRange: [new Date("2025-01-01"), takerCatMaxDate],
+  onSelect: r => { drCat.value = r; },
+  color: "#8E24AA", width
+}));
 ```
 
 <div class="control-strip">
@@ -399,7 +349,7 @@ Plot.plot({
   height: 380,
   marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Contracts settled", grid: true, tickFormat: d => fmtCount(d)},
+  y: {label: "Taker-side notional ($)", grid: true, tickFormat: d => fmtUSD(d)},
   color: {legend: true, domain: activeCatOrder, range: activeCatOrder.map(c => activeCatColors[c])},
   marks: [
     Plot.rectY(stackedCat, {
@@ -409,7 +359,7 @@ Plot.plot({
       y2: "y2",
       fill: "category",
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtCount(d.value)} contracts`
+      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtUSD(d.value)}`
     }),
     Plot.ruleY([0])
   ]
@@ -418,7 +368,7 @@ Plot.plot({
 
 </div>
 
-<p class="chart-note">Top categories in the brushed window: ${catTotalsInRange.slice(0, 5).map(d => `${d.category} (${fmtCount(d.value)})`).join(", ")}.</p>
+<p class="chart-note">Top categories in the brushed window: ${catTotalsInRange.slice(0, 5).map(d => `${d.category} (${fmtUSD(d.value)})`).join(", ")}.</p>
 
 <details class="surface-card compact-details">
   <summary>How taker-side notional is calculated</summary>
