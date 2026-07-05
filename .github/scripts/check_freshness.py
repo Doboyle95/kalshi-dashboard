@@ -30,6 +30,7 @@ Exit code:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -121,6 +122,14 @@ KNOWN_UNMONITORED = {
 
 ISSUE_TITLE = "Dashboard freshness alert"
 ISSUE_LABEL = "stale"
+
+# 2026-07-03: GitHub does not notify issue subscribers on a body PATCH, only on
+# new comments/state changes. This watchdog used to only PATCH the body on every
+# run, so a genuinely new alarm condition updated the issue silently. We persist
+# a signature of the current alarm set as a hidden HTML comment in the issue body
+# and diff against it each run; when it changes we POST a real comment (in
+# addition to the body PATCH) so subscribers actually get notified.
+ALARM_MARKER_RE = re.compile(r"<!--\s*alarm-signature:\s*([0-9a-f]{12})\s*-->")
 
 # If the local alert SOURCES themselves are older than this, the local monitors
 # are probably dead — which would otherwise read as "no local alerts". Both
@@ -280,10 +289,34 @@ def find_open_issue() -> dict | None:
     return None
 
 
+def compute_alarm_signature(stale: list[dict], missing: list[dict],
+                            local_alerts: list[str]) -> str:
+    """Stable fingerprint of *which* things are alarming, not their timings.
+
+    Deliberately excludes age_hours/mtime_utc so an unchanged stale set doesn't
+    re-signature (and re-comment) every 30 min just because the age ticked up —
+    only a genuinely new/changed/cleared condition should trigger a comment.
+    """
+    names = sorted(s["name"] for s in stale)
+    missing_names = sorted(m["name"] for m in missing)
+    alerts = sorted(local_alerts)
+    payload = json.dumps([names, missing_names, alerts], sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
+
+def extract_alarm_signature(body: str | None) -> str | None:
+    """Pull the hidden alarm-signature marker out of a previous issue body."""
+    if not body:
+        return None
+    m = ALARM_MARKER_RE.search(body)
+    return m.group(1) if m else None
+
+
 def render_body(stale: list[dict], missing: list[dict],
-                local_alerts: list[str], manifest: dict) -> str:
+                local_alerts: list[str], manifest: dict, signature: str) -> str:
     now = datetime.now(timezone.utc).isoformat()
     parts = [
+        f"<!-- alarm-signature: {signature} -->",
         f"**Detected at:** {now}",
         f"**Manifest generated_at_utc:** {manifest.get('generated_at_utc', '?')}",
         "",
@@ -318,6 +351,26 @@ def render_body(stale: list[dict], missing: list[dict],
         "all tracked CSVs return to freshness AND the local pipeline "
         "alerts clear._"
     )
+    return "\n".join(parts)
+
+
+def render_change_comment(stale: list[dict], missing: list[dict],
+                          local_alerts: list[str]) -> str:
+    """Short notification comment posted only when the alarm set changed.
+
+    This is what actually pings issue subscribers (see ALARM_MARKER_RE
+    comment above) — the body PATCH alone is silent.
+    """
+    parts = ["**Alarm condition changed** — new/updated freshness issue state:", ""]
+    if stale:
+        parts.append(f"- Stale ({len(stale)}): " + ", ".join(f"`{s['name']}`" for s in stale))
+    if missing:
+        parts.append(f"- Missing ({len(missing)}): " + ", ".join(f"`{m['name']}`" for m in missing))
+    if local_alerts:
+        parts.append(f"- Local pipeline alerts ({len(local_alerts)}): " +
+                      ", ".join(f"`{a}`" for a in local_alerts))
+    if not (stale or missing or local_alerts):
+        parts.append("- All clear.")
     return "\n".join(parts)
 
 
@@ -372,19 +425,31 @@ def main() -> int:
     # Slack, and the open/close gate without new plumbing.
     local_alerts += check_coverage(manifest)
 
+    # 2026-07-03: current alarm signature, compared below against whatever
+    # marker (if any) is embedded in the existing open issue's body — this is
+    # what decides whether a new notifying comment is needed.
+    signature = compute_alarm_signature(stale, missing, local_alerts)
+
     if not stale and not missing and not local_alerts:
         print("All tracked CSVs fresh; no local pipeline alerts.")
         if not args.dry_run:
             existing = find_open_issue()
             if existing:
+                prev_signature = extract_alarm_signature(existing.get("body"))
                 gh_request("PATCH", f"/issues/{existing['number']}", {
                     "state": "closed",
                     "body": existing["body"] + "\n\n---\n**Resolved: all CSVs fresh and local alerts clear.**",
                 })
                 print(f"Closed previously-open issue #{existing['number']}.")
+                # A close is always a real state change worth a comment (GitHub
+                # does notify on state changes, but a comment gives the "why").
+                if prev_signature != signature:
+                    gh_request("POST", f"/issues/{existing['number']}/comments", {
+                        "body": render_change_comment(stale, missing, local_alerts),
+                    })
         return 0
 
-    body = render_body(stale, missing, local_alerts, manifest)
+    body = render_body(stale, missing, local_alerts, manifest, signature)
     print("=" * 60)
     print(body)
     print("=" * 60)
@@ -396,8 +461,20 @@ def main() -> int:
 
     existing = find_open_issue()
     if existing:
+        prev_signature = extract_alarm_signature(existing.get("body"))
         gh_request("PATCH", f"/issues/{existing['number']}", {"body": body})
         print(f"Updated existing issue #{existing['number']}.")
+        # CORE FIX: a body PATCH does not notify GitHub issue subscribers —
+        # only a new comment or state change does. Without this, a genuinely
+        # new/changed alarm condition (e.g. a different CSV goes stale) would
+        # silently update the issue with zero notification to anyone watching.
+        if prev_signature != signature:
+            gh_request("POST", f"/issues/{existing['number']}/comments", {
+                "body": render_change_comment(stale, missing, local_alerts),
+            })
+            print("Alarm signature changed — posted notifying comment.")
+        else:
+            print("Alarm signature unchanged — body PATCH only, no comment.")
     else:
         new = gh_request("POST", "/issues", {
             "title": ISSUE_TITLE,
@@ -405,6 +482,8 @@ def main() -> int:
             "labels": [ISSUE_LABEL],
         })
         print(f"Created issue #{new['number']}.")
+        # A newly-created issue already notifies subscribers/assignees via the
+        # normal GitHub "issue opened" event, so no extra comment is needed here.
 
     post_slack(stale, missing, local_alerts)
 
