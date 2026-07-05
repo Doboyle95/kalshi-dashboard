@@ -49,6 +49,7 @@ THRESHOLDS = {
     "daily_sports_vs_nonsports.csv": 6,
     "daily_top_categories.csv": 6,
     "sports_market_type_daily.csv": 6,
+    "trades_by_hour.csv": 6,
     # settlement chain (refresh every ~4h via settlement_cycle)
     "taker_pnl_daily.csv": 12,
     "taker_category_daily.csv": 12,

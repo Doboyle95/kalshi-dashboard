@@ -11,6 +11,7 @@ title: Overview
 ```js
 const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
+const hourly = await FileAttachment("data/trades_by_hour.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -19,6 +20,7 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Kalshi aggregates", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Local pipeline can refresh within minutes when the collector is running"},
+    {label: "Trades by hour", date: latestDate(hourly), updatedAt: fileUpdatedAt(freshness, "trades_by_hour.csv"), meta: "Refreshes on the same near-live cycle as the aggregates above"},
     {label: "Competitor comparison", date: latestDate(competitor), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public competitor sources + Kalshi API rows", tone: "competitor"}
   ],
   note: "This static page is current as of the CSV snapshot committed or synced into the dashboard. Local refresh scripts can be fresher than the public GitHub Pages build."
@@ -77,6 +79,70 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
   <p>Volume here means contracts traded, not dollars: one contract is one yes/no bet. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026.</p>
   <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
 </details>
+
+## Trading activity today
+
+<p class="section-intro">Kalshi trades by hour (Eastern Time) for the current day. This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
+
+```js
+const isPartialHour = d => d.is_partial === true || d.is_partial === "TRUE";
+
+// The CSV keeps full history so this chart can grow to cover other days later,
+// but today's request is specifically "the current day" — filter to the latest
+// date present and reserve all 24 hour slots (band domain) so the axis doesn't
+// keep resizing as the day goes on.
+const hourlyToday = (() => {
+  const latest = d3.max(hourly, d => d.date);
+  return hourly.filter(d => +d.date === +latest).sort((a, b) => a.hour_et - b.hour_et);
+})();
+
+const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
+```
+
+<div class="plot-shell">
+
+```js
+if (!hourlyToday.length) {
+  display(html`<p class="section-intro">No trades recorded yet today.</p>`);
+} else {
+  display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
+    width,
+    height: 300,
+    marginLeft: 60,
+    marginRight: 16,
+    x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
+    y: {grid: true, label: "Trades", tickFormat: fmtCount},
+    marks: [
+      Plot.barY(hourlyToday, {
+        x: "hour_et", y: "trades",
+        fill: "#00C2A8",
+        fillOpacity: d => isPartialHour(d) ? 0.45 : 1,
+        rx: 2
+      }),
+      Plot.text(hourlyToday.filter(isPartialHour), {
+        x: "hour_et", y: "trades", dy: -10,
+        text: () => "still counting",
+        fontSize: 11,
+        fill: "currentColor"
+      }),
+      Plot.tip(hourlyToday, Plot.pointerX({
+        x: "hour_et", y: "trades",
+        title: d => [
+          fmtHour12(d.hour_et),
+          `${d.trades.toLocaleString()} trades`,
+          `${d.contracts.toLocaleString()} contracts`,
+          `$${d.yes_side_notional.toLocaleString()} yes-side volume`,
+          isPartialHour(d) ? "(hour still in progress)" : null
+        ].filter(Boolean).join("\n")
+      })),
+      Plot.ruleY([0])
+    ]
+  }));
+}
+```
+
+</div>
 
 ## Platform comparison
 
