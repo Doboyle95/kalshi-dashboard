@@ -18,7 +18,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry1.outputs.page_url || steps.deployment_retry2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -41,6 +41,41 @@ jobs:
         with:
           path: dist
 
+      # 2026-07-05: actions/deploy-pages occasionally fails outright with a
+      # generic "Deployment failed, try again later" (a GitHub Pages backend
+      # rejection, not a build problem -- the artifact above already built
+      # and uploaded fine every time this has happened). Confirmed via
+      # `gh run list` history: 0% failure rate through 07-01, then a
+      # persistent 13-27%/day rate every day since 07-02 (this repo pushes
+      # to main roughly every 15 min, so that's a real, recurring gap, not
+      # noise), including streaks of 2-3 consecutive failures in a row
+      # (~30-45 min of stale dashboard before a later push finally got a
+      # clean deploy through). The existing `concurrency: cancel-in-progress`
+      # above already prevents two *workflow runs* from truly overlapping,
+      # but doesn't guarantee the Pages backend itself has finished
+      # processing a prior deployment before this run tries to create a new
+      # one. Retrying a couple of times with a short backoff directly
+      # addresses the observed pattern without adding a third-party action.
       - name: Deploy to GitHub Pages
         id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait before retry 1
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 15
+
+      - name: Deploy to GitHub Pages (retry 1)
+        id: deployment_retry1
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Wait before retry 2
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry1.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (retry 2)
+        id: deployment_retry2
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry1.outcome == 'failure'
         uses: actions/deploy-pages@v4
