@@ -272,7 +272,7 @@ display((() => {
 
 ## Trading activity today
 
-<p class="section-intro">Kalshi trades by hour (Eastern Time) for the current day. This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
+<p class="section-intro">Kalshi trades by hour (Eastern Time) for the current day, split into sports (parlays counted as sports) and non-sports. This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
 
 ```js
 const isPartialHour = d => d.is_partial === true || d.is_partial === "TRUE";
@@ -286,7 +286,15 @@ const hourlyToday = (() => {
   return hourly.filter(d => +d.date === +latest).sort((a, b) => a.hour_et - b.hour_et);
 })();
 
+// Long format for the stacked bars — one row per hour x group. Plot's barY
+// stacks automatically when several rows share an x and a fill channel.
+const hourlyLong = hourlyToday.flatMap(d => [
+  {hour_et: d.hour_et, group: "Sports", trades: d.trades_sports, partial: isPartialHour(d)},
+  {hour_et: d.hour_et, group: "Non-sports", trades: d.trades_nonsports, partial: isPartialHour(d)}
+]);
+
 const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
+const groupColors = {Sports: "#1a9641", "Non-sports": "#5b8def"};
 ```
 
 <div class="plot-shell">
@@ -298,31 +306,30 @@ if (!hourlyToday.length) {
   display(Plot.plot({
     style: {fontFamily: "var(--font-sans)"},
     width,
-    height: 300,
+    height: 320,
     marginLeft: 60,
     marginRight: 16,
     x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
     y: {grid: true, label: "Trades", tickFormat: fmtCount},
+    color: {legend: true, domain: Object.keys(groupColors), range: Object.values(groupColors)},
     marks: [
-      Plot.barY(hourlyToday, {
-        x: "hour_et", y: "trades",
-        fill: "#00C2A8",
-        fillOpacity: d => isPartialHour(d) ? 0.45 : 1,
+      Plot.barY(hourlyLong, {
+        x: "hour_et", y: "trades", fill: "group",
+        fillOpacity: d => d.partial ? 0.45 : 1,
         rx: 2
       }),
       Plot.text(hourlyToday.filter(isPartialHour), {
-        x: "hour_et", y: "trades", dy: -10,
+        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports, dy: -10,
         text: () => "still counting",
         fontSize: 11,
         fill: "currentColor"
       }),
       Plot.tip(hourlyToday, Plot.pointerX({
-        x: "hour_et", y: "trades",
+        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports,
         title: d => [
           fmtHour12(d.hour_et),
-          `${d.trades.toLocaleString()} trades`,
-          `${d.contracts.toLocaleString()} contracts`,
-          `$${d.yes_side_notional.toLocaleString()} yes-side volume`,
+          `Sports: ${d.trades_sports.toLocaleString()} trades, ${d.contracts_sports.toLocaleString()} contracts, $${d.taker_side_notional_sports.toLocaleString()} taker-side volume`,
+          `Non-sports: ${d.trades_nonsports.toLocaleString()} trades, ${d.contracts_nonsports.toLocaleString()} contracts, $${d.taker_side_notional_nonsports.toLocaleString()} taker-side volume`,
           isPartialHour(d) ? "(hour still in progress)" : null
         ].filter(Boolean).join("\n")
       })),
