@@ -39,6 +39,9 @@ $files = @(
   "taker_volume_by_ticker_side_daily.csv",
   "taker_pnl_by_ticker_daily.csv",
   "taker_pnl_by_ticker_summary.csv",
+  # taker_pnl_by_market_leaderboard.csv only - the sibling _daily.csv is an ~850MB backend-only
+  # bookkeeping file (millions of market_key rows), never meant to reach this repo.
+  "taker_pnl_by_market_leaderboard.csv",
   "trade_size_daily.csv",
   # 2026-06-11 full review: these 18 are referenced by dashboard pages but were
   # absent from this list, so the freshness manifest never tracked them (their

@@ -60,6 +60,10 @@ THRESHOLDS = {
     "taker_volume_by_ticker_side_daily.csv": 12,
     "taker_pnl_by_ticker_daily.csv": 12,
     "taker_pnl_by_ticker_summary.csv": 12,
+    # Once-daily (02:00 ET leaderboard_refresh), not the 4hr settlement cadence its report_ticker-
+    # grain sibling above uses - 60h mirrors the same 2x-over-source-threshold margin as every
+    # other pair here (30h source threshold on the KalshiData side).
+    "taker_pnl_by_market_leaderboard.csv": 60,
     "maker_pnl_daily.csv": 12,
     "market_leaderboard.csv": 12,
     "category_leaderboard.csv": 12,

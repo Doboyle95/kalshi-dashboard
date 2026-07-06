@@ -15,11 +15,14 @@ const notionalDaily = await FileAttachment("data/taker_notional_daily.csv").csv(
 const pnlByTicker = await FileAttachment("data/taker_pnl_by_ticker_daily.csv").csv({typed: true});
 const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const sportsDaily = await FileAttachment("data/taker_sports_daily.csv").csv({typed: true});
+const pnlByMarket = await FileAttachment("data/taker_pnl_by_market_leaderboard.csv").csv({typed: true});
+const marketLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {buildReportTickerToCat, TAKER_GENERAL_MAP} from "./components/taker-categories.js";
+import {bestName, fmtWinner, fmtStrike, parseMarketDateFromKey} from "./components/ticker-names.js";
 ```
 
 ```js
@@ -28,13 +31,14 @@ display(freshnessPanel({
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Taker-side notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
-    {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"}
+    {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"},
+    {label: "Market P&L leaderboard", date: null, value: `${pnlByMarket.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_market_leaderboard.csv"), meta: "All-time, refreshed once daily (not the settlement-cycle cadence above)", tone: "settlement"}
   ],
   note: "Recent dates can look incomplete until markets settle. Open interest is not part of the fast window refresh because it requires full rolling position state."
 }));
 display(askPageLink({
   question: "Explain recent taker P&L, including whether results are complete enough to interpret and which categories drove the result.",
-  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_pnl_by_ticker_daily.csv, and taker_sports_daily.csv."
+  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_pnl_by_ticker_daily.csv, taker_sports_daily.csv, and taker_pnl_by_market_leaderboard.csv."
 }));
 ```
 
@@ -627,5 +631,118 @@ Inputs.table(categoryRows.map(d => ({
   "Active days": d.n_days
 })), {
   rows: 12
+})
+```
+
+## Market Leaderboard
+
+<p class="section-intro">The individual settled markets — specific real-world events, not categories or recurring series — where takers made or lost the most money. Toggle to see the biggest taker wins (maker losses) or the biggest taker losses (maker wins).</p>
+
+```js
+// Join the P&L-ranked leaderboard onto market_leaderboard.csv's display enrichment by
+// market_key. market_leaderboard.csv is capped at its own top-1000-by-volume, so some
+// big-P&L-swing markets outside that cutoff won't have a match here - bestName/fmtWinner/
+// fmtStrike (components/ticker-names.js) already degrade gracefully to the raw market_key
+// in that case, same fallback categories.md itself depends on.
+const marketLeaderboardByKey = new Map(marketLeaderboard.map(d => [d.market_key, d]));
+
+const marketPnlRows = pnlByMarket
+  .filter(d => d.contracts_settled > 0)
+  .map(d => {
+    const enrich = marketLeaderboardByKey.get(d.market_key) || {};
+    const merged = {...enrich, ...d};
+    return {
+      market_key: d.market_key,
+      display_name: bestName(merged),
+      winner_display: fmtWinner(merged),
+      market_date: parseMarketDateFromKey(d.market_key) || (enrich.last_trade_date ? new Date(enrich.last_trade_date) : null),
+      taker_pnl_gross: d.taker_pnl_gross || 0,
+      taker_pnl_net: d.taker_pnl_net || 0,
+      maker_pnl_net: d.maker_pnl_net || 0,
+      taker_roi_pct: d.notional_settled ? (d.taker_pnl_net / d.notional_settled * 100) : 0,
+      contracts_settled: d.contracts_settled || 0
+    };
+  });
+```
+
+<div class="control-strip">
+
+```js
+const marketPnlDirection = view(hashInput("marketPnlDirection", Inputs.radio(
+  ["Takers profited", "Makers profited"],
+  {value: hashGet("marketPnlDirection", "Takers profited"), label: "Direction"}
+)));
+```
+
+</div>
+
+```js
+// Maker P&L is defined as the exact mirror of taker P&L (same trades, other side), so
+// filtering on taker_pnl_net's sign alone is sufficient - no need to check both columns.
+const marketPnlFiltered = marketPnlRows
+  .filter(d => marketPnlDirection === "Takers profited" ? d.taker_pnl_net > 0 : d.taker_pnl_net < 0)
+  .sort((a, b) => marketPnlDirection === "Takers profited"
+    ? d3.descending(a.taker_pnl_net, b.taker_pnl_net)
+    : d3.ascending(a.taker_pnl_net, b.taker_pnl_net));
+```
+
+<div class="plot-shell">
+
+```js
+const marketPnlTop = marketPnlFiltered.slice(0, 15);
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: marketPnlTop.length * 30 + 44,
+  marginLeft: 240,
+  x: {label: "Net taker P&L (USD)", grid: true, tickFormat: d => fmtUSD(d)},
+  y: {label: null},
+  marks: [
+    Plot.barX(marketPnlTop, {
+      x: "taker_pnl_net",
+      y: d => d.display_name,
+      fill: d => d.taker_pnl_net >= 0 ? positive : negative,
+      sort: {y: "x"},
+      title: d => `${d.display_name}\nTaker net: ${fmtUSD(d.taker_pnl_net)}\nTaker gross: ${fmtUSD(d.taker_pnl_gross)}\nMaker net: ${fmtUSD(d.maker_pnl_net)}\nTaker ROI: ${d.taker_roi_pct.toFixed(2)}%\nSettled contracts: ${fmtCount(d.contracts_settled)}\nWinner: ${d.winner_display}`,
+      tip: true
+    }),
+    Plot.ruleX([0])
+  ]
+})
+```
+
+</div>
+
+<p class="chart-note">Ranked by net taker P&L magnitude within the selected direction. Includes only markets settled since 2026-04-15 (the start of the current P&L data scope) — pre-2026 markets, including the 2024 election, have no P&L data to rank by and won't appear here.</p>
+
+```js
+const marketPnlSearch = view(Inputs.search(marketPnlFiltered, {placeholder: "Search markets..."}));
+```
+
+```js
+Inputs.table(marketPnlSearch, {
+  columns: ["display_name", "market_date", "taker_pnl_gross", "taker_pnl_net", "maker_pnl_net", "taker_roi_pct", "contracts_settled", "winner_display"],
+  header: {
+    display_name: "Market",
+    market_date: "Date",
+    taker_pnl_gross: "Taker P&L (before fees)",
+    taker_pnl_net: "Taker P&L (after fees)",
+    maker_pnl_net: "Maker P&L (after fees)",
+    taker_roi_pct: "Taker ROI (% of stakes)",
+    contracts_settled: "Settled contracts",
+    winner_display: "Winner"
+  },
+  format: {
+    taker_pnl_gross: d => fmtUSD(d),
+    taker_pnl_net: d => fmtUSD(d),
+    maker_pnl_net: d => fmtUSD(d),
+    taker_roi_pct: d => fmtROI(d),
+    contracts_settled: d => fmtCount(d),
+    market_date: d => d ? d.toLocaleDateString("en-US", {timeZone: "UTC"}) : "—",
+    display_name: v => html`<div title=${v ?? ""}>${v}</div>`
+  },
+  align: {taker_pnl_gross: "right", taker_pnl_net: "right", maker_pnl_net: "right", taker_roi_pct: "right", contracts_settled: "right"},
+  width: {display_name: 280, market_date: 90},
+  rows: 15
 })
 ```
