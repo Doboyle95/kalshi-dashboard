@@ -64,6 +64,7 @@ THRESHOLDS = {
     "market_leaderboard.csv": 12,
     "category_leaderboard.csv": 12,
     "trade_size_daily.csv": 12,
+    "large_trades.csv": 12,
     "parlay_pnl_net.csv": 12,
     # competitor (refresh every ~6h)
     "competitor_daily.csv": 24,
