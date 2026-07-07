@@ -12,18 +12,25 @@ title: Trade Size Mix
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 const fmtPct = n => `${((n ?? 0) * 100).toFixed((n ?? 0) >= 0.1 ? 1 : 2)}%`;
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+const fmtUSD = n => (n < 0 ? "-$" : "$") + fmtCount(Math.abs(n ?? 0));
+const fmtPrice = p => p == null ? "-" : `${Number(p) % 1 === 0 ? Number(p).toFixed(0) : Number(p).toFixed(2)}¢`;
 ```
 
 ```js
 const tradeSizeRaw = await FileAttachment("data/trade_size_daily.csv").csv({typed: true});
+const largeTrades = await FileAttachment("data/large_trades.csv").csv({typed: true});
+const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {bestName, fmtStrike} from "./components/ticker-names.js";
+import {buildReportTickerToCat} from "./components/taker-categories.js";
 ```
 
 ```js
 display(freshnessPanel({
   items: [
     {label: "Trade-size mix", date: latestDate(tradeSizeRaw), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Kalshi can be within 15 minutes locally; competitors follow public files"},
+    {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"},
     {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx, DKeX", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
   ],
   note: "Competitor rows update when their public trade files are downloaded and rebuilt."
@@ -532,4 +539,140 @@ topSpikes.length ? Inputs.table(topSpikes, {
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
   <p>Each raw trade is placed into a size bucket based on <code>contracts_traded</code>. The composition chart uses each bucket's share of daily contracts, not share of trade count. The spike radar compares the selected threshold's contract share with the previous 30 trading days and flags days at least 3x above baseline with at least 1M large-trade contracts.</p>
+</details>
+
+```js
+const reportTickerToCat = buildReportTickerToCat(categoryLeaderboard);
+const RANK_METRICS = {"Contracts": "contracts", "One-party stake": "one_party_stake", "Taker stake": "taker_stake"};
+
+function tradeCategory(d) {
+  return reportTickerToCat.get(d.report_ticker) || d.kalshi_category || "Uncategorized";
+}
+
+function tradeMarket(d) {
+  return bestName({market_key: d.market_key, market_name: "", "i.market_name": ""});
+}
+
+function tradeOutcome(d) {
+  return fmtStrike(d.ticker_name, d.market_key);
+}
+
+function metricValue(d, metricKey) {
+  return metricKey === "contracts" ? d.contracts_traded
+    : metricKey === "one_party_stake" ? d.one_party_stake
+    : d.taker_stake;
+}
+
+function rowsForTable(tableName, metricLabel) {
+  const metricKey = RANK_METRICS[metricLabel];
+  return largeTrades
+    .filter(d => d.table === tableName && d.metric === metricKey)
+    .sort((a, b) => a.rank - b.rank)
+    .map(d => ({
+      date: d.date,
+      category: tradeCategory(d),
+      market: tradeMarket(d),
+      outcome: tradeOutcome(d),
+      contracts: d.contracts_traded,
+      price: d.price,
+      taker_side: d.taker_side || "-",
+      metric_value: metricValue(d, metricKey),
+      pct_of_market: d.pct_of_market
+    }));
+}
+```
+
+## Largest individual trades
+
+<p class="section-intro">The single biggest prints in Kalshi's history — three different notions of "big," since raw contracts, the larger side's dollar stake, and what the taker specifically put up don't always pick the same winners.</p>
+
+<div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices (near-certain or near-impossible outcomes), where one side risks close to the full dollar and the other risks almost nothing.</div>
+
+<div class="control-strip">
+
+```js
+const overallMetricLabel = view(Inputs.radio(["Contracts", "One-party stake", "Taker stake"], {
+  label: "Rank by",
+  value: "Contracts"
+}));
+```
+
+</div>
+
+```js
+const overallRows = rowsForTable("overall", overallMetricLabel);
+```
+
+```js
+Inputs.table(overallRows, {
+  columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"],
+  header: {
+    date: "Date",
+    category: "Category",
+    market: "Market",
+    outcome: "Outcome",
+    contracts: "Contracts",
+    price: "Price",
+    taker_side: "Taker side",
+    metric_value: overallMetricLabel
+  },
+  format: {
+    date: fmtDate,
+    contracts: fmtCount,
+    price: fmtPrice,
+    metric_value: overallMetricLabel === "Contracts" ? fmtCount : fmtUSD
+  },
+  align: {contracts: "right", metric_value: "right"},
+  rows: overallRows.length
+})
+```
+
+## Largest trades in small markets
+
+<p class="section-intro">Same three rankings, but restricted to trades that were unusually large <em>for the specific market they happened in</em> — a print that ate a huge share of everything that market ever traded, not just a big number in isolation.</p>
+
+<div class="control-strip">
+
+```js
+const smallMarketMetricLabel = view(Inputs.radio(["Contracts", "One-party stake", "Taker stake"], {
+  label: "Rank by",
+  value: "Taker stake"
+}));
+```
+
+</div>
+
+```js
+const smallMarketRows = rowsForTable("small_market", smallMarketMetricLabel);
+```
+
+```js
+Inputs.table(smallMarketRows, {
+  columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"],
+  header: {
+    date: "Date",
+    category: "Category",
+    market: "Market",
+    outcome: "Outcome",
+    contracts: "Contracts",
+    price: "Price",
+    taker_side: "Taker side",
+    metric_value: smallMarketMetricLabel,
+    pct_of_market: "% of market"
+  },
+  format: {
+    date: fmtDate,
+    contracts: fmtCount,
+    price: fmtPrice,
+    metric_value: smallMarketMetricLabel === "Contracts" ? fmtCount : fmtUSD,
+    pct_of_market: fmtPct
+  },
+  align: {contracts: "right", metric_value: "right", pct_of_market: "right"},
+  rows: smallMarketRows.length
+})
+```
+
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>A trade qualifies as "large in a small market" when it was at least 100,000 contracts <strong>and</strong> at least 20% of that market's entire lifetime volume in that one print, excluding parlays. Parlays are left out here for two reasons: a parlay combo is by construction its own tiny market, so almost any parlay trade looks like a huge share of a thin one — and the per-combo volume totals behind that ratio aren't reliable at that granularity. Parlays still show up in the table above, which has no market-share requirement. Because the denominator (the market's lifetime volume) can keep growing for still-active markets, a trade can drop out of this list over time even though the trade itself never changes.</p>
 </details>
