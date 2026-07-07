@@ -25,6 +25,42 @@ const mixRaw  = await FileAttachment("data/parlay_sportsmix_v2.csv").csv({typed:
 const popDailyRaw = await FileAttachment("data/parlay_popular_daily.csv").csv({typed: true});
 const popMetaRaw  = await FileAttachment("data/parlay_popular_meta.csv").csv({typed: true});
 const volTypeRaw  = await FileAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {askPageLink, fileUpdatedAt, fmtFreshDate, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+// R/parlay_analytics.R (house edge / legs-over-time / games / mispricing) runs
+// in "sample" mode on every cadence cycle (never --full), selecting files via
+// plain head(list.files(),20) with no recency sort -- so it reads a FIXED
+// slice of tickers, not recent trading, and does not self-correct over time.
+// game_key encodes the actual game date (e.g. "26JUL03ARGCPV" -> 2026-07-03),
+// so we can detect staleness directly from the data instead of trusting the
+// file's own write time (the script can "succeed" every run while re-deriving
+// the same stale answer from unchanging input).
+const GAME_KEY_MONTHS = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+const gameKeyDate = k => {
+  const m = /^(\d{2})([A-Z]{3})(\d{2})/.exec(String(k));
+  const mo = m && GAME_KEY_MONTHS[m[2]];
+  return m && mo != null ? new Date(Date.UTC(2000 + (+m[1]), mo, +m[3])) : null;
+};
+const gamesMaxDate = latestDate(gamesRaw, d => gameKeyDate(d.game_key));
+const gamesStaleDays = gamesMaxDate ? Math.round((Date.now() - gamesMaxDate) / 86400000) : null;
+```
+
+```js
+display(freshnessPanel({
+  items: [
+    {label: "Parlay P&L (by correlation)", date: latestDate(pnlRaw), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_daily_by_corr_v2.csv"), meta: "Settlement-dependent — a parlay only counts once its markets settle", tone: "settlement"},
+    {label: "Parlay volume by type", date: latestDate(volTypeRaw), updatedAt: fileUpdatedAt(freshness, "parlay_volume_by_type_daily.csv"), meta: "Classified from actual legs; very recent tickers can show as \"unclassified\" until leg-mapping catches up"},
+    {label: "Games / house edge / legs-mix / mispricing", value: gamesMaxDate ? `Most recent game: ${fmtFreshDate(gamesMaxDate)}` + (gamesStaleDays > 3 ? ` — ${gamesStaleDays}d behind today` : "") : "n/a", updatedAt: fileUpdatedAt(freshness, "parlay_top_games_by_volume.csv"), meta: "Shared source (R/parlay_analytics.R sample) for the 4 charts below. If “Most recent game” isn't within the last few days, the sample is stuck — that's a pipeline bug, not something that clears up on its own.", tone: "local"}
+  ],
+  note: "Recent days are still filling in for the P&L and volume-by-type figures above — a parlay only counts once its markets settle, and brand-new tickers may briefly show as \"unclassified\" until leg-mapping catches up (normal lag, clears within a day or two). The games/house-edge/mispricing group is a separate, fixed-sample pipeline that does NOT self-correct with time — check its card above and the note on \"The games that drive parlay money\" below."
+}));
+display(askPageLink({
+  question: "Explain parlay anatomy: house edge by leg count, correlated vs independent P&L, and how much recent volume is still unclassified pending leg-mapping.",
+  context: "Parlay Anatomy page (parlay-analytics.md)."
+}));
 ```
 
 ```js
@@ -378,6 +414,15 @@ const games = gamesRaw
 ## The games that drive parlay money
 
 _Top 20 underlying games by parlay volume touching them. A parlay's volume is counted for every distinct game it includes, so totals are non-exclusive (a measure of how "parlayed" each game is). Raw game keys shown for non-dated/futures markets._
+
+```js
+display(
+  gamesMaxDate == null ? html`` :
+  gamesStaleDays > 3
+    ? html`<div class="chart-note" style="color:var(--accent-warning);font-weight:650;">⚠ Stuck: the most recent game in this ranking is ${fmtFreshDate(gamesMaxDate)} — ${gamesStaleDays} days behind today. The underlying sample isn't advancing (see the freshness panel above); this chart won't show newer games until that's fixed.</div>`
+    : html`<div class="chart-note">Most recent game in this ranking: ${fmtFreshDate(gamesMaxDate)}.</div>`
+);
+```
 
 ```js
 Plot.plot({
