@@ -272,7 +272,7 @@ display((() => {
 
 ## Trading activity today
 
-<p class="section-intro">Kalshi trades by hour (Eastern Time) for the current day, split into sports, parlays, and non-sports (sports and parlays are colored as one family since parlays are themselves mostly sports bets). This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
+<p class="section-intro">Kalshi trading volume (contracts) by hour (Eastern Time) for the current day, split into sports, parlays, and non-sports (sports and parlays are colored as one family since parlays are themselves mostly sports bets). This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
 
 ```js
 const isPartialHour = d => d.is_partial === true || d.is_partial === "TRUE";
@@ -290,10 +290,14 @@ const hourlyToday = (() => {
 // stacks automatically when several rows share an x and a fill channel.
 // Sports/Parlay share a green family (matches volume.md's existing sports/
 // non-sports/parlay convention); Non-sports gets a distinct blue.
+// Bars are sized by CONTRACTS (volume), not trade count -- trade count looks
+// close to even between sports and non-sports since non-sports markets tend
+// toward more, smaller prints, which understates how sports-dominated the
+// actual volume is (contracts run roughly 2:1 sports on a typical hour).
 const hourlyLong = hourlyToday.flatMap(d => [
-  {hour_et: d.hour_et, group: "Non-sports", trades: d.trades_nonsports, partial: isPartialHour(d)},
-  {hour_et: d.hour_et, group: "Sports", trades: d.trades_sports, partial: isPartialHour(d)},
-  {hour_et: d.hour_et, group: "Parlay", trades: d.trades_parlay, partial: isPartialHour(d)}
+  {hour_et: d.hour_et, group: "Non-sports", contracts: d.contracts_nonsports, partial: isPartialHour(d)},
+  {hour_et: d.hour_et, group: "Sports", contracts: d.contracts_sports, partial: isPartialHour(d)},
+  {hour_et: d.hour_et, group: "Parlay", contracts: d.contracts_parlay, partial: isPartialHour(d)}
 ]);
 
 const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
@@ -313,22 +317,22 @@ if (!hourlyToday.length) {
     marginLeft: 60,
     marginRight: 16,
     x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
-    y: {grid: true, label: "Trades", tickFormat: fmtCount},
+    y: {grid: true, label: "Contracts", tickFormat: fmtCount},
     color: {legend: true, domain: Object.keys(groupColors), range: Object.values(groupColors)},
     marks: [
       Plot.barY(hourlyLong, {
-        x: "hour_et", y: "trades", fill: "group",
+        x: "hour_et", y: "contracts", fill: "group",
         fillOpacity: d => d.partial ? 0.45 : 1,
         rx: 2
       }),
       Plot.text(hourlyToday.filter(isPartialHour), {
-        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports + d.trades_parlay, dy: -10,
+        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay, dy: -10,
         text: () => "still counting",
         fontSize: 11,
         fill: "currentColor"
       }),
       Plot.tip(hourlyToday, Plot.pointerX({
-        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports + d.trades_parlay,
+        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay,
         title: d => [
           fmtHour12(d.hour_et),
           `Sports: ${d.trades_sports.toLocaleString()} trades, ${d.contracts_sports.toLocaleString()} contracts, $${d.taker_side_notional_sports.toLocaleString()} taker-side volume`,
@@ -370,7 +374,7 @@ const weeklyWindowDays = {"Last 90 days": 90, "Last 180 days": 180, "Last 365 da
 <div class="control-strip">
 
 ```js
-const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], {label: "Metric", value: "Trades"}));
+const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], {label: "Metric", value: "Contracts"}));
 ```
 
 ```js
