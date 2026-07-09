@@ -356,7 +356,11 @@ function weeklyMetricValue(d, metric, segment) {
   const key = metric === "Trades" ? "trades" : metric === "Contracts" ? "contracts" : "taker_side_notional";
   const sports = d[`${key}_sports`] || 0;
   const nonsports = d[`${key}_nonsports`] || 0;
-  return segment === "Sports" ? sports : segment === "Non-sports" ? nonsports : sports + nonsports;
+  const parlay = d[`${key}_parlay`] || 0;
+  if (segment === "Sports") return sports;
+  if (segment === "Parlay") return parlay;
+  if (segment === "Non-sports") return nonsports;
+  return sports + nonsports + parlay; // Combined
 }
 
 const weeklyLatest = d3.max(hourly, d => d.date);
@@ -370,7 +374,7 @@ const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], 
 ```
 
 ```js
-const weeklySegment = view(Inputs.radio(["Combined", "Sports", "Non-sports"], {label: "Segment", value: "Combined"}));
+const weeklySegment = view(Inputs.radio(["Combined", "Sports", "Parlay", "Non-sports"], {label: "Segment", value: "Combined"}));
 ```
 
 ```js
@@ -444,5 +448,5 @@ Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Each cell averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are counted as sports, matching the rest of the dashboard.</p>
+  <p>Each cell averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are broken out as their own segment (as in the chart above) rather than folded into sports; pick "Combined" to see everything together.</p>
 </details>
