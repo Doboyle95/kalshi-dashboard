@@ -272,7 +272,7 @@ display((() => {
 
 ## Trading activity today
 
-<p class="section-intro">Kalshi trades by hour (Eastern Time) for the current day, split into sports (parlays counted as sports) and non-sports. This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
+<p class="section-intro">Kalshi trades by hour (Eastern Time) for the current day, split into sports, parlays, and non-sports (sports and parlays are colored as one family since parlays are themselves mostly sports bets). This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
 
 ```js
 const isPartialHour = d => d.is_partial === true || d.is_partial === "TRUE";
@@ -288,13 +288,16 @@ const hourlyToday = (() => {
 
 // Long format for the stacked bars — one row per hour x group. Plot's barY
 // stacks automatically when several rows share an x and a fill channel.
+// Sports/Parlay share a green family (matches volume.md's existing sports/
+// non-sports/parlay convention); Non-sports gets a distinct blue.
 const hourlyLong = hourlyToday.flatMap(d => [
+  {hour_et: d.hour_et, group: "Non-sports", trades: d.trades_nonsports, partial: isPartialHour(d)},
   {hour_et: d.hour_et, group: "Sports", trades: d.trades_sports, partial: isPartialHour(d)},
-  {hour_et: d.hour_et, group: "Non-sports", trades: d.trades_nonsports, partial: isPartialHour(d)}
+  {hour_et: d.hour_et, group: "Parlay", trades: d.trades_parlay, partial: isPartialHour(d)}
 ]);
 
 const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
-const groupColors = {Sports: "#1a9641", "Non-sports": "#5b8def"};
+const groupColors = {"Non-sports": "#5b8def", Sports: "#1a9641", Parlay: "#74c476"};
 ```
 
 <div class="plot-shell">
@@ -319,16 +322,17 @@ if (!hourlyToday.length) {
         rx: 2
       }),
       Plot.text(hourlyToday.filter(isPartialHour), {
-        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports, dy: -10,
+        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports + d.trades_parlay, dy: -10,
         text: () => "still counting",
         fontSize: 11,
         fill: "currentColor"
       }),
       Plot.tip(hourlyToday, Plot.pointerX({
-        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports,
+        x: "hour_et", y: d => d.trades_sports + d.trades_nonsports + d.trades_parlay,
         title: d => [
           fmtHour12(d.hour_et),
           `Sports: ${d.trades_sports.toLocaleString()} trades, ${d.contracts_sports.toLocaleString()} contracts, $${d.taker_side_notional_sports.toLocaleString()} taker-side volume`,
+          `Parlay: ${d.trades_parlay.toLocaleString()} trades, ${d.contracts_parlay.toLocaleString()} contracts, $${d.taker_side_notional_parlay.toLocaleString()} taker-side volume`,
           `Non-sports: ${d.trades_nonsports.toLocaleString()} trades, ${d.contracts_nonsports.toLocaleString()} contracts, $${d.taker_side_notional_nonsports.toLocaleString()} taker-side volume`,
           isPartialHour(d) ? "(hour still in progress)" : null
         ].filter(Boolean).join("\n")
@@ -340,3 +344,105 @@ if (!hourlyToday.length) {
 ```
 
 </div>
+
+## Typical trading week
+
+<p class="section-intro">Not one day's snapshot, but the average across many — when during the week Kalshi actually trades. Each cell is that hour's average across every matching day-of-week in the selected window (partial in-progress hours excluded).</p>
+
+```js
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function weeklyMetricValue(d, metric, segment) {
+  const key = metric === "Trades" ? "trades" : metric === "Contracts" ? "contracts" : "taker_side_notional";
+  const sports = d[`${key}_sports`] || 0;
+  const nonsports = d[`${key}_nonsports`] || 0;
+  return segment === "Sports" ? sports : segment === "Non-sports" ? nonsports : sports + nonsports;
+}
+
+const weeklyLatest = d3.max(hourly, d => d.date);
+const weeklyWindowDays = {"Last 90 days": 90, "Last 180 days": 180, "Last 365 days": 365, "All time": Infinity};
+```
+
+<div class="control-strip">
+
+```js
+const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], {label: "Metric", value: "Trades"}));
+```
+
+```js
+const weeklySegment = view(Inputs.radio(["Combined", "Sports", "Non-sports"], {label: "Segment", value: "Combined"}));
+```
+
+```js
+const weeklyWindow = view(Inputs.radio(Object.keys(weeklyWindowDays), {label: "Window", value: "Last 180 days"}));
+```
+
+</div>
+
+```js
+const weeklyRows = hourly.filter(d => {
+  if (isPartialHour(d)) return false;
+  const days = weeklyWindowDays[weeklyWindow];
+  return days === Infinity || d.date >= d3.utcDay.offset(weeklyLatest, -days);
+});
+
+const weeklyAgg = d3.rollup(
+  weeklyRows,
+  rows => ({value: d3.sum(rows, d => weeklyMetricValue(d, weeklyMetric, weeklySegment)), n: rows.length}),
+  d => d.date.getUTCDay(),
+  d => d.hour_et
+);
+
+const weeklyCells = [];
+for (let dow = 0; dow < 7; dow++) {
+  for (let h = 0; h < 24; h++) {
+    const cell = weeklyAgg.get(dow)?.get(h);
+    weeklyCells.push({
+      dow_label: DOW_LABELS[dow],
+      hour_et: h,
+      avg: cell ? cell.value / cell.n : 0,
+      n: cell ? cell.n : 0
+    });
+  }
+}
+
+const weeklyFmtValue = v => weeklyMetric === "Taker-side $" ? fmtUSD(v) : fmtCount(v);
+const busiestCell = weeklyCells.reduce((best, d) => (d.avg > best.avg ? d : best), weeklyCells[0]);
+const weeklyDaysCovered = new Set(weeklyRows.map(d => +d.date)).size;
+```
+
+<div class="chart-note">${weeklyDaysCovered.toLocaleString()} days of history in this window (${fmtDate(weeklyRows.length ? d3.min(weeklyRows, d => d.date) : null)} to ${fmtDate(weeklyLatest)}). Busiest slot: <strong>${busiestCell.dow_label} ${fmtHour12(busiestCell.hour_et)} ET</strong>, averaging ${weeklyFmtValue(busiestCell.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour (${weeklySegment.toLowerCase()}).</div>
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 280,
+  marginLeft: 60,
+  marginRight: 16,
+  x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
+  y: {type: "band", domain: DOW_LABELS, label: null},
+  color: {type: "sequential", range: ["#eafaf7", "#00786a"], legend: true,
+          label: weeklyMetric === "Taker-side $" ? "Avg $/hour" : `Avg ${weeklyMetric.toLowerCase()}/hour`},
+  marks: [
+    Plot.cell(weeklyCells, {x: "hour_et", y: "dow_label", fill: "avg", inset: 0.5}),
+    Plot.tip(weeklyCells, Plot.pointer({
+      x: "hour_et", y: "dow_label",
+      title: d => [
+        `${d.dow_label} ${fmtHour12(d.hour_et)}`,
+        `Avg ${weeklyFmtValue(d.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour`,
+        `${weeklySegment} · based on ${d.n} day${d.n === 1 ? "" : "s"}`
+      ].join("\n")
+    }))
+  ]
+})
+```
+
+</div>
+
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>Each cell averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are counted as sports, matching the rest of the dashboard.</p>
+</details>
