@@ -1,49 +1,46 @@
 {
-  "generated_at": "2026-07-09T21:17:45.042758-04:00",
-  "generated_at_utc": "2026-07-10T01:17:45.042758+00:00",
+  "generated_at": "2026-07-09T21:26:44.227286-04:00",
+  "generated_at_utc": "2026-07-10T01:26:44.227286+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'garnet-porcupine' ended FAILED at 2026-07-09T06:17:40.044779+00:00 \u2014 Flow run encountered an exception: RuntimeError: leaderboard step 'patch_leaderboard_winners' failed (exit 1); aborting before publish \u2014 last-good leaderboard CSVs kept.",
     "task_health: prod-v3-settlement-api-backstop: last run 'thundering-raccoon' ended CRASHED at 2026-07-09T08:45:14.860241+00:00 \u2014 Flow run process exited with non-zero status code -9.",
     "task_health: prod-volume-topup-recon: last run 'tourmaline-husky' ended FAILED at 2026-07-09T16:44:09.903811+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-07']",
-    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 66.2 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
-    "freshness_check: BAD_CONTENT parlay_pnl_daily_by_corr_v2.csv - no data rows after header (mtime 2.3 h old)",
-    "freshness_check: STALE    parlay_house_edge_by_legs.csv - 135.4 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_legs_over_time.csv - 135.4 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_mispricing_by_correlation.csv - 135.4 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_top_games_by_volume.csv - 135.4 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_sportsmix_v2.csv - 39.4 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: BAD_CONTENT parlay_pnl_unified_daily.csv - no data rows after header (mtime 2.9 h old)",
-    "freshness_check: BAD_CONTENT parlay_cashout_daily.csv - no data rows after header (mtime 2.9 h old)",
+    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 66.4 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
+    "freshness_check: STALE    parlay_house_edge_by_legs.csv - 135.7 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_legs_over_time.csv - 135.7 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_mispricing_by_correlation.csv - 135.6 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_top_games_by_volume.csv - 135.6 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_sportsmix_v2.csv - 39.6 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
     "freshness_check: GAP      rothera_categories_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      rothera_sports_split_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      dkex_market_daily.csv - 12 missing day(s) in last 60d: 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
-    "freshness_check: STALE    rh_weekly_estimates.csv - 418.8 h old (threshold 336 h) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: STALE    rh_weekly_estimates.csv - 419.0 h old (threshold 336 h) - RH estimates (weekly; manual FCM input)",
     "freshness_check: STALE_TAIL rh_weekly_estimates.csv - newest data row 2026-04-20 is 80d behind today (allowance 21d) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP      polymarket_categories_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13",
-    "freshness_check: STALE    calibration_three_way.csv - 262.8 h old (threshold 192 h) - weekly rebuild",
+    "freshness_check: STALE    calibration_three_way.csv - 263.1 h old (threshold 192 h) - weekly rebuild",
     "freshness_check: GAP      volume_reconciliation_daily.csv - 1 missing day(s) in last 60d: 2026-07-07",
-    "freshness_check: STALL    parlay_settled_sweep - no settled-sweep window has completed in 88.8 h (threshold 24.0 h) - collect_parlay_live.R run_settled_sweep()"
+    "freshness_check: STALL    parlay_settled_sweep - no settled-sweep window has completed in 89.0 h (threshold 24.0 h) - collect_parlay_live.R run_settled_sweep()"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-07-10T01:10:22.247293+00:00",
-    "freshness_report_mtime_utc": "2026-07-10T01:07:38.851413+00:00"
+    "freshness_report_mtime_utc": "2026-07-10T01:22:27.360948+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-09T21:17:44.282147-04:00",
-      "last_write_time_utc": "2026-07-10T01:17:44.282147+00:00",
+      "last_write_time": "2026-07-09T21:26:43.244873-04:00",
+      "last_write_time_utc": "2026-07-10T01:26:43.244873+00:00",
       "size_bytes": 147218
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-09T21:17:44.407146-04:00",
-      "last_write_time_utc": "2026-07-10T01:17:44.407146+00:00",
+      "last_write_time": "2026-07-09T21:26:43.376871-04:00",
+      "last_write_time_utc": "2026-07-10T01:26:43.376871+00:00",
       "size_bytes": 157446
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-09T21:17:44.449145-04:00",
-      "last_write_time_utc": "2026-07-10T01:17:44.449145+00:00",
+      "last_write_time": "2026-07-09T21:26:43.409871-04:00",
+      "last_write_time_utc": "2026-07-10T01:26:43.409871+00:00",
       "size_bytes": 5304227
     },
     "daily_top_categories_fees.csv": {
@@ -52,13 +49,13 @@
       "size_bytes": 21705
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-09T21:17:44.460145-04:00",
-      "last_write_time_utc": "2026-07-10T01:17:44.460145+00:00",
+      "last_write_time": "2026-07-09T21:26:43.420871-04:00",
+      "last_write_time_utc": "2026-07-10T01:26:43.420871+00:00",
       "size_bytes": 2689
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-09T21:17:44.459145-04:00",
-      "last_write_time_utc": "2026-07-10T01:17:44.459145+00:00",
+      "last_write_time": "2026-07-09T21:26:43.417871-04:00",
+      "last_write_time_utc": "2026-07-10T01:26:43.417871+00:00",
       "size_bytes": 149222
     },
     "calibration_three_way.csv": {
@@ -137,9 +134,9 @@
       "size_bytes": 1551
     },
     "parlay_pnl_net.csv": {
-      "last_write_time": "2026-07-09T20:58:10.274746-04:00",
-      "last_write_time_utc": "2026-07-10T00:58:10.274746+00:00",
-      "size_bytes": 84313
+      "last_write_time": "2026-07-09T21:21:57.615296-04:00",
+      "last_write_time_utc": "2026-07-10T01:21:57.615296+00:00",
+      "size_bytes": 84312
     },
     "polymarket_categories_daily.csv": {
       "last_write_time": "2026-07-09T18:54:24.219395-04:00",
@@ -152,14 +149,14 @@
       "size_bytes": 8238
     },
     "taker_pnl_daily.csv": {
-      "last_write_time": "2026-07-09T20:58:13.731693-04:00",
-      "last_write_time_utc": "2026-07-10T00:58:13.731693+00:00",
-      "size_bytes": 108598
+      "last_write_time": "2026-07-09T21:22:02.075244-04:00",
+      "last_write_time_utc": "2026-07-10T01:22:02.075244+00:00",
+      "size_bytes": 108596
     },
     "maker_pnl_daily.csv": {
-      "last_write_time": "2026-07-09T20:58:16.507650-04:00",
-      "last_write_time_utc": "2026-07-10T00:58:16.507650+00:00",
-      "size_bytes": 10434
+      "last_write_time": "2026-07-09T21:22:05.621203-04:00",
+      "last_write_time_utc": "2026-07-10T01:22:05.621203+00:00",
+      "size_bytes": 10431
     },
     "taker_notional_daily.csv": {
       "last_write_time": "2026-07-09T19:59:49.740174-04:00",
@@ -167,39 +164,39 @@
       "size_bytes": 75522
     },
     "taker_category_summary.csv": {
-      "last_write_time": "2026-07-09T20:58:37.812320-04:00",
-      "last_write_time_utc": "2026-07-10T00:58:37.812320+00:00",
-      "size_bytes": 1083
+      "last_write_time": "2026-07-09T21:22:26.310960-04:00",
+      "last_write_time_utc": "2026-07-10T01:22:26.310960+00:00",
+      "size_bytes": 1084
     },
     "taker_category_daily.csv": {
-      "last_write_time": "2026-07-09T20:58:37.803321-04:00",
-      "last_write_time_utc": "2026-07-10T00:58:37.803321+00:00",
-      "size_bytes": 1014863
+      "last_write_time": "2026-07-09T21:22:26.301960-04:00",
+      "last_write_time_utc": "2026-07-10T01:22:26.301960+00:00",
+      "size_bytes": 1014860
     },
     "taker_sports_daily.csv": {
-      "last_write_time": "2026-07-09T20:58:56.605030-04:00",
-      "last_write_time_utc": "2026-07-10T00:58:56.605030+00:00",
-      "size_bytes": 138987
+      "last_write_time": "2026-07-09T21:22:45.955729-04:00",
+      "last_write_time_utc": "2026-07-10T01:22:45.955729+00:00",
+      "size_bytes": 138990
     },
     "taker_volume_by_ticker_daily.csv": {
-      "last_write_time": "2026-07-09T20:59:12.349787-04:00",
-      "last_write_time_utc": "2026-07-10T00:59:12.349787+00:00",
-      "size_bytes": 2465620
+      "last_write_time": "2026-07-09T21:23:01.568545-04:00",
+      "last_write_time_utc": "2026-07-10T01:23:01.568545+00:00",
+      "size_bytes": 2466864
     },
     "taker_volume_by_ticker_side_daily.csv": {
-      "last_write_time": "2026-07-09T20:59:29.896515-04:00",
-      "last_write_time_utc": "2026-07-10T00:59:29.896515+00:00",
-      "size_bytes": 4798134
+      "last_write_time": "2026-07-09T21:23:18.311347-04:00",
+      "last_write_time_utc": "2026-07-10T01:23:18.311347+00:00",
+      "size_bytes": 4800239
     },
     "taker_pnl_by_ticker_daily.csv": {
-      "last_write_time": "2026-07-09T20:59:50.487197-04:00",
-      "last_write_time_utc": "2026-07-10T00:59:50.487197+00:00",
-      "size_bytes": 3627492
+      "last_write_time": "2026-07-09T21:23:36.265133-04:00",
+      "last_write_time_utc": "2026-07-10T01:23:36.265133+00:00",
+      "size_bytes": 3629294
     },
     "taker_pnl_by_ticker_summary.csv": {
-      "last_write_time": "2026-07-09T20:59:50.514196-04:00",
-      "last_write_time_utc": "2026-07-10T00:59:50.514196+00:00",
-      "size_bytes": 111341
+      "last_write_time": "2026-07-09T21:23:36.292133-04:00",
+      "last_write_time_utc": "2026-07-10T01:23:36.292133+00:00",
+      "size_bytes": 111394
     },
     "taker_pnl_by_market_leaderboard.csv": {
       "last_write_time": "2026-07-07T02:57:11.899384-04:00",
@@ -272,13 +269,13 @@
       "size_bytes": 23151
     },
     "parlay_popular_daily.csv": {
-      "last_write_time": "2026-07-09T21:01:24.530743-04:00",
-      "last_write_time_utc": "2026-07-10T01:01:24.530743+00:00",
+      "last_write_time": "2026-07-09T21:24:55.807180-04:00",
+      "last_write_time_utc": "2026-07-10T01:24:55.807180+00:00",
       "size_bytes": 4309185
     },
     "parlay_popular_meta.csv": {
-      "last_write_time": "2026-07-09T21:01:24.049750-04:00",
-      "last_write_time_utc": "2026-07-10T01:01:24.049750+00:00",
+      "last_write_time": "2026-07-09T21:24:55.376185-04:00",
+      "last_write_time_utc": "2026-07-10T01:24:55.376185+00:00",
       "size_bytes": 7039222
     },
     "parlay_sportsmix_v2.csv": {
