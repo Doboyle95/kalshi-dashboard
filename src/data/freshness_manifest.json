@@ -1,12 +1,11 @@
 {
-  "generated_at": "2026-07-10T11:07:34.289539-04:00",
-  "generated_at_utc": "2026-07-10T15:07:34.289539+00:00",
+  "generated_at": "2026-07-10T11:18:19.054393-04:00",
+  "generated_at_utc": "2026-07-10T15:18:19.054393+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'warm-quokka' ended FAILED at 2026-07-10T06:48:28.462830+00:00 \u2014 Flow run encountered an exception: RuntimeError: leaderboard step 'load_clean_current' failed (exit -1); aborting before publish \u2014 last-good leaderboard CSVs kept.",
     "task_health: prod-metadata-refresh: last run 'lush-trout' ended FAILED at 2026-07-10T13:30:03.743380+00:00 \u2014 Flow run encountered an exception: RuntimeError: metadata_refresh preflight: insufficient disk to safely attempt a full fetch+build cycle: 69.3GB < 91.7GB -- resolve disk space before retrying (see bu",
     "task_health: prod-parlay-anatomy: last run 'elite-cormorant' ended FAILED at 2026-07-10T09:47:42.120750+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_anatomy CSV builders failed: ['parlay_anatomy_csvs']",
-    "task_health: prod-parlay-collector: last run 'melodic-swallow' ended FAILED at 2026-07-10T13:39:52.723237+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_collect exited -1",
     "task_health: prod-parlay-leg-facts-recovery: last run 'fast-jaguarundi' ended FAILED at 2026-07-10T09:01:17.427426+00:00 \u2014 Flow run failed due to timeout: StoreBusyTimeout(\"store(s) ['parlay_store'] busy >3600s\")",
     "task_health: prod-settlement-cycle: last run 'chestnut-cockle' ended FAILED at 2026-07-10T13:29:53.266780+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260710_120014): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
     "task_health: prod-volume-topup-recon: last run 'tourmaline-husky' ended FAILED at 2026-07-09T16:44:09.903811+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-07']",
@@ -29,24 +28,24 @@
     "freshness_check: STALE    calibration_three_way.csv - 276.8 h old (threshold 192 h) - weekly rebuild"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-10T14:40:06.846278+00:00",
+    "task_health_generated": "2026-07-10T15:10:03.518953+00:00",
     "freshness_report_mtime_utc": "2026-07-10T15:07:05.960919+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-10T11:07:33.567404-04:00",
-      "last_write_time_utc": "2026-07-10T15:07:33.567404+00:00",
+      "last_write_time": "2026-07-10T11:18:18.117731-04:00",
+      "last_write_time_utc": "2026-07-10T15:18:18.117731+00:00",
       "size_bytes": 147304
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-10T11:07:33.707401-04:00",
-      "last_write_time_utc": "2026-07-10T15:07:33.707401+00:00",
-      "size_bytes": 157580
+      "last_write_time": "2026-07-10T11:18:18.277731-04:00",
+      "last_write_time_utc": "2026-07-10T15:18:18.277731+00:00",
+      "size_bytes": 157581
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-10T11:07:33.734401-04:00",
-      "last_write_time_utc": "2026-07-10T15:07:33.734401+00:00",
-      "size_bytes": 5308040
+      "last_write_time": "2026-07-10T11:18:18.331731-04:00",
+      "last_write_time_utc": "2026-07-10T15:18:18.331731+00:00",
+      "size_bytes": 5308048
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-10T07:05:04.799034-04:00",
@@ -54,13 +53,13 @@
       "size_bytes": 9624595
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-10T11:07:33.746401-04:00",
-      "last_write_time_utc": "2026-07-10T15:07:33.746401+00:00",
-      "size_bytes": 4014
+      "last_write_time": "2026-07-10T11:18:18.371731-04:00",
+      "last_write_time_utc": "2026-07-10T15:18:18.371731+00:00",
+      "size_bytes": 4025
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-10T11:07:33.745401-04:00",
-      "last_write_time_utc": "2026-07-10T15:07:33.745401+00:00",
+      "last_write_time": "2026-07-10T11:18:18.346731-04:00",
+      "last_write_time_utc": "2026-07-10T15:18:18.346731+00:00",
       "size_bytes": 149651
     },
     "calibration_three_way.csv": {
@@ -264,9 +263,9 @@
       "size_bytes": 1079
     },
     "parlay_pnl_daily_by_corr_v2.csv": {
-      "last_write_time": "2026-07-10T10:43:16.634634-04:00",
-      "last_write_time_utc": "2026-07-10T14:43:16.634634+00:00",
-      "size_bytes": 45537
+      "last_write_time": "2026-07-10T11:12:32.144889-04:00",
+      "last_write_time_utc": "2026-07-10T15:12:32.144889+00:00",
+      "size_bytes": 45536
     },
     "parlay_pnl_unified_daily.csv": {
       "last_write_time": "2026-07-10T11:04:23.589976-04:00",
