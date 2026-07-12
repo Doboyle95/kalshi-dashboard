@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-12T16:09:16.200073-04:00",
-  "generated_at_utc": "2026-07-12T20:09:16.200073+00:00",
+  "generated_at": "2026-07-12T16:14:28.303457-04:00",
+  "generated_at_utc": "2026-07-12T20:14:28.303457+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-competitor-sync: last run 'vagabond-tortoise' ended FAILED at 2026-07-12T16:49:21.713061+00:00 \u2014 Flow run encountered an exception: UnfinishedRun: Run is in PENDING state, its result is not available.",
@@ -8,7 +8,6 @@
     "task_health: prod-metadata-refresh: last run 'ambrosial-leopard' ended FAILED at 2026-07-12T13:30:04.673771+00:00 \u2014 Flow run encountered an exception: RuntimeError: metadata_refresh preflight: insufficient disk to safely attempt a full fetch+build cycle: 53.0GB < 91.1GB -- resolve disk space before retrying (see bu",
     "task_health: prod-parlay-collector: last run 'ochre-cheetah' ended FAILED at 2026-07-12T18:08:00.364723+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_collect exited -2",
     "task_health: prod-parlay-leg-facts-recovery: last run 'stereotyped-woodpecker' ended FAILED at 2026-07-12T09:00:13.356510+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_leg_facts_merge failed (exit -15)",
-    "task_health: prod-settlement-cycle: last run 'spotted-scorpion' ended FAILED at 2026-07-12T19:27:48.860757+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260712_183620): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
     "task_health: prod-v3-settlement-api-backstop: last run 'steel-quail' ended FAILED at 2026-07-12T08:45:02.899936+00:00 \u2014 Flow run encountered an exception: RuntimeError: topup_settlement_dim_from_api exited -15",
     "task_health: prod-volume-topup-recon: last run 'fierce-turkey' ended FAILED at 2026-07-12T18:53:55.009768+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-11']",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 133.2 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
@@ -26,23 +25,23 @@
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-12T19:40:07.314137+00:00",
+    "task_health_generated": "2026-07-12T20:10:08.489697+00:00",
     "freshness_report_mtime_utc": "2026-07-12T20:07:05.510299+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-12T16:09:14.869317-04:00",
-      "last_write_time_utc": "2026-07-12T20:09:14.869317+00:00",
+      "last_write_time": "2026-07-12T16:14:27.292427-04:00",
+      "last_write_time_utc": "2026-07-12T20:14:27.292427+00:00",
       "size_bytes": 147489
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-12T16:09:15.124313-04:00",
-      "last_write_time_utc": "2026-07-12T20:09:15.124313+00:00",
+      "last_write_time": "2026-07-12T16:14:27.510421-04:00",
+      "last_write_time_utc": "2026-07-12T20:14:27.510421+00:00",
       "size_bytes": 157854
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-12T16:09:15.162312-04:00",
-      "last_write_time_utc": "2026-07-12T20:09:15.162312+00:00",
+      "last_write_time": "2026-07-12T16:14:27.547420-04:00",
+      "last_write_time_utc": "2026-07-12T20:14:27.547420+00:00",
       "size_bytes": 5316318
     },
     "daily_top_categories_fees.csv": {
@@ -51,13 +50,13 @@
       "size_bytes": 9636718
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-12T16:09:15.176312-04:00",
-      "last_write_time_utc": "2026-07-12T20:09:15.176312+00:00",
+      "last_write_time": "2026-07-12T16:14:27.560420-04:00",
+      "last_write_time_utc": "2026-07-12T20:14:27.560420+00:00",
       "size_bytes": 9206
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-12T16:09:15.174312-04:00",
-      "last_write_time_utc": "2026-07-12T20:09:15.174312+00:00",
+      "last_write_time": "2026-07-12T16:14:27.556420-04:00",
+      "last_write_time_utc": "2026-07-12T20:14:27.556420+00:00",
       "size_bytes": 150540
     },
     "calibration_three_way.csv": {
@@ -236,8 +235,8 @@
       "size_bytes": 2512798
     },
     "parlay_cashout_daily.csv": {
-      "last_write_time": "2026-07-12T14:38:18.835894-04:00",
-      "last_write_time_utc": "2026-07-12T18:38:18.835894+00:00",
+      "last_write_time": "2026-07-12T16:09:38.295958-04:00",
+      "last_write_time_utc": "2026-07-12T20:09:38.295958+00:00",
       "size_bytes": 26172
     },
     "parlay_corr_by_ticker_daily.csv": {
@@ -266,8 +265,8 @@
       "size_bytes": 45627
     },
     "parlay_pnl_unified_daily.csv": {
-      "last_write_time": "2026-07-12T14:38:12.957983-04:00",
-      "last_write_time_utc": "2026-07-12T18:38:12.957983+00:00",
+      "last_write_time": "2026-07-12T16:09:32.087053-04:00",
+      "last_write_time_utc": "2026-07-12T20:09:32.087053+00:00",
       "size_bytes": 23152
     },
     "parlay_popular_daily.csv": {
