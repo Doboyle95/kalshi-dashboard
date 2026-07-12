@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-12T05:16:39.850464-04:00",
-  "generated_at_utc": "2026-07-12T09:16:39.850464+00:00",
+  "generated_at": "2026-07-12T05:31:46.291559-04:00",
+  "generated_at_utc": "2026-07-12T09:31:46.291559+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-competitor-sync: last run 'placid-walrus' ended FAILED at 2026-07-12T04:49:05.615823+00:00 \u2014 Flow run encountered an exception: UnfinishedRun: Run is in PENDING state, its result is not available.",
@@ -10,40 +10,40 @@
     "task_health: prod-recheck-stale-settlements: last run 'foamy-labradoodle' ended FAILED at 2026-07-11T15:28:02.062515+00:00 \u2014 Flow run encountered an exception: RuntimeError: R/upsert_metadata_to_duckdb.R exited 1; stderr tail: dbConnect_retry: market_metadata.duckdb blocked on try 1/5 (lock contention); sleeping 30s\ndbConne",
     "task_health: prod-settlement-cycle: last run 'amiable-ibex' ended FAILED at 2026-07-12T08:00:36.135459+00:00 \u2014 Flow run encountered an exception: RuntimeError: Metadata preflight FAILED: marker is 56.8h old (max 18h) \u2014 metadata_refresh flow may have stopped running. Run metadata_refresh_flow before retrying se",
     "task_health: prod-v3-settlement-api-backstop: last run 'steel-quail' ended FAILED at 2026-07-12T08:45:02.899936+00:00 \u2014 Flow run encountered an exception: RuntimeError: topup_settlement_dim_from_api exited -15",
-    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 122.2 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
-    "freshness_check: STALE    taker_notional_daily.csv - 57.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    trade_size_daily.csv - 10.3 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    market_leaderboard.csv - 57.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    category_leaderboard.csv - 57.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    large_trades.csv - 57.2 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 122.4 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
+    "freshness_check: STALE    taker_notional_daily.csv - 57.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    trade_size_daily.csv - 10.5 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    market_leaderboard.csv - 57.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    category_leaderboard.csv - 57.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    large_trades.csv - 57.4 h old (threshold 6 h) - settlement (~4 hr)",
     "freshness_check: GAP      rothera_categories_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      rothera_sports_split_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      dkex_market_daily.csv - 12 missing day(s) in last 60d: 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
-    "freshness_check: STALE    rh_weekly_estimates.csv - 474.8 h old (threshold 336 h) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: STALE    rh_weekly_estimates.csv - 475.0 h old (threshold 336 h) - RH estimates (weekly; manual FCM input)",
     "freshness_check: STALE_TAIL rh_weekly_estimates.csv - newest data row 2026-04-20 is 83d behind today (allowance 21d) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP      polymarket_categories_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13",
-    "freshness_check: STALE    calibration_three_way.csv - 318.8 h old (threshold 192 h) - weekly rebuild"
+    "freshness_check: STALE    calibration_three_way.csv - 319.1 h old (threshold 192 h) - weekly rebuild"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-07-12T09:10:14.076919+00:00",
-    "freshness_report_mtime_utc": "2026-07-12T09:07:04.367725+00:00"
+    "freshness_report_mtime_utc": "2026-07-12T09:22:05.839057+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-12T05:16:39.063316-04:00",
-      "last_write_time_utc": "2026-07-12T09:16:39.063316+00:00",
-      "size_bytes": 147484
+      "last_write_time": "2026-07-12T05:31:45.016855-04:00",
+      "last_write_time_utc": "2026-07-12T09:31:45.016855+00:00",
+      "size_bytes": 147481
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-12T05:16:39.173314-04:00",
-      "last_write_time_utc": "2026-07-12T09:16:39.173314+00:00",
-      "size_bytes": 157848
+      "last_write_time": "2026-07-12T05:31:45.256851-04:00",
+      "last_write_time_utc": "2026-07-12T09:31:45.256851+00:00",
+      "size_bytes": 157856
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-12T05:16:39.199313-04:00",
-      "last_write_time_utc": "2026-07-12T09:16:39.199313+00:00",
-      "size_bytes": 5315997
+      "last_write_time": "2026-07-12T05:31:45.314850-04:00",
+      "last_write_time_utc": "2026-07-12T09:31:45.314850+00:00",
+      "size_bytes": 5316003
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-11T07:04:47.647554-04:00",
@@ -51,14 +51,14 @@
       "size_bytes": 9630651
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-12T05:16:39.210313-04:00",
-      "last_write_time_utc": "2026-07-12T09:16:39.210313+00:00",
-      "size_bytes": 8146
+      "last_write_time": "2026-07-12T05:31:45.329850-04:00",
+      "last_write_time_utc": "2026-07-12T09:31:45.329850+00:00",
+      "size_bytes": 8148
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-12T05:16:39.209313-04:00",
-      "last_write_time_utc": "2026-07-12T09:16:39.209313+00:00",
-      "size_bytes": 150526
+      "last_write_time": "2026-07-12T05:31:45.327850-04:00",
+      "last_write_time_utc": "2026-07-12T09:31:45.327850+00:00",
+      "size_bytes": 150527
     },
     "calibration_three_way.csv": {
       "last_write_time": "2026-06-28T22:16:43.068994-04:00",
