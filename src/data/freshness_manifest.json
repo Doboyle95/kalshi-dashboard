@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-07-12T02:07:41.146174-04:00",
-  "generated_at_utc": "2026-07-12T06:07:41.146174+00:00",
+  "generated_at": "2026-07-12T02:10:07.666412-04:00",
+  "generated_at_utc": "2026-07-12T06:10:07.666412+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-competitor-sync: last run 'placid-walrus' ended FAILED at 2026-07-12T04:49:05.615823+00:00 \u2014 Flow run encountered an exception: UnfinishedRun: Run is in PENDING state, its result is not available.",
     "task_health: prod-leaderboard-refresh: last run 'hilarious-hound' ended FAILED at 2026-07-11T06:50:49.713379+00:00 \u2014 Flow run encountered an exception: RuntimeError: leaderboard step 'load_clean_current' failed (exit -1); aborting before publish \u2014 last-good leaderboard CSVs kept.",
     "task_health: prod-parlay-compact: last run 'copper-porcupine' ended FAILED at 2026-07-12T04:27:13.617844+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_compact genuine failure (exit 75)",
     "task_health: prod-parlay-leg-facts-recovery: last run 'analytic-quokka' ended FAILED at 2026-07-11T09:43:57.294702+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_leg_facts_fetch failed (exit -15)",
+    "task_health: prod-parlay-partitioner: last run 'proud-degu' ended FAILED at 2026-07-12T06:09:16.205314+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_partition exited -15",
     "task_health: prod-recheck-stale-settlements: last run 'foamy-labradoodle' ended FAILED at 2026-07-11T15:28:02.062515+00:00 \u2014 Flow run encountered an exception: RuntimeError: R/upsert_metadata_to_duckdb.R exited 1; stderr tail: dbConnect_retry: market_metadata.duckdb blocked on try 1/5 (lock contention); sleeping 30s\ndbConne",
     "task_health: prod-settlement-cycle: last run 'burgundy-otter' ended FAILED at 2026-07-12T00:00:11.169511+00:00 \u2014 Flow run encountered an exception: RuntimeError: Metadata preflight FAILED: marker is 48.8h old (max 18h) \u2014 metadata_refresh flow may have stopped running. Run metadata_refresh_flow before retrying se",
-    "task_health: prod-trade-collector: last run 'happy-jellyfish' ended FAILED at 2026-07-12T04:49:29.040982+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: Using libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018package:util",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 119.2 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: STALE    taker_notional_daily.csv - 54.1 h old (threshold 6 h) - settlement (~4 hr)",
     "freshness_check: STALE    trade_size_daily.csv - 7.3 h old (threshold 6 h) - settlement (~4 hr)",
@@ -27,24 +27,24 @@
     "freshness_check: STALL    v3_settle_mode1_last_complete - no fully-complete Mode 1 settlement cycle in 7.1 h (threshold 6.0 h) - collect_settled_markets_v3.py --mode 1; dirty_tickers for settled_ticker_pnl/maker_pnl/parlay_pnl may be starving"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-12T05:40:14.359578+00:00",
+    "task_health_generated": "2026-07-12T06:10:05.514272+00:00",
     "freshness_report_mtime_utc": "2026-07-12T06:07:06.455431+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-12T02:07:40.382906-04:00",
-      "last_write_time_utc": "2026-07-12T06:07:40.382906+00:00",
+      "last_write_time": "2026-07-12T02:10:06.654649-04:00",
+      "last_write_time_utc": "2026-07-12T06:10:06.654649+00:00",
       "size_bytes": 147485
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-12T02:07:40.596903-04:00",
-      "last_write_time_utc": "2026-07-12T06:07:40.596903+00:00",
+      "last_write_time": "2026-07-12T02:10:07.017643-04:00",
+      "last_write_time_utc": "2026-07-12T06:10:07.017643+00:00",
       "size_bytes": 157854
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-12T02:07:40.642902-04:00",
-      "last_write_time_utc": "2026-07-12T06:07:40.642902+00:00",
-      "size_bytes": 5315868
+      "last_write_time": "2026-07-12T02:10:07.060642-04:00",
+      "last_write_time_utc": "2026-07-12T06:10:07.060642+00:00",
+      "size_bytes": 5315869
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-11T07:04:47.647554-04:00",
@@ -52,13 +52,13 @@
       "size_bytes": 9630651
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-12T02:07:40.650902-04:00",
-      "last_write_time_utc": "2026-07-12T06:07:40.650902+00:00",
-      "size_bytes": 7864
+      "last_write_time": "2026-07-12T02:10:07.075642-04:00",
+      "last_write_time_utc": "2026-07-12T06:10:07.075642+00:00",
+      "size_bytes": 7865
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-12T02:07:40.649902-04:00",
-      "last_write_time_utc": "2026-07-12T06:07:40.649902+00:00",
+      "last_write_time": "2026-07-12T02:10:07.074642-04:00",
+      "last_write_time_utc": "2026-07-12T06:10:07.074642+00:00",
       "size_bytes": 150522
     },
     "calibration_three_way.csv": {
@@ -272,13 +272,13 @@
       "size_bytes": 23152
     },
     "parlay_popular_daily.csv": {
-      "last_write_time": "2026-07-11T23:30:56.189328-04:00",
-      "last_write_time_utc": "2026-07-12T03:30:56.189328+00:00",
+      "last_write_time": "2026-07-12T02:09:47.048951-04:00",
+      "last_write_time_utc": "2026-07-12T06:09:47.048951+00:00",
       "size_bytes": 4309185
     },
     "parlay_popular_meta.csv": {
-      "last_write_time": "2026-07-11T23:30:55.780335-04:00",
-      "last_write_time_utc": "2026-07-12T03:30:55.780335+00:00",
+      "last_write_time": "2026-07-12T02:09:46.663957-04:00",
+      "last_write_time_utc": "2026-07-12T06:09:46.663957+00:00",
       "size_bytes": 7019231
     },
     "parlay_sportsmix_v2.csv": {
