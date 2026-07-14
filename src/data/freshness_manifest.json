@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-14T00:08:38.391764-04:00",
-  "generated_at_utc": "2026-07-14T04:08:38.391764+00:00",
+  "generated_at": "2026-07-14T00:11:38.767818-04:00",
+  "generated_at_utc": "2026-07-14T04:11:38.767818+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'righteous-binturong' ended FAILED at 2026-07-13T06:15:37.014353+00:00 \u2014 Flow run encountered an exception: RuntimeError: leaderboard step 'update_market_volume_duckdb' failed (exit -15); aborting before publish \u2014 last-good leaderboard CSVs kept.",
     "task_health: prod-metadata-refresh: last run 'olivine-duck' ended FAILED at 2026-07-13T21:30:12.299099+00:00 \u2014 Flow run encountered an exception: RuntimeError: metadata_refresh preflight: insufficient disk to safely attempt a full fetch+build cycle: 45.6GB < 91.2GB -- resolve disk space before retrying (see bu",
-    "task_health: prod-settlement-cycle: last run 'purple-turkey' ended FAILED at 2026-07-14T00:45:38.343198+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260714_000006): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
-    "task_health: prod-v3-pnl-cycle: last run 'uber-okapi' ended FAILED at 2026-07-14T03:25:34.313770+00:00 \u2014 Flow run encountered an exception: RuntimeError: v3_pnl_cycle: materializer(s) failed ['v3_materialize_settled_ticker_pnl', 'v3_materialize_maker_pnl', 'v3_materialize_parlay_pnl']; export held (fail-",
+    "task_health: prod-settlement-cycle: last run 'unbiased-hound' ended FAILED at 2026-07-14T04:00:11.338600+00:00 \u2014 Flow run encountered an exception: RuntimeError: Metadata preflight FAILED: marker is 20.4h old (max 18h) \u2014 metadata_refresh flow may have stopped running. Run metadata_refresh_flow before retrying se",
+    "task_health: prod-trade-collector: last run 'pragmatic-pillbug' ended FAILED at 2026-07-14T04:09:48.474558+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
     "task_health: prod-volume-topup-recon: last run 'accurate-skua' ended FAILED at 2026-07-13T16:12:47.225154+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-12']",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 165.2 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: STALE    market_leaderboard.csv - 27.1 h old (threshold 6 h) - settlement (~4 hr)",
@@ -21,24 +21,24 @@
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-14T03:40:08.606055+00:00",
+    "task_health_generated": "2026-07-14T04:10:08.262819+00:00",
     "freshness_report_mtime_utc": "2026-07-14T04:07:05.703257+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-14T00:08:37.852858-04:00",
-      "last_write_time_utc": "2026-07-14T04:08:37.852858+00:00",
+      "last_write_time": "2026-07-14T00:11:38.138121-04:00",
+      "last_write_time_utc": "2026-07-14T04:11:38.138121+00:00",
       "size_bytes": 147652
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-14T00:08:37.997856-04:00",
-      "last_write_time_utc": "2026-07-14T04:08:37.997856+00:00",
-      "size_bytes": 158109
+      "last_write_time": "2026-07-14T00:11:38.257119-04:00",
+      "last_write_time_utc": "2026-07-14T04:11:38.257119+00:00",
+      "size_bytes": 158113
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-14T00:08:38.046855-04:00",
-      "last_write_time_utc": "2026-07-14T04:08:38.046855+00:00",
-      "size_bytes": 5323497
+      "last_write_time": "2026-07-14T00:11:38.309119-04:00",
+      "last_write_time_utc": "2026-07-14T04:11:38.309119+00:00",
+      "size_bytes": 5323536
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-13T07:03:54.941571-04:00",
@@ -46,14 +46,14 @@
       "size_bytes": 7764684
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-14T00:08:38.056855-04:00",
-      "last_write_time_utc": "2026-07-14T04:08:38.056855+00:00",
-      "size_bytes": 12291
+      "last_write_time": "2026-07-14T00:11:38.318119-04:00",
+      "last_write_time_utc": "2026-07-14T04:11:38.318119+00:00",
+      "size_bytes": 12293
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-14T00:08:38.055855-04:00",
-      "last_write_time_utc": "2026-07-14T04:08:38.055855+00:00",
-      "size_bytes": 151114
+      "last_write_time": "2026-07-14T00:11:38.317119-04:00",
+      "last_write_time_utc": "2026-07-14T04:11:38.317119+00:00",
+      "size_bytes": 151141
     },
     "calibration_three_way.csv": {
       "last_write_time": "2026-07-12T07:25:05.786868-04:00",
