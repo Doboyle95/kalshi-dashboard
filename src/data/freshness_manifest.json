@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-16T13:37:18.658882-04:00",
-  "generated_at_utc": "2026-07-16T17:37:18.658882+00:00",
+  "generated_at": "2026-07-16T13:47:51.545153-04:00",
+  "generated_at_utc": "2026-07-16T17:47:51.545153+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'masterful-taipan' ended FAILED at 2026-07-16T06:11:11.854160+00:00 \u2014 Flow run encountered an exception: RuntimeError: leaderboard step 'build_category_leaderboard' failed (exit 1); aborting before publish \u2014 last-good leaderboard CSVs kept.",
-    "task_health: prod-settlement-cycle: last run 'urban-scorpion' ended FAILED at 2026-07-16T12:22:44.897170+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260716_120000): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
-    "task_health: prod-volume-topup-recon: last run 'ruddy-seagull' ended FAILED at 2026-07-15T18:24:23.536385+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-14', 'topup_trades_2026-07-13']",
+    "task_health: prod-parlay-partitioner: last run 'magenta-ibex' ended FAILED at 2026-07-16T17:32:06.659336+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_partition exited -2",
+    "task_health: prod-v3-pnl-cycle: last run 'provocative-hawk' ended FAILED at 2026-07-16T17:37:14.065981+00:00 \u2014 Flow run encountered an exception: RuntimeError: v3_pnl_cycle: materializer(s) failed ['v3_materialize_parlay_pnl']; export held (fail-closed).",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 226.7 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: GAP      rothera_categories_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      rothera_sports_split_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
@@ -16,24 +16,24 @@
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-16T17:10:01.998949+00:00",
+    "task_health_generated": "2026-07-16T17:40:01.641861+00:00",
     "freshness_report_mtime_utc": "2026-07-16T17:37:01.621787+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-16T13:37:18.073461-04:00",
-      "last_write_time_utc": "2026-07-16T17:37:18.073461+00:00",
-      "size_bytes": 147843
+      "last_write_time": "2026-07-16T13:47:50.905926-04:00",
+      "last_write_time_utc": "2026-07-16T17:47:50.905926+00:00",
+      "size_bytes": 147848
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-16T13:37:18.141460-04:00",
-      "last_write_time_utc": "2026-07-16T17:37:18.141460+00:00",
-      "size_bytes": 158422
+      "last_write_time": "2026-07-16T13:47:50.973925-04:00",
+      "last_write_time_utc": "2026-07-16T17:47:50.973925+00:00",
+      "size_bytes": 158416
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-16T13:37:18.154460-04:00",
-      "last_write_time_utc": "2026-07-16T17:37:18.154460+00:00",
-      "size_bytes": 5332778
+      "last_write_time": "2026-07-16T13:47:50.987924-04:00",
+      "last_write_time_utc": "2026-07-16T17:47:50.987924+00:00",
+      "size_bytes": 5332794
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-16T07:00:56.446347-04:00",
@@ -41,13 +41,13 @@
       "size_bytes": 7762899
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-16T13:37:18.159460-04:00",
-      "last_write_time_utc": "2026-07-16T17:37:18.159460+00:00",
-      "size_bytes": 18062
+      "last_write_time": "2026-07-16T13:47:50.993924-04:00",
+      "last_write_time_utc": "2026-07-16T17:47:50.993924+00:00",
+      "size_bytes": 18066
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-16T13:37:18.158460-04:00",
-      "last_write_time_utc": "2026-07-16T17:37:18.158460+00:00",
+      "last_write_time": "2026-07-16T13:47:50.992924-04:00",
+      "last_write_time_utc": "2026-07-16T17:47:50.992924+00:00",
       "size_bytes": 151939
     },
     "calibration_three_way.csv": {
