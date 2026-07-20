@@ -1,9 +1,10 @@
 {
-  "generated_at": "2026-07-20T00:40:03.013008-04:00",
-  "generated_at_utc": "2026-07-20T04:40:03.013008+00:00",
+  "generated_at": "2026-07-20T00:43:25.506887-04:00",
+  "generated_at_utc": "2026-07-20T04:43:25.506887+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-rolling-archive-raw-api: last run 'ambitious-gecko' ended FAILED at 2026-07-19T10:46:20.485629+00:00 \u2014 Flow run encountered an exception: RuntimeError: rolling_archive_lifecycle (raw_api) exited 4: [2026-07-19 06:38:47] EXECUTE start: 1461 matched files, cutoff=2022-07-20 (retention=1460d), 1 candidate",
+    "task_health: prod-trade-collector: last run 'tactful-boobook' ended FAILED at 2026-07-20T04:37:17.048008+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
     "task_health: prod-v3-settlement-api-backstop: last run 'marble-basilisk' ended FAILED at 2026-07-19T08:38:29.778530+00:00 \u2014 Flow run encountered an exception: RuntimeError: topup_settlement_dim_from_api exited 1",
     "task_health: prod-volume-topup-recon: last run 'orange-starfish' ended FAILED at 2026-07-19T17:39:13.479970+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-17']",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 43.0 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
@@ -25,24 +26,24 @@
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-20T04:10:31.553265+00:00",
+    "task_health_generated": "2026-07-20T04:40:10.440700+00:00",
     "freshness_report_mtime_utc": "2026-07-20T04:37:14.082233+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-20T00:40:02.639867-04:00",
-      "last_write_time_utc": "2026-07-20T04:40:02.639867+00:00",
+      "last_write_time": "2026-07-20T00:43:25.151819-04:00",
+      "last_write_time_utc": "2026-07-20T04:43:25.151819+00:00",
       "size_bytes": 148218
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-20T00:40:02.728865-04:00",
-      "last_write_time_utc": "2026-07-20T04:40:02.728865+00:00",
-      "size_bytes": 158972
+      "last_write_time": "2026-07-20T00:43:25.219817-04:00",
+      "last_write_time_utc": "2026-07-20T04:43:25.219817+00:00",
+      "size_bytes": 158974
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-20T00:40:02.743865-04:00",
-      "last_write_time_utc": "2026-07-20T04:40:02.743865+00:00",
-      "size_bytes": 5348671
+      "last_write_time": "2026-07-20T00:43:25.234817-04:00",
+      "last_write_time_utc": "2026-07-20T04:43:25.234817+00:00",
+      "size_bytes": 5348683
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-19T07:00:58.481665-04:00",
@@ -50,14 +51,14 @@
       "size_bytes": 7771291
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-20T00:40:02.749865-04:00",
-      "last_write_time_utc": "2026-07-20T04:40:02.749865+00:00",
+      "last_write_time": "2026-07-20T00:43:25.241817-04:00",
+      "last_write_time_utc": "2026-07-20T04:43:25.241817+00:00",
       "size_bytes": 26200
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-20T00:40:02.749865-04:00",
-      "last_write_time_utc": "2026-07-20T04:40:02.749865+00:00",
-      "size_bytes": 153669
+      "last_write_time": "2026-07-20T00:43:25.240817-04:00",
+      "last_write_time_utc": "2026-07-20T04:43:25.240817+00:00",
+      "size_bytes": 153670
     },
     "calibration_three_way.csv": {
       "last_write_time": "2026-07-19T06:50:46.975679-04:00",
