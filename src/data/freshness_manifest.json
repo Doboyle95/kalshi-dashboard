@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-20T21:42:54.700044-04:00",
-  "generated_at_utc": "2026-07-21T01:42:54.700044+00:00",
+  "generated_at": "2026-07-20T21:59:09.048124-04:00",
+  "generated_at_utc": "2026-07-21T01:59:09.048124+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-metadata-refresh: last run 'mighty-hornet' ended FAILED at 2026-07-21T00:35:03.551026+00:00 \u2014 Flow run encountered an exception: ConcurrencySlotAcquisitionError: Unable to acquire concurrency slots on ['kalshi-heavy-duckdb']",
@@ -8,48 +8,48 @@
     "task_health: prod-parlay-compact: last run 'celestial-pudu' ended FAILED at 2026-07-20T22:34:52.373292+00:00 \u2014 Flow run encountered an exception: ConcurrencySlotAcquisitionError: Unable to acquire concurrency slots on ['kalshi-heavy-duckdb']",
     "task_health: prod-settlement-cycle: last run 'mindful-peacock' ended FAILED at 2026-07-21T01:09:09.174346+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260721_000004): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
     "task_health: prod-volume-topup-recon: last run 'infrared-chachalaca' ended CRASHED at 2026-07-20T16:34:03.535747+00:00 \u2014 sweep_zombie_runs: infrastructure_pid 1616376 is dead (worker restart orphan); crashed to free pool capacity and concurrency slots.",
-    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 64.0 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
-    "freshness_check: STALE    taker_notional_daily.csv - 9.2 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    market_leaderboard.csv - 9.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    category_leaderboard.csv - 9.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    large_trades.csv - 9.2 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    parlay_volume_by_type_daily.csv - 123.8 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 64.2 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
+    "freshness_check: STALE    taker_notional_daily.csv - 9.5 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    market_leaderboard.csv - 9.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    category_leaderboard.csv - 9.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    large_trades.csv - 9.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    parlay_volume_by_type_daily.csv - 124.1 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
     "freshness_check: STALE_TAIL parlay_volume_by_type_daily.csv - newest data row 2026-07-15 is 5d behind today (allowance 4d) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_corr_by_ticker_daily.csv - 123.8 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_corr_by_ticker_daily.csv - 124.1 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
     "freshness_check: STALE_TAIL parlay_corr_by_ticker_daily.csv - newest data row 2026-07-15 is 5d behind today (allowance 4d) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_house_edge_by_legs.csv - 123.9 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_legs_over_time.csv - 123.9 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_mispricing_by_correlation.csv - 123.9 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_top_games_by_volume.csv - 123.9 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
-    "freshness_check: STALE    parlay_sportsmix_v2.csv - 123.9 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_house_edge_by_legs.csv - 124.2 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_legs_over_time.csv - 124.2 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_mispricing_by_correlation.csv - 124.1 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_top_games_by_volume.csv - 124.1 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
+    "freshness_check: STALE    parlay_sportsmix_v2.csv - 124.1 h old (threshold 36 h) - parlay anatomy (daily 03:00)",
     "freshness_check: GAP      rothera_categories_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      rothera_sports_split_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      dkex_market_daily.csv - 12 missing day(s) in last 60d: 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
-    "freshness_check: STALE    rh_weekly_estimates.csv - 683.3 h old (threshold 336 h) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: STALE    rh_weekly_estimates.csv - 683.5 h old (threshold 336 h) - RH estimates (weekly; manual FCM input)",
     "freshness_check: STALE_TAIL rh_weekly_estimates.csv - newest data row 2026-04-20 is 91d behind today (allowance 21d) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP      polymarket_categories_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP      polymarket_sports_split_daily.csv - 3 missing day(s) in last 60d: 2026-06-11, 2026-06-12, 2026-06-13",
-    "freshness_check: STALE    volume_reconciliation_daily.csv - 32.0 h old (threshold 30 h) - volume reconciliation (daily 11:30 ET)"
+    "freshness_check: STALE    volume_reconciliation_daily.csv - 32.2 h old (threshold 30 h) - volume reconciliation (daily 11:30 ET)"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-07-21T01:40:25.493487+00:00",
-    "freshness_report_mtime_utc": "2026-07-21T01:37:09.649581+00:00"
+    "freshness_report_mtime_utc": "2026-07-21T01:52:03.355226+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-20T21:42:53.783565-04:00",
-      "last_write_time_utc": "2026-07-21T01:42:53.783565+00:00",
-      "size_bytes": 148225
+      "last_write_time": "2026-07-20T21:59:07.765430-04:00",
+      "last_write_time_utc": "2026-07-21T01:59:07.765430+00:00",
+      "size_bytes": 148230
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-20T21:42:53.978561-04:00",
-      "last_write_time_utc": "2026-07-21T01:42:53.978561+00:00",
+      "last_write_time": "2026-07-20T21:59:07.915428-04:00",
+      "last_write_time_utc": "2026-07-21T01:59:07.915428+00:00",
       "size_bytes": 158973
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-20T21:42:54.194556-04:00",
-      "last_write_time_utc": "2026-07-21T01:42:54.194556+00:00",
-      "size_bytes": 5349629
+      "last_write_time": "2026-07-20T21:59:08.035426-04:00",
+      "last_write_time_utc": "2026-07-21T01:59:08.035426+00:00",
+      "size_bytes": 5349638
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-20T07:03:08.445740-04:00",
@@ -57,13 +57,13 @@
       "size_bytes": 7767403
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-20T21:42:54.201556-04:00",
-      "last_write_time_utc": "2026-07-21T01:42:54.201556+00:00",
-      "size_bytes": 28223
+      "last_write_time": "2026-07-20T21:59:08.065426-04:00",
+      "last_write_time_utc": "2026-07-21T01:59:08.065426+00:00",
+      "size_bytes": 28228
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-20T21:42:54.200556-04:00",
-      "last_write_time_utc": "2026-07-21T01:42:54.200556+00:00",
+      "last_write_time": "2026-07-20T21:59:08.061426-04:00",
+      "last_write_time_utc": "2026-07-21T01:59:08.061426+00:00",
       "size_bytes": 153697
     },
     "calibration_three_way.csv": {
