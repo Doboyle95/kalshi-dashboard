@@ -162,7 +162,8 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXTHEOPEN") || ticker.startsWith("KXLIVTOUR") ||
            ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
            ticker.startsWith("KXRYDER") || ticker.startsWith("KXTGL") ||
-           ticker.startsWith("KXGENESISINVITATIONAL"))                          cat = "Golf";
+           ticker.startsWith("KXGENESISINVITATIONAL") ||
+           ticker.startsWith("KXKFTOUR"))                                       cat = "Golf";
   else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
            ticker.startsWith("KXITF") || ticker.startsWith("KXUSO") ||
            ticker.startsWith("KXFOMEN") || ticker.startsWith("KXFOWOMEN") ||
@@ -223,10 +224,22 @@ function classifyTreemapTicker(ticker, isSports) {
             !ticker.includes("SONG") && !ticker.startsWith("KXWCPRICE") &&
             !ticker.startsWith("KXWCVIEWERSHIP") && !ticker.startsWith("KXWCOC") &&
             !ticker.startsWith("KXWCCAREERGOALS")) ||
-           ticker.startsWith("KXPLAYWC"))                                       cat = "Soccer";
+           ticker.startsWith("KXPLAYWC") ||
+           // 2026-07-22: more leagues found sitting in the "Other Sports" residual
+           // (verified against category_leaderboard.csv, all grp=Sports already,
+           // no non-soccer collisions): USL (US second division), Allsvenskan
+           // (Sweden), Eliteserien (Norway), Indian Super League, UAE Pro League,
+           // Peru's Liga 1.
+           ticker.startsWith("KXUSL") || ticker.startsWith("KXALLSVENSKAN") ||
+           ticker.startsWith("KXELITESERIEN") || ticker.startsWith("KXISL") ||
+           ticker.startsWith("KXUAEPL") || ticker.startsWith("KXPERLIGA1"))      cat = "Soccer";
   else if (ticker.startsWith("KXIPL") || ticker.startsWith("KXT20") ||
            ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
-           ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
+           ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL") ||
+           // 2026-07-22: ODI, Women's T20I, and Test match format tickers were
+           // unmatched (~180M contracts sitting in Other Sports).
+           ticker.startsWith("KXODI") || ticker.startsWith("KXWT20") ||
+           ticker.startsWith("KXTESTMATCH"))                                   cat = "Cricket";
   else if (ticker.startsWith("KXUFC") || ticker.startsWith("KXBOXING") ||
            ticker.startsWith("KXMMA"))                                          cat = "Combat Sports";
   else if (ticker.startsWith("KXCS2") || ticker.startsWith("KXLOL") ||
