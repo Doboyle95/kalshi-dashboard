@@ -473,7 +473,7 @@ Plot.plot({
 
 ## The most popular parlays
 
-_The 30 most-**traded** parlay tickets in the window you pick below — still ranked by number of trades, with each ticket's **Contracts** (yes-side volume) alongside. **Avg price** is the volume-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
+_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. **Volume** is total contracts traded on the ticket, both sides — at Kalshi's \$1-per-contract convention the dollar figure is the same number. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
 
 ```js
 const popDmin = d3.min(popDailyRaw, d => d.date);
@@ -492,11 +492,12 @@ const popAgg = d3.rollup(
   popDailyRaw.filter(d => d.date >= popFrom && d.date <= popTo),
   v => ({trades: d3.sum(v, d => d.trades),
          yc: d3.sum(v, d => d.yes_contracts),
-         yn: d3.sum(v, d => d.yes_notional)}),
+         yn: d3.sum(v, d => d.yes_notional),
+         ct: d3.sum(v, d => d.contracts_total)}),
   d => d.pid);
 const popTop = Array.from(popAgg, ([pid, a]) => {
   const m = popMetaById.get(pid) ?? {};
-  return {trades: a.trades, yc: a.yc,
+  return {trades: a.trades, ct: a.ct, yn: a.yn,
           avg_c: a.yc > 0 ? 100 * a.yn / a.yc : null,
           n_legs: m.n_legs, result: m.result, family: m.family,
           label: String(m.label ?? "").trim(), ticker: String(m.ticker ?? "")};
@@ -524,7 +525,8 @@ html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin
     <th style="padding:5px 6px;">Parlay</th>
     <th style="padding:5px 6px;text-align:right;width:46px;">Legs</th>
     <th style="padding:5px 6px;text-align:right;width:66px;">Trades</th>
-    <th style="padding:5px 6px;text-align:right;width:78px;" title="Yes-side contracts traded on this parlay over the selected range (volume in contracts, Kalshi convention)">Contracts</th>
+    <th style="padding:5px 6px;text-align:right;width:118px;">Volume</th>
+    <th style="padding:5px 6px;text-align:right;width:88px;">Taker stakes</th>
     <th style="padding:5px 6px;text-align:right;width:74px;">Avg price</th>
     <th style="padding:5px 6px;width:72px;">Result</th>
   </tr></thead>
@@ -533,7 +535,8 @@ html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin
     <td style="padding:5px 6px;" title=${d.label}><span style="display:inline-block;font-size:11px;color:#3b82a0;background:rgba(59,130,160,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">${d.family}</span>${popLabel(d)}</td>
     <td style="padding:5px 6px;text-align:right;">${popLegs(d)}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.trades.toLocaleString()}</td>
-    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${fmtCount(d.yc)}</td>
+    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.ct > 0 ? html`${d.ct.toLocaleString()} <span style="color:var(--theme-foreground-muted,#888);">($${fmtCount(d.ct)})</span>` : "—"}</td>
+    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${fmtUSD(d.yn)}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${popFmtPrice(d.avg_c)}</td>
     <td style="padding:5px 6px;">${popResult(d.result)}</td>
   </tr>`)}</tbody>
