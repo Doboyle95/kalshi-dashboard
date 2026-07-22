@@ -356,7 +356,7 @@ if (!hourlyToday.length) {
 
 ## Typical trading week
 
-<p class="section-intro">Not one day's snapshot, but the average across many — when during the week Kalshi actually trades. Each cell is that hour's average across every matching day-of-week in the selected window (partial in-progress hours excluded).</p>
+<p class="section-intro">Not one day's snapshot, but the average across many — when during the week Kalshi actually trades. Each bar is that hour's average across every matching day-of-week in the selected window (partial in-progress hours excluded).</p>
 
 ```js
 const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -422,6 +422,18 @@ for (let dow = 0; dow < 7; dow++) {
 const weeklyFmtValue = v => weeklyMetric === "Taker-side $" ? fmtUSD(v) : fmtCount(v);
 const busiestCell = weeklyCells.reduce((best, d) => (d.avg > best.avg ? d : best), weeklyCells[0]);
 const weeklyDaysCovered = new Set(weeklyRows.map(d => +d.date)).size;
+
+// Today's day-of-week gets highlighted in the chart below, plus an overlay
+// of today's actual hourly values (same metric/segment as the historical
+// bars) so readers can compare today so far against the typical pattern for
+// this day, not just see it labeled.
+const todayDowLabel = DOW_LABELS[weeklyLatest.getUTCDay()];
+const todayOverlayPoints = hourlyToday.map(d => ({
+  hour_et: d.hour_et,
+  dow_label: todayDowLabel,
+  value: weeklyMetricValue(d, weeklyMetric, weeklySegment),
+  partial: isPartialHour(d)
+}));
 ```
 
 <div class="chart-note">${weeklyDaysCovered.toLocaleString()} days of history in this window (${fmtDate(weeklyRows.length ? d3.min(weeklyRows, d => d.date) : null)} to ${fmtDate(weeklyLatest)}). Busiest slot: <strong>${busiestCell.dow_label} ${fmtHour12(busiestCell.hour_et)} ET</strong>, averaging ${weeklyFmtValue(busiestCell.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour (${weeklySegment.toLowerCase()}).</div>
@@ -429,26 +441,60 @@ const weeklyDaysCovered = new Set(weeklyRows.map(d => +d.date)).size;
 <div class="plot-shell">
 
 ```js
+const weeklyBarColor = weeklySegment === "Combined" ? "#00786a" : groupColors[weeklySegment];
+// Warm amber, not the dashboard's purple secondary accent -- every segment
+// color here (teal/blue/green) sits on the cool half of the wheel, and
+// purple was only ~30 degrees from the Non-sports blue (too low-contrast
+// against it); amber sits 90-170 degrees from all four, so it stays legible
+// no matter which segment is selected.
+const TODAY_ACCENT = "#d97706";
+// Today's bars get a version of the same segment color blended toward the
+// accent (rather than an unrelated color) so today's row still visually
+// belongs to the same segment as every other row, just clearly marked.
+const TODAY_BAR_BLEND = {"Combined": "#41784c", "Non-sports": "#8186a9", "Sports": "#538d2f", "Parlay": "#92ad54"};
+const todayBarColor = TODAY_BAR_BLEND[weeklySegment];
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
-  height: 280,
-  marginLeft: 60,
-  marginRight: 16,
-  x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
-  y: {type: "band", domain: DOW_LABELS, label: null},
-  color: {type: "sequential", range: ["#eafaf7", "#00786a"], legend: true,
-          label: weeklyMetric === "Taker-side $" ? "Avg $/hour" : `Avg ${weeklyMetric.toLowerCase()}/hour`},
+  height: 600,
+  marginLeft: 54,
+  marginRight: 56,
+  facet: {data: weeklyCells, y: "dow_label"},
+  fy: {domain: DOW_LABELS, label: null, tickFormat: d => d === todayDowLabel ? `${d} · Today` : d},
+  x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, ticks: [0, 6, 12, 18], label: "Hour (Eastern Time)"},
+  y: {grid: true, ticks: 3, label: weeklyMetric === "Taker-side $" ? "Avg $/hour" : `Avg ${weeklyMetric.toLowerCase()}/hour`, tickFormat: weeklyFmtValue},
   marks: [
-    Plot.cell(weeklyCells, {x: "hour_et", y: "dow_label", fill: "avg", inset: 0.5}),
-    Plot.tip(weeklyCells, Plot.pointer({
-      x: "hour_et", y: "dow_label",
-      title: d => [
-        `${d.dow_label} ${fmtHour12(d.hour_et)}`,
-        `Avg ${weeklyFmtValue(d.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour`,
-        `${weeklySegment} · based on ${d.n} day${d.n === 1 ? "" : "s"}`
-      ].join("\n")
-    }))
+    Plot.barY(weeklyCells, {
+      x: "hour_et", y: "avg", rx: 2,
+      fill: d => d.dow_label === todayDowLabel ? todayBarColor : weeklyBarColor,
+      stroke: TODAY_ACCENT, strokeWidth: 1.5,
+      strokeOpacity: d => d.dow_label === todayDowLabel ? 1 : 0
+    }),
+    Plot.line(todayOverlayPoints, {x: "hour_et", y: "value", fy: "dow_label", stroke: TODAY_ACCENT, strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(todayOverlayPoints, {
+      x: "hour_et", y: "value", fy: "dow_label",
+      fill: TODAY_ACCENT, fillOpacity: d => d.partial ? 0.55 : 1,
+      stroke: "var(--theme-background)", strokeWidth: 1, r: 3.5
+    }),
+    Plot.tip(weeklyCells, Plot.pointerX({
+      x: "hour_et", y: "avg",
+      title: d => {
+        const lines = [
+          `${d.dow_label} ${fmtHour12(d.hour_et)}`,
+          `Avg ${weeklyFmtValue(d.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour`,
+          `${weeklySegment} · based on ${d.n} day${d.n === 1 ? "" : "s"}`
+        ];
+        if (d.dow_label === todayDowLabel) {
+          const todayPt = todayOverlayPoints.find(t => t.hour_et === d.hour_et);
+          if (todayPt) lines.push(`Today so far: ${weeklyFmtValue(todayPt.value)}${todayPt.partial ? " (hour still counting)" : ""}`);
+        }
+        return lines.join("\n");
+      }
+    })),
+    Plot.ruleY([0])
   ]
 })
 ```
@@ -457,5 +503,5 @@ Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Each cell averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are broken out as their own segment (as in the chart above) rather than folded into sports; pick "Combined" to see everything together.</p>
+  <p>Each bar averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are broken out as their own segment (as in the chart above) rather than folded into sports; pick "Combined" to see everything together. Today's row is outlined, its bars shifted toward a distinct accent color, and its label marked "· Today"; the connected dots on that row are today's actual values so far (hollow/faded for the hour still in progress), plotted against the historical average bars for the same comparison.</p>
 </details>
