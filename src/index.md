@@ -5,7 +5,7 @@ title: Overview
 <div class="page-hero">
   <div class="page-eyebrow">Market Structure</div>
   <h1>US Prediction Market Dashboard</h1>
-  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, Underdog Exchange, and Crypto.com/Nadex remain a small fraction of its scale.</p>
+  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, Underdog Exchange, Rothera, and Crypto.com/Nadex remain a small fraction of its scale.</p>
 </div>
 
 ```js
@@ -165,7 +165,7 @@ const indexBrush = view((() => {
   const pColors = {
     Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
     ForecastEx: "#E53535", DKeX: "#F97316", "Underdog Exchange": "#EAB308",
-    "Crypto.com/Nadex": "#9c27b0"
+    Rothera: "#00C805", "Crypto.com/Nadex": "#9c27b0"
   };
 
   const byPlatform = {
@@ -174,6 +174,7 @@ const indexBrush = view((() => {
     ForecastEx:         competitorTidy.filter(d => d.platform === "ForecastEx"),
     DKeX:               competitorTidy.filter(d => d.platform === "DKeX"),
     "Underdog Exchange": competitorTidy.filter(d => d.platform === "Underdog Exchange"),
+    Rothera:            competitorTidy.filter(d => d.platform === "Rothera"),
     "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
   };
 
@@ -243,6 +244,7 @@ display((() => {
     {key: "ForecastEx", color: "#E53535"},
     {key: "DKeX", color: "#F97316"},
     {key: "Underdog Exchange", color: "#EAB308"},
+    {key: "Rothera", color: "#00C805"},
     {key: "Crypto.com/Nadex", color: "#9c27b0"}
   ];
   // platform -> (epoch-date -> contracts), from the same tidy data the chart uses
