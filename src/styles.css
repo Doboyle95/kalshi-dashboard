@@ -40,6 +40,7 @@
      distinct from Kalshi teal (#00C2A8). Orange now belongs to DKeX alone. */
   --accent-rothera:      #00C805;
   --accent-dkex:         #F97316;
+  --accent-underdog:     #EAB308;
   --accent-cme:          #9A6D1F;
 
   /* Semantic accents */
@@ -125,6 +126,7 @@
     --accent-robinhood:  #8ED633;
     --accent-rothera:    #21E065;
     --accent-dkex:       #FF9A4D;
+    --accent-underdog:   #FDE047;
   }
 }
 
@@ -160,6 +162,7 @@ html[data-theme="light"] {
   --accent-robinhood:    #5FB81E;
   --accent-rothera:      #00C805;
   --accent-dkex:         #F97316;
+  --accent-underdog:     #EAB308;
   --accent-cme:          #9A6D1F;
 }
 
@@ -185,6 +188,7 @@ html[data-theme="dark"] {
   --accent-robinhood:    #3DDC84;
   --accent-rothera:      #21E065;
   --accent-dkex:         #FF9A4D;
+  --accent-underdog:     #FDE047;
 }
 
 /* ============================================================
@@ -278,6 +282,7 @@ li {
 .page-hero[data-accent="robinhood"]  { --hero-accent: var(--accent-robinhood); }
 .page-hero[data-accent="rothera"]    { --hero-accent: var(--accent-rothera); }
 .page-hero[data-accent="dkex"]       { --hero-accent: var(--accent-dkex); }
+.page-hero[data-accent="underdog"]   { --hero-accent: var(--accent-underdog); }
 .page-hero[data-accent="cme"]        { --hero-accent: var(--accent-cme); }
 .page-hero[data-accent="kalshi"]     { --hero-accent: var(--accent-kalshi); }
 
@@ -969,6 +974,7 @@ table,
 .kpi-card[data-accent="robinhood"]  { --kpi-accent: var(--accent-robinhood); }
 .kpi-card[data-accent="rothera"]    { --kpi-accent: var(--accent-rothera); }
 .kpi-card[data-accent="dkex"]       { --kpi-accent: var(--accent-dkex); }
+.kpi-card[data-accent="underdog"]   { --kpi-accent: var(--accent-underdog); }
 .kpi-card[data-accent="secondary"]  { --kpi-accent: var(--accent-secondary); }
 .kpi-card[data-accent="tertiary"]   { --kpi-accent: var(--accent-tertiary); }
 .kpi-card[data-accent="warning"]    { --kpi-accent: var(--accent-warning); }

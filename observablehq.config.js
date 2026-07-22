@@ -59,6 +59,7 @@ export default {
     {name: "Polymarket US", path: "/polymarket"},
     {name: "ForecastEx", path: "/forecastex"},
     {name: "DKeX (DraftKings)", path: "/dkex"},
+    {name: "Underdog Exchange", path: "/underdog"},
     {name: "Crypto.com/Nadex", path: "/nadex"},
     {name: "CME (FanDuel/DraftKings)", path: "/cme"},
   ],

@@ -31,7 +31,7 @@ display(freshnessPanel({
   items: [
     {label: "Trade-size mix", date: latestDate(tradeSizeRaw), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Kalshi can be within 15 minutes locally; competitors follow public files"},
     {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"},
-    {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx, DKeX", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
+    {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx, DKeX, Underdog Exchange", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
   ],
   note: "Competitor rows update when their public trade files are downloaded and rebuilt."
 }));
@@ -59,7 +59,7 @@ const latestTradeSizeDate = d3.max(tradeSizeRaw, d => d.date);
 ```
 
 ```js
-const platformOptions = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX"]
+const platformOptions = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange"]
   .filter(platform => tradeSizeRaw.some(d => d.platform === platform));
 
 ```
