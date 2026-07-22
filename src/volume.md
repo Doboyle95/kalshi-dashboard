@@ -23,6 +23,7 @@ const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
+const catLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -178,13 +179,26 @@ const volWideMap = {
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
 
+// Per-report_ticker wide-category classification (same source of truth as
+// categories.md's classByReportTicker/wide_cat) -- preferred over the hand-listed
+// volWideMap above, which only ever covered 3 soccer series (EPL/UCL/LaLiga game);
+// every other league (Bundesliga, Serie A, Ligue 1, MLS, World Cup, ...) silently
+// fell into the "Other sports" residual below. volWideMap stays as a fallback for
+// any report_ticker not yet in the leaderboard CSV.
+const NORMALIZE_WIDE_CAT = {"NFL": "Football", "College Football": "Football", "NBA": "Basketball", "College Basketball": "Basketball"};
+const wideCatByReportTicker = new Map(
+  catLeaderboard
+    .filter(d => d.report_ticker && (d.wide_cat || d.cat))
+    .map(d => [d.report_ticker, d.wide_cat || NORMALIZE_WIDE_CAT[d.cat] || d.cat])
+);
+
 const volWideDaily = topDaily.map(row => {
   const sp = sports.find(s => +s.date === +row.date) || {};
   const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
                   Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
   for (const [cat, v] of Object.entries(row)) {
     if (cat === "date") continue;
-    const wg = volWideMap[cat];
+    const wg = wideCatByReportTicker.get(cat) || volWideMap[cat];
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
   const parlay       = +sp.contracts_parlay    || 0;

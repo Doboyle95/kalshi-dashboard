@@ -27,7 +27,8 @@ export function parseMarketDateFromKey(marketKey) {
 // Non-sports = cool family (blues ? purples ? teal).
 export const CAT_COLORS = {
   "Football":        "#c0392b",  // deep red     -+
-  "Basketball":      "#e67e22",  // orange - warm = sports
+  "Basketball":      "#e67e22",  // orange       |
+  "Soccer":          "#827717",  // olive        | warm = sports
   "Other sport":     "#f0b429",  // amber/gold   -+
   "Politics":        "#1565c0",  // deep blue    -+
   "Economics":       "#0891b2",  // teal-blue - cool = non-sports
@@ -888,5 +889,8 @@ export function getSportDisplayCategory(d) {
   const mk = (d.market_key || "").trim();
   if (/^KXNFL|^KXSB-|^KXNCAAF/.test(mk)) return "Football";
   if (/^KXNBA|^KXNCAAMB|^KXMARMAD|^KXWMARMAD/.test(mk)) return "Basketball";
+  // World Cup (KXWC*) + the major club leagues -- see categories.md's
+  // classifyTreemapTicker for the exhaustive soccer prefix list this mirrors.
+  if (/^KXWC|^KXEPL|^KXUCL|^KXLALIGA|^KXBUNDESLIGA|^KXSERIEA|^KXLIGUE|^KXMLS|^KXFIFA|^KXMENWORLDCUP|^KXCLUBWC/.test(mk)) return "Soccer";
   return "Other sport";
 }

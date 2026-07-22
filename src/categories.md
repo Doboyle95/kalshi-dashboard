@@ -206,7 +206,24 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXTEAMSINUCL") || ticker.startsWith("KXCONCACAF") ||
            ticker.startsWith("KXCONMEBOL") || ticker.startsWith("KXEGYPLGAME") ||
            ticker.startsWith("KXCHNSLGAME") || ticker.startsWith("KXURYPDGAME") ||
-           ticker.startsWith("KXECULPGAME"))                                    cat = "Soccer";
+           ticker.startsWith("KXECULPGAME") ||
+           // 2026-07-22: KXWC* is the 2026 World Cup family (KXWCGAME, KXWCADVANCE,
+           // KXWCSPREAD, KXWCSCORE, KXWCGOALLEADER, KXWCROUND, ...) -- previously
+           // unmatched here so it fell through to the "Other Sports" terminal bucket,
+           // undercounting billions of contracts (KXWCGAME alone = 4.5B all-time).
+           // Same root cause Daniel already found+fixed once in near_live_update.R's
+           // sports/nonsports split (425M contracts / 28% of a day misclassified) --
+           // that fix never propagated to this classifier. Excludes a handful of
+           // KXWC*-prefixed tickers that are genuinely NOT soccer gameplay -- Kalshi
+           // itself tags these non-sports (ads, celebrity attendance, opening-ceremony
+           // songs, price speculation) -- so they keep falling through to the existing
+           // Kalshi-category fallback below instead of being forced into Soccer.
+           (ticker.startsWith("KXWC") &&
+            !ticker.startsWith("KXWCADS") && !ticker.startsWith("KXWCATTEND") &&
+            !ticker.includes("SONG") && !ticker.startsWith("KXWCPRICE") &&
+            !ticker.startsWith("KXWCVIEWERSHIP") && !ticker.startsWith("KXWCOC") &&
+            !ticker.startsWith("KXWCCAREERGOALS")) ||
+           ticker.startsWith("KXPLAYWC"))                                       cat = "Soccer";
   else if (ticker.startsWith("KXIPL") || ticker.startsWith("KXT20") ||
            ticker.startsWith("KXCRICKET") || ticker.startsWith("KXBBL") ||
            ticker.startsWith("KXASIACUP") || ticker.startsWith("KXPSL"))        cat = "Cricket";
@@ -1787,8 +1804,26 @@ const wideMap = {
   KXMVECROSSCATEGORY: "_skip", KXMVESPORTSMULTIGAMEEXTENDED: "_skip"
 };
 
+// wideDaily's `groups` keys use lowercase second-word forms for these three
+// (matching wideOrder's display labels) where classByReportTicker's `cat` uses
+// title case -- translate, everything else (NFL/NBA/Baseball/Hockey/Golf/Tennis/
+// Soccer/Crypto/Politics/Finance/Entertainment/Mention/Weather) matches as-is.
+const CAT_TO_WIDE_GROUP_KEY = {
+  "College Football": "College football",
+  "College Basketball": "College basketball",
+  "Combat Sports": "Combat sports"
+};
+
 function wideCategoryForTicker(ticker) {
   if (String(ticker || "").toUpperCase().includes("MENTION")) return "Mention";
+  // Prefer the R-computed per-report_ticker classification (same source of truth
+  // classifyTreemapTicker's classByReportTicker lookup uses) over the hand-maintained
+  // wideMap below, which only ever listed 3 soccer series (EPL/UCL/LaLiga game) --
+  // every other league (Bundesliga, Serie A, Ligue 1, MLS, World Cup, ...) silently
+  // fell into the "Other sports" residual on this chart. wideMap stays as a fallback
+  // for any report_ticker not yet in the leaderboard CSV.
+  const fromR = classByReportTicker.get(ticker);
+  if (fromR) return CAT_TO_WIDE_GROUP_KEY[fromR.cat] || fromR.cat;
   return wideMap[ticker];
 }
 
@@ -1928,22 +1963,26 @@ const chartDetail = view(hashInput("detail", Inputs.radio(["General", "Detailed"
 </div>
 
 ```js
-// General (5-category) grouping
+// General (6-category) grouping. Soccer is broken out as its own bucket (like
+// Football/Basketball/Baseball) rather than folded into "Other sports" -- World
+// Cup volume alone can exceed $300M/day, dwarfing the other sports left in that
+// residual bucket (Hockey, Golf, Tennis, Combat sports).
 const generalMap = {
   "NFL": "Football", "College football": "Football",
   "NBA": "Basketball", "College basketball": "Basketball",
   "Baseball": "Baseball",
+  "Soccer": "Soccer",
   "Hockey": "Other sports", "Golf": "Other sports", "Tennis": "Other sports",
-  "Soccer": "Other sports", "Combat sports": "Other sports", "Other sports": "Other sports",
+  "Combat sports": "Other sports", "Other sports": "Other sports",
   "Parlay": "Parlay",
   "Parlay (correlated)": "Parlay", "Parlay (independent)": "Parlay", "Parlay (pending)": "Parlay",
   "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
   "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
 };
-const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Basketball", "Football", "Parlay"];
+const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay"];
 const generalColors = {
   "Non-sports": "#78909c", "Other sports": "#a5d6a7", "Baseball": "#880e4f",
-  "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2"
+  "Soccer": "#827717", "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2"
 };
 
 const hasCategoryFocus = !!(tmActiveCategory || tmHoveredCategory || tmPinnedCategories.length);
@@ -2106,7 +2145,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note"><strong>Reading note:</strong> <em>General</em> compresses the market into Football, Basketball, Baseball, Other sports, Parlay, and Non-sports. <em>Detailed</em> expands back into individual categories. <em>Normalized</em> shows share of monthly volume rather than dollars.</div>
+<div class="chart-note"><strong>Reading note:</strong> <em>General</em> compresses the market into Football, Basketball, Baseball, Soccer, Other sports, Parlay, and Non-sports. <em>Detailed</em> expands back into individual categories. <em>Normalized</em> shows share of monthly volume rather than dollars.</div>
 
 ### Daily view
 

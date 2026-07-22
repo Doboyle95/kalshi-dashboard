@@ -36,8 +36,9 @@ export const TAKER_GENERAL_MAP = {
   "NFL": "Football", "College Football": "Football",
   "NBA": "Basketball", "College Basketball": "Basketball",
   "Baseball": "Baseball",
+  "Soccer": "Soccer",
   "Hockey": "Other sports", "Golf": "Other sports", "Tennis": "Other sports",
-  "Soccer": "Other sports", "Combat Sports": "Other sports", "Other Sports": "Other sports",
+  "Combat Sports": "Other sports", "Other Sports": "Other sports",
   "Cricket": "Other sports", "Racing": "Other sports", "Esports": "Other sports",
   "Parlay": "Parlay",
   "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
@@ -45,10 +46,10 @@ export const TAKER_GENERAL_MAP = {
   "Uncategorized": "Uncategorized"
 };
 
-export const TAKER_GENERAL_ORDER = ["Non-sports", "Other sports", "Baseball", "Basketball", "Football", "Parlay", "Uncategorized"];
+export const TAKER_GENERAL_ORDER = ["Non-sports", "Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay", "Uncategorized"];
 
 export const TAKER_GENERAL_COLORS = {
   "Non-sports": "#78909c", "Other sports": "#a5d6a7", "Baseball": "#880e4f",
-  "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2",
+  "Soccer": "#827717", "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2",
   "Uncategorized": "#9E9E9E"
 };
