@@ -142,22 +142,55 @@ const tline = timeRaw
   .sort((a,b) => a.date - b.date);
 ```
 
+```js
+// Daily series for "The rise of multi-leg betting": sum parlay_volume_by_type_daily
+// (already loaded above) across ALL classes per date, INCLUDING "unclassified
+// (pending legs)". Unlike the monthly series (classified-only trade_facts), recent
+// days never vanish while leg-mapping catches up — it can therefore run a few
+// percent above the monthly bars. pct_pending in the tooltip surfaces that share
+// per day (audit aid).
+const dayStr = d => d instanceof Date ? d3.utcFormat("%Y-%m-%d")(d) : String(d);
+const volDay = (() => {
+  const by = new Map();
+  for (const r of volTypeRaw) {
+    if (!r.date) continue;
+    const k = dayStr(r.date);
+    const cur = by.get(k) || {vol: 0, pending: 0};
+    cur.vol += +r.contracts || 0;
+    if (+r.unmapped_flag === 1) cur.pending += +r.contracts || 0;
+    by.set(k, cur);
+  }
+  return [...by.entries()]
+    .map(([k, v]) => ({date: d3.utcParse("%Y-%m-%d")(k), day: k, total_vol: v.vol,
+                       pct_pending: v.vol ? 100 * v.pending / v.vol : 0}))
+    .sort((a, b) => a.date - b.date);
+})();
+```
+
 ## The rise of multi-leg betting
 
-_Monthly parlay volume — from a standing start in late 2025 to billions per month._
+_Parlay volume — from a standing start in late 2025 to billions per month. The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
 
 ```js
-Plot.plot({
+const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View"}));
+```
+
+```js
+const riseDaily = riseGranularity === "Daily";
+display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 72,
   x: {type: "utc", label: null},
-  y: {label: "Monthly parlay volume", grid: true, tickFormat: d => "$" + (d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")},
+  y: {label: riseDaily ? "Daily parlay volume" : "Monthly parlay volume", grid: true, tickFormat: d => "$" + (d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")},
   marks: [
-    Plot.rectY(tline, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
-      tip: true, title: d => `${d.month}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
+    riseDaily
+      ? Plot.rectY(volDay, {x: "date", interval: d3.utcDay, y: "total_vol", fill: "#f4a736",
+          tip: true, title: d => `${d.day}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})\nPending classification: ${pct1(d.pct_pending)}`})
+      : Plot.rectY(tline, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
+          tip: true, title: d => `${d.month}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
     Plot.ruleY([0])
   ]
-})
+}))
 ```
 
 _Mean legs per parlay (left) crept up and stabilised near 6._
