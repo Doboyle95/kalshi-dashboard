@@ -1,11 +1,12 @@
 {
-  "generated_at": "2026-07-22T01:40:15.531772-04:00",
-  "generated_at_utc": "2026-07-22T05:40:15.531772+00:00",
+  "generated_at": "2026-07-22T01:50:49.472467-04:00",
+  "generated_at_utc": "2026-07-22T05:50:49.472467+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
+    "task_health: prod-competitor-sync: last run 'tourmaline-jackrabbit' ended FAILED at 2026-07-22T05:19:56.452820+00:00 \u2014 Flow run encountered an exception: UnfinishedRun: Run is in PENDING state, its result is not available.",
     "task_health: prod-parlay-leg-facts-recovery: last run 'great-bird' ended FAILED at 2026-07-22T03:38:48.577653+00:00 \u2014 Flow run encountered an exception: ConcurrencySlotAcquisitionError: Unable to acquire concurrency slots on ['kalshi-store-parlay']",
     "task_health: prod-taker-category-full: last run 'ancient-malkoha' ended FAILED at 2026-07-22T03:08:05.077022+00:00 \u2014 Flow run encountered an exception: RuntimeError: rebuild_taker_categories_chunked_full exited -1",
-    "task_health: prod-trade-collector: last run 'skilled-muskrat' ended FAILED at 2026-07-22T04:36:46.115130+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
+    "task_health: prod-v3-pnl-cycle: last run 'efficient-fulmar' ended FAILED at 2026-07-22T05:40:51.020154+00:00 \u2014 Flow run encountered an exception: RuntimeError: v3_pnl_cycle: topup_settlement_dim errored (exit=-1); export held (fail-closed).",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 92.0 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: GAP      rothera_categories_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
     "freshness_check: GAP      rothera_sports_split_daily.csv - 1 missing day(s) in last 60d: 2026-06-05",
@@ -17,24 +18,24 @@
     "freshness_check: STALL    parlay_settled_sweep - no settled-sweep window has completed in 27.3 h (threshold 24.0 h) - collect_parlay_live.R run_settled_sweep()"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-22T05:13:04.244780+00:00",
+    "task_health_generated": "2026-07-22T05:42:15.717872+00:00",
     "freshness_report_mtime_utc": "2026-07-22T05:40:07.295888+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-22T01:40:14.794814-04:00",
-      "last_write_time_utc": "2026-07-22T05:40:14.794814+00:00",
-      "size_bytes": 148414
+      "last_write_time": "2026-07-22T01:50:34.616897-04:00",
+      "last_write_time_utc": "2026-07-22T05:50:34.616897+00:00",
+      "size_bytes": 148411
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-22T01:40:14.977812-04:00",
-      "last_write_time_utc": "2026-07-22T05:40:14.977812+00:00",
-      "size_bytes": 159264
+      "last_write_time": "2026-07-22T01:50:34.955892-04:00",
+      "last_write_time_utc": "2026-07-22T05:50:34.955892+00:00",
+      "size_bytes": 159267
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-22T01:40:15.022812-04:00",
-      "last_write_time_utc": "2026-07-22T05:40:15.022812+00:00",
-      "size_bytes": 5357067
+      "last_write_time": "2026-07-22T01:50:36.634870-04:00",
+      "last_write_time_utc": "2026-07-22T05:50:36.634870+00:00",
+      "size_bytes": 5357284
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-21T07:02:42.700447-04:00",
@@ -42,14 +43,14 @@
       "size_bytes": 7773531
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-22T01:40:15.031812-04:00",
-      "last_write_time_utc": "2026-07-22T05:40:15.031812+00:00",
-      "size_bytes": 30869
+      "last_write_time": "2026-07-22T01:50:36.665869-04:00",
+      "last_write_time_utc": "2026-07-22T05:50:36.665869+00:00",
+      "size_bytes": 30967
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-22T01:40:15.030812-04:00",
-      "last_write_time_utc": "2026-07-22T05:40:15.030812+00:00",
-      "size_bytes": 154410
+      "last_write_time": "2026-07-22T01:50:36.662869-04:00",
+      "last_write_time_utc": "2026-07-22T05:50:36.662869+00:00",
+      "size_bytes": 154415
     },
     "calibration_three_way.csv": {
       "last_write_time": "2026-07-19T06:50:46.975679-04:00",
