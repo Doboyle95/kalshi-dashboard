@@ -112,6 +112,14 @@ THRESHOLDS = {
     "dkex_sports_split_daily.csv": 36,
     "dkex_market_daily.csv": 36,
     "dkex_settlement_daily.csv": 36,
+    # Underdog Exchange (build_underdog_daily.py). Same 36h/lag-1d treatment as DKeX.
+    # This watchdog is mtime-only (no STALE_TAIL content check like the VM keystone),
+    # so the exchange's real trading gaps don't need a special threshold here — the
+    # file gets rewritten every ~6h cycle regardless of whether it found new trades.
+    "underdog_daily.csv": 36,
+    "underdog_categories_daily.csv": 36,
+    "underdog_sports_split_daily.csv": 36,
+    "underdog_market_daily.csv": 36,
 }
 
 # Published files deliberately NOT threshold-monitored here: CME is hand-collected

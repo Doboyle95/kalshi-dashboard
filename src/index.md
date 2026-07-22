@@ -5,7 +5,7 @@ title: Overview
 <div class="page-hero">
   <div class="page-eyebrow">Market Structure</div>
   <h1>US Prediction Market Dashboard</h1>
-  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, and Crypto.com/Nadex remain a small fraction of its scale.</p>
+  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, Underdog Exchange, Rothera, and Crypto.com/Nadex remain a small fraction of its scale.</p>
 </div>
 
 ```js
@@ -76,7 +76,7 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Volume here means contracts traded, not dollars: one contract is one yes/no bet. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026.</p>
+  <p>Volume here means contracts traded: one contract is one yes/no bet, worth $1 at settlement — so this figure is a dollar total too, just not discounted by the price each contract actually traded at. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026; Underdog Exchange data begins with its public CFTC reports in late June 2026 and is still extremely sparse — most days report no trades at all.</p>
   <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
 </details>
 
@@ -164,7 +164,8 @@ const indexBrush = view((() => {
   const fmt = d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
   const pColors = {
     Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
-    ForecastEx: "#E53535", DKeX: "#F97316", "Crypto.com/Nadex": "#9c27b0"
+    ForecastEx: "#E53535", DKeX: "#F97316", "Underdog Exchange": "#EAB308",
+    Rothera: "#00C805", "Crypto.com/Nadex": "#9c27b0"
   };
 
   const byPlatform = {
@@ -172,6 +173,8 @@ const indexBrush = view((() => {
     "Polymarket US":    competitorTidy.filter(d => d.platform === "Polymarket US"),
     ForecastEx:         competitorTidy.filter(d => d.platform === "ForecastEx"),
     DKeX:               competitorTidy.filter(d => d.platform === "DKeX"),
+    "Underdog Exchange": competitorTidy.filter(d => d.platform === "Underdog Exchange"),
+    Rothera:            competitorTidy.filter(d => d.platform === "Rothera"),
     "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
   };
 
@@ -240,6 +243,8 @@ display((() => {
     {key: "Polymarket US", color: "#3B7DD8"},
     {key: "ForecastEx", color: "#E53535"},
     {key: "DKeX", color: "#F97316"},
+    {key: "Underdog Exchange", color: "#EAB308"},
+    {key: "Rothera", color: "#00C805"},
     {key: "Crypto.com/Nadex", color: "#9c27b0"}
   ];
   // platform -> (epoch-date -> contracts), from the same tidy data the chart uses
@@ -268,7 +273,7 @@ display((() => {
 
 </div>
 
-<p class="section-intro" style="font-size:0.8rem;opacity:0.7">Volume is contracts traded (one contract = one yes/no bet), not dollars. "—" means that platform has no figure for that day yet.</p>
+<p class="section-intro" style="font-size:0.8rem;opacity:0.7">Volume is contracts traded (one contract = one yes/no bet, worth $1 at settlement — so it's a dollar total too, just not discounted by trade price). "—" means that platform has no figure for that day yet.</p>
 
 ## Trading activity today
 

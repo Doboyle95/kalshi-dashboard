@@ -7,6 +7,7 @@ title: Competitors
   <h1>Platform Comparison</h1>
   <p class="page-lead">Every US regulated prediction-market venue on one chart — Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, CME (where FanDuel and DraftKings clear), and Rothera (Robinhood's own exchange). Kalshi is the story; switch to log scale to see the rest underneath it. CME is collected by hand from daily bulletins, so its line is sparse.</p>
   <p class="page-lead">DKeX (DraftKings, formerly Railbird) is included as the orange line from its public daily reports.</p>
+  <p class="page-lead">Underdog Exchange (Underdog Fantasy's own exchange) is included as the yellow line from its public daily reports — it's a brand-new, very low-volume venue, so expect a mostly-flat line with the occasional spike.</p>
 </div>
 
 <details class="surface-card compact-details">
@@ -29,10 +30,10 @@ display(freshnessPanel({
     {label: "Kalshi", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
     {label: "Competitors", date: latestDate(competitor.filter(d => d.platform !== "Kalshi")), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public platform files/scrapes", tone: "competitor"}
   ],
-  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, DKeX, Crypto.com/Nadex, and Rothera update when their external files are downloaded and rebuilt."
+  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, DKeX, Underdog Exchange, Crypto.com/Nadex, and Rothera update when their external files are downloaded and rebuilt."
 }));
 display(askPageLink({
-  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, DKeX, Crypto.com/Nadex, and Rothera, noting any freshness caveats.",
+  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, DKeX, Underdog Exchange, Crypto.com/Nadex, and Rothera, noting any freshness caveats.",
   context: "Platform Comparison page using daily_overall.csv and competitor_daily.csv."
 }));
 ```
@@ -60,6 +61,11 @@ const platforms = [
   {
     name: "DKeX", color: "#F97316",
     data: competitor.filter(d => d.platform === "DKeX")
+      .map(d => ({date: d.date, contracts: +d.contracts, fees: d.fees === "" || d.fees == null ? null : +d.fees}))
+  },
+  {
+    name: "Underdog Exchange", color: "#EAB308",
+    data: competitor.filter(d => d.platform === "Underdog Exchange")
       .map(d => ({date: d.date, contracts: +d.contracts, fees: d.fees === "" || d.fees == null ? null : +d.fees}))
   },
   {
@@ -266,7 +272,7 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
         y: "contracts",
         fill: "platform",
         offset: "expand",
-        order: ["DKeX", "Rothera", "Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
+        order: ["Underdog Exchange", "DKeX", "Rothera", "Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
         curve: "monotone-x",
         fillOpacity: 0.85
       }),
