@@ -473,7 +473,7 @@ Plot.plot({
 
 ## The most popular parlays
 
-_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. **Volume** is total contracts traded on the ticket, both sides — at Kalshi's \$1-per-contract convention the dollar figure is the same number. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
+_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. The colored chip is the **audited leg-level correlation** (same classifier as the charts above) — not Kalshi's product family. **Volume** is total contracts traded on the ticket, both sides — at Kalshi's \$1-per-contract convention the dollar figure is the same number. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
 
 ```js
 const popDmin = d3.min(popDailyRaw, d => d.date);
@@ -499,7 +499,7 @@ const popTop = Array.from(popAgg, ([pid, a]) => {
   const m = popMetaById.get(pid) ?? {};
   return {trades: a.trades, ct: a.ct, yn: a.yn,
           avg_c: a.yc > 0 ? 100 * a.yn / a.yc : null,
-          n_legs: m.n_legs, result: m.result, family: m.family,
+          n_legs: m.n_legs, result: m.result, family: m.family, kind: m.kind,
           label: String(m.label ?? "").trim(), ticker: String(m.ticker ?? "")};
 }).sort((a, b) => b.trades - a.trades).slice(0, 30).map((d, i) => ({...d, rank: i + 1}));
 ```
@@ -514,6 +514,13 @@ const popLabel = d => {
   if (!s) s = (d.family ? d.family + " · " : "") + d.ticker.split("-").slice(1).join("-");
   return s.length > 90 ? s.slice(0, 90) + "…" : s;
 };
+// Chip = the AUDITED leg-level correlation verdict (same classifier as every other
+// parlay chart) — NOT Kalshi's product family, which misleads (a same-game
+// futures+prop ticket can be issued under the "multi-game" product).
+const popKindChip = d =>
+  d.kind === "correlated"  ? html`<span style="display:inline-block;font-size:11px;color:#e4572e;background:rgba(228,87,46,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">same-game (correlated)</span>`
+  : d.kind === "independent" ? html`<span style="display:inline-block;font-size:11px;color:#5b8def;background:rgba(91,141,239,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">multi-game (independent)</span>`
+  : html`<span style="display:inline-block;font-size:11px;color:var(--theme-foreground-muted,#888);background:rgba(128,128,128,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">pending classification</span>`;
 const popLegs = d => Number.isFinite(d.n_legs) ? d.n_legs : "—";
 ```
 
@@ -532,7 +539,7 @@ html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin
   </tr></thead>
   <tbody>${popTop.map(d => html`<tr style="border-bottom:1px solid var(--theme-background-alt, #eee);">
     <td style="padding:5px 6px;color:var(--theme-foreground-muted, #999);">${d.rank}</td>
-    <td style="padding:5px 6px;" title=${d.label}><span style="display:inline-block;font-size:11px;color:#3b82a0;background:rgba(59,130,160,0.12);border-radius:3px;padding:0 5px;margin-right:6px;white-space:nowrap;">${d.family}</span>${popLabel(d)}</td>
+    <td style="padding:5px 6px;" title=${d.label}>${popKindChip(d)}${popLabel(d)}</td>
     <td style="padding:5px 6px;text-align:right;">${popLegs(d)}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.trades.toLocaleString()}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.ct > 0 ? html`${d.ct.toLocaleString()} <span style="color:var(--theme-foreground-muted,#888);">($${fmtCount(d.ct)})</span>` : "—"}</td>
