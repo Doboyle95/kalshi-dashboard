@@ -105,7 +105,7 @@ Plot.plot({
   marks: [
     Plot.line(he, {x: "legsLabel", y: "house_edge", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.dot(he, {x: "legsLabel", y: "house_edge", fill: "kind", r: 4}),
-    Plot.tip(he, Plot.pointer({x: "legsLabel", y: "house_edge",
+    Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "house_edge", stroke: "kind",
       title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})`})),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
@@ -124,7 +124,7 @@ Plot.plot({
   marks: [
     Plot.line(he, {x: "legsLabel", y: "win_rate", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.dot(he, {x: "legsLabel", y: "win_rate", fill: "kind", r: 4}),
-    Plot.tip(he, Plot.pointer({x: "legsLabel", y: "win_rate",
+    Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "win_rate", stroke: "kind",
       title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}`})),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
@@ -237,7 +237,7 @@ display(Plot.plot({
   marks: [
     Plot.line(compTidy, {x: "date", y: "value", stroke: "series", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.dot(compTidy, {x: "date", y: "value", fill: "series", r: 3}),
-    Plot.tip(compTidy, Plot.pointer({x: "date", y: "value",
+    Plot.tip(compTidy, Plot.pointerX({x: "date", y: "value", stroke: "series",
       title: d => `${d.month}\n${d.series}: ${pct1(d.value)}`}))
   ]
 }))
@@ -323,7 +323,7 @@ Plot.plot({
     Plot.line(pnlCum, {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
     Plot.ruleX(pnlCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(pnlCum, Plot.pointerX({x: "date", y: "cum_pnl",
+    Plot.tip(pnlCum, Plot.pointerX({x: "date", y: "cum_pnl", stroke: "kind",
       title: d => `${fmtDay(d.date)}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
   ]
 })
