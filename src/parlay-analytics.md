@@ -312,7 +312,7 @@ Plot.plot({
     Plot.line(pnlCum, {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
     Plot.ruleX(pnlCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(pnlCum, Plot.pointer({x: "date", y: "cum_pnl",
+    Plot.tip(pnlCum, Plot.pointerX({x: "date", y: "cum_pnl",
       title: d => `${fmtDay(d.date)}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
   ]
 })
