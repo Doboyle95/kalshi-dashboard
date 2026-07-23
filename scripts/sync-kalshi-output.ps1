@@ -65,6 +65,8 @@ $files = @(
   "parlay_pnl_unified_daily.csv",
   "parlay_popular_daily.csv",
   "parlay_popular_meta.csv",
+  "parlay_lottery_daily.csv",
+  "parlay_lottery_summary.csv",
   "parlay_sportsmix_v2.csv",
   "parlay_top_games_by_volume.csv",
   "parlay_volume_by_type_daily.csv",

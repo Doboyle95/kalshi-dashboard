@@ -106,6 +106,8 @@ THRESHOLDS = {
     "parlay_corr_by_ticker_daily.csv": 48,
     "parlay_volume_by_type_daily.csv": 48,
     "parlay_popular_daily.csv": 48,
+    "parlay_lottery_daily.csv": 48,           # v3 aux step, 30min cadence; date-first daily grain
+    "parlay_lottery_summary.csv": 48,         # single-row settled hit-rate aggregate, same cadence
     "taker_sports_daily.csv": 240,            # weekly v3 taker-category reconcile
     "dkex_daily.csv": 36,
     "dkex_categories_daily.csv": 36,
