@@ -30,14 +30,20 @@ import {askPageLink, fileUpdatedAt, fmtFreshDate, freshnessPanel, latestDate} fr
 ```
 
 ```js
-// R/parlay_analytics.R (house edge / legs-over-time / games / mispricing) runs
-// in "sample" mode on every cadence cycle (never --full), selecting files via
-// plain head(list.files(),20) with no recency sort -- so it reads a FIXED
-// slice of tickers, not recent trading, and does not self-correct over time.
-// game_key encodes the actual game date (e.g. "26JUL03ARGCPV" -> 2026-07-03),
-// so we can detect staleness directly from the data instead of trusting the
-// file's own write time (the script can "succeed" every run while re-deriving
-// the same stale answer from unchanging input).
+// Games / house-edge / legs-mix / mispricing are built by build_parlay_anatomy_csvs.py from
+// the modern trade-level facts (parlay_leg_facts/parlay_trade_facts/parlay_ticker_game), NOT
+// the old frozen R-sample -- that legacy path was retired. game_key encodes the actual game
+// date (e.g. "26JUL03ARGCPV" -> 2026-07-03).
+//
+// 2026-07-23: "most recent game" alone is NOT a reliable staleness signal for this file --
+// parlay_top_games_by_volume.csv is a top-40-BY-VOLUME ranking, not a recency feed, so it will
+// always look "old" during any quiet stretch between major single-day sporting spectacles
+// (nothing has to be wrong for weeks to pass with no new game crossing the ~500M+ bar a World
+// Cup final sets). Confirmed empirically: the file is rebuilt on schedule and the true most-
+// recent game (by trade date) genuinely doesn't crack the top 40 during a lull. Only treat
+// this as a real pipeline freeze if the FILE ITSELF also hasn't been rebuilt recently --
+// that's the one signal a frozen pipeline can't fake (a live one keeps re-touching its output
+// even when the ranking's top-40 membership doesn't change).
 const GAME_KEY_MONTHS = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
 const gameKeyDate = k => {
   const m = /^(\d{2})([A-Z]{3})(\d{2})/.exec(String(k));
@@ -46,6 +52,11 @@ const gameKeyDate = k => {
 };
 const gamesMaxDate = latestDate(gamesRaw, d => gameKeyDate(d.game_key));
 const gamesStaleDays = gamesMaxDate ? Math.round((Date.now() - gamesMaxDate) / 86400000) : null;
+const gamesFileUpdatedAt = fileUpdatedAt(freshness, "parlay_top_games_by_volume.csv");
+const gamesFileAgeHours = gamesFileUpdatedAt ? (Date.now() - new Date(gamesFileUpdatedAt)) / 3600000 : null;
+// Anatomy cadence rebuilds twice daily (~12h); 36h tolerates one missed cycle before flagging.
+const gamesFileStale = gamesFileAgeHours == null || gamesFileAgeHours > 36;
+const gamesPipelineStuck = gamesStaleDays > 3 && gamesFileStale;
 ```
 
 ```js
@@ -53,9 +64,9 @@ display(freshnessPanel({
   items: [
     {label: "Parlay P&L (by correlation)", date: latestDate(pnlRaw), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_daily_by_corr_v2.csv"), meta: "Settlement-dependent — a parlay only counts once its markets settle", tone: "settlement"},
     {label: "Parlay volume by type", date: latestDate(volTypeRaw), updatedAt: fileUpdatedAt(freshness, "parlay_volume_by_type_daily.csv"), meta: "Classified from actual legs; very recent tickers can show as \"unclassified\" until leg-mapping catches up"},
-    {label: "Games / house edge / legs-mix / mispricing", value: gamesMaxDate ? `Most recent game: ${fmtFreshDate(gamesMaxDate)}` + (gamesStaleDays > 3 ? ` — ${gamesStaleDays}d behind today` : "") : "n/a", updatedAt: fileUpdatedAt(freshness, "parlay_top_games_by_volume.csv"), meta: "Shared source (R/parlay_analytics.R sample) for the 4 charts below. If “Most recent game” isn't within the last few days, the sample is stuck — that's a pipeline bug, not something that clears up on its own.", tone: "local"}
+    {label: "Games / house edge / legs-mix / mispricing", value: gamesMaxDate ? `Most recent game: ${fmtFreshDate(gamesMaxDate)}` + (gamesStaleDays > 3 ? ` — ${gamesStaleDays}d behind today` : "") : "n/a", updatedAt: gamesFileUpdatedAt, meta: gamesPipelineStuck ? "Shared source (trade-level facts) for the 4 charts below. The file itself hasn't rebuilt recently either — that combination means the pipeline is genuinely stuck, not just a quiet stretch." : "Shared source (trade-level facts) for the 4 charts below. \"Most recent game\" ranks by all-time VOLUME, not recency — it can sit behind today for weeks with no new game topping the bar a big event set, even though the pipeline is rebuilding on schedule (see its own \"Updated\" timestamp above).", tone: "local"}
   ],
-  note: "Recent days are still filling in for the P&L and volume-by-type figures above — a parlay only counts once its markets settle, and brand-new tickers may briefly show as \"unclassified\" until leg-mapping catches up (normal lag, clears within a day or two). The games/house-edge/mispricing group is a separate, fixed-sample pipeline that does NOT self-correct with time — check its card above and the note on \"The games that drive parlay money\" below."
+  note: "Recent days are still filling in for the P&L and volume-by-type figures above — a parlay only counts once its markets settle, and brand-new tickers may briefly show as \"unclassified\" until leg-mapping catches up (normal lag, clears within a day or two). The games/house-edge/mispricing group ranks by all-time volume, so its \"most recent game\" naturally lags during quiet periods — check its card above (both the game date AND the file's own rebuild time) before assuming it's stuck."
 }));
 display(askPageLink({
   question: "Explain parlay anatomy: house edge by leg count, correlated vs independent P&L, and how much recent volume is still unclassified pending leg-mapping.",
@@ -451,8 +462,10 @@ _Top 20 underlying games by parlay volume touching them. A parlay's volume is co
 ```js
 display(
   gamesMaxDate == null ? html`` :
-  gamesStaleDays > 3
-    ? html`<div class="chart-note" style="color:var(--accent-warning);font-weight:650;">⚠ Stuck: the most recent game in this ranking is ${fmtFreshDate(gamesMaxDate)} — ${gamesStaleDays} days behind today. The underlying sample isn't advancing (see the freshness panel above); this chart won't show newer games until that's fixed.</div>`
+  gamesPipelineStuck
+    ? html`<div class="chart-note" style="color:var(--accent-warning);font-weight:650;">⚠ Stuck: the most recent game in this ranking is ${fmtFreshDate(gamesMaxDate)} — ${gamesStaleDays} days behind today, AND the file itself hasn't rebuilt in over 36h. Both signals stale together means the pipeline is genuinely stuck (see the freshness panel above), not just a quiet stretch.</div>`
+    : gamesStaleDays > 3
+    ? html`<div class="chart-note">Most recent game in this ranking: ${fmtFreshDate(gamesMaxDate)} (${gamesStaleDays}d ago). This is a top-40-by-volume ranking, not a recency feed — no game since has topped the volume bar a big event set, though the pipeline itself is rebuilding on schedule.</div>`
     : html`<div class="chart-note">Most recent game in this ranking: ${fmtFreshDate(gamesMaxDate)}.</div>`
 );
 ```
