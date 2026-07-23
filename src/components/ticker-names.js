@@ -102,6 +102,13 @@ export const WC_TEAMS = {
   POR:"Portugal", QAT:"Qatar", RSA:"South Africa", SCO:"Scotland",
   SEN:"Senegal", SUI:"Switzerland", SWE:"Sweden", TUN:"Tunisia",
   TUR:"Turkey", URU:"Uruguay", USA:"USA", UZB:"Uzbekistan",
+  // 2026-07-23: KXMENWORLDCUP-26 (outright tournament winner, distinct ticker
+  // family from the per-game KXWC* markets above) uses 2-letter ISO codes, not
+  // these 3-letter FIFA codes. Only adding codes confirmed against real
+  // winner_ticker data (KXMENWORLDCUP-26-ES = Spain, the 2026 champion) rather
+  // than guessing all 48 -- an unverified guess here is worse than a fallback
+  // to the raw code. Add more as they're confirmed.
+  ES:"Spain",
 };
 export const CRICKET_TEAMS = {
   // International teams (T20 World Cup, WBC, etc.)
@@ -208,7 +215,7 @@ export function getTeamsForMarket(mk) {
   if (/^KXMLB/.test(mk))                       return MLB_TEAMS;
   if (/^KXNHL/.test(mk))                       return NHL_TEAMS;
   if (/^KXUCL|^KXEPL|^KXLALIGA/.test(mk))      return SOCCER_TEAMS;
-  if (/^KXWCGAME|^KXWCADVANCE|^KXWCSPREAD|^KXWCSCORE/.test(mk)) return WC_TEAMS;
+  if (/^KXWCGAME|^KXWCADVANCE|^KXWCSPREAD|^KXWCSCORE|^KXMENWORLDCUP/.test(mk)) return WC_TEAMS;
   if (/^KXT20|^KXICC|^KXWBC/.test(mk))         return CRICKET_TEAMS;
   if (/^KXIPL/.test(mk))                       return IPL_TEAMS;
   if (/^KXATP|^KXWTA|^KXWMEN|^KXFOMEN|^KXUSOMEN|^KXAOMEN|^KXAUSOPEN/.test(mk)) return TENNIS_PLAYERS;
