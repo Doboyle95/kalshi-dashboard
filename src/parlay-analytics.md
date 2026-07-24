@@ -25,6 +25,8 @@ const mixRaw  = await FileAttachment("data/parlay_sportsmix_v2.csv").csv({typed:
 const popDailyRaw = await FileAttachment("data/parlay_popular_daily.csv").csv({typed: true});
 const popMetaRaw  = await FileAttachment("data/parlay_popular_meta.csv").csv({typed: true});
 const volTypeRaw  = await FileAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const lotteryRaw  = await FileAttachment("data/parlay_lottery_daily.csv").csv({typed: true});
+const lotterySummaryRaw = await FileAttachment("data/parlay_lottery_summary.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, fmtFreshDate, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -64,7 +66,8 @@ display(freshnessPanel({
   items: [
     {label: "Parlay P&L (by correlation)", date: latestDate(pnlRaw), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_daily_by_corr_v2.csv"), meta: "Settlement-dependent — a parlay only counts once its markets settle", tone: "settlement"},
     {label: "Parlay volume by type", date: latestDate(volTypeRaw), updatedAt: fileUpdatedAt(freshness, "parlay_volume_by_type_daily.csv"), meta: "Classified from actual legs; very recent tickers can show as \"unclassified\" until leg-mapping catches up"},
-    {label: "Games / house edge / legs-mix / mispricing", value: gamesMaxDate ? `Most recent game: ${fmtFreshDate(gamesMaxDate)}` + (gamesStaleDays > 3 ? ` — ${gamesStaleDays}d behind today` : "") : "n/a", updatedAt: gamesFileUpdatedAt, meta: gamesPipelineStuck ? "Shared source (trade-level facts) for the 4 charts below. The file itself hasn't rebuilt recently either — that combination means the pipeline is genuinely stuck, not just a quiet stretch." : "Shared source (trade-level facts) for the 4 charts below. \"Most recent game\" ranks by all-time VOLUME, not recency — it can sit behind today for weeks with no new game topping the bar a big event set, even though the pipeline is rebuilding on schedule (see its own \"Updated\" timestamp above).", tone: "local"}
+    {label: "Games / house edge / legs-mix / mispricing", value: gamesMaxDate ? `Most recent game: ${fmtFreshDate(gamesMaxDate)}` + (gamesStaleDays > 3 ? ` — ${gamesStaleDays}d behind today` : "") : "n/a", updatedAt: gamesFileUpdatedAt, meta: gamesPipelineStuck ? "Shared source (trade-level facts) for the 4 charts below. The file itself hasn't rebuilt recently either — that combination means the pipeline is genuinely stuck, not just a quiet stretch." : "Shared source (trade-level facts) for the 4 charts below. \"Most recent game\" ranks by all-time VOLUME, not recency — it can sit behind today for weeks with no new game topping the bar a big event set, even though the pipeline is rebuilding on schedule (see its own \"Updated\" timestamp above).", tone: "local"},
+    {label: "Lottery ticket parlays", date: latestDate(lotteryRaw, d => d.date), updatedAt: fileUpdatedAt(freshness, "parlay_lottery_daily.csv"), meta: "Refreshes every ~30min alongside the most-popular-parlays table above"}
   ],
   note: "Recent days are still filling in for the P&L and volume-by-type figures above — a parlay only counts once its markets settle, and brand-new tickers may briefly show as \"unclassified\" until leg-mapping catches up (normal lag, clears within a day or two). The games/house-edge/mispricing group ranks by all-time volume, so its \"most recent game\" naturally lags during quiet periods — check its card above (both the game date AND the file's own rebuild time) before assuming it's stuck."
 }));
@@ -578,6 +581,57 @@ const misp = mispRaw.map(d => ({
 const bucketDomain = [...new Set(misp.map(d => d.bucket))];
 ```
 
+## The "lottery ticket" parlays
+
+_Trading on parlays with **8 or more legs**, priced under **2¢** to win — true longshots, not just "unlikely." A ticket only counts on the days it actually traded at that price, so the same parlay can appear here on one day and not another as its odds move; this is a snapshot of longshot trading activity, not a fixed list of tickets. **Taker stakes** (the money yes-takers put in) is shown starting **June 7, 2026** — before that date, our own price data was rounded to whole cents, which would badly understate stakes for exactly this cheapest-of-the-cheap slice (Kalshi's market itself has always supported sub-cent pricing — this is our data catching up, not a market change). **Volume** isn't affected and covers the full history back to Jan 2026._
+
+```js
+const lotteryDaily = lotteryRaw.map(d => ({date: d.date, volume: d.volume, stakes: d.stakes, trades: d.trades, n_tickers: d.n_tickers}));
+const lotteryFloor = new Date("2026-06-07");
+```
+
+<div class="control-strip">
+
+```js
+const lotteryMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: x => x === "volume" ? "Volume (contracts)" : "Taker stakes ($)"}));
+```
+
+</div>
+
+```js
+const lotteryFmt = lotteryMetric === "volume" ? fmtCount : fmtUSD;
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 300, marginLeft: 64,
+  x: {type: "utc", label: null},
+  y: {label: lotteryMetric === "volume" ? "Daily volume (contracts)" : "Daily taker stakes ($)", grid: true, tickFormat: lotteryFmt},
+  marks: [
+    Plot.rectY(lotteryDaily.filter(d => d[lotteryMetric] != null), {
+      x: "date", interval: d3.utcDay, y: lotteryMetric, fill: "#9b59b6",
+      tip: true,
+      title: d => `${d.date.toISOString().slice(0, 10)}\n`
+        + `${lotteryMetric === "volume" ? "Volume" : "Taker stakes"}: ${lotteryFmt(d[lotteryMetric])}\n`
+        + `Trades: ${d.trades.toLocaleString()}\n`
+        + `Distinct tickets: ${d.n_tickers.toLocaleString()}`
+    }),
+    lotteryMetric === "volume" ? Plot.ruleX([lotteryFloor], {stroke: "var(--theme-foreground-fainter)", strokeDasharray: "3,3"}) : null,
+    lotteryMetric === "volume" ? Plot.text([{date: lotteryFloor, y: 0}], {x: "date", y: () => 0, dy: -8, text: () => "Stakes data starts here", fontSize: 10, fill: "var(--theme-foreground-muted, #888)", frameAnchor: "bottom", textAnchor: "start", dx: 4}) : null,
+    Plot.ruleY([0])
+  ]
+}))
+```
+
+```js
+const lotterySummary = lotterySummaryRaw[0];
+display(html`<div class="surface-card compact-details" style="font-size:13px;padding:12px 16px;margin:6px 0 18px 0;">
+<strong>How often do they hit?</strong> Of ${lotterySummary.n_qualifying.toLocaleString()} qualifying
+tickets, ${lotterySummary.n_settled.toLocaleString()} (${lotterySummary.pct_settled}%) have settled so
+far — <strong>${lotterySummary.n_hit.toLocaleString()} hit, ${lotterySummary.n_miss.toLocaleString()} missed</strong>,
+a <strong>${lotterySummary.hit_rate_pct}% win rate</strong>. That's well below the ~14-20% win rate for
+parlays generally — these are, in fact, lottery tickets.
+</div>`);
+```
+
 ## Are parlays priced fairly?
 
 _Calibration: implied probability (entry price) vs the win rate that actually occurred. Points below the dashed line = bettors **over**paid (actual worse than implied). Bubble size = parlay count._
@@ -631,4 +685,21 @@ Plot.plot({
   the real cost to the bettor is somewhat larger. <strong>Calibration gap</strong>
   is actual minus implied win rate; the negative gap is the all-in cost the
   bettor pays (margin/vig), not pure forecast error.</p>
+  <p><strong>"Lottery ticket" parlays.</strong> Qualifies per ticket <em>per
+  day</em> (8+ legs and that day's own volume-weighted yes price under 2¢) —
+  the same ticket can qualify on one day and not another as its price moves,
+  so this is longshot trading activity over time, not a fixed watchlist.
+  <strong>Taker stakes</strong> starts June 7, 2026: before that date our own
+  price data was rounded to whole cents at collection, which would badly
+  understate stakes for exactly this cheapest slice (a true 0.3¢ leg would
+  show as an exact $0 stake) — Kalshi's own market has always supported
+  sub-cent pricing, this is our data catching up, not a market change.
+  <strong>Volume</strong> isn't price-derived so it's shown for the full
+  history, and includes contracts on both sides of the market (yes and no)
+  plus a small share (~9%) with no attributed taker side, matching how
+  "Volume" is defined elsewhere on this page. Because the qualifying-day
+  price check itself uses whatever precision was available that day, a small
+  number of tickets right at the 2¢ edge in the pre-June-7 volume figures may
+  be mis-bucketed by rounding — a minor effect on the edge cases, not the
+  same understatement that affects stakes broadly.</p>
 </details>
