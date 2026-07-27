@@ -1,11 +1,10 @@
 {
-  "generated_at": "2026-07-27T11:14:01.396634-04:00",
-  "generated_at_utc": "2026-07-27T15:14:01.396634+00:00",
+  "generated_at": "2026-07-27T11:22:28.186270-04:00",
+  "generated_at_utc": "2026-07-27T15:22:28.186270+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'bulky-flounder' ended FAILED at 2026-07-27T09:50:10.743858+00:00 \u2014 Flow run encountered an exception: RuntimeError: PUBLISH GATE BLOCK \u2014 refusing to push dashboard. Reasons: ['BLOCK daily_overall.csv: most-recent date is 2026-07-25 (2d old > 1d bound) \u2014 producer look",
     "task_health: prod-parlay-anatomy: last run 'electronic-trogon' ended FAILED at 2026-07-27T09:58:42.513165+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_anatomy CSV builders failed: ['parlay_anatomy_csvs']",
-    "task_health: prod-parlay-partitioner: last run 'incredible-tapir' ended CRASHED at 2026-07-27T14:39:05.978311+00:00 \u2014 Failed to submit flow run to infrastructure: PrefectHTTPStatusError: Server error '503 Service Unavailable' for url 'http://127.0.0.1:4200/api/flow_runs/019fa3a9-5061-7522-b8c4-3c540dbeefbd/labels' - ",
     "task_health: prod-volume-topup-recon: last run 'miraculous-teal' ended FAILED at 2026-07-26T17:11:11.206901+00:00 \u2014 Flow run encountered an exception: RuntimeError: volume topup/export operational failure: ['topup_trades_2026-07-25', 'topup_trades_2026-07-24']",
     "freshness_check: GAP_KNOWN rothera_categories_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-05",
     "freshness_check: GAP_KNOWN rothera_sports_split_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-05",
@@ -17,24 +16,24 @@
     "freshness_check: STALL    raw_api_unsealed_days - 1 date(s) past the 30h grace period with no sealed trade_data_*.parquet: 2026-07-26 (35h since ET midnight) - check compact_shards / .seal_blocked_<date>.txt"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-27T14:47:22.543517+00:00",
+    "task_health_generated": "2026-07-27T15:15:47.915852+00:00",
     "freshness_report_mtime_utc": "2026-07-27T15:13:35.280319+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-27T11:14:00.804217-04:00",
-      "last_write_time_utc": "2026-07-27T15:14:00.804217+00:00",
-      "size_bytes": 148872
+      "last_write_time": "2026-07-27T11:22:27.353528-04:00",
+      "last_write_time_utc": "2026-07-27T15:22:27.353528+00:00",
+      "size_bytes": 148879
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-27T11:14:00.945216-04:00",
-      "last_write_time_utc": "2026-07-27T15:14:00.945216+00:00",
-      "size_bytes": 159960
+      "last_write_time": "2026-07-27T11:22:27.491525-04:00",
+      "last_write_time_utc": "2026-07-27T15:22:27.491525+00:00",
+      "size_bytes": 159968
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-27T11:14:00.988216-04:00",
-      "last_write_time_utc": "2026-07-27T15:14:00.988216+00:00",
-      "size_bytes": 7028519
+      "last_write_time": "2026-07-27T11:22:27.664522-04:00",
+      "last_write_time_utc": "2026-07-27T15:22:27.664522+00:00",
+      "size_bytes": 7028527
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-27T07:09:01.935637-04:00",
@@ -42,13 +41,13 @@
       "size_bytes": 10339302
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-27T11:14:01.015216-04:00",
-      "last_write_time_utc": "2026-07-27T15:14:01.015216+00:00",
+      "last_write_time": "2026-07-27T11:22:27.681522-04:00",
+      "last_write_time_utc": "2026-07-27T15:22:27.681522+00:00",
       "size_bytes": 1974481
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-27T11:14:01.003216-04:00",
-      "last_write_time_utc": "2026-07-27T15:14:01.003216+00:00",
+      "last_write_time": "2026-07-27T11:22:27.672522-04:00",
+      "last_write_time_utc": "2026-07-27T15:22:27.672522+00:00",
       "size_bytes": 156356
     },
     "calibration_three_way.csv": {
