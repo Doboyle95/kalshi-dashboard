@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-27T08:17:53.291335-04:00",
-  "generated_at_utc": "2026-07-27T12:17:53.291335+00:00",
+  "generated_at": "2026-07-27T08:23:52.617983-04:00",
+  "generated_at_utc": "2026-07-27T12:23:52.617983+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'bulky-flounder' ended FAILED at 2026-07-27T09:50:10.743858+00:00 \u2014 Flow run encountered an exception: RuntimeError: PUBLISH GATE BLOCK \u2014 refusing to push dashboard. Reasons: ['BLOCK daily_overall.csv: most-recent date is 2026-07-25 (2d old > 1d bound) \u2014 producer look",
@@ -17,24 +17,24 @@
     "freshness_check: STALL    raw_api_unsealed_days - 1 date(s) past the 30h grace period with no sealed trade_data_*.parquet: 2026-07-26 (32h since ET midnight) - check compact_shards / .seal_blocked_<date>.txt"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-27T11:46:03.714390+00:00",
+    "task_health_generated": "2026-07-27T12:18:49.531630+00:00",
     "freshness_report_mtime_utc": "2026-07-27T12:15:57.788281+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-27T08:17:51.956768-04:00",
-      "last_write_time_utc": "2026-07-27T12:17:51.956768+00:00",
-      "size_bytes": 148848
+      "last_write_time": "2026-07-27T08:23:51.616000-04:00",
+      "last_write_time_utc": "2026-07-27T12:23:51.616000+00:00",
+      "size_bytes": 148854
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-27T08:17:52.421761-04:00",
-      "last_write_time_utc": "2026-07-27T12:17:52.421761+00:00",
-      "size_bytes": 159973
+      "last_write_time": "2026-07-27T08:23:51.927996-04:00",
+      "last_write_time_utc": "2026-07-27T12:23:51.927996+00:00",
+      "size_bytes": 159979
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-27T08:17:52.484761-04:00",
-      "last_write_time_utc": "2026-07-27T12:17:52.484761+00:00",
-      "size_bytes": 7028511
+      "last_write_time": "2026-07-27T08:23:52.060994-04:00",
+      "last_write_time_utc": "2026-07-27T12:23:52.060994+00:00",
+      "size_bytes": 7028364
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-27T07:09:01.935637-04:00",
@@ -42,13 +42,13 @@
       "size_bytes": 10339302
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-27T08:17:52.534760-04:00",
-      "last_write_time_utc": "2026-07-27T12:17:52.534760+00:00",
-      "size_bytes": 1974191
+      "last_write_time": "2026-07-27T08:23:52.093994-04:00",
+      "last_write_time_utc": "2026-07-27T12:23:52.093994+00:00",
+      "size_bytes": 1974193
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-27T08:17:52.510760-04:00",
-      "last_write_time_utc": "2026-07-27T12:17:52.510760+00:00",
+      "last_write_time": "2026-07-27T08:23:52.075994-04:00",
+      "last_write_time_utc": "2026-07-27T12:23:52.075994+00:00",
       "size_bytes": 156424
     },
     "calibration_three_way.csv": {
