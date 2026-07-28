@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-28T04:48:49.194740-04:00",
-  "generated_at_utc": "2026-07-28T08:48:49.194740+00:00",
+  "generated_at": "2026-07-28T04:54:24.274185-04:00",
+  "generated_at_utc": "2026-07-28T08:54:24.274185+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'bulky-flounder' ended FAILED at 2026-07-27T09:50:10.743858+00:00 \u2014 Flow run encountered an exception: RuntimeError: PUBLISH GATE BLOCK \u2014 refusing to push dashboard. Reasons: ['BLOCK daily_overall.csv: most-recent date is 2026-07-25 (2d old > 1d bound) \u2014 producer look",
@@ -13,30 +13,30 @@
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
     "freshness_check: STALE_TAIL dkex_market_daily.csv - newest data row 2026-07-22 is 6d behind today (allowance 5d) - competitor (~6 hr, reports lag ~1d)",
     "freshness_check: STALE_TAIL dkex_settlement_daily.csv - newest data row 2026-07-22 is 6d behind today (allowance 5d) - competitor (~6 hr, reports lag ~1d)",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 858.2 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 858.5 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 99d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-28T08:19:50.371941+00:00",
-    "freshness_report_mtime_utc": "2026-07-28T08:33:26.141533+00:00"
+    "task_health_generated": "2026-07-28T08:51:07.333082+00:00",
+    "freshness_report_mtime_utc": "2026-07-28T08:48:51.180777+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-28T04:48:48.459813-04:00",
-      "last_write_time_utc": "2026-07-28T08:48:48.459813+00:00",
-      "size_bytes": 148962
+      "last_write_time": "2026-07-28T04:54:23.225302-04:00",
+      "last_write_time_utc": "2026-07-28T08:54:23.225302+00:00",
+      "size_bytes": 148955
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-28T04:48:48.580811-04:00",
-      "last_write_time_utc": "2026-07-28T08:48:48.580811+00:00",
-      "size_bytes": 160122
+      "last_write_time": "2026-07-28T04:54:23.701292-04:00",
+      "last_write_time_utc": "2026-07-28T08:54:23.701292+00:00",
+      "size_bytes": 160121
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-28T04:48:48.647810-04:00",
-      "last_write_time_utc": "2026-07-28T08:48:48.647810+00:00",
-      "size_bytes": 7033654
+      "last_write_time": "2026-07-28T04:54:23.762290-04:00",
+      "last_write_time_utc": "2026-07-28T08:54:23.762290+00:00",
+      "size_bytes": 7033655
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-27T07:09:01.935637-04:00",
@@ -44,13 +44,13 @@
       "size_bytes": 10339302
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-28T04:48:48.667810-04:00",
-      "last_write_time_utc": "2026-07-28T08:48:48.667810+00:00",
-      "size_bytes": 1976156
+      "last_write_time": "2026-07-28T04:54:23.785290-04:00",
+      "last_write_time_utc": "2026-07-28T08:54:23.785290+00:00",
+      "size_bytes": 1976155
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-28T04:48:48.658810-04:00",
-      "last_write_time_utc": "2026-07-28T08:48:48.658810+00:00",
+      "last_write_time": "2026-07-28T04:54:23.776290-04:00",
+      "last_write_time_utc": "2026-07-28T08:54:23.776290+00:00",
       "size_bytes": 156757
     },
     "calibration_three_way.csv": {
