@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-30T20:39:25.085265-04:00",
-  "generated_at_utc": "2026-07-31T00:39:25.085265+00:00",
+  "generated_at": "2026-07-30T20:48:33.674550-04:00",
+  "generated_at_utc": "2026-07-31T00:48:33.674550+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-leaderboard-refresh: last run 'ultraviolet-macaque' ended FAILED at 2026-07-30T09:29:22.587147+00:00 \u2014 Flow run encountered an exception: RuntimeError: leaderboard step 'update_market_volume_duckdb' failed (exit -6); aborting before publish \u2014 last-good leaderboard CSVs kept.",
-    "task_health: prod-settlement-cycle: last run 'massive-moth' ended FAILED at 2026-07-30T20:38:09.621262+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260730_200010): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
+    "task_health: prod-settlement-cycle: last run 'lavender-rhino' ended FAILED at 2026-07-31T00:32:22.829065+00:00 \u2014 Flow run encountered an exception: RuntimeError: settlement_cycle FAILED (cycle_id=20260731_000003): health={'status': 'failed', 'reason': 'post_cycle_health_check raised an exception during execution",
     "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 86.8 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: STALE    market_leaderboard.csv - 67.2 h old (threshold 6 h) - settlement (~4 hr)",
     "freshness_check: STALE    category_leaderboard.csv - 67.2 h old (threshold 6 h) - settlement (~4 hr)",
@@ -24,24 +24,24 @@
     "freshness_check: STALL    v3_settle_mode1_last_complete - no fully-complete Mode 1 settlement cycle in 14.4 h (threshold 6.0 h) - collect_settled_markets_v3.py --mode 1; dirty_tickers for settled_ticker_pnl/maker_pnl/parlay_pnl may be starving"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-07-31T00:10:14.868156+00:00",
+    "task_health_generated": "2026-07-31T00:40:07.837317+00:00",
     "freshness_report_mtime_utc": "2026-07-31T00:37:10.055425+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-07-30T20:39:24.372583-04:00",
-      "last_write_time_utc": "2026-07-31T00:39:24.372583+00:00",
-      "size_bytes": 149151
+      "last_write_time": "2026-07-30T20:48:32.833151-04:00",
+      "last_write_time_utc": "2026-07-31T00:48:32.833151+00:00",
+      "size_bytes": 149145
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-07-30T20:39:24.475581-04:00",
-      "last_write_time_utc": "2026-07-31T00:39:24.475581+00:00",
+      "last_write_time": "2026-07-30T20:48:33.029148-04:00",
+      "last_write_time_utc": "2026-07-31T00:48:33.029148+00:00",
       "size_bytes": 160413
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-07-30T20:39:24.537581-04:00",
-      "last_write_time_utc": "2026-07-31T00:39:24.537581+00:00",
-      "size_bytes": 7045028
+      "last_write_time": "2026-07-30T20:48:33.069148-04:00",
+      "last_write_time_utc": "2026-07-31T00:48:33.069148+00:00",
+      "size_bytes": 7045036
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-30T07:02:42.928416-04:00",
@@ -49,13 +49,13 @@
       "size_bytes": 10350690
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-07-30T20:39:24.559580-04:00",
-      "last_write_time_utc": "2026-07-31T00:39:24.559580+00:00",
-      "size_bytes": 1982282
+      "last_write_time": "2026-07-30T20:48:33.096148-04:00",
+      "last_write_time_utc": "2026-07-31T00:48:33.096148+00:00",
+      "size_bytes": 1982286
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-07-30T20:39:24.550581-04:00",
-      "last_write_time_utc": "2026-07-31T00:39:24.550581+00:00",
+      "last_write_time": "2026-07-30T20:48:33.083148-04:00",
+      "last_write_time_utc": "2026-07-31T00:48:33.083148+00:00",
       "size_bytes": 157574
     },
     "calibration_three_way.csv": {
