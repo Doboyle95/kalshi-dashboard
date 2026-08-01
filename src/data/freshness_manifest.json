@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-08-01T03:47:49.039196-04:00",
-  "generated_at_utc": "2026-08-01T07:47:49.039196+00:00",
+  "generated_at": "2026-08-01T04:01:41.583614-04:00",
+  "generated_at_utc": "2026-08-01T08:01:41.583614+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
-    "freshness_check: STALE    taker_notional_daily.csv - 7.2 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    market_leaderboard.csv - 7.2 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    category_leaderboard.csv - 7.2 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    large_trades.csv - 7.1 h old (threshold 6 h) - settlement (~4 hr)",
-    "freshness_check: STALE    kalshi_oi_daily.csv - 47.6 h old (threshold 36 h) - daily OI snapshot (04:00)",
+    "freshness_check: STALE    taker_notional_daily.csv - 7.5 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    market_leaderboard.csv - 7.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    category_leaderboard.csv - 7.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    large_trades.csv - 7.4 h old (threshold 6 h) - settlement (~4 hr)",
+    "freshness_check: STALE    kalshi_oi_daily.csv - 47.8 h old (threshold 36 h) - daily OI snapshot (04:00)",
     "freshness_check: GAP_KNOWN rothera_categories_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-05",
     "freshness_check: GAP_KNOWN rothera_sports_split_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-05",
     "freshness_check: STALE_TAIL dkex_daily.csv - newest data row 2026-07-22 is 10d behind today (allowance 5d) - competitor (~6 hr, reports lag ~1d)",
@@ -16,32 +16,32 @@
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
     "freshness_check: STALE_TAIL dkex_market_daily.csv - newest data row 2026-07-22 is 10d behind today (allowance 5d) - competitor (~6 hr, reports lag ~1d)",
     "freshness_check: STALE_TAIL dkex_settlement_daily.csv - newest data row 2026-07-22 is 10d behind today (allowance 5d) - competitor (~6 hr, reports lag ~1d)",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 953.3 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 953.5 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 103d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: STALE_TAIL volume_reconciliation_daily.csv - newest data row 2026-07-29 is 3d behind today (allowance 2d) - volume reconciliation (daily 11:30 ET)",
-    "freshness_check: STALL    v3_settle_mode1_last_complete - no fully-complete Mode 1 settlement cycle in 24.3 h (threshold 6.0 h) - collect_settled_markets_v3.py --mode 1; dirty_tickers for settled_ticker_pnl/maker_pnl/parlay_pnl may be starving"
+    "freshness_check: STALL    v3_settle_mode1_last_complete - no fully-complete Mode 1 settlement cycle in 24.5 h (threshold 6.0 h) - collect_settled_markets_v3.py --mode 1; dirty_tickers for settled_ticker_pnl/maker_pnl/parlay_pnl may be starving"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-08-01T07:40:11.683649+00:00",
-    "freshness_report_mtime_utc": "2026-08-01T07:37:03.344732+00:00"
+    "freshness_report_mtime_utc": "2026-08-01T07:52:02.699031+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-08-01T03:47:48.202577-04:00",
-      "last_write_time_utc": "2026-08-01T07:47:48.202577+00:00",
+      "last_write_time": "2026-08-01T04:01:40.671202-04:00",
+      "last_write_time_utc": "2026-08-01T08:01:40.671202+00:00",
       "size_bytes": 149337
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-08-01T03:47:48.327575-04:00",
-      "last_write_time_utc": "2026-08-01T07:47:48.327575+00:00",
-      "size_bytes": 160694
+      "last_write_time": "2026-08-01T04:01:40.795201-04:00",
+      "last_write_time_utc": "2026-08-01T08:01:40.795201+00:00",
+      "size_bytes": 160695
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-08-01T03:47:48.417574-04:00",
-      "last_write_time_utc": "2026-08-01T07:47:48.417574+00:00",
-      "size_bytes": 7055058
+      "last_write_time": "2026-08-01T04:01:40.856200-04:00",
+      "last_write_time_utc": "2026-08-01T08:01:40.856200+00:00",
+      "size_bytes": 7055071
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-07-31T07:02:25.715410-04:00",
@@ -49,13 +49,13 @@
       "size_bytes": 10352121
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-08-01T03:47:48.449574-04:00",
-      "last_write_time_utc": "2026-08-01T07:47:48.449574+00:00",
-      "size_bytes": 1985332
+      "last_write_time": "2026-08-01T04:01:40.879200-04:00",
+      "last_write_time_utc": "2026-08-01T08:01:40.879200+00:00",
+      "size_bytes": 1985408
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-01T03:47:48.434574-04:00",
-      "last_write_time_utc": "2026-08-01T07:47:48.434574+00:00",
+      "last_write_time": "2026-08-01T04:01:40.868200-04:00",
+      "last_write_time_utc": "2026-08-01T08:01:40.868200+00:00",
       "size_bytes": 158397
     },
     "calibration_three_way.csv": {
