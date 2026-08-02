@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-08-02T04:39:33.475641-04:00",
-  "generated_at_utc": "2026-08-02T08:39:33.475641+00:00",
+  "generated_at": "2026-08-02T04:44:24.529470-04:00",
+  "generated_at_utc": "2026-08-02T08:44:24.529470+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-competitor-sync: last run 'natural-anaconda' ended FAILED at 2026-08-02T05:16:34.575181+00:00 \u2014 Flow run encountered an exception: UnfinishedRun: Run is in PENDING state, its result is not available.",
     "task_health: prod-parlay-compact: last run 'vengeful-mosquito' ended FAILED at 2026-08-02T04:57:01.721478+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_compact genuine failure (exit 75)",
-    "task_health: prod-trade-collector: last run 'pumpkin-elephant' ended FAILED at 2026-08-02T07:55:32.488135+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
+    "task_health: prod-trade-collector: last run 'amphibian-wren' ended FAILED at 2026-08-02T08:39:39.022731+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
     "freshness_check: GAP_KNOWN rothera_categories_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-05",
     "freshness_check: GAP_KNOWN rothera_sports_split_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-05",
     "freshness_check: STALE_TAIL dkex_daily.csv - newest data row 2026-07-22 is 11d behind today (allowance 5d) - competitor (~6 hr, reports lag ~1d)",
@@ -21,7 +21,7 @@
     "freshness_check: STALE_TAIL volume_reconciliation_daily.csv - newest data row 2026-07-29 is 4d behind today (allowance 2d) - volume reconciliation (daily 11:30 ET)"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-08-02T08:10:12.173374+00:00",
+    "task_health_generated": "2026-08-02T08:40:09.899220+00:00",
     "freshness_report_mtime_utc": "2026-08-02T08:37:08.227628+00:00"
   },
   "files": {
@@ -51,9 +51,9 @@
       "size_bytes": 1987763
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-02T04:39:32.823974-04:00",
-      "last_write_time_utc": "2026-08-02T08:39:32.823974+00:00",
-      "size_bytes": 158798
+      "last_write_time": "2026-08-02T04:44:20.345566-04:00",
+      "last_write_time_utc": "2026-08-02T08:44:20.345566+00:00",
+      "size_bytes": 158796
     },
     "calibration_three_way.csv": {
       "last_write_time": "2026-07-26T06:20:00.898782-04:00",
