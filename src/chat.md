@@ -9,11 +9,12 @@ title: Ask Data
   <div class="page-meta">Requires <code>OPENAI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code>, plus the local API server.</div>
 </div>
 
-<p class="section-intro">This page is local-only. Your API key and the full dataset stay on your machine; the browser only talks to <code>http://127.0.0.1:8000</code>.</p>
+<p class="section-intro">Ask questions in plain English against the underlying trade data. The dataset itself never leaves the server — what goes to the LLM provider is your question, a description of the schema, and a sample of the rows your query returns.</p>
 
 <details class="surface-card compact-details">
-  <summary>How local chat works</summary>
-  <p>The page sends your question to the local FastAPI server at <code>http://127.0.0.1:8000</code>. The server asks the configured LLM to generate read-only SQL, validates it, runs it against local DuckDB views over Parquet and CSV data, and returns SQL, rows, and interpretation. The full dataset stays on your machine; only the question plus schema context go to the configured LLM provider.</p>
+  <summary>How this works</summary>
+  <p>Your question goes to a FastAPI server, which asks the configured LLM to generate read-only SQL, validates that SQL against a table allowlist and a set of syntax and I/O restrictions, runs it against DuckDB views over Parquet and CSV data, and returns the SQL, the rows, and an interpretation.</p>
+  <p>The dataset stays on the server. What is sent to the LLM provider is: your question, the schema description, and — so the model can interpret results rather than just emit SQL — up to the first 10 rows returned. “Deeper insights” sends up to 20 rows, plus a similar sample from each supporting query it runs. If retrieval-augmented context is enabled, your question is additionally sent to OpenAI’s embeddings endpoint, regardless of which provider generates the SQL.</p>
   <p>Ask for a metric, population, and date window in the same sentence, for example "sports vs non-sports fees in February 2026." Use follow-ups for interpretation after the first query succeeds; the SQL and evidence panels are there to help sanity-check what the model actually used.</p>
 </details>
 
@@ -23,12 +24,18 @@ title: Ask Data
   marked.setOptions({mangle: false, headerIds: false});
 
   // NOTE: this js block runs in the BROWSER (Observable Framework), so Node-only
-  // globals are unavailable -- an earlier version referenced one and crashed the
-  // whole chat panel on load. This page is local-only and talks to the local
-  // FastAPI server with no token, so the values are set directly below.
-  // (Change API_BASE here if you ever expose the API via a tunnel.)
-  const API_BASE = "http://127.0.0.1:8000";
-  const API_TOKEN = "";
+  // globals are unavailable -- an earlier version referenced process.env directly and
+  // crashed the whole chat panel on load (added d486b4753, reverted by 96c25f32f).
+  // 2026-08-01: the endpoint is configurable again, but with NO Node global here.
+  // observablehq.config.js runs in Node at build time and emits window.__CHAT_API__ /
+  // window.__CHAT_TOKEN__ as plain globals; we read those and fall back to localhost,
+  // so local dev and any build with the env vars unset behave exactly as before.
+  // Do NOT reintroduce process.env in this file.
+  const API_BASE = ((typeof window !== "undefined" && window.__CHAT_API__) || "http://127.0.0.1:8000").replace(/\/$/, "");
+  const API_TOKEN = (typeof window !== "undefined" && window.__CHAT_TOKEN__) || "";
+  const IS_LOCAL_API = /^https?:\/\/(127\.0\.0\.1|localhost)\b/.test(API_BASE);
+  // Server-assigned conversation id, echoed back so follow-ups keep context.
+  let sessionId = null;
   const apiUrl = `${API_BASE}/ask`;
   const resetUrl = `${API_BASE}/reset`;
   const healthUrl = `${API_BASE}/health`;
@@ -343,11 +350,15 @@ title: Ask Data
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {...authHeader, "Content-Type": "application/json"},
-        body: JSON.stringify({question})
+        body: JSON.stringify(sessionId ? {question, session_id: sessionId} : {question})
       });
 
       if (!response.ok) throw new Error(`API returned HTTP ${response.status}`);
       const data = await response.json();
+      // 2026-08-01: echo the server-assigned session id back on the next turn.
+      // Without this, _get_or_create_session(None) minted a fresh uuid per request so
+      // _history_turns() always returned [] -- multi-turn context was silently dead.
+      if (data.session_id) sessionId = data.session_id;
 
       // Populate the answer area with the real result
       const answerEl = pendingTurn.querySelector(".chat-turn-answer");
@@ -508,6 +519,7 @@ title: Ask Data
 
   newConvButton.addEventListener("click", async () => {
     try { await fetch(resetUrl, {method: "POST", headers: authHeader}); } catch {}
+    sessionId = null;  // 2026-08-01: drop the conversation id so /reset really starts fresh
     thread.replaceChildren();
     textarea.value = "";
     formWrapper.setAttribute("open", "");

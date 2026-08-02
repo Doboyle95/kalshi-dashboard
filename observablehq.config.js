@@ -6,6 +6,16 @@ export default {
   style: "styles.css",
   head: [
     '<link rel="preconnect" href="https://rsms.me/">',
+    // 2026-08-01: build-time injection of the chat API endpoint.
+    // This config file runs in NODE at build time, so process.env is available HERE.
+    // It is NOT available in a page's browser js block -- referencing it there is what
+    // crashed the whole Ask Data panel on load and forced commit 96c25f32f to hardcode
+    // localhost (see the NOTE in src/chat.md). Emitting the values as window globals
+    // keeps the browser side free of Node globals. JSON.stringify handles quoting/escaping
+    // and yields "" when the env var is unset, so chat.md falls back to localhost and
+    // local development is unchanged. CHAT_API_URL/CHAT_TOKEN are already passed to the
+    // build by .github/workflows/deploy.yml.
+    `<script>window.__CHAT_API__=${JSON.stringify(process.env.CHAT_API_URL ?? "")};window.__CHAT_TOKEN__=${JSON.stringify(process.env.CHAT_TOKEN ?? "")};</script>`,
     '<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
     // Apply saved theme before first paint to avoid FOUC
     `<script>(function(){try{var t=localStorage.getItem("kalshi-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`,
