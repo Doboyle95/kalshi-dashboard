@@ -411,9 +411,9 @@ function getTmRange(period) {
 // Below this all-time contract threshold, trust R's is_sports flag directly
 // rather than our manual JS prefix rules (exception: Parlays, which R misclassifies).
 const FALLBACK_THRESHOLD = 5_000_000;
-const FALLBACK_NOTIONAL_THRESHOLD = 15_000_000;
+const FALLBACK_YES_SIDE_VOLUME_THRESHOLD = 15_000_000;
 const allTimeContractsMap = new Map(leaderboard.map(d => [d.report_ticker, +d.contracts || 0]));
-const allTimeNotionalMap = new Map(leaderboard.map(d => [d.report_ticker, +d.yes_side_notional_volume || 0]));
+const allTimeYesSideVolumeMap = new Map(leaderboard.map(d => [d.report_ticker, +d.yes_side_notional_volume || 0]));
 // Phase 24 — R-as-single-brain: authoritative classification per report_ticker,
 // computed by R/classify_market.R (1:1 port of the JS rules below) and emitted
 // by R/build_leaderboard_from_duckdb.R into the leaderboard CSV. Used as a
@@ -468,7 +468,7 @@ function classifyWithFallback(ticker, isSports) {
   if (cl.cat !== "Other Sports" && cl.cat !== "Other Non-sports") return cl;
   const fallbackCat = categoryFromKalshiCategory(kalshiCategoryByReportTicker.get(ticker));
   const belowFallbackSize = (allTimeContractsMap.get(ticker) || 0) < FALLBACK_THRESHOLD ||
-    (allTimeNotionalMap.get(ticker) || 0) < FALLBACK_NOTIONAL_THRESHOLD;
+    (allTimeYesSideVolumeMap.get(ticker) || 0) < FALLBACK_YES_SIDE_VOLUME_THRESHOLD;
   if (fallbackCat && belowFallbackSize) {
     const grp = fallbackCat === "Other Sports" ? "Sports" : "Non-sports";
     return {grp, cat: fallbackCat, wideCat: normalizeTreemapCategory(fallbackCat), mtype: ticker};
@@ -527,9 +527,9 @@ function clearPinnedCategories() {
 <div class="control-strip">
 
 ```js
-// "notional" dropped — for a flow-style metric prefer taker-side volume,
-// which has its own page. Sorting categories by gross notional is rarely
-// the right comparison since it conflates volume with price level.
+// Dollar-value metrics dropped here — for a flow-style metric prefer taker-side
+// volume, which has its own page. Sorting categories by gross dollar value is
+// rarely the right comparison since it conflates contract count with price level.
 const metric = view(hashInput("metric", Inputs.radio(["contracts", "fees"], {
   label: "Metric",
   value: hashGet("metric", "contracts"),

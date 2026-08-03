@@ -28,13 +28,13 @@ import {buildReportTickerToCat, TAKER_DETAIL_ORDER, TAKER_DETAIL_COLORS, TAKER_G
 ```js
 display(freshnessPanel({
   items: [
-    {label: "Taker-side notional", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
-    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Taker-side notional dollars, broken out by category"}
+    {label: "Taker-side volume", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
+    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Taker-side volume in dollars, broken out by category"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
 }));
 display(askPageLink({
-  question: "Analyze recent taker-side notional and whether yes-side or no-side takers are driving the change.",
+  question: "Analyze recent taker-side volume and whether yes-side or no-side takers are driving the change.",
   context: "Taker-Side Volume page using taker_notional_daily.csv."
 }));
 ```
@@ -50,7 +50,7 @@ const ma7 = rollingMean(taker, "notional_total");
 ```
 
 ```js
-const totalNotional = d3.sum(taker, d => d.notional_total);
+const totalTakerVolume = d3.sum(taker, d => d.notional_total);
 const peakDay       = taker.reduce((b, d) => d.notional_total > b.notional_total ? d : b, taker[0]);
 const recentRows    = taker.slice(-30);
 const recentAvg     = d3.mean(recentRows, d => d.notional_total);
@@ -59,8 +59,8 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_total ? d.notional_yes
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">All-time taker-side notional</div>
-    <div class="kpi-value">${fmtUSD(totalNotional)}</div>
+    <div class="kpi-label">All-time taker-side volume</div>
+    <div class="kpi-value">${fmtUSD(totalTakerVolume)}</div>
     <div class="kpi-meta">dollars staked by takers</div>
   </div>
   <div class="kpi-card" data-accent="warning">
@@ -76,7 +76,7 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_total ? d.notional_yes
   <div class="kpi-card">
     <div class="kpi-label">Recent yes-side share</div>
     <div class="kpi-value">${recentPctYes?.toFixed(1)}%</div>
-    <div class="kpi-meta">of taker-side notional (30-day avg)</div>
+    <div class="kpi-meta">of taker-side volume (30-day avg)</div>
   </div>
 </div>
 
@@ -91,7 +91,7 @@ const takerMaxDate = d3.max(taker, d => d.date);
 const reportTickerToCat = buildReportTickerToCat(categoryLeaderboard);
 
 // Reclassify the per-ticker daily volume rows into detailed categories once, up front.
-// value = taker-side notional DOLLARS (not contracts) - Kalshi contracts price 1-99 cents, so a
+// value = taker-side volume in DOLLARS (not contracts) - Kalshi contracts price 1-99 cents, so a
 // "taker volume" chart plotted in raw contract counts isn't comparable to this page's other
 // dollar-denominated charts and overweights categories full of cheap, high-count contracts.
 const takerCatRows = takerVolByTicker.map(d => ({
@@ -107,7 +107,7 @@ const takerCatDaily = Array.from(
 const takerCatMaxDate = d3.max(takerCatDaily, d => d.date);
 ```
 
-## Daily taker-side notional
+## Daily taker-side volume
 
 <p class="section-intro">Dollars staked by the aggressor on each trade — the handle equivalent. Because it weighs each bet by what it cost, a 99¢ contract counts for far more than a 1¢ one.</p>
 
@@ -138,7 +138,7 @@ Plot.plot({
   height: 360,
   marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker-side notional ($)", grid: true},
+  y: {label: "Taker-side volume ($)", grid: true},
   marks: [
     Plot.rectY(fd, {
       x1: d => d.date,
@@ -169,7 +169,7 @@ Plot.plot({
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker-side notional</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker-side volume</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
@@ -209,7 +209,7 @@ Plot.plot({
   height: 300,
   marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker-side notional ($)", grid: true},
+  y: {label: "Taker-side volume ($)", grid: true},
   color: {domain: ["Yes", "No"], range: ["#00C2A8", "#e15759"], legend: false},
   marks: [
     Plot.rectY(fdStack, {
@@ -243,7 +243,7 @@ Plot.plot({
 
 ## Volume by category
 
-<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into, in the same taker-side notional dollars as the chart above — just broken out by category. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
+<p class="section-intro">Which categories the aggressive (taker) money is actually flowing into, in the same taker-side volume dollars as the chart above — just broken out by category. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
 
 ```js
 const drCat = Mutable([new Date("2025-01-01"), takerCatMaxDate]);
@@ -306,7 +306,7 @@ Plot.plot({
   height: 380,
   marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Taker-side notional ($)", grid: true, tickFormat: d => fmtUSD(d)},
+  y: {label: "Taker-side volume ($)", grid: true, tickFormat: d => fmtUSD(d)},
   color: {legend: true, domain: activeCatOrder, range: activeCatOrder.map(c => activeCatColors[c])},
   marks: [
     Plot.rectY(stackedCat, {
@@ -371,7 +371,7 @@ Plot.plot({
   width,
   height: skewByCategory.length * 26 + 44,
   marginLeft: 130,
-  x: {label: "Taker-side notional ($)", grid: true, tickFormat: d => fmtUSD(d)},
+  x: {label: "Taker-side volume ($)", grid: true, tickFormat: d => fmtUSD(d)},
   y: {label: null, domain: skewByCategory.map(d => d.category)},
   color: {legend: true, domain: ["Yes", "No"], range: ["#00C2A8", "#e15759"]},
   marks: [
@@ -393,6 +393,6 @@ Plot.plot({
 <p class="chart-note">Most yes-skewed in the brushed window: ${mostYesSkewed ? `${mostYesSkewed.category} (${mostYesSkewed.yesShare.toFixed(1)}% yes)` : "n/a"}. Most no-skewed: ${mostNoSkewed ? `${mostNoSkewed.category} (${(100 - mostNoSkewed.yesShare).toFixed(1)}% no)` : "n/a"}.</p>
 
 <details class="surface-card compact-details">
-  <summary>How taker-side notional is calculated</summary>
-  <p>Every matched trade has an aggressor (taker) who crosses the spread and a liquidity provider (maker) who rests. The taker's cost depends on which side they take: a yes-side taker pays the yes price per contract; a no-side taker pays <em>1 − yes price</em> per contract. Summing those dollar amounts across all takers gives total taker-side notional — the prediction-market equivalent of handle in sports betting. Unlike raw contract count, taker-side notional is unaffected by artificial inflation from high-frequency trading in near-certain contracts.</p>
+  <summary>How taker-side volume is calculated</summary>
+  <p>Every matched trade has an aggressor (taker) who crosses the spread and a liquidity provider (maker) who rests. The taker's cost depends on which side they take: a yes-side taker pays the yes price per contract; a no-side taker pays <em>1 − yes price</em> per contract. Summing those dollar amounts across all takers gives total taker-side volume — the prediction-market equivalent of handle in sports betting. Unlike raw contract count, taker-side volume is unaffected by artificial inflation from high-frequency trading in near-certain contracts.</p>
 </details>

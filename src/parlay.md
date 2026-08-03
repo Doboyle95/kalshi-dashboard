@@ -40,8 +40,8 @@ const totalHoldNet   = d3.sum(uni, d => d.hold_to_settlement_net);
 const totalFees      = d3.sum(uni, d => d.fees_total);
 const totalHandle    = d3.sum(uni, d => d.handle_yes);
 const overallPct     = totalNet / totalHandle * 100;
-const totalCashoutNotionalKpi = d3.sum(cashoutDaily, d => d.cashout_notional);
-const cashoutRateKpi = totalCashoutNotionalKpi / (totalHandle + totalCashoutNotionalKpi) * 100;
+const totalCashoutValueKpi = d3.sum(cashoutDaily, d => d.cashout_notional);
+const cashoutRateKpi = totalCashoutValueKpi / (totalHandle + totalCashoutValueKpi) * 100;
 ```
 
 <div class="kpi-grid">

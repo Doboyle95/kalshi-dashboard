@@ -156,7 +156,7 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">ForecastEx full exchange volume from CFTC daily bulletins. Contract denominations vary by product; counts reflect individual contracts traded, not notional value.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">ForecastEx full exchange volume from CFTC daily bulletins. Contract denominations vary by product; counts reflect individual contracts traded, not dollar value.</p>
 
 ## Sports vs. non-sports
 

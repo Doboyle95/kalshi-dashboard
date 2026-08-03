@@ -11,7 +11,7 @@ title: Taker P&L
 ```js
 const daily = await FileAttachment("data/taker_pnl_daily.csv").csv({typed: true});
 const makerDaily = await FileAttachment("data/maker_pnl_daily.csv").csv({typed: true});
-const notionalDaily = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerVolumeDaily = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
 const pnlByTicker = await FileAttachment("data/taker_pnl_by_ticker_daily.csv").csv({typed: true});
 const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
 const sportsDaily = await FileAttachment("data/taker_sports_daily.csv").csv({typed: true});
@@ -30,7 +30,7 @@ display(freshnessPanel({
   items: [
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
-    {label: "Taker-side notional", date: latestDate(notionalDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
+    {label: "Taker-side volume", date: latestDate(takerVolumeDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
     {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"},
     {label: "Market P&L leaderboard", date: null, value: `${pnlByMarket.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_market_leaderboard.csv"), meta: "All-time, refreshed once daily (not the settlement-cycle cadence above)", tone: "settlement"}
   ],
@@ -97,9 +97,9 @@ display(renderDateBrush({
 
 ```js
 const [startDate, endDate] = takerDateSel;
-const notionalByDate = new Map(notionalDaily.map(d => [+d.date, d]));
-const dailyWithNotional = daily.map(d => {
-  const n = notionalByDate.get(+d.date) ?? {};
+const takerVolumeByDate = new Map(takerVolumeDaily.map(d => [+d.date, d]));
+const dailyWithTakerVolume = daily.map(d => {
+  const n = takerVolumeByDate.get(+d.date) ?? {};
   return {
     ...d,
     notional_yes: n.notional_yes || 0,
@@ -108,7 +108,7 @@ const dailyWithNotional = daily.map(d => {
   };
 });
 
-const filteredDaily = dailyWithNotional
+const filteredDaily = dailyWithTakerVolume
   .filter(d => d.date >= startDate && d.date <= endDate)
   .sort((a, b) => a.date - b.date);
 
@@ -120,15 +120,15 @@ const totals = {
   gross: d3.sum(filteredDaily, d => d.pnl_gross || 0),
   net: d3.sum(filteredDaily, d => d.pnl_net || 0),
   fees: d3.sum(filteredDaily, d => d.fees_taker || 0),
-  notional: d3.sum(filteredDaily, d => d.notional_total || 0),
+  takerVolume: d3.sum(filteredDaily, d => d.notional_total || 0),
   settled: d3.sum(filteredDaily, d => d.contracts_settled || 0),
   total: d3.sum(filteredDaily, d => d.contracts_total || 0)
 };
 totals.netPerFace = totals.settled ? totals.net / totals.settled * 100 : 0;
 totals.feesPerFace = totals.settled ? totals.fees / totals.settled * 100 : 0;
-totals.grossRoi = totals.notional ? totals.gross / totals.notional * 100 : 0;
-totals.netRoi = totals.notional ? totals.net / totals.notional * 100 : 0;
-totals.feeDragRoi = totals.notional ? totals.fees / totals.notional * 100 : 0;
+totals.grossRoi = totals.takerVolume ? totals.gross / totals.takerVolume * 100 : 0;
+totals.netRoi = totals.takerVolume ? totals.net / totals.takerVolume * 100 : 0;
+totals.feeDragRoi = totals.takerVolume ? totals.fees / totals.takerVolume * 100 : 0;
 totals.coverage = totals.total ? totals.settled / totals.total * 100 : 0;
 
 const makerTotals = {
@@ -147,12 +147,12 @@ const makerTotals = {
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Taker fees paid</div>
     <div class="kpi-value" title="$${totals.fees.toLocaleString()}">${fmtUSD(totals.fees)}</div>
-    <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of taker-side notional</div>
+    <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of taker-side volume</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Net ROI on taker cost</div>
     <div class="kpi-value">${fmtROI(totals.netRoi)}</div>
-    <div class="kpi-meta" title="$${totals.notional.toLocaleString()} taker-side notional">${fmtUSD(totals.notional)} taker-side notional</div>
+    <div class="kpi-meta" title="$${totals.takerVolume.toLocaleString()} taker-side volume">${fmtUSD(totals.takerVolume)} taker-side volume</div>
   </div>
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Settled coverage</div>
@@ -164,14 +164,14 @@ const makerTotals = {
 ```js
 let runningGross = 0;
 let runningNet = 0;
-let runningNotional = 0;
+let runningTakerVolume = 0;
 const cumulativeRows = filteredDaily.flatMap(d => {
   runningGross += d.pnl_gross || 0;
   runningNet += d.pnl_net || 0;
-  runningNotional += d.notional_total || 0;
+  runningTakerVolume += d.notional_total || 0;
   return [
-    {date: d.date, series: "Before fees", value: runningGross, notional: runningNotional},
-    {date: d.date, series: "After fees", value: runningNet, notional: runningNotional}
+    {date: d.date, series: "Before fees", value: runningGross, takerVolume: runningTakerVolume},
+    {date: d.date, series: "After fees", value: runningNet, takerVolume: runningTakerVolume}
   ];
 });
 
@@ -181,8 +181,8 @@ const cumulativeTip = Array.from(
     rows => {
       const out = {date: rows[0].date};
       for (const row of rows) out[row.series] = row.value;
-      out.notional = rows[0].notional;
-      out.netRoi = out.notional ? out["After fees"] / out.notional * 100 : 0;
+      out.takerVolume = rows[0].takerVolume;
+      out.netRoi = out.takerVolume ? out["After fees"] / out.takerVolume * 100 : 0;
       return out;
     },
     d => +d.date
@@ -221,7 +221,7 @@ Plot.plot({
     Plot.ruleX(cumulativeTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(cumulativeTip, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])} ($${d["Before fees"].toLocaleString()})\nAfter fees: ${fmtUSD(d["After fees"])} ($${d["After fees"].toLocaleString()})\nTaker-side notional: ${fmtUSD(d.notional)} ($${d.notional.toLocaleString()})\nNet ROI: ${fmtROI(d.netRoi)}`
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])} ($${d["Before fees"].toLocaleString()})\nAfter fees: ${fmtUSD(d["After fees"])} ($${d["After fees"].toLocaleString()})\nTaker-side volume: ${fmtUSD(d.takerVolume)} ($${d.takerVolume.toLocaleString()})\nNet ROI: ${fmtROI(d.netRoi)}`
     })),
     Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.35})
   ]
@@ -349,7 +349,7 @@ Plot.plot({
       x2: d => new Date(d.date.getTime() + 864e5),
       y: "pnl_net",
       fill: d => Math.max(-20, Math.min(20, d.netRoi)),
-      title: d => `${fmtDate(d.date)}\nNet taker P&L: ${fmtUSD(d.pnl_net)}\nGross: ${fmtUSD(d.pnl_gross)}\nFees: ${fmtUSD(d.fees_taker)}\nTaker-side notional: ${fmtUSD(d.notional_total)}\nNet ROI: ${fmtROI(d.netRoi)}\nSettled contracts: ${fmtCount(d.contracts_settled)}`,
+      title: d => `${fmtDate(d.date)}\nNet taker P&L: ${fmtUSD(d.pnl_net)}\nGross: ${fmtUSD(d.pnl_gross)}\nFees: ${fmtUSD(d.fees_taker)}\nTaker-side volume: ${fmtUSD(d.notional_total)}\nNet ROI: ${fmtROI(d.netRoi)}\nSettled contracts: ${fmtCount(d.contracts_settled)}`,
       tip: true
     }),
     Plot.ruleY([0])
