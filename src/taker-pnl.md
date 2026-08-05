@@ -43,6 +43,43 @@ display(askPageLink({
 ```
 
 ```js
+// 2026-08-05 — SETTLEMENT-COMPLETENESS BANNER.
+//
+// taker_pnl_daily.csv deliberately publishes through TODAY so the newest days are
+// visible while still settling (PROVISIONAL PUBLISH, exporter_common.py). The gap
+// that leaves: a day at ~11% settled renders a real-looking number that is not
+// comparable to a matured one. On 2026-08-05 the page showed
+//   08-03  -$13.2M at 76.6% settled      <- matured
+//   08-04    -$158k at 11.6% settled      <- 98% of the day missing
+// and the only hedge was the generic freshnessPanel note "recent dates can look
+// incomplete", which names no day and no number.
+//
+// This is NOT the same situation as parlay.md's provisional note. There the metric
+// is a win RATE, and numerator and denominator move together, so the figure stays
+// honest while incomplete. Absolute P&L does not: it scales with how much has
+// settled, so a provisional day understates the eventual total AND can change sign
+// — 2026-08-02 read +$800,818 at 18% settled and matured to -$8.72M.
+//
+// pct_settled is already a published column, so this needs no schema change: adding
+// one would trip windowed_merge's column assertion and its `merged[old_cols]`
+// reprojection, and export_settled_daily_pnl is shared with maker P&L and covered by
+// smoke tests. Reading the existing column is the smaller blast radius.
+const PNL_PROVISIONAL_PCT_FLOOR = 40;
+const isProvPnl = d => d?.pct_settled != null && d.pct_settled < PNL_PROVISIONAL_PCT_FLOOR;
+const provPnlDays = daily.filter(isProvPnl).sort((a, b) => a.date - b.date);
+display(provPnlDays.length
+  ? html`<div class="chart-note" style="border-left:3px solid #d7191c; padding-left:.75rem;">
+      ○ The most recent ${provPnlDays.length === 1 ? "day is" : provPnlDays.length + " days are"}
+      <strong>provisional</strong> —
+      ${provPnlDays.map(d => `${fmtDate(d.date)} at ${d.pct_settled.toFixed(1)}% settled`).join(", ")}.
+      Only contracts that have already settled are counted, so the P&L shown is a
+      <strong>fraction of the eventual figure</strong>, not a small result — and it can
+      still change sign as the rest resolve. The same applies to maker P&L below.
+    </div>`
+  : html``);
+```
+
+```js
 const fmtCount = n => {
   const a = Math.abs(n ?? 0), s = n < 0 ? "-" : "";
   return s + (a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : String(Math.round(a)));
