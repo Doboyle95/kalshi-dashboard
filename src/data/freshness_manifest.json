@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-05T01:18:35.117033-04:00",
-  "generated_at_utc": "2026-08-05T05:18:35.117033+00:00",
+  "generated_at": "2026-08-05T01:22:04.573376-04:00",
+  "generated_at_utc": "2026-08-05T05:22:04.573376+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-trade-collector: last run 'coral-cockle' ended FAILED at 2026-08-05T05:05:42.914255+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
-    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 90.9 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
+    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 91.1 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1046.8 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1047.0 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 107d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-08-05T05:10:10.041909+00:00",
-    "freshness_report_mtime_utc": "2026-08-05T05:07:10.183784+00:00"
+    "freshness_report_mtime_utc": "2026-08-05T05:22:03.561561+00:00"
   },
   "files": {
     "daily_overall.csv": {
@@ -42,8 +42,8 @@
       "size_bytes": 1994481
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-05T01:18:34.343500-04:00",
-      "last_write_time_utc": "2026-08-05T05:18:34.343500+00:00",
+      "last_write_time": "2026-08-05T01:21:59.024591-04:00",
+      "last_write_time_utc": "2026-08-05T05:21:59.024591+00:00",
       "size_bytes": 159910
     },
     "calibration_three_way.csv": {
@@ -52,14 +52,14 @@
       "size_bytes": 13690
     },
     "category_leaderboard.csv": {
-      "last_write_time": "2026-08-05T01:18:28.497511-04:00",
-      "last_write_time_utc": "2026-08-05T05:18:28.497511+00:00",
-      "size_bytes": 939809
+      "last_write_time": "2026-08-05T01:19:46.366292-04:00",
+      "last_write_time_utc": "2026-08-05T05:19:46.366292+00:00",
+      "size_bytes": 881778
     },
     "market_leaderboard.csv": {
-      "last_write_time": "2026-08-05T01:18:28.336511-04:00",
-      "last_write_time_utc": "2026-08-05T05:18:28.336511+00:00",
-      "size_bytes": 188620
+      "last_write_time": "2026-08-05T01:19:26.380363-04:00",
+      "last_write_time_utc": "2026-08-05T05:19:26.380363+00:00",
+      "size_bytes": 191480
     },
     "competitor_daily.csv": {
       "last_write_time": "2026-08-05T00:58:49.847877-04:00",
