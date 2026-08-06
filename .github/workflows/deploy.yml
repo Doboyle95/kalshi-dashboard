@@ -4,10 +4,24 @@ on:
   push:
     branches: [main]
 
-# Allow one concurrent deployment
+# Allow one concurrent deployment.
+#
+# cancel-in-progress MUST stay false. GitHub Pages serialises deployments
+# per environment, and a run cancelled *mid-deploy* leaves its Pages
+# deployment in progress on the backend for ~10-11 min. Every run behind it
+# is then rejected outright with HTTP 400 "Deployment request failed ... due
+# to in progress deployment. Please cancel <sha> first or wait for it to
+# complete." See the note on the deploy step below for the measurement.
+#
+# With false, a newer push waits for the in-flight deploy instead of killing
+# it. GitHub still keeps only ONE pending run per group -- older pending runs
+# are cancelled *before they start*, so they never create a Pages deployment
+# and never leave a blocker behind. Runs still show up as "cancelled", but
+# harmlessly, and the surviving pending run always carries the newest data.
+# This matches GitHub's own Pages starter workflow, which uses false.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -41,21 +55,35 @@ jobs:
         with:
           path: dist
 
-      # 2026-07-05: actions/deploy-pages occasionally fails outright with a
-      # generic "Deployment failed, try again later" (a GitHub Pages backend
-      # rejection, not a build problem -- the artifact above already built
-      # and uploaded fine every time this has happened). Confirmed via
-      # `gh run list` history: 0% failure rate through 07-01, then a
-      # persistent 13-27%/day rate every day since 07-02 (this repo pushes
-      # to main roughly every 15 min, so that's a real, recurring gap, not
-      # noise), including streaks of 2-3 consecutive failures in a row
-      # (~30-45 min of stale dashboard before a later push finally got a
-      # clean deploy through). The existing `concurrency: cancel-in-progress`
-      # above already prevents two *workflow runs* from truly overlapping,
-      # but doesn't guarantee the Pages backend itself has finished
-      # processing a prior deployment before this run tries to create a new
-      # one. Retrying a couple of times with a short backoff directly
-      # addresses the observed pattern without adding a third-party action.
+      # 2026-07-05: actions/deploy-pages occasionally fails outright. The
+      # artifact above builds and uploads fine every time this happens, so
+      # retrying a couple of times with a short backoff was added here.
+      #
+      # 2026-08-06: the original diagnosis in this comment ("a GitHub Pages
+      # backend rejection", and "the concurrency group above already prevents
+      # two workflow runs from truly overlapping") was WRONG, and the retry
+      # ladder never actually addressed the real cause. Pulled the failure
+      # annotations for all 11 failures in the last 100 main-branch runs:
+      #
+      #   5  HTTP 400 "Deployment request failed for <sha> due to in progress
+      #                deployment. Please cancel <sha> first..."
+      #   5  "Deployment cancelled."  (job ran ~11.5 min, then gave up)
+      #   1  "Invalid actions OIDC token"        <- unrelated GitHub transient
+      #
+      # The first two are the same fault, ping-ponging. `cancel-in-progress:
+      # true` killed runs mid-deploy; each one left a Pages deployment stuck
+      # in progress for ~10-11 min; the next run was rejected instantly with
+      # the 400; the run after that got starved and timed out into
+      # "Deployment cancelled."; repeat. Every failure named the immediately
+      # preceding run as its blocker, an unbroken chain from 11:46 to 14:02
+      # UTC. So 10 of 11 failures traced to the concurrency setting, not to
+      # Pages being flaky. Fixed by setting cancel-in-progress: false above.
+      #
+      # Keep these backoffs SHORT. They are now only insurance against
+      # genuine one-off transients (OIDC, runner acquisition). A failing run
+      # holds the "pages" concurrency slot for as long as it keeps retrying,
+      # which under cancel-in-progress: false delays the next deploy -- and
+      # no realistic backoff can outwait a ~10 min Pages lock anyway.
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
