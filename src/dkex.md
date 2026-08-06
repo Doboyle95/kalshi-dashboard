@@ -73,7 +73,7 @@ const latestDay = daily.reduce((best, d) => d.date > (best?.date ?? new Date(0))
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>DKeX volume is the sum of <code>Last Quantity</code> in the public time-and-sales files. Categories come from the report symbol prefix using the same style as the Polymarket US parsing. Market/open-interest rows come from the daily market report; the market table keeps rows with either trade volume or open interest. Settlement rows come from the daily settlement report.</p>
+  <p>DKeX volume is the sum of <code>Last Quantity</code> in the public time-and-sales files. Categories come from the report symbol prefix using the same style as the Polymarket US parsing; the league columns on <code>dkex_sports_split_daily.csv</code> break out MLB, NPB and KBO and roll every other league into "Other leagues", so the four always sum to the daily total. Market/open-interest rows come from the daily market report; the market table keeps rows with either trade volume or open interest. Settlement rows come from the daily settlement report.</p>
   <p>The reports do not publish fees, so DKeX is shown in volume and trade-size views but has no fee series.</p>
 </details>
 
@@ -166,21 +166,29 @@ Plot.plot({
 })
 ```
 
-## Sports vs. non-sports
+## League mix
 
-<p class="section-intro">Most currently reported DKeX activity is sports, especially baseball in the first files.</p>
+<p class="section-intro">Every symbol DKeX has listed since its first public file belongs to a sports league, so a sports-vs-non-sports split would be a flat line at 100% and is no longer shown. The cut that carries information is the league: MLB is the majority, but NPB (Japan) and KBO (Korea) together are about a third of the venue.</p>
 
 ```js
-const brushSports = view(makeBrush(split, DKEX));
+const brushLeague = view(makeBrush(split, DKEX));
 ```
 
 ```js
-const [sS, eS] = brushSports;
-const splitFSports = split.filter(d => d.date >= sS && d.date <= eS);
-const tidySplit = splitFSports.flatMap(d => [
-  {date: d.date, category: "Sports", value: d.contracts_sports || 0},
-  {date: d.date, category: "Non-sports", value: d.contracts_nonsports || 0}
-]);
+const [sL, eL] = brushLeague;
+const splitFLeague = split.filter(d => d.date >= sL && d.date <= eL);
+const LEAGUE_SERIES = [
+  {key: "contracts_mlb", label: "MLB", color: DKEX},
+  {key: "contracts_npb", label: "NPB (Japan)", color: "#00C2A8"},
+  {key: "contracts_kbo", label: "KBO (Korea)", color: "#7C6CF0"},
+  {key: "contracts_other_leagues", label: "Other leagues", color: "#94A3B8"}
+];
+const leagueOrder = LEAGUE_SERIES.map(s => s.label);
+const tidyLeague = splitFLeague.flatMap(d => LEAGUE_SERIES.map(s => ({
+  date: d.date, league: s.label, value: d[s.key] || 0
+})));
+const leagueTotals = LEAGUE_SERIES.map(s => ({label: s.label, value: d3.sum(splitFLeague, d => d[s.key] || 0)}));
+const leagueGrand = d3.sum(leagueTotals, t => t.value);
 ```
 
 ```js
@@ -191,21 +199,29 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: [DKEX, "#00C2A8"]},
+  color: {legend: true, domain: leagueOrder, range: LEAGUE_SERIES.map(s => s.color)},
   marks: [
-    Plot.areaY(tidySplit, {
-      x: "date", y: "value", fill: "category",
-      order: ["Non-sports", "Sports"],
+    Plot.areaY(tidyLeague, {
+      x: "date", y: "value", fill: "league",
+      order: leagueOrder.slice().reverse(),
       curve: "monotone-x", fillOpacity: 0.85
     }),
-    Plot.ruleX(splitFSports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(splitFSports, Plot.pointerX({
+    Plot.ruleX(splitFLeague, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(splitFLeague, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nSports: ${fmtCount(d.contracts_sports || 0)}\nNon-sports: ${fmtCount(d.contracts_nonsports || 0)}`
+      title: d => [fmtDate(d.date)].concat(LEAGUE_SERIES.map(s => `${s.label}: ${fmtCount(d[s.key] || 0)}`)).join("\n")
     })),
     Plot.ruleY([0])
   ]
 })
+```
+
+```js
+display(leagueGrand
+  ? html`<p class="section-intro">Share of the selected window: ${leagueTotals
+      .map(t => `${t.label} ${(100 * t.value / leagueGrand).toFixed(1)}%`)
+      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - today NWSL, NASCAR and INDYCAR.</p>`
+  : html`<p class="section-intro">League columns arrive with the next competitor data refresh (~6h); this chart fills in then.</p>`);
 ```
 
 ## Category mix
@@ -337,7 +353,7 @@ display((() => {
 
 ## Settlements
 
-<p class="section-intro">Daily settlement report counts, split by yes/no settlement price.</p>
+<p class="section-intro">Daily settlement report counts by outcome. DKeX settles a contract at $1.00 (won), $0.00 (lost), or $0.50 &mdash; and $0.50 means the event was <strong>voided or postponed</strong>, so both sides refund at half. Voids are counted separately, not as wins. &ldquo;Other&rdquo; is the rare partial or pro-rated settlement.</p>
 
 ```js
 const settlementByDate = Array.from(
@@ -345,15 +361,28 @@ const settlementByDate = Array.from(
     date: rows[0].date,
     settlements: d3.sum(rows, d => d.settlements || 0),
     settled_yes: d3.sum(rows, d => d.settled_yes || 0),
-    settled_no: d3.sum(rows, d => d.settled_no || 0)
+    settled_no: d3.sum(rows, d => d.settled_no || 0),
+    settled_void: d3.sum(rows, d => d.settled_void || 0),
+    settled_other: d3.sum(rows, d => d.settled_other || 0)
   }), d => +d.date),
   ([, v]) => v
 ).sort((a, b) => a.date - b.date);
 
 const settlementTidy = settlementByDate.flatMap(d => [
   {date: d.date, outcome: "Settled yes", count: d.settled_yes || 0},
-  {date: d.date, outcome: "Settled no", count: d.settled_no || 0}
+  {date: d.date, outcome: "Settled no", count: d.settled_no || 0},
+  {date: d.date, outcome: "Voided ($0.50)", count: d.settled_void || 0},
+  {date: d.date, outcome: "Other", count: d.settled_other || 0}
 ]);
+
+// The per-day void rate ships as a column in dkex_daily.csv (build_dkex_daily.py)
+// so this chart, the DuckDB tables and the chatbot all read one definition.
+// Days with no settlement report leave void_rate blank -> null under typed:true.
+const voidRate = daily
+  .filter(d => d.void_rate != null && (d.settlements || 0) > 0)
+  .map(d => ({date: d.date, void_rate: +d.void_rate}))
+  .sort((a, b) => a.date - b.date);
+const fmtPct = n => n == null || Number.isNaN(+n) ? "" : (100 * +n).toFixed(2) + "%";
 ```
 
 ```js
@@ -364,7 +393,7 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Settled contracts", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Settled yes", "Settled no"], range: ["#1a9641", "#d7191c"]},
+  color: {legend: true, domain: ["Settled yes", "Settled no", "Voided ($0.50)", "Other"], range: ["#1a9641", "#d7191c", "#fdae61", "#9ca3af"]},
   marks: [
     Plot.rectY(settlementTidy, {
       x1: d => d.date,
@@ -373,6 +402,32 @@ Plot.plot({
       fill: "outcome",
       tip: true,
       title: d => `${fmtDate(d.date)}\n${d.outcome}: ${fmtCount(d.count)}`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+<p class="section-intro">Share of each day&rsquo;s settlements that voided at $0.50. Spikes are postponement days &mdash; before this fix those legs were reported as wins.</p>
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 200,
+  marginLeft: 70,
+  x: {type: "utc", label: null},
+  y: {label: "Void rate", grid: true, zero: true, tickFormat: d => (100 * d).toFixed(0) + "%"},
+  marks: [
+    Plot.areaY(voidRate, {x: "date", y: "void_rate", fill: "#fdae61", fillOpacity: 0.3, curve: "monotone-x"}),
+    Plot.lineY(voidRate, {x: "date", y: "void_rate", stroke: "#b45309", strokeWidth: 1.5, curve: "monotone-x"}),
+    Plot.dot(voidRate, {
+      x: "date",
+      y: "void_rate",
+      r: 2,
+      fill: "#b45309",
+      tip: true,
+      title: d => fmtDate(d.date) + "\nVoid rate: " + fmtPct(d.void_rate)
     }),
     Plot.ruleY([0])
   ]

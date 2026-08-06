@@ -71,7 +71,7 @@ const latestDay = daily.reduce((best, d) => d.date > (best?.date ?? new Date(0))
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Underdog volume is the <code>daily_volume</code> field from the public daily market reports, confirmed to equal the sum of that ticker's <code>contracts_traded</code> in the public trade-level reports — the same contracts convention used everywhere else on this site (not dollar volume). Categories are parsed from the sport code embedded in each ticker (e.g. <code>UDXMLBGAMEWIN...</code> → Baseball); bet type (Moneyline / Spread / Total) is parsed from the rest of that same ticker segment.</p>
+  <p>Underdog volume is the <code>daily_volume</code> field from the public daily market reports, confirmed to equal the sum of that ticker's <code>contracts_traded</code> in the public trade-level reports — the same contracts convention used everywhere else on this site (not dollar volume). Categories are parsed from the sport code embedded in each ticker (e.g. <code>UDXMLBGAMEWIN...</code> → Baseball); bet type (Moneyline / Spread / Total) is parsed from the rest of that same ticker segment. Multi-leg parlays are reported as <code>UDXCOMBO-&lt;hash&gt;</code> tickers that carry no sport or bet-type code, so they are grouped as Parlays rather than split across sports.</p>
   <p>The reports do not publish fees, so Underdog is shown in volume and trade-size views but has no fee series. Contract sizes on this exchange can be fractional (unlike Kalshi's whole-contract trades), which is expected, not a parsing error.</p>
 </details>
 
@@ -164,9 +164,9 @@ Plot.plot({
 })
 ```
 
-## Sports vs. non-sports
+## Single-game vs. parlay
 
-<p class="section-intro">Every Underdog market reported so far is a sports contract (all baseball) — this section will be more useful once other categories start trading.</p>
+<p class="section-intro">Everything Underdog has reported so far is a sports contract, so the useful split is not sports vs. non-sports but single-game markets vs. multi-leg parlays. The “non-sports” bucket in the underlying file is entirely the <code>UDXCOMBO-&lt;hash&gt;</code> parlay tickers — they carry no sport code, so the ticker parser files them outside the sport categories. Verified 2026-08-06: on every date in the file that bucket equals the UDXCOMBO total exactly, and no non-parlay ticker has ever landed in it.</p>
 
 ```js
 const brushSports = view(makeBrush(split, UNDERDOG));
@@ -175,9 +175,13 @@ const brushSports = view(makeBrush(split, UNDERDOG));
 ```js
 const [sS, eS] = brushSports;
 const splitFSports = split.filter(d => d.date >= sS && d.date <= eS);
+// contracts_nonsports is NOT a non-sports series: it is total minus the sport
+// categories, and Underdog's only out-of-taxonomy tickers are the UDXCOMBO
+// parlays. Labelling it "Non-sports" made the chart claim a non-sports market
+// existed when none ever has. Labelled for what it actually measures.
 const tidySplit = splitFSports.flatMap(d => [
-  {date: d.date, category: "Sports", value: d.contracts_sports || 0},
-  {date: d.date, category: "Non-sports", value: d.contracts_nonsports || 0}
+  {date: d.date, category: "Single-game", value: d.contracts_sports || 0},
+  {date: d.date, category: "Parlays (combos)", value: d.contracts_nonsports || 0}
 ]);
 ```
 
@@ -189,13 +193,13 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: [UNDERDOG, "#00C2A8"]},
+  color: {legend: true, domain: ["Single-game", "Parlays (combos)"], range: [UNDERDOG, "#00C2A8"]},
   marks: [
     Plot.dot(tidySplit.filter(d => d.value > 0), {x: "date", y: "value", fill: "category", r: 4}),
     Plot.ruleX(splitFSports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(splitFSports, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nSports: ${fmtCount(d.contracts_sports || 0)}\nNon-sports: ${fmtCount(d.contracts_nonsports || 0)}`
+      title: d => `${fmtDate(d.date)}\nSingle-game: ${fmtCount(d.contracts_sports || 0)}\nParlays (combos): ${fmtCount(d.contracts_nonsports || 0)}`
     })),
     Plot.ruleY([0])
   ]
@@ -204,7 +208,7 @@ Plot.plot({
 
 ## Category mix
 
-<p class="section-intro">Volume by sport, parsed from each contract's ticker.</p>
+<p class="section-intro">Volume by sport, parsed from each contract's ticker. Underdog is not a baseball-only venue: WNBA has been listed since 2026-07-28 and is 12.6% of all contracts traded to date. The parlay bucket is the <code>UDXCOMBO</code> tickers, which carry no sport code.</p>
 
 ```js
 const brushCats = view(makeBrush(split, UNDERDOG));
@@ -212,8 +216,14 @@ const brushCats = view(makeBrush(split, UNDERDOG));
 
 ```js
 const [sC, eC] = brushCats;
-const catDailyF = catDaily.filter(d => d.date >= sC && d.date <= eC && d.contracts > 0);
-const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => d.category);
+// The "Other" category is not a residual grab-bag: it is exactly the UDXCOMBO
+// parlay tickers (verified 2026-08-06 against every date in the raw reports).
+// A genuinely new unmapped sport code would also arrive as "Other", so if a
+// non-parlay ever shows up here this label has to be revisited.
+const catLabel = c => c === "Other" ? "Parlays (combos)" : c;
+const catDailyF = catDaily.filter(d => d.date >= sC && d.date <= eC && d.contracts > 0)
+  .map(d => ({...d, category: catLabel(d.category)}));
+const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => catLabel(d.category));
 const topCats = [...catTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(d => d[0]);
 ```
 
@@ -266,13 +276,26 @@ Plot.plot({
 
 ## Bet type mix
 
-<p class="section-intro">Underdog Exchange lists moneyline, spread, and total contracts on the same games — a breakdown other venues on this site don't have. Parsed from the same ticker as category, one level down.</p>
+<p class="section-intro">Underdog Exchange lists moneyline, spread, and total contracts on the same games — a breakdown other venues on this site don't have. Parsed from the same ticker as category, one level down. Every multi-leg parlay is minted as its own one-off ticker, so all of them are grouped into a single Parlay series rather than charted individually.</p>
 
 ```js
-const betTypeTotals = d3.rollup(market, v => d3.sum(v, d => d.trade_volume), d => d.market_type);
+// Underdog mints one ticker per parlay (UDXCOMBO-<hash>), and the ticker parser
+// turns each of those hashes into its own market_type. Charted raw that is 3,006
+// distinct values -- 2,999 of them occurring exactly once -- which rendered a
+// 3,006-entry legend above a ~102,000px tall bar chart to represent 3.9% of
+// volume. They are all the same thing, so they collapse into one Parlay series.
+// Matching on the UDXCOMBO symbol as well as the Combo- market_type means a
+// genuinely new bet type stays visible as itself instead of hiding in here.
+// Verified 2026-08-06: this moves 0.00 contracts between series, the Parlay
+// total equals the UDXCOMBO total exactly, and no non-combo row is relabelled.
+const betTypeLabel = d =>
+  (/^Combo-/.test(d.market_type) || /^UDXCOMBO/i.test(d.symbol || "")) ? "Parlay" : d.market_type;
+
+const betTypeTotals = d3.rollup(market, v => d3.sum(v, d => d.trade_volume), d => betTypeLabel(d));
 const topBetTypes = [...betTypeTotals.entries()].sort((a, b) => b[1] - a[1]).map(d => d[0]);
 
-const betTypeTidy = market.filter(d => d.trade_volume > 0);
+const betTypeTidy = market.filter(d => d.trade_volume > 0)
+  .map(d => ({...d, bet_type: betTypeLabel(d)}));
 ```
 
 ```js
@@ -286,9 +309,9 @@ Plot.plot({
   color: {legend: true, domain: topBetTypes, scheme: "set2"},
   marks: [
     Plot.dot(betTypeTidy, {
-      x: "date", y: "trade_volume", fill: "market_type", r: 3, fillOpacity: 0.75,
+      x: "date", y: "trade_volume", fill: "bet_type", r: 3, fillOpacity: 0.75,
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${d.market_type}: ${fmtCount(d.trade_volume)} contracts (${d.symbol})`
+      title: d => `${fmtDate(d.date)}\n${d.bet_type}: ${fmtCount(d.trade_volume)} contracts (${d.symbol})`
     }),
     Plot.ruleY([0])
   ]
@@ -324,7 +347,22 @@ Plot.plot({
 
 ## Open interest
 
-<p class="section-intro">Open interest reported across active Underdog markets.</p>
+<p class="section-intro">Open interest reported across active Underdog markets. Hollow grey markers on the zero line are dates where Underdog reported no open interest at all — every market row came back 0, including 2026-07-24 on 911.9k contracts of volume — so those days are drawn as explicit gaps rather than as a real zero or dropped from the chart. 2026-08-02 is flagged separately: open interest fell 92% from the prior day on the third-heaviest volume day in the file, then fully recovered the next day, which is a partial reporting failure rather than a real unwind.</p>
+
+```js
+// Four dates come back with every single market row at exactly 0 open interest:
+// 2026-07-17, 07-22, 07-23 and 07-24, on 1,012 / 56,132 / 220,210 / 911,855
+// contracts of volume respectively. On every other date the rows are a mix of
+// zero and positive, so a 100%-zero day is an upstream reporting gap, not a
+// genuinely flat book. Derived from the data rather than hardcoded so a future
+// gap is handled the same way.
+const oiReported = daily.filter(d => (d.open_interest || 0) > 0);
+const oiNotReported = daily.filter(d => !((d.open_interest || 0) > 0));
+// 2026-08-02: 182,306 -> 14,614 (-92.0%) on the third-highest volume day in the
+// file, back to 148,171 the next day. Annotated inline so it is not read as a
+// real position unwind.
+const oiCollapse = daily.filter(d => d.date.toISOString().slice(0, 10) === "2026-08-02");
+```
 
 ```js
 Plot.plot({
@@ -335,13 +373,30 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
-    Plot.dot(daily.filter(d => (d.open_interest || 0) > 0), {
+    Plot.ruleY([0]),
+    Plot.dot(oiReported, {
       x: "date", y: "open_interest",
       r: 4, fill: UNDERDOG,
       tip: true,
       title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.open_interest || 0)}`
     }),
-    Plot.ruleY([0])
+    // Explicit gap treatment: the old chart filtered these rows out entirely, so
+    // four dates vanished and the series read as continuous across them.
+    Plot.dot(oiNotReported, {
+      x: "date", y: 0,
+      r: 5, stroke: "#94A3B8", strokeWidth: 1.5, strokeDasharray: "2,2",
+      tip: true,
+      title: d => `${fmtDate(d.date)}\nOpen interest not reported\nEvery market row returned 0 on this date, on ${fmtCount(d.contracts)} contracts of traded volume.`
+    }),
+    Plot.dot(oiCollapse, {
+      x: "date", y: "open_interest",
+      r: 9, stroke: "#EF4444", strokeWidth: 1.5
+    }),
+    Plot.text(oiCollapse, {
+      x: "date", y: "open_interest",
+      text: () => "-92% vs prior day, recovered next day",
+      dy: -16, textAnchor: "end", fontSize: 10, fill: "currentColor", fillOpacity: 0.75
+    })
   ]
 })
 ```

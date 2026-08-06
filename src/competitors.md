@@ -40,13 +40,22 @@ display(askPageLink({
 
 ```js
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+// is_partial in daily_overall.csv is the string "TRUE"/"FALSE" (uppercase) which
+// d3.autoType does not coerce to boolean, so naive truthiness fails. Use explicit
+// check. Same helper volume.md uses -- keep the two in sync.
+const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 ```
 
 ```js
 const platforms = [
   {
     name: "Kalshi", color: "#00C2A8",
-    data: kalshi.map(d => ({date: d.date, contracts: d.contracts_total, fees: d.fees_total}))
+    // Kalshi MUST come from daily_overall.csv (loaded above), never from the Kalshi
+    // rows in competitor_daily.csv: near_live_update.R recomputes daily_overall every
+    // ~7 min but only *copies* competitor_daily, so the latter's current-day row lags
+    // by hours -- 106,790,077 vs 232,872,916 contracts on 2026-08-06.
+    // `partial` rides along so the charts can mark today's still-filling value.
+    data: kalshi.map(d => ({date: d.date, contracts: d.contracts_total, fees: d.fees_total, partial: isPartial(d)}))
   },
   {
     name: "Polymarket US", color: "#3B7DD8",
@@ -170,10 +179,25 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
   const tipPivot = Array.from(
     d3.rollup(
       filteredAll.filter(d => d[metric] != null),
-      rs => { const o = {date: rs[0].date}; for (const r of rs) o[r.platform] = r[metric]; return o; },
+      rs => {
+        const o = {date: rs[0].date};
+        for (const r of rs) o[r.platform] = r[metric];
+        o.partial = rs.some(r => r.platform === "Kalshi" && r.partial);
+        return o;
+      },
       d => +d.date
     )
   ).map(([, v]) => v).sort((a, b) => a.date - b.date);
+
+  // Partial-day treatment, copied from volume.md V1 so the two pages read the same:
+  // solid line/fill over complete days, a dashed bridge into today, and a distinct
+  // orange marker on today's still-filling point. Without this the Kalshi line dives
+  // to whatever has been collected so far and reads as a crash -- 1,276,366,440 on
+  // 2026-08-05 to 232,872,916 on 2026-08-06 (-81.8%), every single day.
+  const kWindow   = platforms[0].data.filter(d => d.date >= s && d.date <= e && d[metric] != null);
+  const kComplete = kWindow.filter(d => !d.partial);
+  const kPartial  = kWindow.filter(d =>  d.partial);
+  const kBridge   = kComplete.length && kPartial.length ? [kComplete.at(-1), kPartial[0]] : [];
 
   display(Plot.plot({
     style: {fontFamily: "var(--font-sans)"},
@@ -190,23 +214,46 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
     },
     color: {legend: true, domain: colorDomain, range: colorRange},
     marks: [
-      Plot.areaY(platforms[0].data.filter(d => d.date >= s && d.date <= e), {
+      Plot.areaY(kComplete, {
         x: "date", y: metric,
         fill: platforms[0].color, fillOpacity: 0.08,
         curve: "monotone-x"
       }),
-      ...platforms.map(p =>
+      Plot.areaY(kBridge, {
+        x: "date", y: metric,
+        fill: platforms[0].color, fillOpacity: 0.04,
+        curve: "monotone-x"
+      }),
+      Plot.lineY(kComplete, {
+        x: "date", y: metric,
+        stroke: platforms[0].color, strokeWidth: 2.5,
+        curve: "monotone-x"
+      }),
+      Plot.lineY(kBridge, {
+        x: "date", y: metric,
+        stroke: platforms[0].color, strokeWidth: 2.5,
+        strokeDasharray: "5,3", curve: "monotone-x"
+      }),
+      Plot.dot(kPartial, {
+        x: "date", y: metric,
+        fill: "#ff8c00", r: 4, stroke: "var(--theme-background)", strokeWidth: 1.5
+      }),
+      ...platforms.slice(1).map(p =>
         Plot.lineY(p.data.filter(d => d.date >= s && d.date <= e && d[metric] != null), {
           x: "date", y: metric,
           stroke: p.color,
-          strokeWidth: p.name === "Kalshi" ? 2.5 : 1.75,
+          strokeWidth: 1.75,
           curve: "monotone-x"
         })
       ),
       Plot.ruleX(tipPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
       Plot.tip(tipPivot, Plot.pointerX({
         x: "date",
-        title: d => [fmtDate(d.date), ...colorDomain.map(p => d[p] != null ? `${p}: ${fmtFine(d[p])} (${d[p].toLocaleString()})` : null).filter(Boolean)].join("\n")
+        title: d => [
+          fmtDate(d.date),
+          d.partial ? "Kalshi partial day — still filling" : null,
+          ...colorDomain.map(p => d[p] != null ? `${p}: ${fmtFine(d[p])} (${d[p].toLocaleString()})` : null)
+        ].filter(Boolean).join("\n")
       })),
       ...(compLogScale === "Log" ? [] : [Plot.ruleY([0])])
     ]
@@ -214,7 +261,7 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived). CME = FanDuel + DraftKings combined event-contract volume (both clear through CME), hand-collected from daily bulletins so it's sparse. CME lumps each weekend's volume into the following Monday's bulletin, so here we spread Monday (and holiday-weekend) volume back across the days it actually traded, so the line reflects when activity happened rather than spiking every Monday. No fee series. (The CME page itself shows the raw bulletin numbers.)</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume. Crypto.com/Nadex = event binary contracts only (from CFTC daily bulletins, starts Dec 2024); fees computed at $0.02/contract (exchange fee for $1 contracts; settlement fees waived). CME = FanDuel + DraftKings combined event-contract volume (both clear through CME), hand-collected from daily bulletins so it's sparse. CME lumps each weekend's volume into the following Monday's bulletin, so here we spread Monday (and holiday-weekend) volume back across the days it actually traded, so the line reflects when activity happened rather than spiking every Monday. No fee series. (The CME page itself shows the raw bulletin numbers.) Today's Kalshi point is still filling, so it is drawn as a dashed segment ending in an orange dot instead of a solid line — the dip into it is how much has been collected so far, not a real fall in trading.</p>
 
 <div class="control-strip">
 
@@ -240,11 +287,39 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
   // A3 fix: exclude CME from the 100%-stacked share denominator. CME is sparse (~57 days) and is
   // omitted from the legend `order` + caption, so including it normalized every other platform's
   // share downward on CME's days only (inconsistent denominator). Share chart only; tooltips derive.
-  const shareTidy = platforms.filter(p => !p.name.includes("CME")).flatMap(p =>
+  const sharePlatforms = platforms.filter(p => !p.name.includes("CME"));
+
+  // Keep reported ZEROS. A venue that reported 0 contracts is dead, not absent --
+  // the old `d.contracts > 0` filter deleted the row, which made Plot interpolate
+  // that venue's band straight across the dead span and made it vanish from the
+  // tooltip entirely. DKeX reported 0 on 12 days (2026-06-12..2026-06-28) and
+  // Rothera on 2 (2026-05-25..26); all 14 rows were being discarded. Only drop
+  // Kalshi's partial row, which is a different problem (handled below).
+  const shareRaw = sharePlatforms.flatMap(p =>
     p.data
-      .filter(d => d.date >= s && d.date <= e && d.contracts != null && d.contracts > 0)
+      .filter(d => d.date >= s && d.date <= e && d.contracts != null && !d.partial)
       .map(d => ({date: d.date, platform: p.name, contracts: d.contracts}))
   );
+
+  // Leading-edge guard. The newest date normally carries ONLY Kalshi, because
+  // daily_overall.csv refreshes every ~7 min while competitor_daily.csv is just
+  // copied on a slower cadence. With offset:"expand" that renders Kalshi at exactly
+  // 100% share -- 87.17% on 2026-08-05 jumping to 100.00% on 2026-08-06. Stop the
+  // stack at the last date where more than one venue actually reported.
+  const venuesPerDay   = d3.rollup(shareRaw, rs => new Set(rs.map(r => r.platform)).size, d => +d.date);
+  const lastStackable  = d3.max(Array.from(venuesPerDay).filter(([, n]) => n > 1).map(([k]) => k));
+  const shareTidy      = shareRaw.filter(d => +d.date <= lastStackable);
+
+  // Hatch the trailing span where at least one venue has not reported yet, so a
+  // silent feed reads as "no report" rather than "zero share". A per-venue hatch is
+  // not representable in a 100%-stacked chart (there is no band to hatch where the
+  // venue has no row), so this marks the union span and names the laggards.
+  const lastReport = d3.rollup(shareTidy, rs => d3.max(rs, r => r.date), d => d.platform);
+  const staleFrom  = d3.min(Array.from(lastReport.values()));
+  const laggards   = Array.from(lastReport).filter(([, d]) => +d <= +staleFrom).map(([n]) => n);
+  const hatchMarks = (staleFrom != null && +staleFrom < lastStackable)
+    ? d3.utcHour.range(staleFrom, d3.utcHour.offset(new Date(lastStackable), 1), 4)
+    : [];
 
   const shareByDate = Array.from(
     d3.rollup(
@@ -276,6 +351,14 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
         curve: "monotone-x",
         fillOpacity: 0.85
       }),
+      ...(hatchMarks.length ? [
+        Plot.ruleX(hatchMarks, {x: d => d, stroke: "currentColor", strokeOpacity: 0.16, strokeWidth: 3}),
+        Plot.text([{d: staleFrom}], {
+          x: "d", y: 0.5, text: [`no report yet: ${laggards.join(", ")}`],
+          textAnchor: "start", dx: 4, fontSize: 10,
+          fill: "currentColor", fillOpacity: 0.7
+        })
+      ] : []),
       Plot.ruleX(shareByDate, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
       Plot.tip(shareByDate, Plot.pointerX({
         x: "date",
@@ -291,4 +374,4 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Share of total reported US prediction market contracts. Kalshi dominates; growing slivers at the bottom show ForecastEx and Polymarket US gaining ground.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Share of total reported US prediction market contracts. Kalshi dominates; growing slivers at the bottom show ForecastEx and Polymarket US gaining ground. A venue that reported zero for a day is drawn at zero rather than dropped, so a dead feed reads as dead. The stack stops at the last day on which more than one venue reported, so Kalshi is never shown at 100% merely because the competitor files have not landed yet; when a venue has not reported for the most recent days, those days are hatched and labelled with its name.</p>
