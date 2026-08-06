@@ -67,17 +67,29 @@ jobs:
       #
       #   5  HTTP 400 "Deployment request failed for <sha> due to in progress
       #                deployment. Please cancel <sha> first..."
-      #   5  "Deployment cancelled."  (job ran ~11.5 min, then gave up)
-      #   1  "Invalid actions OIDC token"        <- unrelated GitHub transient
+      #   4  "Deployment cancelled."  (job ran ~11.5 min, then gave up)
+      #   -- those 9 are one unbroken cascade, 11:46-14:02 UTC --
+      #   1  "job was not acquired by Runner of type hosted"  \ GitHub Actions
+      #   1  "Invalid actions OIDC token"                     / outage, below
       #
       # The first two are the same fault, ping-ponging. `cancel-in-progress:
       # true` killed runs mid-deploy; each one left a Pages deployment stuck
       # in progress for ~10-11 min; the next run was rejected instantly with
       # the 400; the run after that got starved and timed out into
-      # "Deployment cancelled."; repeat. Every failure named the immediately
-      # preceding run as its blocker, an unbroken chain from 11:46 to 14:02
-      # UTC. So 10 of 11 failures traced to the concurrency setting, not to
-      # Pages being flaky. Fixed by setting cancel-in-progress: false above.
+      # "Deployment cancelled."; repeat. Every one of the 9 named the
+      # immediately preceding run as its blocker. Two links in that chain
+      # were blocked by runs this concurrency group had *cancelled*
+      # (13:32 was blocked by 761bcc21, a cancelled run), which is the
+      # direct proof that a cancelled run leaves a blocking deployment.
+      # So 9 of 11 failures traced to the concurrency setting, not to Pages
+      # being flaky. Fixed by setting cancel-in-progress: false above.
+      #
+      # CAVEAT for whoever verifies this fix: GitHub opened a major Actions
+      # + Pages outage at 15:22 UTC on 2026-08-06, ~1.5h after the cascade
+      # above and shortly before this fix landed. Runs from 15:48 UTC onward
+      # that hang in "queued", never reach "in_progress", and die as
+      # cancelled/OIDC/runner errors are that outage, NOT this bug and NOT a
+      # failed fix. Judge the fix on runs after the incident is resolved.
       #
       # Keep these backoffs SHORT. They are now only insurance against
       # genuine one-off transients (OIDC, runner acquisition). A failing run
