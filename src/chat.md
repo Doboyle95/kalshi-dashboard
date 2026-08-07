@@ -31,8 +31,26 @@ title: Ask Data
   // window.__CHAT_TOKEN__ as plain globals; we read those and fall back to localhost,
   // so local dev and any build with the env vars unset behave exactly as before.
   // Do NOT reintroduce process.env in this file.
-  const API_BASE = ((typeof window !== "undefined" && window.__CHAT_API__) || "http://127.0.0.1:8000").replace(/\/$/, "");
-  const API_TOKEN = (typeof window !== "undefined" && window.__CHAT_TOKEN__) || "";
+  // 2026-08-07 SELF-HEAL: the endpoint now comes from src/chat-endpoint.json, which the VM
+  // rewrites and pushes whenever the tunnel hostname changes (KalshiData
+  // scripts/publish_chat_endpoint.py, run by kalshi-chat-endpoint.timer). A Cloudflare Quick
+  // Tunnel is assigned a NEW *.trycloudflare.com name on every restart, and with the endpoint
+  // baked in at build time that meant a human had to re-paste the CHAT_API_URL secret by hand
+  // each time -- in practice, the page just stayed broken until someone noticed.
+  // Precedence: published file -> build-time globals -> localhost, so local dev and any build
+  // with the env vars unset behave exactly as they did before.
+  // The read is fully guarded and must NEVER throw: an unguarded config read in this very
+  // block took the whole chat panel down once already (added d486b4753, reverted by 96c25f32f).
+  // A missing, empty or malformed file simply falls through to the previous behaviour.
+  let publishedEndpoint = {};
+  try {
+    const parsed = await FileAttachment("chat-endpoint.json").json();
+    if (parsed && typeof parsed === "object") publishedEndpoint = parsed;
+  } catch (err) {
+    publishedEndpoint = {};
+  }
+  const API_BASE = ((publishedEndpoint.api) || (typeof window !== "undefined" && window.__CHAT_API__) || "http://127.0.0.1:8000").replace(/\/$/, "");
+  const API_TOKEN = (publishedEndpoint.token) || (typeof window !== "undefined" && window.__CHAT_TOKEN__) || "";
   const IS_LOCAL_API = /^https?:\/\/(127\.0\.0\.1|localhost)\b/.test(API_BASE);
   // Server-assigned conversation id, echoed back so follow-ups keep context.
   let sessionId = null;
