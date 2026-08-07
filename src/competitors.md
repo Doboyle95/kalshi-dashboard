@@ -29,14 +29,26 @@ const cme        = await FileAttachment("data/cme_daily_distributed.csv").csv({t
 const dkexDaily     = await FileAttachment("data/dkex_daily.csv").csv({typed: true});
 const underdogDaily = await FileAttachment("data/underdog_daily.csv").csv({typed: true});
 const freshness = await FileAttachment("data/freshness_manifest.json").json();
+// Kalshi's end-of-day open-interest snapshot. It has to come from its own file rather
+// than from the open_interest column of competitor_daily.csv, for the same reason the
+// Kalshi volume line does (see platforms[0] below): this page never reads Kalshi out of
+// competitor_daily. This is also the exact series the Volume page charts, so the two
+// pages cannot disagree. kalshi_taker_oi_daily.csv is NOT a substitute -- it ends
+// 2026-04-14.
+const kalshiOi = await FileAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+// One shared turnover definition, mirrored in the pipeline's R/competitor_oi_helpers.R:
+// volume over the PRIOR day's open interest, smoothed as a 7-day ratio of sums, with a
+// missing or zero denominator producing a gap rather than a number.
+import {buildTurnover, kalshiOiRows, TURNOVER_WINDOW_DAYS} from "./components/turnover.js";
 ```
 
 ```js
 display(freshnessPanel({
   items: [
     {label: "Kalshi", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
-    {label: "Competitors", date: latestDate(competitor.filter(d => d.platform !== "Kalshi")), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public platform files/scrapes", tone: "competitor"}
+    {label: "Competitors", date: latestDate(competitor.filter(d => d.platform !== "Kalshi")), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public platform files/scrapes", tone: "competitor"},
+    {label: "Open interest (Kalshi)", date: latestDate(kalshiOi), updatedAt: fileUpdatedAt(freshness, "kalshi_oi_daily.csv"), meta: "End-of-day snapshot written for the PREVIOUS day at about 04:00 ET, so it always trails the volume rows by a day"}
   ],
   note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, DKeX, Underdog Exchange, Crypto.com/Nadex, and Rothera update when their external files are downloaded and rebuilt."
 }));
@@ -79,6 +91,14 @@ const perSideFee = (fee, contracts) => {
   const f = num(fee);
   return (f === 0 && num(contracts) > 0) ? null : f;
 };
+
+// open_interest is a SNAPSHOT of the contracts standing at a date's close -- a stock,
+// not a flow. It is never summed across dates anywhere on this page.
+// A reported 0 is not a real zero here. None of the venues that publish open interest
+// has ever genuinely held none while trading, so a 0 means the upstream row lost its
+// value; left as 0 it would draw a crash to the axis on the chart and, worse, become a
+// divide-by-zero denominator in turnover. Collapse it to null so the line breaks.
+const snapshotOi = v => { const n = num(v); return n > 0 ? n : null; };
 ```
 
 ```js
@@ -96,7 +116,12 @@ const fromCompetitor = (key, tvMap) => competitor.filter(d => d.platform === key
     contracts: num(d.contracts),
     fees: perSideFee(d.fees, d.contracts),
     revenue: num(d.fees_exchange_revenue),
-    tradedValue: num(d.traded_value) ?? (tvMap ? (tvMap.get(+d.date) ?? null) : null)
+    tradedValue: num(d.traded_value) ?? (tvMap ? (tvMap.get(+d.date) ?? null) : null),
+    // Both of these are new pipeline columns. num()/snapshotOi() turn a column that does
+    // not exist yet into null rather than 0, so a chart that reads them degrades to "no
+    // line" instead of "flat zero line".
+    openInterest: snapshotOi(d.open_interest),
+    oiBearingContracts: num(d.contracts_oi_bearing)
   }));
 
 // CME publishes a flat $0.01 per contract PER SIDE for every membership category,
@@ -659,3 +684,433 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
 ```
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Share of total reported US prediction market contracts. Kalshi dominates; growing slivers at the bottom show ForecastEx and Polymarket US gaining ground. A venue that reported zero for a day is drawn at zero rather than dropped, so a dead feed reads as dead. The stack stops at the last day on which more than one venue reported, so Kalshi is never shown at 100% merely because the competitor files have not landed yet; when a venue has not reported for the most recent days, those days are hatched and labelled with its name.</p>
+
+## Open interest
+
+<p class="section-intro">Everything above this measures <em>flow</em> — contracts changing hands. This measures <em>stock</em>: how many contracts are still open at the end of each day. It is the capital parked at a venue rather than the capital passing through it, and it is the only number on this page that says how much is currently riding on a venue's book.</p>
+
+<div class="instruction-line"><strong>Open interest is a snapshot, not a running total.</strong> Every point is the whole book on that day, so it must never be added up across days — a "total open interest for July" would not mean anything. The brush picks a window; the figures under the chart are that window's <em>latest</em> value and its <em>peak</em>, and there is deliberately no total. The default view is about <em>growth</em> and spans eight orders of magnitude, because Polymarket US and Rothera each spent months holding four- and five-figure books; brush into the last few weeks to compare <em>current</em> levels, which collapses the axis to about two and a half decades.</div>
+
+```js
+// ---- Open interest -----------------------------------------------------------
+// OPEN INTEREST IS A SNAPSHOT, NOT A FLOW. Each point is the entire book standing at
+// that date's close. NOTHING on this page may sum it across dates: the brush changes
+// the visible window only, and the figures under the chart are the window's LAST value
+// and its PEAK. (Audited before this shipped -- the only reducer on this page that sums
+// anything is the market-share stack, and it sums `contracts` WITHIN one date, so it
+// cannot reach this column. If a "total over the selected range" tile is ever added,
+// open interest has to be excluded from it by name.)
+//
+// Kalshi's snapshot comes from kalshi_oi_daily.csv, NOT from the open_interest column
+// of competitor_daily.csv. This page never reads Kalshi out of competitor_daily (see
+// platforms[0] above for why), and kalshi_oi_daily.csv is the same series the Volume
+// page charts, so the two pages cannot quietly disagree. kalshi_taker_oi_daily.csv is
+// not a substitute: it ends 2026-04-14.
+const kalshiOiSeries = kalshiOiRows(kalshiOi);
+const kalshiOiByDay  = new Map(kalshiOiSeries.map(d => [+d.date, d.open_interest]));
+
+// Why a venue is not on this chart. Absent means NOT PUBLISHED or NOT MEASURABLE --
+// never zero. Drawing any of these on the zero line would say something false about the
+// venue, which is the specific failure this page exists to avoid.
+const OI_ABSENT = new Map([
+  ["Crypto.com/Nadex",           "publishes no open interest at all"],
+  ["CME (FanDuel + DraftKings)", "publishes no open interest at all"],
+  ["DKeX",                       "reports open interest as zero on 78% of its market rows (12,198 of 15,642) and on 15 of its 57 days, and its latest book is 33,100 contracts against Kalshi's 760,650,224, so what it publishes is overnight carry on a handful of markets rather than the venue's standing book"],
+  ["Underdog Exchange",          "reports zero open interest across every market row on four of its sixteen dates, including one carrying 911,855 contracts of volume, and its book has never exceeded 366,538 contracts. The field is returned and non-null on 100% of rows on every date, so those zeros are what the venue reported, not a missing feed — but whatever the figure measures, it is not an end-of-day venue book comparable to the others here. It is charted on Underdog's own page instead"]
+]);
+
+const oiRowsOf = p => p.name === "Kalshi"
+  ? kalshiOiSeries.map(d => ({date: d.date, openInterest: d.open_interest}))
+  : p.data.map(d => ({date: d.date, openInterest: d.openInterest}));
+
+// Rows whose snapshot is missing are KEPT, carrying null, so the line BREAKS at the
+// gap. Filtering them is the bug: an `open_interest > 0` filter deletes the row and
+// lets the line interpolate straight across a venue's no-report days. Polymarket US
+// has no daily market report for 2026-06-15 or 2026-06-18 -- 337.8M contracts traded
+// between those two days -- and they have to read as holes, not as a dip to zero.
+const oiPlatforms = platforms
+  .filter(p => !OI_ABSENT.has(p.name))
+  .map(p => ({name: p.name, color: p.color, rows: oiRowsOf(p)}))
+  .filter(p => p.rows.some(d => d.openInterest > 0));
+
+// Degradation guard. `open_interest` is a brand-new pipeline column; until it is
+// backfilled the competitor rows carry nothing, and this section must render an
+// explanation rather than a chart. `> 0` rather than `!= null` on purpose: it rejects a
+// column that exists but is empty AND one that exists but backfilled to all zeros,
+// which is the shape a half-finished pipeline change takes.
+// ONE competitor here, against the TWO the revenue guard above demands. That guard
+// excludes Kalshi because Kalshi's revenue is derived on this page and would satisfy it
+// with no pipeline work at all; Kalshi's open interest is produced independently
+// upstream and has been live since April 2025, so it is real evidence, and Kalshi
+// against one measured venue is a real comparison.
+const oiCompetitors = oiPlatforms.filter(p => p.name !== "Kalshi");
+const hasOi = oiPlatforms.some(p => p.name === "Kalshi") && oiCompetitors.length >= 1;
+
+// The step in Kalshi's line on 2026-07-19: 1,205,283,803 -> 688,884,859 contracts,
+// -42.84%, and the level stays about a third lower afterwards (median 1.12B across the
+// 30 days before, 726M across the 18 days after). Annotated because a fall that size
+// reads as a broken feed, and because it lifts Kalshi's turnover below.
+//
+// It is a SETTLEMENT, not a change in how open interest is reported, and the caption
+// says so. Measured from kalshi_oi_daily.csv itself: it is only the SIXTH largest
+// single-day fall in the 490 days of that series, and five larger ones -- -76.4% on
+// 2025-05-09, -55.3% on 2025-06-22, -46.1% on 2025-12-15, -45.3% on 2025-12-12 and
+// -43.5% on 2025-04-07 -- predate it by up to fifteen months, so no single July 2026
+// methodology change can produce the shape. 20 of those 490 days fall by 20% or more,
+// and the median Sunday falls 8.15%, because event books settle on a weekly sports
+// rhythm. Across this particular boundary the number of markets in the source file GREW
+// (5,204,715 -> 5,427,588) while the number holding open positions roughly halved
+// (90,574 -> 47,584): markets settled, the file did not change shape.
+const KALSHI_OI_BREAK = {
+  date: new Date("2026-07-19T00:00:00Z"),
+  label: "-42.8%: large event books settle"
+};
+```
+
+```js
+const dr_oi = view(makeDateBrush(new Date("2025-04-01")));
+```
+
+```js
+{
+  const [s, e] = dr_oi;
+  const fmtOi = n => { const a = Math.abs(n ?? 0);
+    return a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M"
+         : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : String(Math.round(a)); };
+
+  if (!hasOi) {
+    display(html`<p class="chart-note"><strong>Not available yet.</strong> This chart needs
+      Kalshi's open-interest snapshot and at least one competitor's, and one of them has
+      not arrived: the <code>open_interest</code> column of <code>competitor_daily.csv</code>
+      is a new pipeline field and may not be backfilled yet. The chart appears once real
+      values land, so the window between shipping this page and backfilling the pipeline
+      cannot render as a flat zero line.</p>`);
+  } else {
+    // Rows keep their nulls so the line breaks at a gap; only the tooltip and the stat
+    // line filter down to real values.
+    const series = oiPlatforms
+      .map(p => ({name: p.name, color: p.color,
+                  win: p.rows.filter(d => d.date >= s && d.date <= e)
+                             .map(d => ({...d, platform: p.name}))}))
+      .filter(p => p.win.some(d => d.openInterest > 0));
+
+    const pivot = Array.from(d3.rollup(
+      series.flatMap(p => p.win.filter(d => d.openInterest > 0)),
+      rs => { const o = {date: rs[0].date};
+              for (const r of rs) o[r.platform] = r.openInterest; return o; },
+      d => +d.date
+    )).map(([, v]) => v).sort((a, b) => a.date - b.date);
+
+    const names    = series.map(p => p.name);
+    const showBreak = +KALSHI_OI_BREAK.date >= +s && +KALSHI_OI_BREAK.date <= +e
+                      && names.includes("Kalshi");
+
+    display(Plot.plot({
+      style: {fontFamily: "var(--font-sans)"},
+      width,
+      height: 380,
+      marginLeft: 70,
+      marginRight: 16,
+      x: {type: "utc", label: null},
+      y: {
+        type: oiScale === "Log" ? "log" : "linear",
+        label: "Contracts of open interest (end of day)",
+        grid: true,
+        tickFormat: d => fmtOi(d)
+      },
+      color: {legend: true, domain: names, range: series.map(p => p.color)},
+      marks: [
+        // The area is linear-only: an area needs a zero baseline and a log axis has no
+        // zero. On log every venue is a line, which is all the comparison needs.
+        ...(oiScale === "Log" ? [] : series.filter(p => p.name === "Kalshi").map(p =>
+          Plot.areaY(p.win, {x: "date", y: "openInterest", fill: p.color,
+                             fillOpacity: 0.08, curve: "monotone-x"}))),
+        ...series.map(p =>
+          Plot.lineY(p.win, {x: "date", y: "openInterest", stroke: "platform",
+                             strokeWidth: p.name === "Kalshi" ? 2.5 : 1.75,
+                             curve: "monotone-x"})),
+        ...(showBreak ? [
+          Plot.ruleX([KALSHI_OI_BREAK.date], {stroke: "currentColor", strokeOpacity: 0.4,
+                                              strokeDasharray: "3,3"}),
+          Plot.text([KALSHI_OI_BREAK], {x: "date", text: [KALSHI_OI_BREAK.label],
+                                        frameAnchor: "top", textAnchor: "start",
+                                        dx: 5, dy: 9, fontSize: 10,
+                                        fill: "currentColor", fillOpacity: 0.75})
+        ] : []),
+        Plot.ruleX(pivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+        Plot.tip(pivot, Plot.pointerX({
+          x: "date",
+          title: d => [
+            fmtDate(d.date),
+            "Open interest, end of day",
+            ...names.map(n => d[n] != null
+              ? `${n}: ${fmtOi(d[n])} contracts (${Math.round(d[n]).toLocaleString()})`
+              : null)
+          ].filter(Boolean).join("\n")
+        })),
+        ...(oiScale === "Log" ? [] : [Plot.ruleY([0])])
+      ]
+    }));
+
+    // LATEST and PEAK inside the window. Never a sum -- see the note at the top of this
+    // section. Same treatment as the Volume page's open-interest stat line.
+    const stats = series.map(p => {
+      const real = p.win.filter(d => d.openInterest > 0);
+      return {
+        name: p.name, color: p.color,
+        last: real[real.length - 1],
+        peak: real.reduce((a, b) => b.openInterest > a.openInterest ? b : a, real[0]),
+        gaps: p.win.filter(d => !(d.openInterest > 0)).map(d => d.date)
+      };
+    });
+
+    display(html`<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 4px 0;font-size:13px;color:var(--theme-foreground-muted);">
+      ${stats.map(t => html`<div title="${Math.round(t.last.openInterest).toLocaleString()} contracts on ${fmtDate(t.last.date)}">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${t.color};margin-right:5px;"></span><strong>${t.name}</strong>
+        · latest ${fmtOi(t.last.openInterest)} (${fmtDate(t.last.date)})
+        · peak ${fmtOi(t.peak.openInterest)} (${fmtDate(t.peak.date)})</div>`)}
+    </div>`);
+
+    const gapped = stats.filter(t => t.gaps.length);
+    if (gapped.length) {
+      display(html`<p class="chart-note"><strong>A break in a line is a real gap.</strong>
+        ${gapped.map(t => html`<span>${t.name} published no open interest on ${t.gaps.map(fmtDate).join(", ")}. </span>`)}
+        Those rows are kept and drawn as holes rather than filtered out, because deleting
+        them would let the line interpolate straight across the missing days.</p>`);
+    }
+
+    const notShown = platforms.map(p => p.name).filter(n => !names.includes(n));
+    if (notShown.length) {
+      display(html`<p class="chart-note"><strong>Not shown:</strong>
+        ${notShown.map(n => html`<span>${n} — ${OI_ABSENT.get(n) ?? "no open-interest figure has reached the pipeline for this venue yet"}. </span>`)}
+        Absent from this chart means unmeasured or unpublished. It does not mean zero.</p>`);
+    }
+  }
+}
+```
+
+<div class="control-strip">
+
+```js
+// Log by default, which is the opposite of the volume chart above, and it is not a
+// stylistic choice. Measured over the default window: on a linear axis Kalshi fills the
+// frame while Polymarket US tops out at 10.9% of its height, Rothera at 9.4% and
+// ForecastEx at 2.5% -- three of the four venues live inside the bottom tenth. The
+// within-venue ranges are worse than the between-venue one: Polymarket US spans
+// 4,977,341x from its first reported day to its peak and Rothera 16,679,133x, so even a
+// single-venue linear axis hides most of that venue's own history.
+// An INDEXED view (rebase every venue to 100 at the start of the window) was built and
+// rejected on measurement: Polymarket US opens at 161 contracts and Rothera at 62, so
+// their indices run to 95,836,999 and 215,214,615 -- it needs a log axis of its own, and
+// it throws away the level comparison, which is the whole point here (Kalshi holds
+// roughly 85x ForecastEx's standing capital and 10x Polymarket US's).
+// The full-history log domain is wide -- 8.2 decades, which leaves today's four levels
+// occupying about 28% of the axis -- and that is NOT launch dust that could be trimmed
+// away: Polymarket US spent 109 of its 278 days below a million contracts, the last of
+// them 2026-03-09, and ForecastEx 83 days inside this window. Those are months of real
+// history, so the axis carries them and the caption tells the reader to brush in for a
+// levels comparison, where the domain falls to 2.5 decades and 90% of the axis.
+const oiScale = view(Inputs.radio(["Log", "Linear"], {value: "Log", label: "Scale"}));
+```
+
+</div>
+
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Contracts still open at the close of each day, summed across every market at the venue. <strong>Log scale by default</strong> — on a linear axis Kalshi fills the frame and the other three venues sit inside the bottom tenth of it, and each venue's own history spans six or seven orders of magnitude from launch to peak. The default window covers 8.2 decades, so today's four levels use only the top quarter of the axis; <strong>brush into the last few weeks</strong> and the axis narrows to two and a half decades, which is the view for comparing where the venues stand now. <strong>Kalshi's line steps down 42.8% on 2026-07-19</strong>, from 1.21B to 689M contracts, and stays about a third lower: large event books settled together. It is annotated because a fall that size reads as a broken feed, but it is only the sixth largest single-day fall in the series and five larger ones stretch back to May 2025, so it is the weekly settlement rhythm at its most extreme rather than a change in what is being counted — 20 of 490 days fall by 20% or more, and the median Sunday falls 8.2%. <strong>Four venues are missing and none of them is at zero.</strong> Crypto.com/Nadex and CME publish no open interest at all. DKeX reports it as zero on 78% of its market rows (12,198 of 15,642) and on 15 of its 57 days, and its latest book is 33,100 contracts against Kalshi's 760,650,224, so what it publishes is overnight carry on a handful of markets rather than a venue book. Underdog Exchange reports zero open interest across every market row on four of its sixteen dates, including one carrying 911,855 contracts of volume; the field is returned non-null on 100% of rows on every date, so those are reported zeros rather than a missing feed, but whatever it measures is not an end-of-day venue book comparable to the others here. Polymarket US has no daily market report for 2026-06-15 or 2026-06-18 and those two days are drawn as gaps. Kalshi's snapshot is written for the previous day at about 04:00 ET, so this chart always ends one day behind the volume charts above. ForecastEx counts matched pairs, one contract per side, which is the same unit as everyone else here.</p>
+
+## Turnover
+
+<p class="section-intro">Volume divided by open interest: how many times a venue turns its own book over in a day. This is the number that separates a <em>positioning</em> venue, where people buy a contract and hold it to resolution, from a <em>churn</em> venue, where the same capital is traded round and round. It is the one comparison on this page that neither volume nor fees can make.</p>
+
+<div class="instruction-line"><strong>How to read it:</strong> 1.0 means the venue traded as many contracts today as were standing open last night. Above the line is churn, below it is positioning. The denominator is the <em>previous</em> day's close, because event contracts settle to zero open interest on the day they trade hardest — a same-day denominator collapses exactly when the numerator peaks and manufactures a spike. Lines are 7-day ratios of sums, because weekend settlement plus weekend sports gives the raw daily number a hard weekly sawtooth.</div>
+
+```js
+// ---- Turnover ----------------------------------------------------------------
+// turnover(D) = contracts traded on D / open interest at the CLOSE OF D-1, smoothed as
+// a 7-day ratio of sums. The definition, the prior-day denominator, the gaps-not-zeros
+// rule and the smoothing all live in ./components/turnover.js, which is shared with the
+// pipeline so no page can quietly pick a different convention.
+//
+// ForecastEx needs a RESTRICTED numerator or its ratio answers a different question:
+// its snapshot is struck AFTER same-day settlement, so a contract that traded heavily
+// and resolved the same day books its whole volume against a book that no longer holds
+// it. The pipeline publishes contracts_oi_bearing -- that day's volume in contracts that
+// still had open interest -- for exactly this.
+// Measured on the shipped series: on raw daily numbers the gap is enormous (2026-01-04,
+// an NFL playoff Sunday, reads 4.759 on full volume against 0.095 restricted), but the
+// prior-day denominator and the 7-day window between them absorb most of it -- on the
+// smoothed series the medians differ by 1.22x to 1.29x and the maxima by at most 2.26x.
+// So when contracts_oi_bearing has not landed, fall back to full volume and SAY SO in
+// the note rather than dropping the venue: ForecastEx reads about 0.12 instead of about
+// 0.09, which is the same answer to the only question this chart asks.
+const OI_RESTRICTED_NUMERATOR = new Set(["ForecastEx"]);
+const numeratorOf = p => OI_RESTRICTED_NUMERATOR.has(p.name)
+  ? d => d.oiBearingContracts ?? d.contracts
+  : d => d.contracts;
+const numeratorFellBack = platforms
+  .filter(p => OI_RESTRICTED_NUMERATOR.has(p.name) && !p.data.some(d => d.oiBearingContracts > 0))
+  .map(p => p.name);
+
+const turnoverPlatforms = oiPlatforms.map(p => {
+  const src = platforms.find(q => q.name === p.name);
+  return {
+    name: p.name, color: p.color,
+    rows: buildTurnover(
+      src.data,
+      p.rows.map(d => ({date: d.date, open_interest: d.openInterest})),
+      {contracts: numeratorOf(src)}
+    )
+  };
+}).filter(p => p.rows.some(d => d.turnover7d != null));
+
+// Same guard as the chart above, for the same reason.
+const hasTurnover = turnoverPlatforms.some(p => p.name === "Kalshi")
+  && turnoverPlatforms.some(p => p.name !== "Kalshi");
+```
+
+```js
+// Defaults to mid-June 2026 rather than the whole history, and that is measured. Over
+// 2026-06-15..today the four venues span 0.085 to 1.783 -- 21x, which reads cleanly on a
+// linear axis with the 1.0 reference line in the middle of the frame. Widen the brush
+// past 2026-05-21 and the span becomes 1,761x, because Rothera's ninth day of existence
+// turned a 139,000-contract book over 133 times. That value is real rather than an
+// artifact, which is why it is not filtered out -- switch the scale to Log to look at it.
+const dr_turn = view(makeDateBrush(new Date("2026-06-15")));
+```
+
+```js
+{
+  const [s, e] = dr_turn;
+
+  if (!hasTurnover) {
+    display(html`<p class="chart-note"><strong>Not available yet.</strong> Turnover needs an
+      open-interest denominator for Kalshi and for at least one competitor, and one of them
+      has not arrived in <code>competitor_daily.csv</code> yet. The chart appears when it
+      does, rather than rendering one lonely line against nothing.</p>`);
+  } else {
+    const series = turnoverPlatforms
+      .map(p => ({name: p.name, color: p.color,
+                  win: p.rows.filter(d => d.date >= s && d.date <= e)
+                             .map(d => ({...d, platform: p.name}))}))
+      .filter(p => p.win.some(d => d.turnover7d != null));
+    const names = series.map(p => p.name);
+    const flat  = series.flatMap(p => p.win.filter(d => d.turnover7d != null));
+
+    if (!flat.length) {
+      display(html`<p class="chart-note">No venue has a complete ${TURNOVER_WINDOW_DAYS}-day
+        window inside this selection. Widen the brush.</p>`);
+    } else {
+      const pivot = Array.from(d3.rollup(
+        flat,
+        rs => { const o = {date: rs[0].date};
+                for (const r of rs) o[r.platform] = r.turnover7d; return o; },
+        d => +d.date
+      )).map(([, v]) => v).sort((a, b) => a.date - b.date);
+
+      const showBreak = +KALSHI_OI_BREAK.date >= +s && +KALSHI_OI_BREAK.date <= +e
+                        && names.includes("Kalshi");
+
+      display(Plot.plot({
+        style: {fontFamily: "var(--font-sans)"},
+        width,
+        height: 320,
+        marginLeft: 70,
+        marginRight: 16,
+        x: {type: "utc", label: null},
+        y: {
+          type: turnScale === "Log" ? "log" : "linear",
+          label: "Contracts traded / prior day's open interest",
+          grid: true,
+          tickFormat: d => d >= 10 ? d.toFixed(0) : d.toFixed(2)
+        },
+        color: {legend: true, domain: names, range: series.map(p => p.color)},
+        marks: [
+          Plot.ruleY([1], {stroke: "currentColor", strokeOpacity: 0.35, strokeDasharray: "4,3"}),
+          Plot.text([{v: 1}], {y: "v", text: ["book turns over once a day"],
+                               frameAnchor: "right", textAnchor: "end", dx: -4, dy: -6,
+                               fontSize: 10, fill: "currentColor", fillOpacity: 0.7}),
+          ...series.map(p =>
+            Plot.lineY(p.win, {x: "date", y: "turnover7d", stroke: "platform",
+                               strokeWidth: p.name === "Kalshi" ? 2.5 : 1.75,
+                               curve: "monotone-x"})),
+          ...(showBreak ? [
+            Plot.ruleX([KALSHI_OI_BREAK.date], {stroke: "currentColor", strokeOpacity: 0.4,
+                                                strokeDasharray: "3,3"}),
+            Plot.text([KALSHI_OI_BREAK], {x: "date", text: ["Kalshi denominator -42.8%"],
+                                          frameAnchor: "top", textAnchor: "start",
+                                          dx: 5, dy: 9, fontSize: 10,
+                                          fill: "currentColor", fillOpacity: 0.75})
+          ] : []),
+          Plot.ruleX(pivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+          Plot.tip(pivot, Plot.pointerX({
+            x: "date",
+            title: d => [
+              fmtDate(d.date),
+              "Turnover, 7-day average (per day)",
+              ...names.map(n => d[n] != null ? `${n}: ${d[n].toFixed(2)}x` : null)
+            ].filter(Boolean).join("\n")
+          }))
+        ]
+      }));
+
+      const stats = series.map(p => {
+        const real = p.win.filter(d => d.turnover7d != null);
+        return {name: p.name, color: p.color, last: real[real.length - 1],
+                med: d3.median(real, d => d.turnover7d)};
+      });
+      display(html`<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 4px 0;font-size:13px;color:var(--theme-foreground-muted);">
+        ${stats.map(t => html`<div>
+          <span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${t.color};margin-right:5px;"></span><strong>${t.name}</strong>
+          · latest ${t.last.turnover7d.toFixed(2)}x (${fmtDate(t.last.date)})
+          · median ${t.med.toFixed(2)}x</div>`)}
+      </div>`);
+
+      const vmax = d3.max(flat, d => d.turnover7d);
+      if (turnScale === "Linear" && vmax > 5) {
+        display(html`<p class="chart-note">This window reaches ${vmax.toFixed(0)}x, which
+          flattens every venue's current level against the axis. That peak is real rather
+          than a fault — it is a venue in its first weeks, when a book of a few thousand
+          contracts was turned over many times a day — so it is not filtered out. Switch the
+          scale to Log to read both eras at once.</p>`);
+      }
+
+      const missing = platforms.map(p => p.name).filter(n => !names.includes(n));
+      if (missing.length) {
+        display(html`<p class="chart-note"><strong>Not shown:</strong>
+          ${missing.map(n => html`<span>${n} — ${OI_ABSENT.get(n) ?? "no open-interest denominator for this venue yet"}. </span>`)}
+          A venue with no open interest cannot have a turnover, and a venue whose open
+          interest is near zero would be dividing by almost nothing. Absent means
+          unmeasured.</p>`);
+      }
+      if (numeratorFellBack.length) {
+        display(html`<p class="chart-note"><strong>${numeratorFellBack.join(", ")}</strong> is
+          drawn on full daily volume because its <code>contracts_oi_bearing</code> column has
+          not landed yet. That reads about 25% high against the correct restricted numerator
+          on the smoothed series, and much higher on individual settlement-heavy days, so
+          treat its level as an upper bound until the column arrives.</p>`);
+      }
+    }
+  }
+}
+```
+
+<div class="control-strip">
+
+```js
+// Linear by default, unlike the open-interest chart above: over the default window the
+// whole four-venue range is 0.085 to 1.783, a 21x span that reads cleanly on a linear
+// axis and keeps the 1.0 reference line where the eye can use it. Log is here for
+// brushing back into any venue's launch weeks, when turnover genuinely ran into the
+// hundreds against a book of a few thousand contracts.
+const turnScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
+```
+
+</div>
+
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Contracts traded divided by the <em>previous</em> day's open interest, as a trailing 7-day ratio of sums. Three conventions, all deliberate. <strong>The denominator is the prior close</strong>, because event contracts settle to zero open interest on the day they trade hardest, so a same-day denominator collapses exactly when the numerator peaks: on Kalshi that reads 2.76 against 1.58 on 2026-07-19, with untouched neighbours at 1.61 and 1.46. <strong>A missing or zero denominator is a gap, never a zero</strong> — no point is drawn, nothing is carried forward, and a 7-day window containing one missing day yields no point at all. <strong>The smoothing is a ratio of sums, not an average of ratios</strong>, which would overweight the lowest-open-interest days and reintroduce the distortion the prior-day rule removes. <strong>Kalshi's 2026-07-19 settlement cuts its own denominator</strong>, lifting its measured turnover from a 1.28 median across the preceding month to 1.43 across the weeks after — part of that step is the book shrinking, not trading speeding up. ForecastEx's numerator is restricted to volume in contracts that still had open interest at the snapshot, because its book is photographed after same-day settlement; every other venue uses full daily volume, so ForecastEx's line is the one that is not strictly like-for-like with the volume chart at the top of this page. Kalshi's still-filling current day is excluded rather than drawn as a fall. The fee caveats above do not apply here — this chart uses no fee number at all — but the volume caveats do, in particular that Polymarket US is US-accessible volume only and that ForecastEx counts matched pairs.</p>
+
+<details class="surface-card compact-details">
+<summary>Why there is no "revenue per unit of open interest" chart</summary>
+<p>It was built and measured, and it is an identity rather than a finding. Revenue divided by open interest is exactly turnover multiplied by revenue per contract — the two charts either side of this note — and the two agree to machine precision on every venue on every day, the largest relative difference across the whole series being 2.5 × 10<sup>-16</sup>. A third chart would restate them while looking like independent evidence, and it would inherit both denominators' defects at once: the open-interest gaps described above plus the fee approximations, every one of which is already an upper bound because volume-tier rebates are unobservable to us.</p>
+<p>There is also a units problem with the question as it is usually asked. "Earnings per dollar of standing capital" needs open interest marked to market, and no venue here publishes the value of its open book — only the contract count. The computable version is earnings per <em>contract</em> of open interest per day.</p>
+<p>For anyone who wants it anyway, here it is without a chart. Per 1,000 contracts of open interest per day, median across the series and latest: Kalshi $7.50 and $14.55, Polymarket US $6.70 and $17.67, Rothera $2.80 and $6.65, ForecastEx $0.61 and $0.91. The ordering is the ordering of turnover times fee rate, because that is what it is. The genuine signal — that ForecastEx monetizes its standing capital about an order of magnitude less intensively than Kalshi does — is already visible as the gap between its turnover line and everyone else's.</p>
+</details>

@@ -347,20 +347,29 @@ Plot.plot({
 
 ## Open interest
 
-<p class="section-intro">Open interest reported across active Underdog markets. Hollow grey markers on the zero line are dates where Underdog reported no open interest at all — every market row came back 0, including 2026-07-24 on 911.9k contracts of volume — so those days are drawn as explicit gaps rather than as a real zero or dropped from the chart. 2026-08-02 is flagged separately: open interest fell 92% from the prior day on the third-heaviest volume day in the file, then fully recovered the next day, which is a partial reporting failure rather than a real unwind.</p>
+<p class="section-intro">Contracts still open in Underdog markets at the nightly capture. This is <em>not</em> venue open interest in the sense the Kalshi and Rothera pages use it, and it is not comparable to them: Underdog's file is a single snapshot taken the following morning — the venue publishes no capture-time field, so that timing is inferred from the file itself — and its markets appear to settle when their game ends, so the only contracts left standing at capture are those in games still running, plus next-day markets that have already started trading. Hollow grey markers on the zero line are the four dates where nothing at all was still open — 2026-07-17, 07-22, 07-23 and 07-24. On each of those the latest same-day event started at 19:00 or 20:00 ET; on every date that does carry open interest there was a later start. That pattern holds across all 16 dates on file, but 16 dates is a thin basis, the start times are parsed out of ticker strings rather than published, and the parlay contracts carry no parseable date at all — so treat it as the most likely explanation, not a demonstrated one. Underdog returns the field, non-null, on 100% of market rows on every date, so those are reported zeros rather than missing data. The pattern is <em>consistent with</em> a capture-timing artifact rather than a demonstrated one: the venue publishes no capture time and no event-start field, so the start hours here are parsed from ticker strings across only 16 dates. 2026-08-02 is the same effect in partial form: a Sunday day-game slate left the same-day component at exactly zero while 14,614 contracts of next-day (08-03) markets stayed open, which reads as a 92% drop. Traded volume that day was <em>up</em> 3.3%, the third-heaviest in the file. Because this tracks capture timing rather than standing capital, it is deliberately not carried into the cross-venue open-interest comparison.</p>
 
 ```js
 // Four dates come back with every single market row at exactly 0 open interest:
 // 2026-07-17, 07-22, 07-23 and 07-24, on 1,012 / 56,132 / 220,210 / 911,855
-// contracts of volume respectively. On every other date the rows are a mix of
-// zero and positive, so a 100%-zero day is an upstream reporting gap, not a
-// genuinely flat book. Derived from the data rather than hardcoded so a future
-// gap is handled the same way.
+// contracts of volume respectively. This is capture timing, NOT a reporting gap:
+// the raw file carries the open_interest key, non-null, on 100% of market rows on
+// all 16 dates, and the snapshot appears to land ~00:49 ET the next morning (inferred; no capture-time
+// field is published) with every row
+// already status "Finalized". Underdog markets settle when the game ends, so a
+// date whose latest same-day start was 19:00-20:00 ET has nothing open left by
+// capture; every date with a 21:00+ ET start reports positive open interest -- a
+// pattern over only 16 dates, with start times parsed from tickers, not published, with
+// no counterexample in 16 dates. Derived from the data rather than hardcoded so a
+// future date behaves the same way.
 const oiReported = daily.filter(d => (d.open_interest || 0) > 0);
 const oiNotReported = daily.filter(d => !((d.open_interest || 0) > 0));
-// 2026-08-02: 182,306 -> 14,614 (-92.0%) on the third-highest volume day in the
-// file, back to 148,171 the next day. Annotated inline so it is not read as a
-// real position unwind.
+// 2026-08-02: 182,306 -> 14,614 (-92.0%), back to 148,171 the next day. Neither an
+// unwind nor a fault -- a Sunday day-game slate (latest same-day start 19:00 ET)
+// left the same-day component at exactly 0.00, and the entire 14,614 residual is
+// next-day (08-03) markets: STLNYY26AUG03, TORHOU26AUG03, LVATL2026AUG03. Traded
+// volume that day was UP 3.3% (2,080,418 -> 2,149,082), the third-heaviest in the
+// file. Annotated inline so the dip is not read as a positioning change.
 const oiCollapse = daily.filter(d => d.date.toISOString().slice(0, 10) === "2026-08-02");
 ```
 
@@ -386,7 +395,7 @@ Plot.plot({
       x: "date", y: 0,
       r: 5, stroke: "#94A3B8", strokeWidth: 1.5, strokeDasharray: "2,2",
       tip: true,
-      title: d => `${fmtDate(d.date)}\nOpen interest not reported\nEvery market row returned 0 on this date, on ${fmtCount(d.contracts)} contracts of traded volume.`
+      title: d => `${fmtDate(d.date)}\nNothing still open at capture\nEvery market row returned 0. ${fmtCount(d.contracts)} contracts traded.`
     }),
     Plot.dot(oiCollapse, {
       x: "date", y: "open_interest",
@@ -394,7 +403,7 @@ Plot.plot({
     }),
     Plot.text(oiCollapse, {
       x: "date", y: "open_interest",
-      text: () => "-92% vs prior day, recovered next day",
+      text: () => "-92%: Sunday slate settled before capture, not an unwind",
       dy: -16, textAnchor: "end", fontSize: 10, fill: "currentColor", fillOpacity: 0.75
     })
   ]
