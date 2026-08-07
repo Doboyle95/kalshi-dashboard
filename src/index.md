@@ -76,7 +76,7 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Volume here means contracts traded: one contract is one yes/no bet, worth $1 at settlement — so this figure is a dollar total too, just not discounted by the price each contract actually traded at. Kalshi's figures come from its own trade records; competitor lines come from public sources, including CFTC daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026; Underdog Exchange data begins with its public CFTC reports in late June 2026 and is still extremely sparse — most days report no trades at all.</p>
+  <p>Volume here means contracts traded: one contract is one yes/no bet, worth $1 at settlement — so this figure is a dollar total too, just not discounted by the price each contract actually traded at. Kalshi's figures come from its own trade records; competitor lines come from public sources, including the exchange's daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026; Underdog Exchange data begins with its public CFTC reports in late June 2026 and is still extremely sparse — most days report no trades at all.</p>
   <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
 </details>
 

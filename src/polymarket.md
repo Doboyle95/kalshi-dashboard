@@ -147,7 +147,7 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">US-accessible Polymarket volume only (separate from global Polymarket). Data from CFTC daily bulletins, starting Oct 30, 2025. Almost entirely sports.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">US-accessible Polymarket volume only (separate from global Polymarket). Data from the exchange's own daily bulletins, starting Oct 30, 2025. Almost entirely sports.</p>
 
 ## Sports vs. non-sports
 
