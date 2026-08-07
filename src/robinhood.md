@@ -20,6 +20,44 @@ title: Robinhood on Kalshi
 ```js
 const monthly = await FileAttachment("data/rh_monthly_estimates.csv").csv({typed: true});
 const weekly  = await FileAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
+import {freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+// 2026-08-07: this page had NO freshness panel -- the only page besides chat.md without one.
+// That matters more here than anywhere else on the site, because both feeds are REWRITTEN on
+// every sync while their CONTENT has not advanced since April:
+//     rh_monthly_estimates.csv   max month      2026-04      mtime 2026-08-06 23:17
+//     rh_weekly_estimates.csv    max week_start 2026-04-20   mtime 2026-08-06 23:17
+// So an mtime-based signal reports "fresh, written minutes ago" over ~108-day-old data, and the
+// page looked current. Hence: driven by latestDate() over the DATA, and deliberately passing NO
+// updatedAt -- fileUpdatedAt() would actively mislead on this page.
+//
+// Root cause is upstream and unfixed: R/export_rh_estimates.R:39-42 quits 0 when
+// KALSHI_RH_FCM_CSV is absent, and that path points at a lost-laptop location. Until the CFTC
+// filing feed is re-established these numbers cannot advance, so say so rather than render
+// April figures as though they were current.
+const rhMonthlyLatest = latestDate(monthlyParsed, d => d.month_date);
+const rhWeeklyLatest  = latestDate(weekly, d => d.week_start);
+const rhStaleDays = rhWeeklyLatest ? Math.floor((Date.now() - +rhWeeklyLatest) / 86400000) : null;
+
+display(freshnessPanel({
+  title: rhStaleDays != null && rhStaleDays > 14
+    ? `Data freshness — these estimates stopped updating ${rhStaleDays} days ago`
+    : "Data freshness",
+  items: [
+    {label: "Monthly estimates", date: rhMonthlyLatest,
+     meta: "Latest complete month present in the data", tone: "settlement"},
+    {label: "Weekly estimates", date: rhWeeklyLatest,
+     meta: "Latest week present in the data", tone: "settlement"}
+  ],
+  note: rhStaleDays != null && rhStaleDays > 14
+    ? `Every figure on this page is as of ${fmtWeek(rhWeeklyLatest)} and will not move until the `
+      + `CFTC filing feed that drives it is restored. The underlying files are rewritten on every `
+      + `sync, so their timestamps look current — the data inside them is not. Treat the numbers `
+      + `below as a historical snapshot, not as the present state.`
+    : "Estimates derived from daily CFTC filings; see the methodology note above."
+}));
 ```
 
 ```js
