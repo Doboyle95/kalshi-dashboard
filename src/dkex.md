@@ -74,7 +74,7 @@ const latestDay = daily.reduce((best, d) => d.date > (best?.date ?? new Date(0))
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>DKeX volume is the sum of <code>Last Quantity</code> in the public time-and-sales files. Categories come from the report symbol prefix using the same style as the Polymarket US parsing; the league columns on <code>dkex_sports_split_daily.csv</code> break out MLB, NPB and KBO and roll every other league into "Other leagues", so the four always sum to the daily total. Market/open-interest rows come from the daily market report; the market table keeps rows with either trade volume or open interest. Settlement rows come from the daily settlement report.</p>
-  <p>The reports do not publish fees, so DKeX is shown in volume and trade-size views but has no fee series.</p>
+  <p>The reports do not publish fees, so this page shows volume and trade size only. Any DKeX fee on the Comparison page is derived from the exchange's published schedule — a step of about $0.01 per contract across almost the whole book, charged to the taker, with a further $0.0025 charged to the maker rather than rebated.</p>
 </details>
 
 ```js

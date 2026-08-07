@@ -72,7 +72,7 @@ const latestDay = daily.reduce((best, d) => d.date > (best?.date ?? new Date(0))
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Underdog volume is the <code>daily_volume</code> field from the public daily market reports, confirmed to equal the sum of that ticker's <code>contracts_traded</code> in the public trade-level reports — the same contracts convention used everywhere else on this site (not dollar volume). Categories are parsed from the sport code embedded in each ticker (e.g. <code>UDXMLBGAMEWIN...</code> → Baseball); bet type (Moneyline / Spread / Total) is parsed from the rest of that same ticker segment. Multi-leg parlays are reported as <code>UDXCOMBO-&lt;hash&gt;</code> tickers that carry no sport or bet-type code, so they are grouped as Parlays rather than split across sports.</p>
-  <p>The reports do not publish fees, so Underdog is shown in volume and trade-size views but has no fee series. Contract sizes on this exchange can be fractional (unlike Kalshi's whole-contract trades), which is expected, not a parsing error.</p>
+  <p>The reports do not publish fees, so this page shows volume and trade size only. Any Underdog fee on the Comparison page is derived from the exchange's published schedule — the same 0.07 coefficient Kalshi uses, but charged to both sides, so Underdog collects about twice per matched trade what Kalshi does. Contract sizes on this exchange can be fractional (unlike Kalshi's whole-contract trades), which is expected, not a parsing error.</p>
 </details>
 
 ```js

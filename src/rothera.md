@@ -56,7 +56,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Rothera is Robinhood's own regulated event-contract exchange — distinct from the Robinhood brokerage business covered on the <a href="./robinhood">Robinhood (FCM)</a> page, which estimates how much Robinhood trades <em>on Kalshi</em>. This page reads Rothera's daily clearing exports directly.</p>
-  <p>Volume is contract count (one settled contract per unit), summed by day. Categories come from each market's product prefix (e.g. <code>MWC*</code> = World Cup soccer, <code>MLB*</code> = baseball, <code>EC*</code> = economics); the sports split sums sport prefixes against everything else. The exports carry no fee field, so there is no fee series here. Because this is end-of-day market data rather than trade prints, the page is best for scale and category mix rather than microstructure.</p>
+  <p>Volume is contract count (one settled contract per unit), summed by day. Categories come from each market's product prefix (e.g. <code>MWC*</code> = World Cup soccer, <code>MLB*</code> = baseball, <code>EC*</code> = economics); the sports split sums sport prefixes against everything else. The exports carry no fee field, so no fee series is shown here; the Comparison page instead derives Rothera's exchange fee from the venue's published schedule, which depends on price, so it must stand a daily price in for each trade's price and assume a mix of retail and professional participants (professionals pay six times retail). Because this is end-of-day market data rather than trade prints, the page is best for scale and category mix rather than microstructure.</p>
 </details>
 
 ```js
@@ -147,7 +147,7 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Daily contract volume from Rothera's clearing exports (sum of per-market volume). No fee field is published in the source, so fees are not shown here.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Daily contract volume from Rothera's clearing exports (sum of per-market volume). No fee field is published in the source, so no fee is shown on this page. Any Rothera fee on the Comparison page is derived from the venue's published schedule, not reported by the venue, and rests on a daily price proxy and an assumed participant mix — read its caption before quoting it.</p>
 
 ## Sports vs. non-sports
 
