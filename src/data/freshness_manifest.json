@@ -1,35 +1,35 @@
 {
-  "generated_at": "2026-08-07T17:49:52.837462-04:00",
-  "generated_at_utc": "2026-08-07T21:49:52.837462+00:00",
+  "generated_at": "2026-08-07T17:57:42.422094-04:00",
+  "generated_at_utc": "2026-08-07T21:57:42.422094+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-parlay-compact: last run 'opalescent-ferret' ended FAILED at 2026-08-07T17:15:32.194637+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_compact genuine failure (exit 75)",
     "task_health: prod-v3-pnl-cycle: last run 'nocturnal-bug' ended FAILED at 2026-08-07T21:24:45.527246+00:00 \u2014 Flow run encountered an exception: RuntimeError: v3_pnl_cycle: topup_settlement_dim errored (exit=-1); export held (fail-closed).",
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1111.3 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1111.5 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 109d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
     "task_health_generated": "2026-08-07T21:40:20.433539+00:00",
-    "freshness_report_mtime_utc": "2026-08-07T21:37:09.650234+00:00"
+    "freshness_report_mtime_utc": "2026-08-07T21:52:08.812053+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-08-07T17:49:50.240239-04:00",
-      "last_write_time_utc": "2026-08-07T21:49:50.240239+00:00",
-      "size_bytes": 149890
+      "last_write_time": "2026-08-07T17:57:40.553820-04:00",
+      "last_write_time_utc": "2026-08-07T21:57:40.553820+00:00",
+      "size_bytes": 149891
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-08-07T17:49:50.384237-04:00",
-      "last_write_time_utc": "2026-08-07T21:49:50.384237+00:00",
-      "size_bytes": 161541
+      "last_write_time": "2026-08-07T17:57:40.737817-04:00",
+      "last_write_time_utc": "2026-08-07T21:57:40.737817+00:00",
+      "size_bytes": 161537
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-08-07T17:49:50.495235-04:00",
-      "last_write_time_utc": "2026-08-07T21:49:50.495235+00:00",
-      "size_bytes": 7087398
+      "last_write_time": "2026-08-07T17:57:40.805816-04:00",
+      "last_write_time_utc": "2026-08-07T21:57:40.805816+00:00",
+      "size_bytes": 7087408
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-08-07T07:03:02.529653-04:00",
@@ -37,13 +37,13 @@
       "size_bytes": 10361349
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-08-07T17:49:50.525234-04:00",
-      "last_write_time_utc": "2026-08-07T21:49:50.525234+00:00",
-      "size_bytes": 2000608
+      "last_write_time": "2026-08-07T17:57:40.835815-04:00",
+      "last_write_time_utc": "2026-08-07T21:57:40.835815+00:00",
+      "size_bytes": 2000612
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-07T17:49:50.515235-04:00",
-      "last_write_time_utc": "2026-08-07T21:49:50.515235+00:00",
+      "last_write_time": "2026-08-07T17:57:40.817816-04:00",
+      "last_write_time_utc": "2026-08-07T21:57:40.817816+00:00",
       "size_bytes": 160644
     },
     "calibration_three_way.csv": {
