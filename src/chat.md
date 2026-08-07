@@ -84,12 +84,12 @@ title: Ask Data
   }
 
   function loadHistory() {
-    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+    try { return JSON.parse(window.localStorage.getItem(HISTORY_KEY) || "[]"); }
     catch { return []; }
   }
 
   function saveHistory(history) {
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+    try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
     catch {}
   }
 
@@ -141,14 +141,14 @@ title: Ask Data
   }
 
   try {
-    const pending = JSON.parse(localStorage.getItem(PREFILL_KEY) || "null");
+    const pending = JSON.parse(window.localStorage.getItem(PREFILL_KEY) || "null");
     if (pending?.question) {
       textarea.value = pending.context
         ? `${pending.question}\n\nContext: ${pending.context}`
         : pending.question;
       replyLabel.textContent = "Ask about the page you came from";
       formWrapper.open = true;
-      localStorage.removeItem(PREFILL_KEY);
+      window.localStorage.removeItem(PREFILL_KEY);
     }
   } catch {}
 
