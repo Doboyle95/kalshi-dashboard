@@ -1,35 +1,35 @@
 {
-  "generated_at": "2026-08-06T20:06:01.665279-04:00",
-  "generated_at_utc": "2026-08-07T00:06:01.665279+00:00",
+  "generated_at": "2026-08-06T20:15:28.502073-04:00",
+  "generated_at_utc": "2026-08-07T00:15:28.502073+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-parlay-compact: last run 'artificial-chameleon' ended FAILED at 2026-08-06T22:14:39.530956+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_compact genuine failure (exit 75)",
-    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 133.6 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
+    "freshness_check: STALE    taker_pnl_by_market_leaderboard.csv - 133.9 h old (threshold 30 h) - daily (02:00 ET leaderboard_refresh, v3 taker-pnl-by-market)",
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1089.5 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1089.8 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 108d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-08-06T23:40:08.718826+00:00",
-    "freshness_report_mtime_utc": "2026-08-06T23:52:11.861124+00:00"
+    "task_health_generated": "2026-08-07T00:10:14.876314+00:00",
+    "freshness_report_mtime_utc": "2026-08-07T00:07:03.411119+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-08-06T20:06:00.673059-04:00",
-      "last_write_time_utc": "2026-08-07T00:06:00.673059+00:00",
-      "size_bytes": 149803
+      "last_write_time": "2026-08-06T20:15:27.830727-04:00",
+      "last_write_time_utc": "2026-08-07T00:15:27.830727+00:00",
+      "size_bytes": 126374
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-08-06T20:06:00.804057-04:00",
-      "last_write_time_utc": "2026-08-07T00:06:00.804057+00:00",
-      "size_bytes": 161394
+      "last_write_time": "2026-08-06T20:15:27.962725-04:00",
+      "last_write_time_utc": "2026-08-07T00:15:27.962725+00:00",
+      "size_bytes": 160966
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-08-06T20:06:00.877056-04:00",
-      "last_write_time_utc": "2026-08-07T00:06:00.877056+00:00",
-      "size_bytes": 7082093
+      "last_write_time": "2026-08-06T20:15:27.635730-04:00",
+      "last_write_time_utc": "2026-08-07T00:15:27.635730+00:00",
+      "size_bytes": 7082108
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-08-06T07:02:43.844812-04:00",
@@ -37,13 +37,13 @@
       "size_bytes": 10359960
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-08-06T20:06:00.899056-04:00",
-      "last_write_time_utc": "2026-08-07T00:06:00.899056+00:00",
-      "size_bytes": 1998462
+      "last_write_time": "2026-08-06T20:15:27.767728-04:00",
+      "last_write_time_utc": "2026-08-07T00:15:27.767728+00:00",
+      "size_bytes": 1998555
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-06T20:06:00.886056-04:00",
-      "last_write_time_utc": "2026-08-07T00:06:00.886056+00:00",
+      "last_write_time": "2026-08-06T20:15:27.747728-04:00",
+      "last_write_time_utc": "2026-08-07T00:15:27.747728+00:00",
       "size_bytes": 160273
     },
     "calibration_three_way.csv": {
