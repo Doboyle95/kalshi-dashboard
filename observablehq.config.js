@@ -1,3 +1,35 @@
+import {readFileSync} from "node:fs";
+
+// 2026-08-07 SELF-HEAL: prefer src/chat-endpoint.json, which the VM rewrites and pushes
+// whenever the Cloudflare Quick Tunnel is assigned a new hostname (KalshiData
+// scripts/publish_chat_endpoint.py, on a 5-min timer). Without this, the endpoint came
+// only from a GitHub secret and a human had to re-paste it after every tunnel restart --
+// in practice the chat page just stayed broken.
+//
+// Read HERE, in Node at build time -- NOT in the browser. The first attempt did this in
+// chat.md with a top-level `await FileAttachment("chat-endpoint.json").json()`; the cell
+// never resolved and the Ask Data panel rendered as an empty placeholder. That is the
+// same class of failure as the process.env incident this file already warns about below.
+// There was never anything to gain from the runtime read: Framework content-hashes the
+// file into its own name, so a changed endpoint needs a rebuild either way, and the
+// near-live data push rebuilds every ~7 min regardless.
+//
+// Precedence: published file -> env var -> "" (chat.md then falls back to localhost, so
+// local dev is unchanged). try/catch so a missing or malformed file can never fail the
+// build -- it just degrades to the previous env-var behaviour.
+const publishedChatEndpoint = (() => {
+  try {
+    const parsed = JSON.parse(
+      readFileSync(new URL("./src/chat-endpoint.json", import.meta.url), "utf-8")
+    );
+    return {api: parsed.api ?? "", token: parsed.token ?? ""};
+  } catch {
+    return {api: "", token: ""};
+  }
+})();
+const CHAT_API = publishedChatEndpoint.api || process.env.CHAT_API_URL || "";
+const CHAT_TOKEN = publishedChatEndpoint.token || process.env.CHAT_TOKEN || "";
+
 export default {
   title: "US Prediction Markets",
   base: "/kalshi-dashboard/",
@@ -15,7 +47,7 @@ export default {
     // and yields "" when the env var is unset, so chat.md falls back to localhost and
     // local development is unchanged. CHAT_API_URL/CHAT_TOKEN are already passed to the
     // build by .github/workflows/deploy.yml.
-    `<script>window.__CHAT_API__=${JSON.stringify(process.env.CHAT_API_URL ?? "")};window.__CHAT_TOKEN__=${JSON.stringify(process.env.CHAT_TOKEN ?? "")};</script>`,
+    `<script>window.__CHAT_API__=${JSON.stringify(CHAT_API)};window.__CHAT_TOKEN__=${JSON.stringify(CHAT_TOKEN)};</script>`,
     '<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
     // Apply saved theme before first paint to avoid FOUC
     `<script>(function(){try{var t=localStorage.getItem("kalshi-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`,
