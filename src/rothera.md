@@ -245,6 +245,24 @@ Plot.plot({
 })
 ```
 
+## Why there is no calibration curve on this page
+
+<p class="section-intro">Kalshi's <a href="./calibration">calibration page</a> asks the sharpest question available: do prices actually predict outcomes? Rothera carries <code>settlement_price</code> and <code>contracts_delivered</code>, so it looks like it should support the same chart. It does not. The measurement is published here so the gap is a documented result rather than a silent omission.</p>
+
+<details class="surface-card compact-details">
+  <summary>What was measured, and what it ruled out</summary>
+  <p><strong>The outcome side is fine.</strong> 2,229 contracts carry a clean binary settlement (a delivery row with <code>settlement_price</code> of exactly 0 or 1), spanning 2026-05-23 to 2026-08-06.</p>
+  <p><strong>The price side is not.</strong> <code>mkt_eod</code> is end-of-day market data with no trade prints. The <code>trades_eod</code> tape starts 2026-07-27 — anything earlier is permanently 403 — so a full-history x-axis would have to be a daily OHLC-derived proxy rather than a traded price.</p>
+  <p><strong>The proxy turns out to be the smaller problem.</strong> Against the 10 sessions where real prints and daily bars overlap (3,494 contract-days, with the tape's quantity matching the bar's volume on all 3,494), the best proxy — OHLC/4 — sits 0.46¢ from the true volume-weighted traded price on average and drops 6.8% of observations into the wrong 5-cent bin. The daily close and the daily settlement mark are worse: 1.50¢ and 1.56¢, about 10% misbinned. Usable, if that were the only obstacle.</p>
+  <p><strong>The binding constraint is independent events, and it is not close.</strong> Trades cluster on games: thousands of prints on one match share one outcome, so they are one observation. Counting events instead of prints:</p>
+  <ul>
+    <li><strong>Real prints:</strong> 298,529 prints land on a settled contract, but they are <strong>70 baseball games plus one inflation release — 71 independent events</strong>. Soccer is about 92% of Rothera's all-time volume and that World Cup settled before the tape begins, so it contributes zero usable prints. Per 5-cent bin the effective event count is 22–51 — an order of magnitude short of what the comparable DKeX measurement rests on (424–654 independent games per decile), and the one large block is a single tournament.</li>
+    <li><strong>Daily proxy:</strong> 307 events across 77 days, but <strong>94.4% of the weight is the one World Cup and 25.8% of all weight is a single cluster</strong> — the tournament-winner market, where 48 team contracts resolve off one tournament. The curve that falls out is incoherent (−25.9¢ at 40¢, +20.3¢ at 45¢, +24.6¢ at 70¢, −13.2¢ at 90¢), and about half its bins would be flagged "significant" because the distortion is systematic rather than random. Clustering cannot rescue a biased axis.</li>
+  </ul>
+  <p><strong>One more trap.</strong> On the delivery day the daily close is 0.01 or 0.99 — the outcome itself. Any proxy curve built without excluding settlement-day bars measures its own leakage and will look beautifully calibrated at both ends.</p>
+  <p><strong>What would change the answer.</strong> The comparable DKeX measurement rests on 424–654 independent games per decile. Rothera currently offers 22–51 effective events per 5-cent bin, an order of magnitude short, and its one large block is a single tournament. Continuous <code>trades_eod</code> collection across a broader set of leagues — months of it, not weeks — is the prerequisite. Until then a curve here would imply precision the sample cannot carry.</p>
+</details>
+
 ## Category breakdown (all time)
 
 <p class="section-intro">Every category ranked by all-time volume.</p>
