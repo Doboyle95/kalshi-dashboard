@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-08T06:04:51.953989-04:00",
-  "generated_at_utc": "2026-08-08T10:04:51.953989+00:00",
+  "generated_at": "2026-08-08T06:13:28.941795-04:00",
+  "generated_at_utc": "2026-08-08T10:13:28.941795+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-metadata-refresh: last run 'large-caiman' ended FAILED at 2026-08-08T05:30:22.176284+00:00 \u2014 Flow run encountered an exception: RuntimeError: metadata_refresh preflight: insufficient disk to safely attempt a full fetch+build cycle: 109.2GB < 116.7GB -- resolve disk space before retrying (see ",
@@ -10,15 +10,14 @@
     "freshness_check: GAP_KNOWN underdog_categories_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
     "freshness_check: GAP_KNOWN underdog_sports_split_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
     "freshness_check: GAP_KNOWN underdog_market_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1123.5 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1123.8 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 110d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
-    "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
-    "freshness_check: STALL    v3_export_liveness - no v3 P&L export (taker/maker/parlay_pnl_net) in 2.1 h (threshold 2.0 h, cadence 30 min) - v3_pnl_cycle is running but not exporting: check skip_export holds, export_all_settled BATCH SKIP (dirty backlog), store-busy skips"
+    "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-08-08T09:40:14.735792+00:00",
-    "freshness_report_mtime_utc": "2026-08-08T09:52:10.454845+00:00"
+    "task_health_generated": "2026-08-08T10:10:16.580721+00:00",
+    "freshness_report_mtime_utc": "2026-08-08T10:07:02.445604+00:00"
   },
   "files": {
     "daily_overall.csv": {
@@ -222,9 +221,9 @@
       "size_bytes": 156772
     },
     "taker_pnl_by_market_leaderboard.csv": {
-      "last_write_time": "2026-08-07T05:55:56.648240-04:00",
-      "last_write_time_utc": "2026-08-07T09:55:56.648240+00:00",
-      "size_bytes": 194342
+      "last_write_time": "2026-08-08T06:13:24.113222-04:00",
+      "last_write_time_utc": "2026-08-08T10:13:24.113222+00:00",
+      "size_bytes": 194374
     },
     "trade_size_daily.csv": {
       "last_write_time": "2026-08-08T04:20:22.994764-04:00",
@@ -302,13 +301,13 @@
       "size_bytes": 10265954
     },
     "parlay_lottery_daily.csv": {
-      "last_write_time": "2026-08-08T04:37:59.391951-04:00",
-      "last_write_time_utc": "2026-08-08T08:37:59.391951+00:00",
-      "size_bytes": 8596
+      "last_write_time": "2026-08-08T06:05:59.770504-04:00",
+      "last_write_time_utc": "2026-08-08T10:05:59.770504+00:00",
+      "size_bytes": 8597
     },
     "parlay_lottery_summary.csv": {
-      "last_write_time": "2026-08-08T04:38:04.064892-04:00",
-      "last_write_time_utc": "2026-08-08T08:38:04.064892+00:00",
+      "last_write_time": "2026-08-08T06:06:05.559420-04:00",
+      "last_write_time_utc": "2026-08-08T10:06:05.559420+00:00",
       "size_bytes": 101
     },
     "parlay_sportsmix_v2.csv": {
