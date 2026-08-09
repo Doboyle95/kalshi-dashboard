@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-09T05:38:36.625964-04:00",
-  "generated_at_utc": "2026-08-09T09:38:36.625964+00:00",
+  "generated_at": "2026-08-09T05:50:39.417899-04:00",
+  "generated_at_utc": "2026-08-09T09:50:39.417899+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-parlay-compact: last run 'adamant-hog' ended FAILED at 2026-08-09T04:40:36.207647+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_compact genuine failure (exit 75)",
-    "task_health: prod-trade-collector: last run 'handsome-wildebeest' ended FAILED at 2026-08-09T08:53:41.761069+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
+    "task_health: prod-trade-collector: last run 'wakeful-wren' ended FAILED at 2026-08-09T09:28:31.983964+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
     "task_health: prod-v3-taker-aggregate-parity: SCHEDULED but has ZERO terminal runs on record -- it has stopped being submitted (nothing else detects total absence)",
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
     "freshness_check: GAP_KNOWN underdog_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
@@ -17,24 +17,24 @@
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-08-09T09:10:22.486570+00:00",
+    "task_health_generated": "2026-08-09T09:40:11.844366+00:00",
     "freshness_report_mtime_utc": "2026-08-09T09:37:03.927262+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-08-09T05:38:35.967050-04:00",
-      "last_write_time_utc": "2026-08-09T09:38:35.967050+00:00",
+      "last_write_time": "2026-08-09T05:50:38.527547-04:00",
+      "last_write_time_utc": "2026-08-09T09:50:38.527547+00:00",
       "size_bytes": 150077
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-08-09T05:38:36.084048-04:00",
-      "last_write_time_utc": "2026-08-09T09:38:36.084048+00:00",
-      "size_bytes": 161824
+      "last_write_time": "2026-08-09T05:50:38.676545-04:00",
+      "last_write_time_utc": "2026-08-09T09:50:38.676545+00:00",
+      "size_bytes": 161813
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-08-09T05:38:36.116048-04:00",
-      "last_write_time_utc": "2026-08-09T09:38:36.116048+00:00",
-      "size_bytes": 7097625
+      "last_write_time": "2026-08-09T05:50:38.747545-04:00",
+      "last_write_time_utc": "2026-08-09T09:50:38.747545+00:00",
+      "size_bytes": 7097628
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-08-08T07:03:06.230059-04:00",
@@ -42,13 +42,13 @@
       "size_bytes": 10362748
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-08-09T05:38:36.140047-04:00",
-      "last_write_time_utc": "2026-08-09T09:38:36.140047+00:00",
-      "size_bytes": 2004098
+      "last_write_time": "2026-08-09T05:50:38.787544-04:00",
+      "last_write_time_utc": "2026-08-09T09:50:38.787544+00:00",
+      "size_bytes": 2004099
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-09T05:38:36.131047-04:00",
-      "last_write_time_utc": "2026-08-09T09:38:36.131047+00:00",
+      "last_write_time": "2026-08-09T05:50:38.771544-04:00",
+      "last_write_time_utc": "2026-08-09T09:50:38.771544+00:00",
       "size_bytes": 161387
     },
     "calibration_three_way.csv": {
@@ -267,19 +267,19 @@
       "size_bytes": 192725
     },
     "parlay_house_edge_by_legs.csv": {
-      "last_write_time": "2026-08-08T21:21:49.271206-04:00",
-      "last_write_time_utc": "2026-08-09T01:21:49.271206+00:00",
+      "last_write_time": "2026-08-09T05:45:37.112509-04:00",
+      "last_write_time_utc": "2026-08-09T09:45:37.112509+00:00",
       "size_bytes": 1554
     },
     "parlay_legs_over_time.csv": {
-      "last_write_time": "2026-08-08T21:21:50.865184-04:00",
-      "last_write_time_utc": "2026-08-09T01:21:50.865184+00:00",
-      "size_bytes": 663
+      "last_write_time": "2026-08-09T05:45:38.697488-04:00",
+      "last_write_time_utc": "2026-08-09T09:45:38.697488+00:00",
+      "size_bytes": 661
     },
     "parlay_mispricing_by_correlation.csv": {
-      "last_write_time": "2026-08-08T21:24:25.879138-04:00",
-      "last_write_time_utc": "2026-08-09T01:24:25.879138+00:00",
-      "size_bytes": 1089
+      "last_write_time": "2026-08-09T05:47:27.777054-04:00",
+      "last_write_time_utc": "2026-08-09T09:47:27.777054+00:00",
+      "size_bytes": 1090
     },
     "parlay_pnl_daily_by_corr_v2.csv": {
       "last_write_time": "2026-08-09T05:15:37.742252-04:00",
@@ -317,8 +317,8 @@
       "size_bytes": 1354
     },
     "parlay_top_games_by_volume.csv": {
-      "last_write_time": "2026-08-08T21:24:21.564188-04:00",
-      "last_write_time_utc": "2026-08-09T01:24:21.564188+00:00",
+      "last_write_time": "2026-08-09T05:47:25.095089-04:00",
+      "last_write_time_utc": "2026-08-09T09:47:25.095089+00:00",
       "size_bytes": 1353
     },
     "parlay_volume_by_type_daily.csv": {
