@@ -1,42 +1,42 @@
 {
-  "generated_at": "2026-08-09T02:04:11.913948-04:00",
-  "generated_at_utc": "2026-08-09T06:04:11.913948+00:00",
+  "generated_at": "2026-08-09T02:19:03.788907-04:00",
+  "generated_at_utc": "2026-08-09T06:19:03.788907+00:00",
   "source_dir": "/root/KalshiData/output",
   "local_alerts": [
     "task_health: prod-parlay-compact: last run 'adamant-hog' ended FAILED at 2026-08-09T04:40:36.207647+00:00 \u2014 Flow run encountered an exception: RuntimeError: parlay_compact genuine failure (exit 75)",
-    "task_health: prod-trade-collector: last run 'loyal-orangutan' ended FAILED at 2026-08-09T05:33:28.706304+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
+    "task_health: prod-trade-collector: last run 'practical-snake' ended FAILED at 2026-08-09T06:05:22.309550+00:00 \u2014 Flow run encountered an exception: RuntimeError: catchup_live.R exited 1; stderr: [ERRORS]\nUsing libcurl 8.5.0 with OpenSSL/3.0.13\n\nAttaching package: \u2018arrow\u2019\n\nThe following object is masked from \u2018pac",
     "task_health: prod-v3-taker-aggregate-parity: SCHEDULED but has ZERO terminal runs on record -- it has stopped being submitted (nothing else detects total absence)",
     "freshness_check: GAP_KNOWN dkex_market_daily.csv - 12 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-12, 2026-06-13, 2026-06-14, 2026-06-15, 2026-06-16, 2026-06-17, 2026-06-19, 2026-06-20 +4 more",
     "freshness_check: GAP_KNOWN underdog_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
     "freshness_check: GAP_KNOWN underdog_categories_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
     "freshness_check: GAP_KNOWN underdog_sports_split_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
     "freshness_check: GAP_KNOWN underdog_market_daily.csv - 1 previously-reported missing day(s) in last 60d (not re-alarming): 2026-08-06",
-    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1143.5 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
+    "freshness_check: KNOWN    rh_weekly_estimates.csv - 1143.8 h old (threshold 336 h; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: KNOWN    rh_weekly_estimates.csv - newest data row 2026-04-20 is 111d behind today (allowance 21d; acknowledged manual-input backlog, not alarming) - RH estimates (weekly; manual FCM input)",
     "freshness_check: GAP_KNOWN polymarket_categories_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
     "freshness_check: GAP_KNOWN polymarket_sports_split_daily.csv - 3 previously-reported missing day(s) in last 60d (not re-alarming): 2026-06-11, 2026-06-12, 2026-06-13",
-    "freshness_check: STALL    v3_settle_mode1_last_complete - no fully-complete Mode 1 settlement cycle in 7.7 h (threshold 6.0 h) - collect_settled_markets_v3.py --mode 1; dirty_tickers for settled_ticker_pnl/maker_pnl/parlay_pnl may be starving",
-    "freshness_check: STALL    v3_export_liveness - no v3 P&L export (taker/maker/parlay_pnl_net) in 5.6 h (threshold 2.0 h, cadence 30 min) - v3_pnl_cycle is running but not exporting: check skip_export holds, export_all_settled BATCH SKIP (dirty backlog), store-busy skips"
+    "freshness_check: STALL    v3_settle_mode1_last_complete - no fully-complete Mode 1 settlement cycle in 7.9 h (threshold 6.0 h) - collect_settled_markets_v3.py --mode 1; dirty_tickers for settled_ticker_pnl/maker_pnl/parlay_pnl may be starving",
+    "freshness_check: STALL    v3_export_liveness - no v3 P&L export (taker/maker/parlay_pnl_net) in 5.8 h (threshold 2.0 h, cadence 30 min) - v3_pnl_cycle is running but not exporting: check skip_export holds, export_all_settled BATCH SKIP (dirty backlog), store-busy skips"
   ],
   "local_alerts_meta": {
-    "task_health_generated": "2026-08-09T05:40:11.209619+00:00",
-    "freshness_report_mtime_utc": "2026-08-09T05:52:02.930785+00:00"
+    "task_health_generated": "2026-08-09T06:10:14.033038+00:00",
+    "freshness_report_mtime_utc": "2026-08-09T06:07:03.133645+00:00"
   },
   "files": {
     "daily_overall.csv": {
-      "last_write_time": "2026-08-09T02:04:10.964967-04:00",
-      "last_write_time_utc": "2026-08-09T06:04:10.964967+00:00",
-      "size_bytes": 150073
+      "last_write_time": "2026-08-09T02:19:02.804944-04:00",
+      "last_write_time_utc": "2026-08-09T06:19:02.804944+00:00",
+      "size_bytes": 150080
     },
     "daily_sports_vs_nonsports.csv": {
-      "last_write_time": "2026-08-09T02:04:11.190964-04:00",
-      "last_write_time_utc": "2026-08-09T06:04:11.190964+00:00",
-      "size_bytes": 161814
+      "last_write_time": "2026-08-09T02:19:02.929942-04:00",
+      "last_write_time_utc": "2026-08-09T06:19:02.929942+00:00",
+      "size_bytes": 161816
     },
     "daily_top_categories.csv": {
-      "last_write_time": "2026-08-09T02:04:11.238963-04:00",
-      "last_write_time_utc": "2026-08-09T06:04:11.238963+00:00",
-      "size_bytes": 7097397
+      "last_write_time": "2026-08-09T02:19:02.977942-04:00",
+      "last_write_time_utc": "2026-08-09T06:19:02.977942+00:00",
+      "size_bytes": 7097419
     },
     "daily_top_categories_fees.csv": {
       "last_write_time": "2026-08-08T07:03:06.230059-04:00",
@@ -44,13 +44,13 @@
       "size_bytes": 10362748
     },
     "trades_by_hour.csv": {
-      "last_write_time": "2026-08-09T02:04:11.288962-04:00",
-      "last_write_time_utc": "2026-08-09T06:04:11.288962+00:00",
-      "size_bytes": 2003809
+      "last_write_time": "2026-08-09T02:19:02.995941-04:00",
+      "last_write_time_utc": "2026-08-09T06:19:02.995941+00:00",
+      "size_bytes": 2003826
     },
     "sports_market_type_daily.csv": {
-      "last_write_time": "2026-08-09T02:04:11.263963-04:00",
-      "last_write_time_utc": "2026-08-09T06:04:11.263963+00:00",
+      "last_write_time": "2026-08-09T02:19:02.986941-04:00",
+      "last_write_time_utc": "2026-08-09T06:19:02.986941+00:00",
       "size_bytes": 161420
     },
     "calibration_three_way.csv": {
