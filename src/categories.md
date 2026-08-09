@@ -14,15 +14,18 @@ title: Categories
 </details>
 
 ```js
-const leaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
-const topDaily = await FileAttachment("data/daily_top_categories.csv").csv({typed: true});
-const mktLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const leaderboard = await DataAttachment("data/category_leaderboard.csv", FileAttachment("data/category_leaderboard.csv")).csv({typed: true});
+const topDaily = await DataAttachment("data/daily_top_categories.csv", FileAttachment("data/daily_top_categories.csv")).csv({typed: true});
+const mktLeaderboard = await DataAttachment("data/market_leaderboard.csv", FileAttachment("data/market_leaderboard.csv")).csv({typed: true});
 // Leg-based parlay correlation by (date, report_ticker): lets the treemap split each
 // parlay series' windowed volume into correlated / independent / pending by what the legs
 // actually were, instead of the ticker-name-derived Same-game/Multi-game mtype (which is
 // wrong — e.g. KXMVESPORTSMULTIGAMEEXTENDED is ~46% correlated / ~54% independent).
-const parlayCorrByTicker = await FileAttachment("data/parlay_corr_by_ticker_daily.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+const parlayCorrByTicker = await DataAttachment("data/parlay_corr_by_ticker_daily.csv", FileAttachment("data/parlay_corr_by_ticker_daily.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
@@ -1780,7 +1783,7 @@ const tmActiveMarketRowsByTicker = d3.group(
 <p class="section-intro">How Kalshi's category mix has shifted month to month. Pick a category in the treemap to break it out into its own line.</p>
 
 ```js
-const sportsSplit = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
+const sportsSplit = await DataAttachment("data/daily_sports_vs_nonsports.csv", FileAttachment("data/daily_sports_vs_nonsports.csv")).csv({typed: true});
 ```
 
 ```js
@@ -1841,7 +1844,7 @@ function wideCategoryForTicker(ticker) {
 }
 
 // Leg-based parlay split (correlated / independent / pending) for the Detailed view.
-const parlayByType = await FileAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const parlayByType = await DataAttachment("data/parlay_volume_by_type_daily.csv", FileAttachment("data/parlay_volume_by_type_daily.csv")).csv({typed: true});
 const PARLAY_CLASS_TO_CAT = {
   "same-game (correlated)":      "Parlay (correlated)",
   "multi-game (independent)":    "Parlay (independent)",
@@ -2259,8 +2262,8 @@ Plot.plot({
 <p class="section-intro">The same category mix, but for the fees Kalshi <em>collected</em> — on a trade-date basis (fees as charged when a trade executes, not when markets settle). Uses the date window and category controls below; shares the brush with the volume charts above.</p>
 
 ```js
-const topDailyFees = await FileAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
-const dailyOverallFees = await FileAttachment("data/daily_overall.csv").csv({typed: true});
+const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv", FileAttachment("data/daily_top_categories_fees.csv")).csv({typed: true});
+const dailyOverallFees = await DataAttachment("data/daily_overall.csv", FileAttachment("data/daily_overall.csv")).csv({typed: true});
 ```
 
 ```js
@@ -2738,7 +2741,7 @@ if (!compareSeries.length) {
 _How sports volume is split between market types across all sports tickers. Moneylines = individual game winners. Futures/Award = season champions, conference winners, awards, tournament brackets. **Parlay (correlated)** = at least two legs are in the same game, so the legs aren't independent and the odds aren't a simple product of the leg prices. **Parlay (independent)** = every leg is a different game. (Classified from the actual legs, not the ticker name.)_
 
 ```js
-const marketTypeRaw = await FileAttachment("data/sports_market_type_daily.csv").csv({typed: true});
+const marketTypeRaw = await DataAttachment("data/sports_market_type_daily.csv", FileAttachment("data/sports_market_type_daily.csv")).csv({typed: true});
 ```
 
 ```js

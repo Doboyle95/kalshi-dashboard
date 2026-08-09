@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import {createHash, webcrypto} from "node:crypto";
 import test from "node:test";
 
-import {loadRemoteCsv, loadRemoteJson} from "../src/components/remote-data.js";
+import {
+  createRemoteFileAttachment,
+  loadRemoteCsv,
+  loadRemoteJson
+} from "../src/components/remote-data.js";
 
 globalThis.crypto ??= webcrypto;
 
@@ -102,4 +106,68 @@ test("unsafe endpoint falls back before making a request", async () => {
     globalThis.window = priorWindow;
     console.warn = priorWarn;
   }
+});
+
+test("FileAttachment adapter tracks one generation and every remote file", async () => {
+  const endpoint = "https://canary-adapter.example";
+  const files = {
+    "tiny.csv": "date,value\n2026-08-09,7\n",
+    "freshness_manifest.json": "{\"files\":{}}\n"
+  };
+  const mock = transport(endpoint, files);
+  const fallbacks = [];
+  const fileAttachment = path => ({
+    csv: async () => {
+      fallbacks.push(path);
+      return ["fallback"];
+    },
+    json: async () => {
+      fallbacks.push(path);
+      return {fallback: true};
+    }
+  });
+  const d3 = {
+    autoType: value => value,
+    csvParse: (_text, row) => {
+      const value = {date: "2026-08-09", value: "7"};
+      return [row ? row(value) : value];
+    }
+  };
+  const documentImpl = {createElement: () => ({dataset: {}, hidden: false})};
+  const DataAttachment = createRemoteFileAttachment(fileAttachment, d3, {
+    endpoint,
+    fetchImpl: mock.fetchImpl,
+    documentImpl
+  });
+  assert.equal(DataAttachment.marker.dataset.dashboardDataSource, "pending");
+  const typedRows = await DataAttachment(
+    "data/tiny.csv",
+    fileAttachment("data/tiny.csv")
+  ).csv({typed: true});
+  await DataAttachment(
+    "data/freshness_manifest.json",
+    fileAttachment("data/freshness_manifest.json")
+  ).json();
+  assert.equal(DataAttachment.marker.hidden, true);
+  assert.equal(DataAttachment.marker.dataset.dashboardDataSource, "remote");
+  assert.equal(DataAttachment.marker.dataset.dashboardDataGeneration, mock.generation);
+  assert.equal(
+    DataAttachment.marker.dataset.dashboardDataFiles,
+    "freshness_manifest.json,tiny.csv"
+  );
+  assert.ok(typedRows[0].date instanceof Date);
+  assert.equal(typedRows[0].value, 7);
+  assert.deepEqual(fallbacks, []);
+});
+
+test("FileAttachment adapter rejects a data path without an explicit build-visible fallback", () => {
+  const DataAttachment = createRemoteFileAttachment(
+    () => ({csv: async () => []}),
+    {csvParse: () => []},
+    {documentImpl: {createElement: () => ({dataset: {}, hidden: false})}}
+  );
+  assert.throws(
+    () => DataAttachment("data/tiny.csv"),
+    /requires an explicit FileAttachment fallback/
+  );
 });

@@ -4,6 +4,26 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 15000;
 const manifestPromises = new Map();
+const ISO_DATE = /^([-+]\d{2})?\d{4}(-\d{2}(-\d{2})?)?(T\d{2}:\d{2}(:\d{2}(\.\d{3})?)?(Z|[-+]\d{2}:\d{2})?)?$/;
+
+// Equivalent to d3-dsv's autoType. Keeping this local matters because
+// Framework tree-shakes the page-level d3 bundle and cannot see d3.autoType
+// when d3 is passed through this adapter.
+function autoTypeRow(object) {
+  for (const key in object) {
+    let value = object[key].trim();
+    let number;
+    if (!value) value = null;
+    else if (value === "true") value = true;
+    else if (value === "false") value = false;
+    else if (value === "NaN") value = NaN;
+    else if (!Number.isNaN(number = +value)) value = number;
+    else if (ISO_DATE.test(value)) value = new Date(value);
+    else continue;
+    object[key] = value;
+  }
+  return object;
+}
 
 function browserEndpoint() {
   const raw = globalThis.window?.__CHAT_API__;
@@ -107,8 +127,9 @@ async function withFallback(filename, fallback, decode, options = {}) {
   }
   try {
     const remote = await verifiedRemoteText(filename, options);
+    const decoded = decode(remote.text);
     return {
-      value: decode(remote.text),
+      value: decoded,
       source: "remote",
       generation: remote.generation,
       publishedAt: remote.publishedAt,
@@ -133,4 +154,84 @@ export function loadRemoteCsv(filename, {fallback, parse, ...options}) {
 
 export function loadRemoteJson(filename, {fallback, ...options}) {
   return withFallback(filename, fallback, JSON.parse, options);
+}
+
+export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
+  if (typeof fileAttachment !== "function" || !d3) {
+    throw new TypeError("remote FileAttachment requires the Framework attachment and d3");
+  }
+  const {documentImpl: providedDocument, ...loadOptions} = options;
+  const documentImpl = providedDocument ?? globalThis.document;
+  if (!documentImpl?.createElement) throw new Error("browser document is unavailable");
+  const marker = documentImpl.createElement("span");
+  marker.hidden = true;
+  const results = new Map();
+
+  function updateMarker() {
+    const values = [...results.values()];
+    const sources = values.map(value => value.source);
+    marker.dataset.dashboardDataSource = !values.length
+      ? "pending"
+      : sources.every(source => source === "remote")
+        ? "remote"
+        : sources.every(source => source === "fallback")
+          ? "fallback"
+          : "mixed";
+    const generations = new Set(
+      values.filter(value => value.source === "remote").map(value => value.generation)
+    );
+    marker.dataset.dashboardDataGeneration = generations.size === 1
+      ? [...generations][0]
+      : "";
+    marker.dataset.dashboardDataFiles = [...results.keys()].sort().join(",");
+  }
+
+  async function track(filename, promise) {
+    try {
+      const result = await promise;
+      results.set(filename, result);
+      updateMarker();
+      return result.value;
+    } catch (error) {
+      results.set(filename, {source: "error", generation: null});
+      updateMarker();
+      throw error;
+    }
+  }
+
+  function RemoteFileAttachment(path, legacyAttachment = null) {
+    if (typeof path !== "string" || !path.startsWith("data/")) {
+      return legacyAttachment ?? fileAttachment(path);
+    }
+    const filename = path.slice("data/".length);
+    if (!legacyAttachment) {
+      throw new TypeError(`remote attachment ${filename} requires an explicit FileAttachment fallback`);
+    }
+    const legacy = legacyAttachment;
+    return {
+      csv(csvOptions = {}) {
+        return track(
+          filename,
+          loadRemoteCsv(filename, {
+            fallback: () => legacy.csv(csvOptions),
+            parse: text => d3.csvParse(text, csvOptions.typed ? autoTypeRow : undefined),
+            ...loadOptions,
+          })
+        );
+      },
+      json() {
+        return track(
+          filename,
+          loadRemoteJson(filename, {
+            fallback: () => legacy.json(),
+            ...loadOptions,
+          })
+        );
+      },
+    };
+  }
+
+  updateMarker();
+  RemoteFileAttachment.marker = marker;
+  return RemoteFileAttachment;
 }
