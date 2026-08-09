@@ -122,8 +122,8 @@ async function verifiedRemoteText(filename, options = {}) {
 }
 
 async function withFallback(filename, fallback, decode, options = {}) {
-  if (typeof fallback !== "function" || typeof decode !== "function") {
-    throw new TypeError("remote data loaders require fallback and decode functions");
+  if ((fallback !== undefined && typeof fallback !== "function") || typeof decode !== "function") {
+    throw new TypeError("remote data loaders require a decode function and an optional fallback function");
   }
   try {
     const remote = await verifiedRemoteText(filename, options);
@@ -137,6 +137,9 @@ async function withFallback(filename, fallback, decode, options = {}) {
     };
   } catch (error) {
     const detail = String(error?.message ?? error).slice(0, 240);
+    if (fallback === undefined) {
+      throw new Error(`Remote dashboard data unavailable for ${filename}: ${detail}`);
+    }
     console.warn(`Remote dashboard data fallback for ${filename}: ${detail}`);
     return {
       value: await fallback(),
@@ -156,9 +159,9 @@ export function loadRemoteJson(filename, {fallback, ...options}) {
   return withFallback(filename, fallback, JSON.parse, options);
 }
 
-export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
-  if (typeof fileAttachment !== "function" || !d3) {
-    throw new TypeError("remote FileAttachment requires the Framework attachment and d3");
+function createRemoteAttachment(fileAttachment, d3, options = {}) {
+  if ((fileAttachment !== null && typeof fileAttachment !== "function") || !d3) {
+    throw new TypeError("remote data attachment requires d3 and an optional Framework attachment");
   }
   const {documentImpl: providedDocument, ...loadOptions} = options;
   const documentImpl = providedDocument ?? globalThis.document;
@@ -172,6 +175,8 @@ export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
     const sources = values.map(value => value.source);
     marker.dataset.dashboardDataSource = !values.length
       ? "pending"
+      : sources.includes("error")
+        ? "error"
       : sources.every(source => source === "remote")
         ? "remote"
         : sources.every(source => source === "fallback")
@@ -201,19 +206,26 @@ export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
 
   function RemoteFileAttachment(path, legacyAttachment = null) {
     if (typeof path !== "string" || !path.startsWith("data/")) {
-      return legacyAttachment ?? fileAttachment(path);
+      if (legacyAttachment) return legacyAttachment;
+      if (fileAttachment) return fileAttachment(path);
+      throw new TypeError("remote-only data attachment accepts only data/ paths");
     }
     const filename = path.slice("data/".length);
-    if (!legacyAttachment) {
+    if (!legacyAttachment && fileAttachment) {
       throw new TypeError(`remote attachment ${filename} requires an explicit FileAttachment fallback`);
     }
-    const legacy = legacyAttachment;
+    const csvFallback = legacyAttachment
+      ? csvOptions => () => legacyAttachment.csv(csvOptions)
+      : () => undefined;
+    const jsonFallback = legacyAttachment
+      ? () => () => legacyAttachment.json()
+      : () => undefined;
     return {
       csv(csvOptions = {}) {
         return track(
           filename,
           loadRemoteCsv(filename, {
-            fallback: () => legacy.csv(csvOptions),
+            fallback: csvFallback(csvOptions),
             parse: text => d3.csvParse(text, csvOptions.typed ? autoTypeRow : undefined),
             ...loadOptions,
           })
@@ -223,7 +235,7 @@ export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
         return track(
           filename,
           loadRemoteJson(filename, {
-            fallback: () => legacy.json(),
+            fallback: jsonFallback(),
             ...loadOptions,
           })
         );
@@ -234,4 +246,16 @@ export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
   updateMarker();
   RemoteFileAttachment.marker = marker;
   return RemoteFileAttachment;
+}
+
+// Compatibility adapter retained during the staged migration. Callers must
+// provide an explicit build-visible FileAttachment fallback for every data file.
+export function createRemoteFileAttachment(fileAttachment, d3, options = {}) {
+  return createRemoteAttachment(fileAttachment, d3, options);
+}
+
+// Final data-plane adapter. It has no repository fallback: transport failure is
+// visible as a page error and to the browser canary instead of serving stale data.
+export function createRemoteDataAttachment(d3, options = {}) {
+  return createRemoteAttachment(null, d3, options);
 }

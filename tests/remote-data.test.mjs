@@ -3,6 +3,7 @@ import {createHash, webcrypto} from "node:crypto";
 import test from "node:test";
 
 import {
+  createRemoteDataAttachment,
   createRemoteFileAttachment,
   loadRemoteCsv,
   loadRemoteJson
@@ -170,4 +171,46 @@ test("FileAttachment adapter rejects a data path without an explicit build-visib
     () => DataAttachment("data/tiny.csv"),
     /requires an explicit FileAttachment fallback/
   );
+});
+
+test("remote-only adapter loads data without a repository attachment", async () => {
+  const endpoint = "https://remote-only.example";
+  const mock = transport(endpoint, {"tiny.csv": "date,value\n2026-08-09,7\n"});
+  const d3 = {
+    csvParse: (_text, row) => {
+      const value = {date: "2026-08-09", value: "7"};
+      return [row ? row(value) : value];
+    }
+  };
+  const DataAttachment = createRemoteDataAttachment(d3, {
+    endpoint,
+    fetchImpl: mock.fetchImpl,
+    documentImpl: {createElement: () => ({dataset: {}, hidden: false})}
+  });
+
+  const rows = await DataAttachment("data/tiny.csv").csv({typed: true});
+  assert.ok(rows[0].date instanceof Date);
+  assert.equal(rows[0].value, 7);
+  assert.equal(DataAttachment.marker.dataset.dashboardDataSource, "remote");
+  assert.equal(DataAttachment.marker.dataset.dashboardDataGeneration, mock.generation);
+});
+
+test("remote-only adapter fails visibly instead of returning stale data", async () => {
+  const endpoint = "https://remote-only-failure.example";
+  const mock = transport(endpoint, {"tiny.csv": "a,b\n1,2\n"}, {corrupt: "tiny.csv"});
+  const DataAttachment = createRemoteDataAttachment(
+    {csvParse: text => text},
+    {
+      endpoint,
+      fetchImpl: mock.fetchImpl,
+      documentImpl: {createElement: () => ({dataset: {}, hidden: false})}
+    }
+  );
+
+  await assert.rejects(
+    DataAttachment("data/tiny.csv").csv(),
+    /Remote dashboard data unavailable.*size mismatch/
+  );
+  assert.equal(DataAttachment.marker.dataset.dashboardDataSource, "error");
+  assert.equal(DataAttachment.marker.dataset.dashboardDataGeneration, "");
 });

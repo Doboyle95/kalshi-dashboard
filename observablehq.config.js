@@ -11,8 +11,9 @@ import {readFileSync} from "node:fs";
 // never resolved and the Ask Data panel rendered as an empty placeholder. That is the
 // same class of failure as the process.env incident this file already warns about below.
 // There was never anything to gain from the runtime read: Framework content-hashes the
-// file into its own name, so a changed endpoint needs a rebuild either way, and the
-// near-live data push rebuilds every ~7 min regardless.
+// file into its own name, so a changed endpoint needs a rebuild either way. The Quick
+// Tunnel publisher performs that endpoint-only rebuild today; the named tunnel makes
+// the endpoint stable and removes that recurring Git dependency.
 //
 // Precedence: published file -> env var -> "" (chat.md then falls back to localhost, so
 // local dev is unchanged). try/catch so a missing or malformed file can never fail the

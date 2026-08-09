@@ -14,14 +14,14 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numer
 ```
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const taker = await DataAttachment("data/taker_notional_daily.csv", FileAttachment("data/taker_notional_daily.csv")).csv({typed: true});
-const takerVolByTicker = await DataAttachment("data/taker_volume_by_ticker_daily.csv", FileAttachment("data/taker_volume_by_ticker_daily.csv")).csv({typed: true});
-const takerVolByTickerSide = await DataAttachment("data/taker_volume_by_ticker_side_daily.csv", FileAttachment("data/taker_volume_by_ticker_side_daily.csv")).csv({typed: true});
-const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv", FileAttachment("data/category_leaderboard.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const taker = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerVolByTicker = await DataAttachment("data/taker_volume_by_ticker_daily.csv").csv({typed: true});
+const takerVolByTickerSide = await DataAttachment("data/taker_volume_by_ticker_side_daily.csv").csv({typed: true});
+const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {renderDateBrush} from "./components/date-brush.js";

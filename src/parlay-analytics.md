@@ -16,21 +16,21 @@ const pct1     = n => (n == null ? "n/a" : n.toFixed(1) + "%");
 ```
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const heRaw   = await DataAttachment("data/parlay_house_edge_by_legs.csv", FileAttachment("data/parlay_house_edge_by_legs.csv")).csv({typed: true});
-const timeRaw = await DataAttachment("data/parlay_legs_over_time.csv", FileAttachment("data/parlay_legs_over_time.csv")).csv({typed: true});
-const gamesRaw= await DataAttachment("data/parlay_top_games_by_volume.csv", FileAttachment("data/parlay_top_games_by_volume.csv")).csv({typed: true});
-const mispRaw = await DataAttachment("data/parlay_mispricing_by_correlation.csv", FileAttachment("data/parlay_mispricing_by_correlation.csv")).csv({typed: true});
-const pnlRaw  = await DataAttachment("data/parlay_pnl_daily_by_corr_v2.csv", FileAttachment("data/parlay_pnl_daily_by_corr_v2.csv")).csv({typed: true});
-const mixRaw  = await DataAttachment("data/parlay_sportsmix_v2.csv", FileAttachment("data/parlay_sportsmix_v2.csv")).csv({typed: true});
-const popDailyRaw = await DataAttachment("data/parlay_popular_daily.csv", FileAttachment("data/parlay_popular_daily.csv")).csv({typed: true});
-const popMetaRaw  = await DataAttachment("data/parlay_popular_meta.csv", FileAttachment("data/parlay_popular_meta.csv")).csv({typed: true});
-const volTypeRaw  = await DataAttachment("data/parlay_volume_by_type_daily.csv", FileAttachment("data/parlay_volume_by_type_daily.csv")).csv({typed: true});
-const lotteryRaw  = await DataAttachment("data/parlay_lottery_daily.csv", FileAttachment("data/parlay_lottery_daily.csv")).csv({typed: true});
-const lotterySummaryRaw = await DataAttachment("data/parlay_lottery_summary.csv", FileAttachment("data/parlay_lottery_summary.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const heRaw   = await DataAttachment("data/parlay_house_edge_by_legs.csv").csv({typed: true});
+const timeRaw = await DataAttachment("data/parlay_legs_over_time.csv").csv({typed: true});
+const gamesRaw= await DataAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
+const mispRaw = await DataAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
+const pnlRaw  = await DataAttachment("data/parlay_pnl_daily_by_corr_v2.csv").csv({typed: true});
+const mixRaw  = await DataAttachment("data/parlay_sportsmix_v2.csv").csv({typed: true});
+const popDailyRaw = await DataAttachment("data/parlay_popular_daily.csv").csv({typed: true});
+const popMetaRaw  = await DataAttachment("data/parlay_popular_meta.csv").csv({typed: true});
+const volTypeRaw  = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const lotteryRaw  = await DataAttachment("data/parlay_lottery_daily.csv").csv({typed: true});
+const lotterySummaryRaw = await DataAttachment("data/parlay_lottery_summary.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, fmtFreshDate, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 

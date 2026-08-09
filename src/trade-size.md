@@ -17,13 +17,13 @@ const fmtPrice = p => p == null ? "-" : `${Number(p) % 1 === 0 ? Number(p).toFix
 ```
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const tradeSizeRaw = await DataAttachment("data/trade_size_daily.csv", FileAttachment("data/trade_size_daily.csv")).csv({typed: true});
-const largeTrades = await DataAttachment("data/large_trades.csv", FileAttachment("data/large_trades.csv")).csv({typed: true});
-const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv", FileAttachment("data/category_leaderboard.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const tradeSizeRaw = await DataAttachment("data/trade_size_daily.csv").csv({typed: true});
+const largeTrades = await DataAttachment("data/large_trades.csv").csv({typed: true});
+const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {bestName, fmtStrike} from "./components/ticker-names.js";
 import {buildReportTickerToCat} from "./components/taker-categories.js";

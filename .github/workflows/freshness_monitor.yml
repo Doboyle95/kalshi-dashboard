@@ -1,7 +1,8 @@
 name: Dashboard freshness monitor
 
 # External watchdog independent of the cadence orchestrator. Runs on a
-# 30-min schedule. Reads freshness_manifest.json from the deployed site
+# 30-min schedule. Reads freshness_manifest.json from the verified immutable
+# remote generation advertised by the dashboard endpoint configuration
 # and alerts (via GitHub issue + optional Slack webhook) when any tracked
 # dashboard CSV exceeds its freshness threshold.
 #
@@ -25,9 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Need to read .github/scripts/check_freshness.py
-          # AND the most-recent freshness_manifest.json (which is regen'd
-          # on every push to main).
+          # Need the watchdog and the endpoint configuration. Generated data is
+          # deliberately absent from Git after the data-plane cutover.
           ref: main
 
       - uses: actions/setup-python@v5
@@ -41,4 +41,4 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           python .github/scripts/check_freshness.py \
-            --manifest src/data/freshness_manifest.json
+            --endpoint-config src/chat-endpoint.json

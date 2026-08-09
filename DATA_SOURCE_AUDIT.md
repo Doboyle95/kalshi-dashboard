@@ -1,6 +1,6 @@
 # Dashboard Data Source Audit
 
-Last audited: 2026-04-29
+Last audited: 2026-08-09
 
 This note maps each Observable dashboard CSV to the pages that use it, the apparent source pipeline in `C:\Users\doboy\OneDrive\Documents\KalshiData`, and whether it is currently raw Kalshi API-derived / near-live compatible.
 
@@ -8,9 +8,11 @@ This note maps each Observable dashboard CSV to the pages that use it, the appar
 
 - The core Kalshi daily time-series used by the overview, volume, fees, and some category charts are now raw API-derived and near-live compatible.
 - The new taker-side P&L files are raw API-derived and use `taker_side`.
-- Migration scripts now exist for the remaining all-time / settlement-heavy Kalshi files; run the full orchestrator before treating the checked-in CSV snapshots as fully migrated.
+- Migration scripts exist for the remaining all-time / settlement-heavy Kalshi files; run the full orchestrator before treating a newly published transport generation as fully refreshed.
 - Competitor files are intentionally not Kalshi API-derived; they come from each competitor's raw export/scrape folders.
-- The dashboard is still static once built. Local freshness comes from `npm run data:sync`, which copies fresh CSVs from `KalshiData\output` into `src\data`.
+- The dashboard's application shell is static, but its data is not checked into this repository. Pages fetch an immutable, hash-verified generation from the VM transport selected by `src/chat-endpoint.json`.
+- The private producer stages its exact allowlisted output outside Git. The VM publisher validates that generation and atomically advances `/dashboard-data/current.json` only after every file is present and hashed.
+- `src/data/` is deliberately ignored and absent. Do not restore repository CSV fallbacks: a transport failure must be visible to the browser canary instead of silently serving stale data.
 
 ## CSV Inventory
 
@@ -42,25 +44,20 @@ This note maps each Observable dashboard CSV to the pages that use it, the appar
 
 1. Run `R/rebuild_dashboard_api_outputs.R --full --skip-taker` to regenerate the migrated non-taker CSVs.
 2. Run `R/build_taker_daily.R` and `R/build_taker_notional.R` when a full taker refresh is desired; these are included in the orchestrator unless `--skip-taker` is passed.
-3. Run `npm run data:sync` from the dashboard repo to copy regenerated `KalshiData\output` files locally.
-4. Run `npm run build` in the dashboard repo and spot-check the affected pages.
+3. Run the producer's `python/sync_dashboard_data.py` into the VM's external incoming directory. The data publisher validates the complete set, creates an immutable generation, and atomically updates the current pointer.
+4. Run the transport health check and browser canary. A dashboard rebuild is required only for application or endpoint-configuration changes, not routine data publication.
 
-## Local Freshness Workflow
+## Dashboard Development Workflow
 
 From the dashboard repo:
 
 ```powershell
-npm run data:sync
 npm run dev
+npm run test:data-transport
+npm run build
 ```
 
-For a build using the freshest available `KalshiData\output` CSVs:
-
-```powershell
-npm run build:fresh
-```
-
-Use `npm run data:sync:force` only when `KalshiData\output` should overwrite dashboard copies even if those output files are older.
+Local preview and production pages both read the configured remote generation. If the remote transport is unavailable, data-bearing pages intentionally fail visibly; investigate the transport rather than copying CSVs into this repository.
 
 ## New API Rebuild Scripts
 

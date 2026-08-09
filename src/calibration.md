@@ -13,11 +13,11 @@ How accurately do Kalshi contract prices predict outcomes? A perfectly calibrate
 </details>
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const calib = await DataAttachment("data/calibration_three_way.csv", FileAttachment("data/calibration_three_way.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const calib = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 ```
 

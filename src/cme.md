@@ -9,33 +9,13 @@ title: CME (FanDuel + DraftKings)
 </div>
 
 ```js
-import {loadRemoteCsv, loadRemoteJson} from "./components/remote-data.js";
-const cmeLoad = await loadRemoteCsv("cme_daily.csv", {
-  parse: text => d3.csvParse(text, d3.autoType),
-  fallback: () => FileAttachment("data/cme_daily.csv").csv({typed: true})
-});
-const freshnessLoad = await loadRemoteJson("freshness_manifest.json", {
-  fallback: () => FileAttachment("data/freshness_manifest.json").json()
-});
-const cme = cmeLoad.value;
-const freshness = freshnessLoad.value;
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
+display(DataAttachment.marker);
+const cme = await DataAttachment("data/cme_daily.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
-```
-
-```js
-const transportSource = cmeLoad.source === "remote" && freshnessLoad.source === "remote"
-  ? "remote"
-  : cmeLoad.source === "fallback" && freshnessLoad.source === "fallback"
-    ? "fallback"
-    : "mixed";
-const transportGeneration = cmeLoad.generation === freshnessLoad.generation
-  ? (cmeLoad.generation ?? "")
-  : "";
-display(html`<span hidden
-  data-dashboard-data-source=${transportSource}
-  data-dashboard-data-generation=${transportGeneration}
-  data-dashboard-data-files="cme_daily.csv,freshness_manifest.json"></span>`);
 ```
 
 ```js
