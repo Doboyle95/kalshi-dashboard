@@ -13,12 +13,12 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const uni = await DataAttachment("data/parlay_pnl_unified_daily.csv", FileAttachment("data/parlay_pnl_unified_daily.csv")).csv({typed: true});
-const cashoutDaily = await DataAttachment("data/parlay_cashout_daily.csv", FileAttachment("data/parlay_cashout_daily.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const uni = await DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
+const cashoutDaily = await DataAttachment("data/parlay_cashout_daily.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
 ```

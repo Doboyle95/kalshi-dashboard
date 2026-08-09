@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "observable preview",
     "build": "observable build",
-    "data:sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-kalshi-output.ps1",
-    "data:sync:force": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-kalshi-output.ps1 -ForceAll",
-    "build:fresh": "npm run data:sync && npm run build",
+    "test:data-loader": "node --test tests/remote-data.test.mjs",
+    "test:data-watchdog": "python -m unittest tests.test_freshness_remote",
+    "test:data-transport": "npm run test:data-loader && npm run test:data-watchdog",
     "clean": "rm -rf dist"
   },
   "type": "module",

@@ -2,11 +2,16 @@ node_modules/
 dist/
 src/.observablehq/
 
+# Generated dashboard data is published through the immutable VM transport.
+# Keep accidental local sync output out of the application repository.
+src/data/
+
 # Local env — never commit API tokens or URLs
 .env
 
 # Local dev artifacts
 .npm-cache/
+**/__pycache__/
 observablehq.local.config.js
 preview.log
 preview.err.log

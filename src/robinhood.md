@@ -18,11 +18,11 @@ title: Robinhood on Kalshi
 </details>
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const monthly = await DataAttachment("data/rh_monthly_estimates.csv", FileAttachment("data/rh_monthly_estimates.csv")).csv({typed: true});
-const weekly  = await DataAttachment("data/rh_weekly_estimates.csv", FileAttachment("data/rh_weekly_estimates.csv")).csv({typed: true});
+const monthly = await DataAttachment("data/rh_monthly_estimates.csv").csv({typed: true});
+const weekly  = await DataAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
 import {freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 

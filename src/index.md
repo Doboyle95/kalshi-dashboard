@@ -9,13 +9,13 @@ title: Overview
 </div>
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const kalshi = await DataAttachment("data/daily_overall.csv", FileAttachment("data/daily_overall.csv")).csv({typed: true});
-const competitor = await DataAttachment("data/competitor_daily.csv", FileAttachment("data/competitor_daily.csv")).csv({typed: true});
-const hourly = await DataAttachment("data/trades_by_hour.csv", FileAttachment("data/trades_by_hour.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true});
+const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -26,7 +26,7 @@ display(freshnessPanel({
     {label: "Trades by hour", date: latestDate(hourly), updatedAt: fileUpdatedAt(freshness, "trades_by_hour.csv"), meta: "Refreshes on the same near-live cycle as the aggregates above"},
     {label: "Competitor comparison", date: latestDate(competitor), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public competitor sources + Kalshi API rows", tone: "competitor"}
   ],
-  note: "This static page is current as of the CSV snapshot committed or synced into the dashboard. Local refresh scripts can be fresher than the public GitHub Pages build."
+  note: "This static application reads the VM's latest verified immutable data generation at page load. The public generation can advance without a new GitHub Pages build."
 }));
 display(askPageLink({
   question: "Summarize the latest platform comparison and identify what changed most recently.",

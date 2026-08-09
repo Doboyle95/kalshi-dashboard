@@ -9,18 +9,18 @@ title: Crypto.com/Nadex
 </div>
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const catDaily  = await DataAttachment("data/nadex_categories_daily.csv", FileAttachment("data/nadex_categories_daily.csv")).csv({typed: true});
+const catDaily  = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
 // nadex_sports_split_daily.csv's upstream builder has appended a second,
 // out-of-chronological-order block of rows (backfilled weekends + the most
 // recent days) rather than merging them in sorted - without this sort, the
 // area chart and brush sparkline (which connect points in array order, not
 // x order) draw a line that zigzags backward through time.
-const split     = (await DataAttachment("data/nadex_sports_split_daily.csv", FileAttachment("data/nadex_sports_split_daily.csv")).csv({typed: true}))
+const split     = (await DataAttachment("data/nadex_sports_split_daily.csv").csv({typed: true}))
   .sort((a, b) => a.date - b.date);
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -308,7 +308,7 @@ _The biggest individual sports events on Nadex by all-time contract volume, from
 // line regex as descriptions starting with "Center", carrying an expiry date in
 // the volume column. Same drop rule as R/nadex_categories_daily.R.
 const TICKER_RE = /^[A-Z0-9]+(-[A-Za-z0-9.]+)*$/;
-const nadexEvents = (await DataAttachment("data/nadex_events_daily.csv", FileAttachment("data/nadex_events_daily.csv")).csv({typed: true}))
+const nadexEvents = (await DataAttachment("data/nadex_events_daily.csv").csv({typed: true}))
   .filter(d => TICKER_RE.test(d.resource_description) || d.resource_description === "NO DESCRIPTION");
 ```
 

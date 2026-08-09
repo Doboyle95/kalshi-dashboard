@@ -1,8 +1,9 @@
 """Dashboard freshness monitor — external watchdog.
 
-Runs from GitHub Actions on a 30-min schedule. Reads
-src/data/freshness_manifest.json and alerts when any tracked dashboard CSV
-exceeds its freshness threshold.
+Runs from GitHub Actions on a 30-min schedule. Resolves and verifies
+freshness_manifest.json from the dashboard's immutable remote generation, then
+alerts when any tracked dashboard CSV exceeds its freshness threshold. A local
+manifest path remains available for offline tests and incident replay.
 
 Also relays "local pipeline alerts" (2026-06-12): the laptop-side monitors
 (task_health.json from check_task_results.ps1, freshness_alert.txt from
@@ -36,6 +37,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -80,6 +82,11 @@ THRESHOLDS = {
     "forecastex_sports_split_daily.csv": 24,
     # weekly
     "calibration_three_way.csv": 192,    # 8 days
+    # Competitor calibration producers currently run as a slower analytical
+    # refresh than the venue volume jobs. Eight days catches a stopped refresh
+    # without paging on normal multi-day rebuild intervals.
+    "calibration_polymarket.csv": 192,
+    "forecastex_calibration.csv": 192,
     # monthly_top_categories.csv removed 2026-06-12: no dashboard page reads
     # it (grep src/*.md), it was never in the publisher's sync list, and it
     # produced a permanent "missing from manifest" alert.
@@ -114,6 +121,7 @@ THRESHOLDS = {
     "dkex_sports_split_daily.csv": 36,
     "dkex_market_daily.csv": 36,
     "dkex_settlement_daily.csv": 36,
+    "dkex_calibration.csv": 36,
     # Underdog Exchange (build_underdog_daily.py). Same 36h/lag-1d treatment as DKeX.
     # This watchdog is mtime-only (no STALE_TAIL content check like the VM keystone),
     # so the exchange's real trading gaps don't need a special threshold here — the
@@ -150,6 +158,17 @@ ALARM_MARKER_RE = re.compile(r"<!--\s*alarm-signature:\s*([0-9a-f]{12})\s*-->")
 # are probably dead — which would otherwise read as "no local alerts". Both
 # sources rerun at least every 4h, so 26h is permissive.
 LOCAL_SOURCE_STALE_H = 26
+TRANSPORT_SCHEMA_VERSION = 1
+TRANSPORT_GENERATION_RE = re.compile(r"^[0-9a-f]{20}$")
+TRANSPORT_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+TRANSPORT_SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+ACKNOWLEDGED_LOCAL_ALERT_RE = re.compile(
+    r"^freshness_check:\s+(?:KNOWN|GAP_KNOWN)\b"
+)
+REMOTE_MANIFEST_NAME = "freshness_manifest.json"
+MAX_CURRENT_BYTES = 512 * 1024
+MAX_FRESHNESS_BYTES = 2 * 1024 * 1024
+REMOTE_TIMEOUT_SECONDS = 20
 
 
 def load_manifest(path: str) -> dict:
@@ -157,6 +176,125 @@ def load_manifest(path: str) -> dict:
     # script) leaves at the start. Plain utf-8 errors with "Unexpected BOM".
     with open(path, "r", encoding="utf-8-sig") as f:
         return json.load(f)
+
+
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "redirect forbidden", headers, fp)
+
+
+def _read_remote(opener, url: str, max_bytes: int) -> bytes:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "Cache-Control": "no-cache",
+            "User-Agent": "kalshi-dashboard-freshness-watchdog/2",
+        },
+    )
+    with opener.open(request, timeout=REMOTE_TIMEOUT_SECONDS) as response:
+        if response.geturl() != url:
+            raise ValueError("remote data request changed URL")
+        content_length = response.headers.get("Content-Length")
+        if content_length is not None and int(content_length) > max_bytes:
+            raise ValueError("remote data response exceeds size limit")
+        payload = response.read(max_bytes + 1)
+    if len(payload) > max_bytes:
+        raise ValueError("remote data response exceeds size limit")
+    return payload
+
+
+def _json_object(payload: bytes, label: str) -> dict:
+    value = json.loads(payload.decode("utf-8-sig"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} is not a JSON object")
+    return value
+
+
+def _transport_location(endpoint_config: dict, current: dict) -> tuple[str, int, str]:
+    endpoint = endpoint_config.get("api")
+    if not isinstance(endpoint, str):
+        raise ValueError("endpoint config has no API origin")
+    parsed = urllib.parse.urlsplit(endpoint)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.port is not None
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("endpoint config API origin is unsafe")
+    origin = f"https://{parsed.hostname}"
+
+    generation = current.get("generation")
+    files = current.get("files")
+    if (
+        current.get("schema_version") != TRANSPORT_SCHEMA_VERSION
+        or not isinstance(generation, str)
+        or not TRANSPORT_GENERATION_RE.fullmatch(generation)
+        or not isinstance(files, dict)
+        or current.get("file_count") != len(files)
+        or any(not TRANSPORT_SAFE_FILENAME_RE.fullmatch(str(name)) for name in files)
+    ):
+        raise ValueError("remote generation manifest is invalid")
+
+    record = files.get(REMOTE_MANIFEST_NAME)
+    if not isinstance(record, dict):
+        raise ValueError("remote generation omits freshness manifest")
+    size_bytes = record.get("size_bytes")
+    sha256 = record.get("sha256")
+    if (
+        not isinstance(size_bytes, int)
+        or isinstance(size_bytes, bool)
+        or size_bytes < 1
+        or size_bytes > MAX_FRESHNESS_BYTES
+        or not isinstance(sha256, str)
+        or not TRANSPORT_SHA256_RE.fullmatch(sha256)
+    ):
+        raise ValueError("remote freshness manifest record is invalid")
+    url = (
+        f"{origin}/dashboard-data/generations/{generation}/"
+        f"{urllib.parse.quote(REMOTE_MANIFEST_NAME, safe='')}"
+    )
+    return url, size_bytes, sha256
+
+
+def fetch_remote_manifest(endpoint_config_path: str, opener=None) -> dict:
+    endpoint_config = load_manifest(endpoint_config_path)
+    endpoint = endpoint_config.get("api")
+    if not isinstance(endpoint, str):
+        raise ValueError("endpoint config has no API origin")
+    parsed = urllib.parse.urlsplit(endpoint)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.port is not None
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("endpoint config API origin is unsafe")
+    origin = f"https://{parsed.hostname}"
+    opener = opener or urllib.request.build_opener(_RejectRedirects())
+    current_url = f"{origin}/dashboard-data/current.json"
+    current = _json_object(
+        _read_remote(opener, current_url, MAX_CURRENT_BYTES),
+        "remote generation manifest",
+    )
+    freshness_url, expected_size, expected_sha256 = _transport_location(
+        endpoint_config, current
+    )
+    payload = _read_remote(opener, freshness_url, MAX_FRESHNESS_BYTES)
+    if len(payload) != expected_size:
+        raise ValueError("remote freshness manifest size mismatch")
+    if hashlib.sha256(payload).hexdigest() != expected_sha256:
+        raise ValueError("remote freshness manifest hash mismatch")
+    return _json_object(payload, "remote freshness manifest")
 
 
 def check_freshness(manifest: dict) -> tuple[list[dict], list[dict]]:
@@ -231,7 +369,11 @@ def check_local_alerts(manifest: dict) -> list[str]:
     timestamps). Also flags the sources going stale: a dead local monitor
     produces no alerts, which must not read as "all healthy".
     """
-    alerts = [str(a) for a in (manifest.get("local_alerts") or []) if str(a).strip()]
+    alerts = []
+    for raw in manifest.get("local_alerts") or []:
+        alert = str(raw).strip()
+        if alert and not ACKNOWLEDGED_LOCAL_ALERT_RE.match(alert):
+            alerts.append(alert)
     meta = manifest.get("local_alerts_meta") or {}
     now = datetime.now(timezone.utc)
     for key, label in (
@@ -422,16 +564,30 @@ def post_slack(stale: list[dict], missing: list[dict],
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", default="src/data/freshness_manifest.json")
+    source = ap.add_mutually_exclusive_group()
+    source.add_argument("--manifest", help="Read a local manifest for offline replay.")
+    source.add_argument(
+        "--endpoint-config",
+        default="src/chat-endpoint.json",
+        help="Fetch and verify the current remote manifest using this endpoint config.",
+    )
     ap.add_argument("--dry-run", action="store_true",
                     help="Skip GitHub + Slack calls; print findings only.")
     args = ap.parse_args()
 
     try:
-        manifest = load_manifest(args.manifest)
+        if args.manifest:
+            manifest = load_manifest(args.manifest)
+            manifest_source = args.manifest
+        else:
+            manifest = fetch_remote_manifest(args.endpoint_config)
+            manifest_source = args.endpoint_config
     except Exception as e:
-        print(f"ERROR: could not load manifest at {args.manifest}: {e}", file=sys.stderr)
+        source_name = args.manifest or args.endpoint_config
+        print(f"ERROR: could not load manifest from {source_name}: {e}", file=sys.stderr)
         return 2
+
+    print(f"Verified freshness manifest from {manifest_source}.")
 
     stale, missing = check_freshness(manifest)
     local_alerts = check_local_alerts(manifest)

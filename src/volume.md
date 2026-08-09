@@ -20,14 +20,14 @@ const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 ```
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const daily = await DataAttachment("data/daily_overall.csv", FileAttachment("data/daily_overall.csv")).csv({typed: true});
-const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv", FileAttachment("data/daily_sports_vs_nonsports.csv")).csv({typed: true});
-const topDaily = await DataAttachment("data/daily_top_categories.csv", FileAttachment("data/daily_top_categories.csv")).csv({typed: true});
-const catLeaderboard = await DataAttachment("data/category_leaderboard.csv", FileAttachment("data/category_leaderboard.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
+const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
+const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
+const catLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -550,7 +550,7 @@ const sportsMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", lab
 _Total contracts still open across Kalshi at the end of each day — bets placed but not yet settled. Volume is how much changes hands; open interest is how much money is currently riding on the exchange._
 
 ```js
-const oiRaw = await DataAttachment("data/kalshi_oi_daily.csv", FileAttachment("data/kalshi_oi_daily.csv")).csv({typed: true});
+const oiRaw = await DataAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
 const oi = oiRaw
   .map(d => ({
     date: d.date,

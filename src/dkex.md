@@ -9,15 +9,15 @@ title: DKeX (DraftKings)
 </div>
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const daily      = await DataAttachment("data/dkex_daily.csv", FileAttachment("data/dkex_daily.csv")).csv({typed: true});
-const catDaily   = await DataAttachment("data/dkex_categories_daily.csv", FileAttachment("data/dkex_categories_daily.csv")).csv({typed: true});
-const split      = await DataAttachment("data/dkex_sports_split_daily.csv", FileAttachment("data/dkex_sports_split_daily.csv")).csv({typed: true});
-const market     = await DataAttachment("data/dkex_market_daily.csv", FileAttachment("data/dkex_market_daily.csv")).csv({typed: true});
-const settlement = await DataAttachment("data/dkex_settlement_daily.csv", FileAttachment("data/dkex_settlement_daily.csv")).csv({typed: true});
-const freshness  = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const daily      = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
+const catDaily   = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const split      = await DataAttachment("data/dkex_sports_split_daily.csv").csv({typed: true});
+const market     = await DataAttachment("data/dkex_market_daily.csv").csv({typed: true});
+const settlement = await DataAttachment("data/dkex_settlement_daily.csv").csv({typed: true});
+const freshness  = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -450,7 +450,7 @@ Plot.plot({
 </details>
 
 ```js
-const calibDkex = await DataAttachment("data/dkex_calibration.csv", FileAttachment("data/dkex_calibration.csv")).csv({typed: true});
+const calibDkex = await DataAttachment("data/dkex_calibration.csv").csv({typed: true});
 ```
 
 ```js

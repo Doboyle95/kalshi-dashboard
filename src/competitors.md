@@ -19,27 +19,27 @@ title: Competitors
 </details>
 
 ```js
-import {createRemoteFileAttachment} from "./components/remote-data.js";
-const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+import {createRemoteDataAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const kalshi     = await DataAttachment("data/daily_overall.csv", FileAttachment("data/daily_overall.csv")).csv({typed: true});
-const competitor = await DataAttachment("data/competitor_daily.csv", FileAttachment("data/competitor_daily.csv")).csv({typed: true});
-const cme        = await DataAttachment("data/cme_daily_distributed.csv", FileAttachment("data/cme_daily_distributed.csv")).csv({typed: true});
+const kalshi     = await DataAttachment("data/daily_overall.csv").csv({typed: true});
+const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const cme        = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
 // Traded value per venue-day. competitor_daily.csv carries contracts and fees but
 // no traded value, so the effective-rate chart reads it from each venue's own
 // published daily file where one exists. If competitor_daily.csv ever grows a
 // traded_value column that one wins (see fromCompetitor below), and these two
 // become redundant rather than wrong.
-const dkexDaily     = await DataAttachment("data/dkex_daily.csv", FileAttachment("data/dkex_daily.csv")).csv({typed: true});
-const underdogDaily = await DataAttachment("data/underdog_daily.csv", FileAttachment("data/underdog_daily.csv")).csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
+const dkexDaily     = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
+const underdogDaily = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json").json();
 // Kalshi's end-of-day open-interest snapshot. It has to come from its own file rather
 // than from the open_interest column of competitor_daily.csv, for the same reason the
 // Kalshi volume line does (see platforms[0] below): this page never reads Kalshi out of
 // competitor_daily. This is also the exact series the Volume page charts, so the two
 // pages cannot disagree. kalshi_taker_oi_daily.csv is NOT a substitute -- it ends
 // 2026-04-14.
-const kalshiOi = await DataAttachment("data/kalshi_oi_daily.csv", FileAttachment("data/kalshi_oi_daily.csv")).csv({typed: true});
+const kalshiOi = await DataAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 // One shared turnover definition, mirrored in the pipeline's R/competitor_oi_helpers.R:
 // volume over the PRIOR day's open interest, smoothed as a 7-day ratio of sums, with a
