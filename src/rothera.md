@@ -9,9 +9,12 @@ title: Rothera (Robinhood)
 </div>
 
 ```js
-const catDaily  = await FileAttachment("data/rothera_categories_daily.csv").csv({typed: true});
-const split     = await FileAttachment("data/rothera_sports_split_daily.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const catDaily  = await DataAttachment("data/rothera_categories_daily.csv", FileAttachment("data/rothera_categories_daily.csv")).csv({typed: true});
+const split     = await DataAttachment("data/rothera_sports_split_daily.csv", FileAttachment("data/rothera_sports_split_daily.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 

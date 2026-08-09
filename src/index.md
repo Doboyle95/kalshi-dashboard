@@ -9,10 +9,13 @@ title: Overview
 </div>
 
 ```js
-const kalshi = await FileAttachment("data/daily_overall.csv").csv({typed: true});
-const competitor = await FileAttachment("data/competitor_daily.csv").csv({typed: true});
-const hourly = await FileAttachment("data/trades_by_hour.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const kalshi = await DataAttachment("data/daily_overall.csv", FileAttachment("data/daily_overall.csv")).csv({typed: true});
+const competitor = await DataAttachment("data/competitor_daily.csv", FileAttachment("data/competitor_daily.csv")).csv({typed: true});
+const hourly = await DataAttachment("data/trades_by_hour.csv", FileAttachment("data/trades_by_hour.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 

@@ -9,11 +9,14 @@ title: Underdog Exchange
 </div>
 
 ```js
-const daily    = await FileAttachment("data/underdog_daily.csv").csv({typed: true});
-const catDaily = await FileAttachment("data/underdog_categories_daily.csv").csv({typed: true});
-const split    = await FileAttachment("data/underdog_sports_split_daily.csv").csv({typed: true});
-const market   = await FileAttachment("data/underdog_market_daily.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const daily    = await DataAttachment("data/underdog_daily.csv", FileAttachment("data/underdog_daily.csv")).csv({typed: true});
+const catDaily = await DataAttachment("data/underdog_categories_daily.csv", FileAttachment("data/underdog_categories_daily.csv")).csv({typed: true});
+const split    = await DataAttachment("data/underdog_sports_split_daily.csv", FileAttachment("data/underdog_sports_split_daily.csv")).csv({typed: true});
+const market   = await DataAttachment("data/underdog_market_daily.csv", FileAttachment("data/underdog_market_daily.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
