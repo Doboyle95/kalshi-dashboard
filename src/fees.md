@@ -9,9 +9,12 @@ title: Kalshi Fee Revenue
 </div>
 
 ```js
-const daily = await FileAttachment("data/daily_overall.csv").csv({typed: true});
-const sports = await FileAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const daily = await DataAttachment("data/daily_overall.csv", FileAttachment("data/daily_overall.csv")).csv({typed: true});
+const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv", FileAttachment("data/daily_sports_vs_nonsports.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 

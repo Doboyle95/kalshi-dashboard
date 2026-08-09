@@ -15,8 +15,11 @@ Do Polymarket US contract prices predict outcomes? A perfectly calibrated market
 </details>
 
 ```js
-const calib = await FileAttachment("data/calibration_polymarket.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const calib = await DataAttachment("data/calibration_polymarket.csv", FileAttachment("data/calibration_polymarket.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 ```
 

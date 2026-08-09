@@ -19,6 +19,9 @@ title: Cross-Venue Calibration
 </details>
 
 ```js
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
 // Each venue publishes its own calibration file with its own schema. They are
 // loaded separately and normalised below rather than merged upstream, so a
 // producer change at one venue cannot silently reshape another venue's series.
@@ -26,11 +29,11 @@ title: Cross-Venue Calibration
 // ORDERING NOTE for whoever adds the next venue: Observable fails the BUILD on a
 // missing FileAttachment, so a venue's CSV has to exist in src/data before its
 // line appears here. Every file below is already read by that venue's own page.
-const calKalshi     = await FileAttachment("data/calibration_three_way.csv").csv({typed: true});
-const calDkex       = await FileAttachment("data/dkex_calibration.csv").csv({typed: true});
-const calPolymarket = await FileAttachment("data/calibration_polymarket.csv").csv({typed: true});
-const calForecastex = await FileAttachment("data/forecastex_calibration.csv").csv({typed: true});
-const freshness     = await FileAttachment("data/freshness_manifest.json").json();
+const calKalshi     = await DataAttachment("data/calibration_three_way.csv", FileAttachment("data/calibration_three_way.csv")).csv({typed: true});
+const calDkex       = await DataAttachment("data/dkex_calibration.csv", FileAttachment("data/dkex_calibration.csv")).csv({typed: true});
+const calPolymarket = await DataAttachment("data/calibration_polymarket.csv", FileAttachment("data/calibration_polymarket.csv")).csv({typed: true});
+const calForecastex = await DataAttachment("data/forecastex_calibration.csv", FileAttachment("data/forecastex_calibration.csv")).csv({typed: true});
+const freshness     = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 ```
 
