@@ -508,3 +508,4 @@ Plot.plot({
   <summary>How this is calculated</summary>
   <p>Each bar averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are broken out as their own segment (as in the chart above) rather than folded into sports; pick "Combined" to see everything together. Today's row is outlined, its bars shifted toward a distinct accent color, and its label marked "· Today"; the connected dots on that row are today's actual values so far (hollow/faded for the hour still in progress), plotted against the historical average bars for the same comparison.</p>
 </details>
+<!-- autopilot narrow-repair CI canary; this draft is closed without merging -->
