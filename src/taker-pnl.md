@@ -9,15 +9,18 @@ title: Taker P&L
 </div>
 
 ```js
-const daily = await FileAttachment("data/taker_pnl_daily.csv").csv({typed: true});
-const makerDaily = await FileAttachment("data/maker_pnl_daily.csv").csv({typed: true});
-const takerVolumeDaily = await FileAttachment("data/taker_notional_daily.csv").csv({typed: true});
-const pnlByTicker = await FileAttachment("data/taker_pnl_by_ticker_daily.csv").csv({typed: true});
-const categoryLeaderboard = await FileAttachment("data/category_leaderboard.csv").csv({typed: true});
-const sportsDaily = await FileAttachment("data/taker_sports_daily.csv").csv({typed: true});
-const pnlByMarket = await FileAttachment("data/taker_pnl_by_market_leaderboard.csv").csv({typed: true});
-const marketLeaderboard = await FileAttachment("data/market_leaderboard.csv").csv({typed: true});
-const freshness = await FileAttachment("data/freshness_manifest.json").json();
+import {createRemoteFileAttachment} from "./components/remote-data.js";
+const DataAttachment = createRemoteFileAttachment(FileAttachment, d3);
+display(DataAttachment.marker);
+const daily = await DataAttachment("data/taker_pnl_daily.csv", FileAttachment("data/taker_pnl_daily.csv")).csv({typed: true});
+const makerDaily = await DataAttachment("data/maker_pnl_daily.csv", FileAttachment("data/maker_pnl_daily.csv")).csv({typed: true});
+const takerVolumeDaily = await DataAttachment("data/taker_notional_daily.csv", FileAttachment("data/taker_notional_daily.csv")).csv({typed: true});
+const pnlByTicker = await DataAttachment("data/taker_pnl_by_ticker_daily.csv", FileAttachment("data/taker_pnl_by_ticker_daily.csv")).csv({typed: true});
+const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv", FileAttachment("data/category_leaderboard.csv")).csv({typed: true});
+const sportsDaily = await DataAttachment("data/taker_sports_daily.csv", FileAttachment("data/taker_sports_daily.csv")).csv({typed: true});
+const pnlByMarket = await DataAttachment("data/taker_pnl_by_market_leaderboard.csv", FileAttachment("data/taker_pnl_by_market_leaderboard.csv")).csv({typed: true});
+const marketLeaderboard = await DataAttachment("data/market_leaderboard.csv", FileAttachment("data/market_leaderboard.csv")).csv({typed: true});
+const freshness = await DataAttachment("data/freshness_manifest.json", FileAttachment("data/freshness_manifest.json")).json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
