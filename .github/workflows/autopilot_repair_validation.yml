@@ -1,0 +1,70 @@
+name: Autopilot repair validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-narrow-repair:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'agent/autopilot-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Enforce narrow repair surface
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import subprocess
+
+          base = os.environ["BASE_SHA"]
+          head = os.environ["HEAD_SHA"]
+
+          def git(*args: str) -> bytes:
+              return subprocess.check_output(["git", *args])
+
+          if git("rev-list", "--count", f"{base}..{head}").decode().strip() != "1":
+              raise SystemExit("narrow repair PR must contain exactly one commit")
+
+          fields = [field for field in git(
+              "diff", "--name-status", "--no-renames", "-z", base, head
+          ).decode().split("\0") if field]
+          if len(fields) != 2 or fields[0] != "M":
+              raise SystemExit("narrow repair PR must modify exactly one existing file")
+          path = fields[1]
+          if not re.fullmatch(r"src/[A-Za-z0-9][A-Za-z0-9_-]*\.md", path):
+              raise SystemExit(f"path is outside the narrow repair surface: {path}")
+
+          numstat = git("diff", "--numstat", base, head).decode().strip().split("\t")
+          if len(numstat) != 3 or numstat[2] != path or not all(
+              value.isdigit() for value in numstat[:2]
+          ):
+              raise SystemExit("binary or non-canonical diff is forbidden")
+          changed_lines = int(numstat[0]) + int(numstat[1])
+          if changed_lines < 1 or changed_lines > 80:
+              raise SystemExit(f"changed-line limit exceeded: {changed_lines}")
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build exact repair head
+        run: npm run build
