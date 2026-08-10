@@ -193,6 +193,111 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #3f007d"></span>7-day average</span>
 </div>
 
+## Taker vs maker fees
+
+<p class="section-intro">Kalshi bills the aggressor on almost every market, but it also charges the <strong>resting</strong> side on a named subset — soccer, tennis, rate and inflation markets. This splits the daily total above into those two parts.</p>
+
+<div class="instruction-line"><strong>Useful trick:</strong> switch to <em>Share of total</em> and brush across mid-2025 — the maker component changes level when the flat per-contract maker fee gave way to a price-dependent curve, which a dollar view hides behind the growth in volume.</div>
+
+```js
+const dr4 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total || 0, "#e6550d"));
+```
+
+```js
+const [s4, e4] = dr4;
+const feeSplitShare = feeSplitView === "Share of total";
+
+// A date with no split is DROPPED, not drawn at zero. Zero here would assert "no maker fees
+// were charged that day", which is a different claim from "the split is not available".
+const feeSplitRows = daily.filter(d =>
+  d.date >= s4 && d.date <= e4 && d.fees_taker != null && d.fees_maker != null);
+
+// The stack is built explicitly rather than left to Plot's stack transform: taker sits on the
+// baseline, maker directly on top of it, so the top of every bar IS fees_total and the reader
+// can check this decomposition against the headline chart above by eye.
+const feeSplitStacked = feeSplitRows.flatMap(d => {
+  const denom = feeSplitShare ? (d.fees_total || 1) : 1;
+  const taker = (d.fees_taker || 0) / denom;
+  const maker = (d.fees_maker || 0) / denom;
+  return [
+    {date: d.date, side: "Taker", y0: 0,     y1: taker},
+    {date: d.date, side: "Maker", y0: taker, y1: taker + maker}
+  ];
+});
+
+// One row per date so the tooltip shows both sides together instead of whichever band the
+// pointer happens to be inside.
+const feeSplitTip = feeSplitRows.map(d => ({
+  date:  d.date,
+  taker: d.fees_taker || 0,
+  maker: d.fees_maker || 0,
+  total: d.fees_total || 0
+}));
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 280,
+  marginLeft: 70,
+  x: {type: "utc", label: null},
+  y: feeSplitShare
+    ? {label: "Share of daily fees", grid: true, domain: [0, 1], tickFormat: d => (d * 100).toFixed(0) + "%"}
+    : {label: "Fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
+  color: {legend: true, domain: ["Taker", "Maker"], range: ["#756bb1", "#e6550d"]},
+  marks: [
+    Plot.rect(feeSplitStacked, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y1: "y0", y2: "y1",
+      fill: "side", fillOpacity: 0.85
+    }),
+    Plot.ruleX(feeSplitTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(feeSplitTip, Plot.pointerX({
+      x: "date",
+      title: d => [
+        fmtDate(d.date),
+        `Taker: $${d.taker.toLocaleString(undefined, {maximumFractionDigits: 0})} (${(100 * d.taker / (d.total || 1)).toFixed(1)}%)`,
+        `Maker: $${d.maker.toLocaleString(undefined, {maximumFractionDigits: 0})} (${(100 * d.maker / (d.total || 1)).toFixed(1)}%)`,
+        `Total: $${d.total.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+      ].join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="control-strip">
+
+```js
+const feeSplitView = view(Inputs.radio(["Dollars", "Share of total"], {
+  label: "View",
+  value: "Dollars"
+}));
+```
+
+</div>
+
+```js
+const splitRows      = daily.filter(d => d.fees_taker != null && d.fees_maker != null);
+const makerAllTime   = d3.sum(splitRows, d => d.fees_maker);
+const takerAllTime   = d3.sum(splitRows, d => d.fees_taker);
+const splitTotal     = d3.sum(splitRows, d => d.fees_total);
+const rows2026       = splitRows.filter(d => d.date >= new Date("2026-01-01"));
+const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
+  ? 100 * d3.sum(rows2026, d => d.fees_maker) / d3.sum(rows2026, d => d.fees_total)
+  : 0;
+```
+
+<div class="chart-note"><strong>Maker fees are ${(100 * makerAllTime / (splitTotal || 1)).toFixed(2)}% of all-time fee revenue</strong> (${fmtUSD(makerAllTime)} of ${fmtUSD(splitTotal)}), and ${makerShare2026.toFixed(2)}% in 2026, spread across roughly 95 report tickers. The two bands add to the daily total on the chart above them, so this decomposes the headline rather than restating it.</div>
+
+<div class="chart-note"><strong>This page reports total fee revenue — everything Kalshi collects, from both sides.</strong> The Kalshi column on the <a href="./competitors">venue comparison</a> answers a different question: what <em>one trader</em> pays to execute. That number is the taker band alone, ${fmtUSD(takerAllTime)} against ${fmtUSD(splitTotal)} here, because a like-for-like comparison against venues that bill both sides has to count one side at each of them. The gap between the two pages is this maker band, and both figures are correct.</div>
+
 ## Cumulative fee revenue
 
 <p class="section-intro">How much sports and non-sports have each added to Kalshi's fee revenue over time.</p>
