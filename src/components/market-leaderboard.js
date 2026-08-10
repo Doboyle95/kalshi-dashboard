@@ -193,7 +193,7 @@ export const LB_VENUES = {
     topHeader: "Busiest outcome",
     topIsCode: false,
     winnerIsCode: false,
-    coverage: "Since 2025-10-29. 2026-06-11 to 06-13 are excluded, matching every other Polymarket series on this site (known-bad upstream feed).",
+    coverage: "Since 2025-10-29.",
     nameNote: "Names are Polymarket's own published question text. Where a market's outcomes share one question, the shared wording is shown with the outcome factored out — <em>Will … win the 2026 FIFA World Cup</em> — and that row is marked <strong>composed</strong>. 15 markets describe their outcomes with bare tokens (<em>Rodri</em>, <em>6 Goals</em>) and were never given a question by the venue; those show their market code, not a name.",
     map: r => {
       const nm = str(r.market_name);
