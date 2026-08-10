@@ -405,3 +405,25 @@ Plot.plot({
   ]
 })
 ```
+
+## Individual markets
+
+<p class="section-intro">Crypto.com/Nadex's individual markets, ranked by volume. <strong>This is the least readable venue on the site and the table does not pretend otherwise</strong> — the daily bulletin publishes a ticker and a volume, and nothing that identifies a fixture.</p>
+
+<p class="chart-note">A name like <em>NFL #00001 (2026-02-08)</em> is the whole of what the venue publishes. The five-digit number is a counter within the day, not a game id, so it is reproduced as-is rather than dressed up; no decoding gets a team name out of it, because no team name is there. Rows whose ticker carries no date at all — season-long tickets, and a handful of opaque codes — decode to even less.</p>
+<p class="chart-note">Two rows deserve their labels read carefully. <code>COMBOS</code> sorts first and is a <em>pool</em> of every parlay the venue books rather than a market, about a third of its ranked volume; it is kept because dropping it would understate the venue. <code>NO DESCRIPTION</code> is five days in June 2026 when the bulletin's product field came through blank — real volume, unknown product. A separate class of parse artifact from the Events Center bulletins is filtered out upstream, as it is on the category charts, because those rows would otherwise sit at the very top of this table.</p>
+
+```js
+// Untyped on purpose — see the note in components/market-leaderboard.js: reading
+// this file with {typed: true} turns the period column's "2026-05" into a Date
+// and coerces market codes. Every column is coerced explicitly there instead.
+const lbRows = await DataAttachment("data/nadex_market_leaderboard.csv").csv();
+import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+```
+
+```js
+display(marketLeaderboard({
+  hashPrefix: "ndlb",
+  venues: [{spec: LB_VENUES.nadex, rows: normalizeLeaderboard("nadex", lbRows)}]
+}));
+```

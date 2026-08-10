@@ -130,6 +130,24 @@ THRESHOLDS = {
     "underdog_categories_daily.csv": 36,
     "underdog_sports_split_daily.csv": 36,
     "underdog_market_daily.csv": 36,
+    # Per-market leaderboards (2026-08-08), read by the "Individual markets"
+    # table on competitors.md and on each venue page. These MUST be classified
+    # here or in KNOWN_UNMONITORED: check_coverage() below alerts on any file
+    # present in the manifest with neither, and all six enter the manifest the
+    # moment the VM copier's FILES list carries them.
+    # This watchdog is mtime-only, so the fact that these are all-time ranked
+    # top-N snapshots rather than daily series does not matter here (no tail
+    # check to misread a non-date first column). Thresholds mirror the venue
+    # builders each one derives from: 24h for the three that ride the ~6h
+    # competitor cycle, 36h for DKeX and Underdog whose public reports for date D
+    # do not land until D+1, and 48h for Nadex whose bulletins lag 1-2 days and
+    # whose scraper skips weekends.
+    "polymarket_market_leaderboard.csv": 24,
+    "forecastex_market_leaderboard.csv": 24,
+    "rothera_market_leaderboard.csv": 24,
+    "dkex_market_leaderboard.csv": 36,
+    "underdog_market_leaderboard.csv": 36,
+    "nadex_market_leaderboard.csv": 48,
 }
 
 # Published files deliberately NOT threshold-monitored here: CME is hand-collected

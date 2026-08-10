@@ -599,3 +599,25 @@ const calibGap = 100 * (calibActual - calibPaid);
 </div>
 
 <div class="instruction-line"><strong>How to read this:</strong> across ${calibEvents.toLocaleString()} settled events DKeX prices land close to outcomes, and the honest summary is that <em>no price band shows a bias this sample can measure</em>. The tails lean the textbook way &mdash; cheap contracts a little rich, favourites a little cheap &mdash; but each of those gaps sits inside its own error bar. Switching to 5&cent; bins puts one or two bands across the line, which is about what twenty draws produce by chance; treat them as noise unless they persist as the sample grows.</div>
+
+## Individual markets
+
+<p class="section-intro">DKeX's individual markets, ranked by volume and searchable by club, driver or player. These names are <strong>composed</strong>: DKeX publishes an English name for each <em>outcome</em> in its settlement report but never for the market, so each title here is built from that published text plus the market type and the published settlement date.</p>
+
+<p class="chart-note">A blank winner is not missing data. A total or handicap ladder settles several rungs at 1.00 at the same time, a voided game settles both legs at 0.50 as a refund, and an open market has not settled at all — so the column is filled only where exactly one outcome settled at 1.00, which is about 47% of rows. The date in each name is the <em>settlement</em> date from the settlement report, not the maturity stamped in the market report: DKeX gives races a placeholder maturity, and every race in a season can share one.</p>
+<p class="chart-note">Fees are the taker-side number, for comparability with Kalshi. DKeX bills the resting side too, at $0.0025 per contract — as do ForecastEx, Crypto.com/Nadex, Rothera and Underdog Exchange; <strong>Kalshi is the one venue here that bills a single side</strong>. What DKeX itself keeps is about a quarter more than this column shows.</p>
+
+```js
+// Untyped on purpose — see the note in components/market-leaderboard.js: reading
+// this file with {typed: true} turns the period column's "2026-05" into a Date
+// and coerces market codes. Every column is coerced explicitly there instead.
+const lbRows = await DataAttachment("data/dkex_market_leaderboard.csv").csv();
+import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+```
+
+```js
+display(marketLeaderboard({
+  hashPrefix: "dklb",
+  venues: [{spec: LB_VENUES.dkex, rows: normalizeLeaderboard("dkex", lbRows)}]
+}));
+```

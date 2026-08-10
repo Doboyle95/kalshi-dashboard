@@ -285,3 +285,25 @@ Plot.plot({
 ```
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Politics dominated 2024 volume (presidential election contracts). Weather contracts (city high-temperature markets) are now ForecastEx's primary product. Football = NFL game-winner contracts (NFLGW). Basketball = NBA game-winner contracts (NBAGW).</p>
+
+## Individual markets
+
+<p class="section-intro">Every ForecastEx product ranked by volume, with the venue's own published product names. Volume here is matched <em>pairs</em>, the same convention as the charts above and as <code>competitor_daily.csv</code>.</p>
+
+<p class="chart-note"><strong>All-time is dominated by one election.</strong> The two 2024 US presidential contracts are 47% of everything ForecastEx has traded since 2024-08-01, and Politics is over half the ranked volume. That is a real fact about the venue rather than a defect, but it hides everything that has happened since — so use the <strong>Period</strong> control above the table to read a single month, where weather products and the S&amp;P future move to the top. The line under the table restates the concentration for whichever period is selected.</p>
+<p class="chart-note">There is no winner column and no outcome count, and neither is an omission. ForecastEx strikes are threshold contracts, not exclusive outcomes: across the 21,506 multi-contract events measured here, the number settling YES is most commonly two to eleven, so &ldquo;the winner&rdquo; is not a well-formed question. What the venue does support is a count of contracts ever listed under a product — 2,140 for a daily temperature product — which is a different statistic and is headed as one.</p>
+
+```js
+// Untyped on purpose — see the note in components/market-leaderboard.js: reading
+// this file with {typed: true} turns the period column's "2026-05" into a Date
+// and coerces market codes. Every column is coerced explicitly there instead.
+const lbRows = await DataAttachment("data/forecastex_market_leaderboard.csv").csv();
+import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+```
+
+```js
+display(marketLeaderboard({
+  hashPrefix: "fxlb",
+  venues: [{spec: LB_VENUES.forecastex, rows: normalizeLeaderboard("forecastex", lbRows)}]
+}));
+```

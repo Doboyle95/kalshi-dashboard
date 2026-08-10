@@ -276,3 +276,25 @@ Plot.plot({
   ]
 })
 ```
+
+## Individual markets
+
+<p class="section-intro">The biggest individual Polymarket US markets, ranked by all-time contracts and searchable by name. This is the one venue on the site that publishes a full English question for its markets, so most rows read as sentences rather than tickers.</p>
+
+<p class="chart-note">Half of these rows have no &ldquo;busiest outcome&rdquo; and that is correct, not missing data: Polymarket lists a head-to-head as a <em>single</em> instrument settling to 1.00 or 0.00, so there is no sibling outcome to name and the winner column carries yes/no instead. Where the venue does list an outcome per contestant — a World Cup or a golf major — the outcome count runs to several hundred.</p>
+<p class="chart-note">This table's universe is slightly larger than the volume charts above it. Those are built from the tick feed, which is short on four dates (2026-06-27, 07-01, 07-06 and 07-08); the leaderboard reads volume from the daily market report and tops it up from ticks only where no report exists, which is about 1.4% more contracts overall. Where the two disagree the leaderboard is the more complete number. Fees still need a per-trade price and so can only come from ticks, which leaves fees understated on those same four dates and absent — never zero — on the eight dates in May 2026 when the venue exported placeholder symbols that cannot be attributed to a market.</p>
+
+```js
+// Untyped on purpose — see the note in components/market-leaderboard.js: reading
+// this file with {typed: true} turns the period column's "2026-05" into a Date
+// and coerces market codes. Every column is coerced explicitly there instead.
+const lbRows = await DataAttachment("data/polymarket_market_leaderboard.csv").csv();
+import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+```
+
+```js
+display(marketLeaderboard({
+  hashPrefix: "pmlb",
+  venues: [{spec: LB_VENUES.polymarket, rows: normalizeLeaderboard("polymarket", lbRows)}]
+}));
+```

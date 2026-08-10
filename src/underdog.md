@@ -451,3 +451,25 @@ display((() => {
 ```
 
 </div>
+
+## Individual markets
+
+<p class="section-intro">Underdog Exchange's individual markets, ranked by volume. Underdog publishes no English name anywhere in its feed, so every label here is <strong>decoded from the ticker</strong> — readable down to the club code and the scheduled start time, and no further.</p>
+
+<p class="chart-note">Club codes are left as Underdog's own two-to-four letter codes rather than expanded to team names, because expanding them would need a hand-built dictionary that the venue never published. Splitting a code pair is not guesswork: the two clubs are read off the venue's own moneyline and spread outcome tokens and required to concatenate back to the ticker, which resolves all but three of 732 markets.</p>
+<p class="chart-note">There is no winner column: Underdog publishes no settlement price, and not one of its market rows sits at exactly 0.00 or 1.00. Parlay tickets are excluded from this table entirely — each is a one-off basket keyed by a 19-digit hash with no leg information, so it can be neither ranked nor searched — which is 8.45% of the venue's contracts. Its file also starts only on 2026-07-17, so &ldquo;all time&rdquo; is three weeks.</p>
+
+```js
+// Untyped on purpose — see the note in components/market-leaderboard.js: reading
+// this file with {typed: true} turns the period column's "2026-05" into a Date
+// and coerces market codes. Every column is coerced explicitly there instead.
+const lbRows = await DataAttachment("data/underdog_market_leaderboard.csv").csv();
+import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+```
+
+```js
+display(marketLeaderboard({
+  hashPrefix: "udlb",
+  venues: [{spec: LB_VENUES.underdog, rows: normalizeLeaderboard("underdog", lbRows)}]
+}));
+```

@@ -1118,3 +1118,57 @@ const turnScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: 
 <p>There is also a units problem with the question as it is usually asked. "Earnings per dollar of standing capital" needs open interest marked to market, and no venue here publishes the value of its open book — only the contract count. The computable version is earnings per <em>contract</em> of open interest per day.</p>
 <p>For anyone who wants it anyway, here it is without a chart. Per 1,000 contracts of open interest per day, median across the series and latest: Kalshi $7.50 and $14.55, Polymarket US $6.70 and $17.67, Rothera $2.80 and $6.65, ForecastEx $0.61 and $0.91. The ordering is the ordering of turnover times fee rate, because that is what it is. The genuine signal — that ForecastEx monetizes its standing capital about an order of magnitude less intensively than Kalshi does — is already visible as the gap between its turnover line and everyone else's.</p>
 </details>
+
+## Individual markets
+
+<p class="section-intro">One search box across every venue's individual markets. Type a club, a player, a tournament or a fragment of a ticker and see who listed it — Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, Rothera, DKeX and Underdog Exchange in the same table.</p>
+
+Until now every competitor market on this site rendered as an opaque ticker. Six of these seven venues publish no market title at all, so the **Label** column on every row says where its text came from: *published* by the venue, *composed* from the venue's own published outcome names, *derived* by decoding the ticker, or *code only* — the venue publishes nothing and the row shows its raw market code rather than a guess.
+
+<details class="surface-card compact-details">
+  <summary>Why the <strong>#</strong> column is a rank <em>within each venue</em>, and there is no combined ranking</summary>
+  <p>A blended ranking would be wrong in three independent ways at once, and each one is large.</p>
+  <p><strong>Different units.</strong> ForecastEx reports matched <em>pairs</em>; every other venue reports contracts. This table follows ForecastEx's own convention, the same one <code>competitor_daily.csv</code> and the ForecastEx category charts use, so its numbers agree with the rest of the site — but it means a ForecastEx row placed in a combined sort reads about half-size. Pair rows are stamped &ldquo;pairs&rdquo; in the volume column for that reason.</p>
+  <p><strong>Different windows.</strong> These files do not cover the same history: ForecastEx starts 2024-08-01 and Underdog Exchange starts 2026-07-17. An all-time ranking across them would substantially be a ranking of how long we have been collecting.</p>
+  <p><strong>Different scale.</strong> Kalshi's largest single market is 1.51bn contracts, 4.9&times; Polymarket US's largest, so Kalshi would own the first screen of any combined sort and tell you nothing you cannot already read from the volume chart at the top of this page.</p>
+  <p>So this is a market <em>finder</em>, not a combined league table. Sorting by volume is still available — the caption under the table restates what that sort is comparing. For a single venue ranked properly against itself, pick that venue in the chips above the table, or use the same table on its own page.</p>
+  <p><strong>Categories are each venue's own.</strong> Kalshi files this as &ldquo;Sports&rdquo;, Polymarket US as &ldquo;Soccer&rdquo;, Rothera as &ldquo;Basketball&rdquo; where others say &ldquo;Basketball (pro)&rdquo;. The category filter therefore appears only when one venue is selected; the taxonomies are never merged.</p>
+  <p><strong>Fees are the per-side number</strong> — what one trader pays to execute — the same convention as the fee charts above, so the column stays comparable to Kalshi. It is each venue's own published schedule applied to that venue's own trades, never one venue's rate applied to another's volume.</p>
+</details>
+
+```js
+// Untyped on purpose (no {typed: true}). d3.autoType reads the string "2026-05"
+// in the period column as a Date, which breaks every period comparison, and it
+// coerces some market codes too. components/market-leaderboard.js coerces each
+// column explicitly instead, and turns an empty cell into null rather than 0.
+const lbKalshi     = await DataAttachment("data/market_leaderboard.csv").csv();
+const lbPolymarket = await DataAttachment("data/polymarket_market_leaderboard.csv").csv();
+const lbForecastex = await DataAttachment("data/forecastex_market_leaderboard.csv").csv();
+const lbNadex      = await DataAttachment("data/nadex_market_leaderboard.csv").csv();
+const lbRothera    = await DataAttachment("data/rothera_market_leaderboard.csv").csv();
+const lbDkex       = await DataAttachment("data/dkex_market_leaderboard.csv").csv();
+const lbUnderdog   = await DataAttachment("data/underdog_market_leaderboard.csv").csv();
+import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+// Kalshi's market_leaderboard.csv repeats the ticker in its market_name column on
+// every row, so Kalshi names have to be parsed. bestName/fmtWinner/fmtStrike are
+// the SAME functions the market leaderboard on the Categories page uses, imported
+// rather than reimplemented, so the two tables can never disagree about a title.
+import {bestName, fmtStrike, fmtWinner} from "./components/ticker-names.js";
+```
+
+```js
+display(marketLeaderboard({
+  hashPrefix: "xlb",
+  venues: [
+    {spec: LB_VENUES.kalshi,     rows: normalizeLeaderboard("kalshi", lbKalshi, {nameFn: bestName, winnerFn: fmtWinner, topFn: fmtStrike})},
+    {spec: LB_VENUES.polymarket, rows: normalizeLeaderboard("polymarket", lbPolymarket)},
+    {spec: LB_VENUES.forecastex, rows: normalizeLeaderboard("forecastex", lbForecastex)},
+    {spec: LB_VENUES.nadex,      rows: normalizeLeaderboard("nadex", lbNadex)},
+    {spec: LB_VENUES.rothera,    rows: normalizeLeaderboard("rothera", lbRothera)},
+    {spec: LB_VENUES.dkex,       rows: normalizeLeaderboard("dkex", lbDkex)},
+    {spec: LB_VENUES.underdog,   rows: normalizeLeaderboard("underdog", lbUnderdog)}
+  ]
+}));
+```
+
+<p class="chart-note">Two rows near the top are pools rather than markets and are labelled as such rather than dropped. Crypto.com/Nadex publishes <code>COMBOS</code> as a single line covering every parlay leg it books — 1.09bn contracts, about a third of its ranked volume — so it sorts first on that venue and is not comparable to a single market. Underdog Exchange's parlay tickets go the other way and are excluded from its file entirely: each is a one-off basket keyed by a 19-digit hash carrying no leg information, so it can be neither ranked nor searched. That is 8.45% of Underdog's contracts.</p>
