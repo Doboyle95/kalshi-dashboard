@@ -82,6 +82,13 @@ THRESHOLDS = {
     "forecastex_sports_split_daily.csv": 24,
     # weekly
     "calibration_three_way.csv": 192,    # 8 days
+    # Clustered-SE + event-count sidecar, produced in the same Sunday weekly flow
+    # immediately after the curve, so it carries the curve's threshold. Required here
+    # and not merely optional: it is in the publish manifest as of this change, and
+    # check_coverage() alarms on any manifest file in neither THRESHOLDS nor
+    # KNOWN_UNMONITORED. Mirrored in the VM keystone (freshness_monitor.py CHECKS),
+    # which additionally marks it low_priority and gap_check False.
+    "calibration_three_way_clusters.csv": 192,
     # Competitor calibration producers currently run as a slower analytical
     # refresh than the venue volume jobs. Eight days catches a stopped refresh
     # without paging on normal multi-day rebuild intervals.

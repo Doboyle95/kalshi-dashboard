@@ -10,22 +10,58 @@ How accurately do Kalshi contract prices predict outcomes? A perfectly calibrate
   <summary>About this page</summary>
   <p>Settled contracts are grouped into 5-cent price bins. The x-axis is implied probability from contract price; the y-axis is the realized win rate for contracts in that bin using the contract-weighted outcome rate (yes contracts divided by total contracts). Bins below 5 cents and above 95 cents are excluded to keep sparse tails from dominating the visual.</p>
   <p>On the scatter, points above the diagonal mean outcomes happened more often than the price implied; points below mean less often. The error chart shows where that gap is widest by price band.</p>
+  <p><strong>Read the error bars, not the dots.</strong> Every interval is clustered on the underlying event ticker, because thousands of prints on one event share a single outcome and are therefore one observation, not thousands. Dot area is proportional to the independent events behind a bin, never to its trade count &mdash; sizing by trades would make the busiest bin look like the most certain one, which is backwards. Hollow dots are bins that do not clear two clustered standard errors: read them as <em>no measurable bias</em>, never as a small one.</p>
 </details>
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const calib = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
+const calibCurve = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
+// The event-clustered standard errors and per-bin independent-event counts ship in
+// their own file, keyed (group, price_bin) exactly like the curve. Two files rather
+// than one wider one because they have two producers: R/calibration_three_way.R writes
+// the curve, python/kalshi_calibration_clusters.py writes this, sequenced immediately
+// after it in the same weekly flow (refresh_calibration_clusters runs wait_for=[calib])
+// so the pair always describes one date set.
+const calibClusters = await DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
+
+// JOIN, by name and only the five decoration columns. A blanket spread would drag the
+// sidecar's *_chk reconciliation columns across too, and n_trades_chk /
+// actual_win_rate_chk are one rename away from shadowing the curve's own published
+// n_trades / actual_win_rate_wt / calib_error, which must stay the curve's.
+//
+// A bin with no match keeps se_calib_error_mid and n_effective UNDEFINED, so the
+// fail-closed guard below reads it as unmeasurable and draws it as a cross rather than
+// as a finding. That is the right direction to fail: a bin whose standard error did not
+// arrive has not been shown to be calibrated OR mispriced.
+const clusterByBin = new Map(calibClusters.map(d => [`${d.group}|${d.price_bin}`, d]));
+const calib = calibCurve.map(d => {
+  const c = clusterByBin.get(`${d.group}|${d.price_bin}`);
+  return c == null ? d : {
+    ...d,
+    n_events: c.n_events,
+    n_effective: c.n_effective,
+    se_calib_error_mid: c.se_calib_error_mid,
+    se_calib_error: c.se_calib_error,
+    calib_error_mean: c.calib_error_mean
+  };
+});
+// Counted, not assumed: if the curve and the sidecar ever rebuild against different
+// bin sets this is the number that says so, and it is surfaced on the page below.
+const calibUnjoined = calib.filter(d => d.se_calib_error_mid === undefined).length;
 ```
 
 ```js
 display(freshnessPanel({
   items: [
     {label: "Calibration sample", value: `${d3.sum(calib.filter(d => d.group === "ALL"), d => +d.n_trades || 0).toLocaleString()} prints`, updatedAt: fileUpdatedAt(freshness, "calibration_three_way.csv"), meta: "Prints — not independent observations; thousands on one event share one outcome", tone: "settlement"},
-    {label: "Price bins", value: `${new Set(calib.map(d => d.price_bin)).size}`, updatedAt: fileUpdatedAt(freshness, "calibration_three_way.csv"), meta: "5-cent bins from raw API trades"}
+    {label: "Price bins", value: `${new Set(calib.map(d => d.price_bin)).size}`, updatedAt: fileUpdatedAt(freshness, "calibration_three_way.csv"), meta: "5-cent bins from raw API trades"},
+    // Dated against the SIDECAR, not the curve: the two are separate files on separate
+    // producers, and this is the one that decides whether the page has error bars at all.
+    {label: "Independent events", value: `${d3.sum(calib.filter(d => d.group === "ALL"), d => +d.n_events || 0).toLocaleString()} settlements`, updatedAt: fileUpdatedAt(freshness, "calibration_three_way_clusters.csv"), meta: "The actual sample size — one event ticker is one observation, however many prints it carried", tone: "settlement"}
   ],
   note: "Calibration is settlement-dependent. It should be read as an all-history settled-market diagnostic, not a minute-live metric."
 }));
@@ -117,12 +153,18 @@ const dataUnmeasurable = data.filter(d => !d.reliable);
 ```
 
 ```js
-if (!hasClustered) display(html`<p class="chart-note"><strong>No error bars yet.</strong>
-  This page's producer does not yet publish a per-bin event count or an event-clustered
-  standard error, so nothing below can be marked as measurably mispriced or not. Read every
-  point as a point estimate of unknown precision until it does. The
-  <a href="./calibration-venues">cross-venue page</a> shows what the same chart looks like
-  with the intervals attached.</p>`);
+// These banners are fail-closed notices, not roadmap notices: the clustered standard
+// errors ship, so neither should ever render. The first fires if the sidecar cannot be
+// read at all, the second if it loads but no longer agrees with the curve about which
+// price bins exist -- the silent-divergence case that a plain exists() check waves through.
+if (!hasClustered) display(html`<p class="chart-note"><strong>Error bars unavailable.</strong>
+  <code>calibration_three_way_clusters.csv</code> did not load, so no bin below can be marked
+  measurably mispriced or not, and every point is a point estimate of unknown precision.
+  This is a data-plumbing failure, not a property of the market.</p>`);
+else if (calibUnjoined > 0) display(html`<p class="chart-note"><strong>${calibUnjoined} of
+  ${calib.length} bins carry no clustered standard error.</strong> The calibration curve and its
+  clustered-error sidecar disagree about which price bins exist, which is what happens when one
+  rebuilds without the other. Those bins are drawn as &#10005; and nothing is claimed from them.</p>`);
 ```
 
 ## Taker-side actual vs. implied win rate
@@ -208,8 +250,11 @@ Plot.plot({
         d.n_events != null ? `Events: ${(+d.n_events).toLocaleString()}`
           + (d.n_eff != null ? ` (effective ${Math.round(d.n_eff).toLocaleString()})` : "") : null,
         `Trades: ${(+d.n_trades).toLocaleString()} (NOT the sample size)`,
-        !d.reliable ? "TOO FEW INDEPENDENT EVENTS — standard error unreliable"
-          : d.se == null ? "No clustered standard error published yet"
+        // Order matters. An unjoined bin has BOTH se == null and reliable == false, and
+        // calling that "too few independent events" would assert a measurement of the
+        // sample that was never taken. Missing-measurement is reported first.
+        d.se == null ? "NO CLUSTERED STANDARD ERROR for this bin — nothing claimed"
+          : !d.reliable ? "TOO FEW INDEPENDENT EVENTS — standard error unreliable"
           : d.clears ? "Clears 2 event-clustered SE"
                      : "NOT distinguishable from perfectly calibrated"
       ].filter(Boolean).join("\n")
@@ -303,6 +348,13 @@ const maxPos = eligible.length
   ? eligible.reduce((best, d) => +d.calib_error > +best.calib_error ? d : best, eligible[0]) : null;
 const maxNeg = eligible.length
   ? eligible.reduce((worst, d) => +d.calib_error < +worst.calib_error ? d : worst, eligible[0]) : null;
+// The nominal -> effective (Kish) event collapse, computed live rather than quoted.
+// It is the single number that explains why every bar on this page is as wide as it is,
+// and a hardcoded version of it would stop reproducing the first week the corpus grows.
+const effCollapse = d3.median(
+  data.filter(d => d.n_eff > 0 && +d.n_events > 0),
+  d => +d.n_events / d.n_eff
+);
 const extremeQualifier = hasClustered
   ? `${dataClear.length} of ${data.length} bins clear 2 SE`
   : "no clustered standard errors published yet";
@@ -325,4 +377,4 @@ const extremeQualifier = hasClustered
   </div>
 </div>
 
-<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Contract-weighted win rates using settled taker-side contracts (void filter applied) &mdash; <code>yes_contracts / n_contracts</code>, which is what this chart has always plotted whatever the axis said. The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area on this page is <em>not</em> yet event-scaled: this producer publishes no per-bin event count, so every dot is drawn at a constant radius and no error bars are shown (see the note above the chart). The competitor pages, whose producers do publish event counts, scale bubble area by independent settlement events rather than trade count</strong>, and the error bars are cluster-robust with the event as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>
+<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Contract-weighted win rates using settled taker-side contracts (void filter applied) &mdash; <code>yes_contracts / n_contracts</code>, which is what this chart has always plotted whatever the axis said. The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area is proportional to the independent settlement events behind a bin, never to its trade count</strong>, and the error bars are cluster-robust with the Kalshi event ticker as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. On the bins drawn here the nominal event count collapses to an effective (Kish) count by a median factor of about ${effCollapse ? Math.round(effCollapse).toLocaleString() : "\u2014"}&times;, because contract weighting concentrates a bin on its busiest events &mdash; that collapse, not the print count, is what sets the width of every bar above. A bin whose effective count falls below ${MIN_EFF_CLUSTERS} is drawn as &#10005; and claims nothing in either direction. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>

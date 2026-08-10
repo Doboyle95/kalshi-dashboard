@@ -11,9 +11,9 @@ title: Cross-Venue Calibration
 <details class="surface-card compact-details">
   <summary>About this page &mdash; read before quoting any number</summary>
   <p><strong>Weighting: contract-weighted, everywhere.</strong> Of every contract bought near 25&cent;, what share paid out. This is the series Kalshi's own calibration page plots (<code>yes_contracts / n_contracts</code>) and it is the only weighting for which all four venues publish a matching event-clustered standard error, so it is the only one on which a cross-venue comparison is defined. The ForecastEx producer leads with the <em>trade</em>-weighted series measured against the mean traded price instead, and on that venue the two conventions disagree by several cents and in sign in a number of bins, so the ForecastEx curve here will not match figures quoted from its own file. The divergence is counted from the file, with the bins driving it, above the favourite&ndash;longshot table below. It is a weighting difference, not a disagreement about the data.</p>
-  <p><strong>Implied probability is the bin midpoint</strong> at every venue, not the average price actually paid, because Polymarket US publishes no traded-price sum &mdash; its <code>sum_price</code> column is derived from the midpoint &mdash; so a mean-price axis is not available for all four venues and the midpoint is the only shared choice. That is not free. Contracts trade a little below their bin midpoint: on Kalshi the contract-weighted mean price sits about 0.47&cent; below it across bins and 1.27&cent; below it in the cheapest bin, and this convention books that gap as mispricing rather than as a binning artefact. On the one-month Kalshi fixture this page was built against it accounted for <strong>0.94&cent; of a &minus;2.17&cent; longshot reading, about 43% of it</strong>; the direction survived on a mean-price axis (&minus;1.23&cent;, still clearing) but the level did not. Those Kalshi figures come from that fixture rather than from Kalshi's live history, and no Kalshi curve is drawn here. The convention is applied identically to everyone, so the <em>comparison</em> is clean even though the level carries that bias.</p>
+  <p><strong>Implied probability is the bin midpoint</strong> at every venue, not the average price actually paid, because Polymarket US publishes no traded-price sum &mdash; its <code>sum_price</code> column is derived from the midpoint &mdash; so a mean-price axis is not available for all four venues and the midpoint is the only shared choice. That is not free. Contracts trade a little below their bin midpoint: over Kalshi's full settled history the contract-weighted mean price sits 0.47&cent; below the midpoint averaged across the 5&ndash;95&cent; bins, and 1.23&cent; below it in the cheapest bin, and this convention books that gap as mispricing rather than as a binning artefact. Kalshi is now drawn here from its live history, and because it is the one venue publishing both axes the size of that bias can be measured instead of assumed: on the longshot band it accounts for <strong>${midpointCost ? `${fmtCents(midpointCost.gap)} of a ${fmtCents(midpointCost.mid)} reading, about ${Math.abs(midpointCost.share)}% of it` : "a share this page cannot currently compute"}</strong>${midpointCost ? html`, and the direction ${midpointCost.clearsMean ? html`survives on a mean-price axis (${fmtCents(midpointCost.mean)}, still clearing two clustered standard errors)` : html`does <em>not</em> survive on a mean-price axis (${fmtCents(midpointCost.mean)}, inside its own interval)`}` : ""}. The convention is applied identically to every venue, so the <em>comparison</em> is clean even though the level carries that bias.</p>
   <p><strong>Whose price.</strong> A binary has two legs and the venues do not all bin the same one. Kalshi bins the <strong>taker's</strong> own side. DKeX and Polymarket US publish one price per print against a symbol naming a specific leg, and neither publishes an aggressor flag, so those are <strong>leg</strong>-price curves. ForecastEx matches a YES buyer against a NO buyer with no taker flag at all, so it is the <strong>YES leg</strong> and its NO-leg curve is the mirror. Small level differences between venues should not be over-read.</p>
-  <p><strong>Significance is recomputed here, not copied.</strong> All four producers publish a significance flag and they do not all mean the same thing &mdash; Kalshi's is computed against mean price, ForecastEx's against its trade-weighted series. This page ignores all four and applies one rule to every bin: <em>does the contract-weighted error exceed twice its own event-clustered standard error</em>. Nothing else counts as measurable.</p>
+  <p><strong>Significance is recomputed here, not copied.</strong> The producers do not agree on what significance means, and one of them does not publish a verdict at all: ForecastEx flags its <em>trade</em>-weighted series, and Kalshi publishes no flag but two different standard errors &mdash; one against the bin midpoint, one against the mean traded price &mdash; which differ by a median 0.51&cent; and by as much as 1.54&cent;, so pairing the wrong one with this page's gap would misdraw every Kalshi bar. This page ignores every published verdict and applies one rule to every bin: <em>does the contract-weighted error exceed twice its own event-clustered standard error, measured on the same axis as the gap</em>. Nothing else counts as measurable.</p>
   <p><strong>Twenty bins per venue is twenty tests.</strong> About one bin in twenty crosses two standard errors by chance alone, so a single isolated solid dot is not evidence. The counts below are there to be read against that expectation, and the crossings that survive a Bonferroni correction at twenty bins per venue (|t| &ge; 2.96) are counted under the panels below &mdash; computed from the venues actually drawn, not asserted here.</p>
   <p><strong>Dot area is proportional to the number of independent events</strong> in the bin, never to trade count. The scale is set separately for each venue, because an &ldquo;event&rdquo; is not the same object at every venue &mdash; a Kalshi event ticker, a DKeX ball game, a Polymarket contest, a ForecastEx city-day settlement. Compare dot sizes <em>within</em> a venue, never across them.</p>
 </details>
@@ -29,12 +29,35 @@ display(DataAttachment.marker);
 // ORDERING NOTE for whoever adds the next venue: the immutable transport's exact
 // allowlist and current generation must contain the CSV before its line appears
 // here. Every file below is already read by that venue's own page.
-const calKalshi     = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
+const calKalshiCurve = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
+// Kalshi ships its clustered standard errors and event counts BESIDE the curve rather
+// than inside it, because the two have different producers sequenced in one weekly flow.
+// Joined below so the registry entry can read Kalshi exactly like any other venue.
+const calKalshiClusters = await DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true});
 const calDkex       = await DataAttachment("data/dkex_calibration.csv").csv({typed: true});
 const calPolymarket = await DataAttachment("data/calibration_polymarket.csv").csv({typed: true});
 const calForecastex = await DataAttachment("data/forecastex_calibration.csv").csv({typed: true});
 const freshness     = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
+
+// JOIN on (group, price_bin), copying only the clustered-error and event-count columns
+// by name. A blanket spread would also drag across the sidecar's *_chk reconciliation
+// columns, which are one rename away from shadowing the curve's published n_trades /
+// n_contracts / actual_win_rate_wt / calib_error. A bin with no match keeps se and
+// n_effective undefined, so the fail-closed guard below treats it as unmeasurable rather
+// than letting it through as reliable -- the same rule applied to every other venue.
+const kalshiClusterByBin = new Map(calKalshiClusters.map(d => [`${d.group}|${d.price_bin}`, d]));
+const calKalshi = calKalshiCurve.map(d => {
+  const c = kalshiClusterByBin.get(`${d.group}|${d.price_bin}`);
+  return c == null ? d : {
+    ...d,
+    n_events: c.n_events,
+    n_effective: c.n_effective,
+    se_calib_error_mid: c.se_calib_error_mid,
+    se_calib_error: c.se_calib_error,
+    calib_error_mean: c.calib_error_mean
+  };
+});
 ```
 
 ```js
@@ -48,6 +71,33 @@ const num = v => (v == null || v === "" || Number.isNaN(+v)) ? null : +v;
 // rather than as a measurement. Conventional rule of thumb, and the same
 // threshold the Polymarket producer applies in its own se_reliable column.
 const MIN_EFF_CLUSTERS = 30;
+
+// What the shared bin-midpoint convention COSTS, measured rather than asserted.
+// Kalshi is the venue that publishes both axes -- calib_error against the bin midpoint
+// (what every venue is plotted on here) and calib_error_mean against the contract-
+// weighted mean traded price -- so the difference between them IS the binning artefact.
+// Contract-weighted over the same <30c longshot band the summary table below uses, and
+// with the same conservative triangle-inequality bound on the standard error, so the
+// two are directly comparable. Computed live: the fixture figure this paragraph used to
+// quote had already stopped reproducing against the live history.
+const midpointCost = (() => {
+  const rows = calKalshi.filter(d => d.group === "ALL" && +d.price_bin < 30
+    && num(d.calib_error) != null && num(d.calib_error_mean) != null && num(d.n_contracts) > 0);
+  if (!rows.length) return null;
+  const w = d3.sum(rows, d => +d.n_contracts);
+  const wavg = f => 100 * d3.sum(rows, d => f(d) * +d.n_contracts) / w;
+  const mid = wavg(d => +d.calib_error);
+  const mean = wavg(d => +d.calib_error_mean);
+  const seMid = wavg(d => num(d.se_calib_error_mid) ?? 0);
+  const seMean = wavg(d => num(d.se_calib_error) ?? 0);
+  if (!(mid < 0 || mid > 0)) return null;
+  return {
+    mid, mean, gap: mid - mean,
+    share: Math.round(100 * (mid - mean) / mid),
+    clearsMid: Math.abs(mid) > 2 * seMid,
+    clearsMean: seMean > 0 && Math.abs(mean) > 2 * seMean
+  };
+})();
 
 const fmtCents = c => (c >= 0 ? "+" : "") + c.toFixed(2) + "¢";
 const fmtInt = n => (n == null || Number.isNaN(n)) ? "n/a" : Math.round(n).toLocaleString();
@@ -90,11 +140,13 @@ const VENUES = [
     // ALL is the venue-wide series. The parlay and sports splits live on
     // /calibration and are deliberately not offered here.
     groups: {headline: "ALL", reported: "ALL"},
-    // se_calib_error_mid is the event-clustered SE of the MIDPOINT gap, which is
-    // the gap this page plots. se_calib_error (no suffix) belongs to the
-    // mean-price gap and would be the wrong pairing. Both columns are absent
-    // until the clustered-SE producer change lands, hence num() -- until then
-    // Kalshi has no error bars and is held back rather than drawn without them.
+    // se_calib_error_mid is the event-clustered SE of the MIDPOINT gap, which is the
+    // gap this page plots. se_calib_error (no suffix) belongs to the mean-price gap and
+    // would be the wrong pairing -- across this file the two axes differ by a median
+    // 0.51c and up to 1.54c, so the choice is not cosmetic. Both, plus n_effective, are
+    // joined in from calibration_three_way_clusters.csv above; num() still guards them,
+    // so a failed join defers Kalshi to the "waiting on its pipeline" list rather than
+    // drawing it without intervals.
     rows: r => ({
       price_bin: +r.price_bin,
       implied: num(r.implied_prob),
