@@ -975,7 +975,7 @@ display(html`<div class="chart-note">
     Kalshi bins the taker's own side. Polymarket US, DKeX and Underdog Exchange bin the leg their symbol
     names, because none of them publishes an aggressor flag at all. ForecastEx has no aggressor to publish
     &mdash; it matches a YES buyer against a NO buyer and both pay &mdash; so it is drawn on its YES leg.
-    These are one definitional step apart and the levels should not be read as identical constructions; on
+    These are one definitional step apart and the levels should not be read as identical constructions. There is a second difference, and it is not the same one: DKeX lists <em>both</em> complementary legs of a two-outcome market as separately tradeable symbols &mdash; 1,769 of its 1,775 settled two-leg roots have settlement prices summing to exactly 1.00, and 42.6% of its traded contracts sit in such markets &mdash; while Polymarket US publishes one symbol per head-to-head event. So a DKeX market can contribute to both a cheap bin and its mirrored dear bin, and a Polymarket one cannot. That is a difference in what the two curves are, not in the data behind them; on
     Kalshi, the one venue that publishes an aggressor, the two conventions differ by 3.0 percentage points
     across the twenty bins and move the cheapest bin by 0.29 points. The published Polymarket file also
     carries a second series, <code>SYMMETRIZED</code>, which books both counterparties at half weight. It is
