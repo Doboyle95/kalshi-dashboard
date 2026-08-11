@@ -833,7 +833,13 @@ const VOLUME_VENUES = [
     name: "Underdog Exchange", color: "#EAB308", accent: "underdog",
     file: "underdog_volume_at_price.csv", src: volSrc.underdog,
     leg: "leg named by the ticker",
-    popCol: "population", popFallback: "all prints, settled or not",
+    // popCol resolves to null -- underdog_volume_at_price.csv has no population
+    // column -- so this fallback IS what the card renders. It previously read
+    // "all prints, settled or not", which is false: the chart draws SINGLE.
+    // Parlays are 15,551,285 contracts, 28.1% of the venue, and excluding them
+    // roughly triples the cheap-tail share this section is about
+    // (under 10c: 19.3% of contracts on ALL vs 5.8% on SINGLE).
+    popCol: "population", popFallback: "single-market prints only -- parlays excluded, which is a large exclusion: 15,551,285 contracts, 28.1% of this venue. Including them roughly triples the cheap-tail share (under 10c goes from 5.8% to 19.3% of contracts)",
     // SINGLE, not ALL. A UDXCOMBO price is the price of a COMBINATION, not of a
     // single-market probability, so it does not belong on a probability axis —
     // and it is much too large to leave silently mixed in: parlays are about a
@@ -974,7 +980,7 @@ display(html`<div class="chart-note">
     across the twenty bins and move the cheapest bin by 0.29 points. The published Polymarket file also
     carries a second series, <code>SYMMETRIZED</code>, which books both counterparties at half weight. It is
     never drawn here and it is <strong>a bracket, not an estimate, and not a taker view</strong>: it assumes
-    a 50/50 aggressor split, and on Kalshi the measured split is 77.25% on the named side, so the true
+    a 50/50 aggressor split, and on Kalshi the measured split is 75.4% of contracts on the named side (67.7% of prints, 63.8% of taker dollars - the three differ by over 11 points, so the basis matters), so the true
     taker-side distribution sits much nearer the leg-price curve than the midpoint between them.</p>
   ${volReady.filter(v => v.groupFellBack).length ? html`<p><strong>Substituted series:</strong>
     ${volReady.filter(v => v.groupFellBack).map(v => html`<span>${v.name} is drawn on <code>${v.group}</code>, not the series this page asked for. </span>`)}</p>` : ""}
