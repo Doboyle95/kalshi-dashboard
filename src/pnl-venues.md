@@ -82,6 +82,11 @@ const rolled = Array.from(
       leg: rows[0].leg,
       basis: rows[0].basis,
       contracts, pnl: total, stake,
+      // "" means the venue publishes no directly comparable clustered SE -- unknown, which
+      // is not the same as measurable. 0 means it does publish one and NOTHING clears it.
+      measurable: rows[0].measurable,
+      binsClearing: rows[0].bins_clearing_2se,
+      binsTested: rows[0].bins_tested,
       perContract: total / contracts,
       pctOfStake: stake ? 100 * total / stake : null,
       bins: rows.length
@@ -114,7 +119,7 @@ const detail0 = parlayDetail[0] ?? {};
 
 ## What a contract costs its buyer
 
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX is the only bar pointing right</strong> — its binned side came out ahead over the period measured.</div>
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX’s bar points right, and must not be read as traders profiting there</strong> — <strong>zero of its 30 price bins</strong> clear two event-clustered standard errors, and its aggregate miss is +0.11¢ against a ±3.80¢ interval. It is drawn hollow for that reason: the money really did change hands, but the edge is not distinguishable from zero. It also moved 24% between two builds hours apart, which a real edge on 41 million contracts would not do.</div>
 
 ```js
 Plot.plot({
@@ -127,7 +132,19 @@ Plot.plot({
   color: {legend: true, domain: Object.keys(VENUE_COLOR), range: Object.values(VENUE_COLOR)},
   marks: [
     Plot.ruleX([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.barX(headline, {
+    // Bars whose venue publishes a clustered SE that NOTHING clears are drawn hollow, so a
+    // reader cannot mistake an unmeasurable number for a finding. Venues publishing no
+    // comparable SE stay solid: unknown is not the same as refuted.
+    Plot.barX(headline.filter(d => d.measurable === 0), {
+      y: "label", x: "perContract", fill: "none", stroke: "venue", strokeWidth: 2,
+      strokeDasharray: "3,2", rx1: 4, insetTop: 2, insetBottom: 2,
+      title: d => `${d.label}
+${fmtCents(d.perContract)} per contract - NOT measurable
+${d.binsClearing} of ${d.binsTested} bins clear 2 clustered SE
+realised, but not an edge`,
+      tip: true
+    }),
+    Plot.barX(headline.filter(d => d.measurable !== 0), {
       y: "label", x: "perContract", fill: "venue",
       // 4px rounded data-end anchored to the zero baseline; a 2px gap to the surface.
       rx1: 4, insetTop: 2, insetBottom: 2,
