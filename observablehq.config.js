@@ -97,6 +97,7 @@ export default {
     {name: "Parlay Anatomy", path: "/parlay-analytics"},
     {name: "Calibration", path: "/calibration"},
     {name: "Cross-Venue Calibration", path: "/calibration-venues"},
+    {name: "Cross-Venue P&L", path: "/pnl-venues"},
     {name: "Robinhood (FCM)", path: "/robinhood"},
     {name: "Rothera (Robinhood)", path: "/rothera"},
     {name: "Platform Comparison", path: "/competitors"},
