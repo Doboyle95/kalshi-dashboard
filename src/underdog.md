@@ -154,11 +154,19 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
-    Plot.dot(splitFVolume, {
+    // Bars, not dots: 22 dates over a 26-day span (85% coverage, 16-day contiguous
+    // run), so this is daily magnitude over a near-continuous window. The four absent
+    // days read as missing without needing a marker. ry = 4px rounded data-end;
+    // insets give the 2px surface gap between adjacent bars.
+    Plot.rectY(splitFVolume, {
       x: d => d.date,
+      interval: "day",
       y: d => d.contracts_total || 0,
-      r: 4,
       fill: UNDERDOG,
+      fillOpacity: 0.85,
+      ry: 4,
+      insetLeft: 1,
+      insetRight: 1,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total || 0)} contracts`
     }),
@@ -198,7 +206,19 @@ Plot.plot({
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, domain: ["Single-game", "Parlays (combos)"], range: [UNDERDOG, "#00C2A8"]},
   marks: [
-    Plot.dot(tidySplit.filter(d => d.value > 0), {x: "date", y: "value", fill: "category", r: 4}),
+    // Stacked bars: two components of one daily total read as parts of a whole,
+    // which dots cannot show. Same 4px data-end and 2px surface gap as chart 1;
+    // the gap between the two segments comes from the 1px insets on each.
+    Plot.rectY(tidySplit.filter(d => d.value > 0), {
+      x: "date",
+      interval: "day",
+      y: "value",
+      fill: "category",
+      fillOpacity: 0.9,
+      ry: 4,
+      insetLeft: 1,
+      insetRight: 1
+    }),
     Plot.ruleX(splitFSports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(splitFSports, Plot.pointerX({
       x: "date",

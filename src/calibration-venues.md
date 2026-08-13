@@ -15,7 +15,7 @@ title: Cross-Venue Calibration
   <p><strong>Whose price.</strong> A binary has two legs and the venues do not all bin the same one. Kalshi bins the <strong>taker's</strong> own side. DKeX and Polymarket US publish one price per print against a symbol naming a specific leg, and neither publishes an aggressor flag, so those are <strong>leg</strong>-price curves. ForecastEx matches a YES buyer against a NO buyer with no taker flag at all, so it is the <strong>YES leg</strong> and its NO-leg curve is the mirror. Small level differences between venues should not be over-read.</p>
   <p><strong>Significance is recomputed here, not copied.</strong> The producers do not agree on what significance means, and one of them does not publish a verdict at all: ForecastEx flags its <em>trade</em>-weighted series, and Kalshi publishes no flag but two different standard errors &mdash; one against the bin midpoint, one against the mean traded price &mdash; which differ by a median 0.50&cent; and by as much as 1.54&cent;, so pairing the wrong one with this page's gap would misdraw every Kalshi bar. This page ignores every published verdict and applies one rule to every bin: <em>does the contract-weighted error exceed twice its own event-clustered standard error, measured on the same axis as the gap</em>. Nothing else counts as measurable.</p>
   <p><strong>Twenty bins per venue is twenty tests.</strong> About one bin in twenty crosses two standard errors by chance alone, so a single isolated solid dot is not evidence. The counts below are there to be read against that expectation, and the crossings that survive a Bonferroni correction at twenty bins per venue (|t| &ge; 2.96) are counted under the panels below &mdash; computed from the venues actually drawn, not asserted here.</p>
-  <p><strong>Dot area is proportional to the number of independent events</strong> in the bin, never to trade count. The scale is set separately for each venue, because an &ldquo;event&rdquo; is not the same object at every venue &mdash; a Kalshi event ticker, a DKeX ball game, a Polymarket contest, a ForecastEx city-day settlement. Compare dot sizes <em>within</em> a venue, never across them.</p>
+  <p><strong>Dot area is proportional to the number of independent events</strong> in the bin, never to trade count. The scale is set separately for each venue, because an &ldquo;event&rdquo; is not the same object at every venue &mdash; a Kalshi event ticker, a DKeX ball game, a Polymarket contest, a ForecastEx city-day settlement. Dots are drawn at a uniform size. The <em>length of the interval</em> is what shows precision, and unlike a dot area it is comparable across venues, because every interval is in the same probability units.</p>
 </details>
 
 ```js
@@ -379,8 +379,13 @@ const rowsAll = shown.flatMap(v => {
   // counts are the same kind of thing. Within a venue the radius stays exactly
   // proportional to sqrt(n_events) -- the property that matters. It must never be
   // sqrt(n_trades), which is what makes a busy bin look precise.
-  const evMax = d3.max(v.rows, d => d.n_events) || 1;
-  return v.rows.map(d => ({...d, radius: 10 * Math.sqrt((d.n_events ?? 0) / evMax)}));
+  // No radius channel. It used to be 10*sqrt(n_events/evMax) with evMax recomputed
+  // PER VENUE -- necessary, because Kalshi counts event tickers in the millions and
+  // DKeX ball games in the hundreds, but it meant a big dot meant a different absolute
+  // thing in each colour, which a reader cannot help but compare. Precision is already
+  // shown by the error-bar length, which IS comparable across venues (same probability
+  // units for everyone), and the exact event count is in the tooltip.
+  return v.rows.map(d => ({...d}));
 });
 const domainNames  = shown.map(v => v.name);
 const domainColors = shown.map(v => v.color);
@@ -424,7 +429,7 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
   marks: [
     Plot.line([{x: 0, y: 0}, {x: 1, y: 1}], {
       x: "x", y: "y",
-      stroke: "var(--theme-foreground-fainter)", strokeDasharray: "4,3", strokeWidth: 1.5
+      stroke: "var(--theme-foreground-fainter)", strokeWidth: 1
     }),
     // +/-2 event-clustered SE, split into two marks rather than one mark with a
     // variable opacity: a strokeOpacity channel would be pushed through Plot's
@@ -443,13 +448,13 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
     }),
     // NOT distinguishable from calibrated: hollow.
     Plot.dot(noiseRows, {
-      x: "implied", y: "actual", r: "radius",
+      x: "implied", y: "actual", r: 4,
       fill: "none", stroke: "venue", strokeWidth: 1.3, strokeOpacity: 0.85
     }),
     // Clears 2 clustered SE: solid.
     Plot.dot(clearRows, {
-      x: "implied", y: "actual", r: "radius",
-      fill: "venue", fillOpacity: 0.85, stroke: "var(--theme-background)", strokeWidth: 1
+      x: "implied", y: "actual", r: 5,
+      fill: "venue", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 2
     }),
     // Standard error itself untrustworthy (too few effective clusters).
     Plot.dot(unmeasRows, {
