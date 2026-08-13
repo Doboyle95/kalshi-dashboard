@@ -53,6 +53,12 @@ jobs:
           CHAT_API_URL: ${{ secrets.CHAT_API_URL }}
           CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
 
+      - name: Copy static files not handled by Framework's build
+        # Framework only bundles files that are part of its page/asset graph, so a
+        # well-known root path like robots.txt (must be served at exactly /robots.txt)
+        # has to be copied in manually after the build step.
+        run: cp src/robots.txt dist/robots.txt
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -38,6 +38,9 @@ export default {
   theme: ["air", "near-midnight"],
   style: "styles.css",
   head: [
+    // 2026-08-13: keep the site out of search engines while it's not meant to be
+    // freely discoverable -- direct links still work fine, this only affects crawlers.
+    '<meta name="robots" content="noindex, nofollow">',
     '<link rel="preconnect" href="https://rsms.me/">',
     // 2026-08-01: build-time injection of the chat API endpoint.
     // This config file runs in NODE at build time, so process.env is available HERE.
