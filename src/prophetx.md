@@ -117,6 +117,89 @@ Plot.plot({
   <p><strong>Coverage.</strong> The tape is available from 2026-06-16; earlier dates return 403. There are no gaps in the ${recon.length} sessions since.</p>
 </details>
 
+## What the market thinks home advantage is worth
+
+<div class="instruction-line">ProphetX quotes one price per market, and it is the <strong>home side's</strong> probability. Averaged over every head-to-head moneyline in a sport, that becomes a direct read on how much the market prices home advantage &mdash; a series no other venue here can produce, because no other venue publishes a single home-referenced price. <strong>Tennis is the control:</strong> matches are at neutral venues, so if the number meant anything other than the home side it would not land on a coin flip. It lands on 50.3%.</div>
+
+```js
+const HA = await DataAttachment("data/prophetx_home_advantage.csv").csv({typed: true});
+const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
+const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
+```
+
+```js
+Plot.plot({
+  width,
+  height: 60 + HA.length * 46,
+  marginLeft: 96,
+  marginRight: 92,
+  x: {label: "Home side's mean price above an even market (percentage points)", grid: true, nice: true},
+  y: {label: null, domain: HA.map(d => d.sport)},
+  marks: [
+    Plot.ruleX([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
+    Plot.barX(HA, {
+      y: "sport", x: "home_edge_pp", fill: PX, rx1: 4, insetTop: 3, insetBottom: 3,
+      title: d => `${d.sport}\nhome side prices at ${(100 * d.mean_home_price).toFixed(2)}% on average\n${d.home_edge_pp >= 0 ? "+" : ""}${d.home_edge_pp.toFixed(2)}pp above an even market\n${d3.format(",")(d.n_markets)} head-to-head moneylines\nmiddle 80% runs ${(100 * d.p10).toFixed(0)}%–${(100 * d.p90).toFixed(0)}%`,
+      tip: true
+    }),
+    Plot.text(HA, {
+      y: "sport", x: "home_edge_pp",
+      text: d => `${d.home_edge_pp >= 0 ? "+" : ""}${d.home_edge_pp.toFixed(2)}pp`,
+      textAnchor: "start", dx: 6, fill: "var(--theme-foreground)", fontWeight: 600
+    })
+  ]
+})
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Ordered smallest to largest, the ranking matches the home advantage each sport is independently known to have: tennis effectively none, baseball the smallest of the team sports, soccer the largest. That ordering is the evidence the price means what this page says it means &mdash; a number that meant nothing could not reproduce it.</div>
+
+## Where the volume sits on the probability axis
+
+<div class="instruction-line">Contracts traded by price, on the home side. Every trade also has an away side at one minus this price, so counting both would double the venue &mdash; one side per trade is what the other venue pages here show too.</div>
+
+```js
+Plot.plot({
+  width,
+  height: 320,
+  marginLeft: 62,
+  marginBottom: 40,
+  x: {label: "Home side's price (¢)", domain: [0, 100], grid: true},
+  y: {label: "Contracts", grid: true, tickFormat: fmtCount},
+  marks: [
+    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
+    Plot.rectY(vap, {
+      x1: d => d.price_bin, x2: d => d.price_bin + 5, y: "n_contracts",
+      fill: PX, ry2: 4, insetLeft: 1, insetRight: 1,
+      title: d => `${d.price_bin}–${d.price_bin + 5}¢\n${d3.format(",.0f")(d.n_contracts)} contracts (${d.pct_contracts.toFixed(1)}%)\n${d3.format(",")(d.n_trades)} trades\n$${d3.format(",.0f")(d.dollars)}`,
+      tip: true
+    })
+  ]
+})
+```
+
+## Parlays by leg count
+
+<div class="instruction-line">ProphetX calls them multi-event contracts. They run from 2 legs to <strong>12</strong>, and shorter parlays dominate &mdash; but the tail is real, and a 12-leg ticket is a very different product from a 2-leg one.</div>
+
+```js
+Plot.plot({
+  width,
+  height: 300,
+  marginLeft: 62,
+  marginBottom: 44,
+  x: {label: "Legs", type: "band", tickFormat: d => `${d}`},
+  y: {label: "Contracts", grid: true, tickFormat: fmtCount},
+  marks: [
+    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
+    Plot.barY(plegs, {
+      x: "legs", y: "contracts", fill: PX, ry2: 4, insetLeft: 2, insetRight: 2,
+      title: d => `${d.legs}-leg parlays\n${d3.format(",.0f")(d.contracts)} contracts (${d.pct_of_parlay_volume.toFixed(1)}% of parlay volume)\n${d3.format(",")(d.trades)} trades`,
+      tip: true
+    })
+  ]
+})
+```
+
 ## Every day
 
 ```js

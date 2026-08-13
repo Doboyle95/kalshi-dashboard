@@ -106,6 +106,7 @@ export default {
     {name: "Platform Comparison", path: "/competitors"},
     {name: "Polymarket US", path: "/polymarket"},
     {name: "ProphetX", path: "/prophetx"},
+    {name: "Novig", path: "/novig"},
     {name: "Polymarket Calibration", path: "/polymarket-calibration"},
     {name: "ForecastEx", path: "/forecastex"},
     {name: "DKeX (DraftKings)", path: "/dkex"},
