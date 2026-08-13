@@ -55,7 +55,14 @@ const pxShare = px.filter(d => d.complete === 1)
   .map(d => ({venue: "ProphetX", date: d.date, share: d.pct_parlay, parlay: d.contracts_parlay, tot: d.contracts}));
 const pmShare = pmParlay.filter(d => d.venue_contracts > 0)
   .map(d => ({venue: "Polymarket US", date: d.date, share: d.pct_of_venue, parlay: d.contracts, tot: d.venue_contracts}));
-const udShare = udDaily.filter(d => d.contracts > 0 && d.contracts_parlay != null)
+// Underdog's contracts_parlay column only starts being populated on 2026-07-30: the nine
+// days before that are a contiguous block of exact zeros followed by a contiguous block of
+// real values, which is a tracking cutover rather than nine parlay-free days. Counting them
+// as genuine zeros understates the venue by about 3 points (33.8% against 36.8%), so the
+// series starts at the first populated date and the window is reported on the bar.
+const udFirst = d3.min(udDaily.filter(d => d.contracts_parlay > 0), d => d.date);
+const udShare = udDaily
+  .filter(d => d.contracts > 0 && d.contracts_parlay != null && udFirst != null && d.date >= udFirst)
   .map(d => ({venue: "Underdog", date: d.date, share: 100 * d.contracts_parlay / d.contracts, parlay: d.contracts_parlay, tot: d.contracts}));
 
 const series = [...kShare, ...pxShare, ...nvShare, ...pmShare, ...udShare];
@@ -235,6 +242,7 @@ Plot.plot({
   <p><strong>Share is volume-weighted, not an average of daily percentages.</strong> Averaging daily shares lets a venue's quietest day count as much as its busiest, which flatters days with almost no volume. Every headline figure is total parlay contracts over total contracts across the window.</p>
   <p><strong>Leg counts are mapped into Kalshi's buckets, not the reverse.</strong> Kalshi publishes 2 / 3 / 4 / 5&ndash;7 / 8+; ProphetX and Novig publish exact integers. Mapping the exact numbers into the buckets loses detail but keeps the comparison honest; doing it the other way round would invent precision Kalshi never published. ProphetX's own exact distribution, out to twelve legs, is on <a href="./prophetx">its venue page</a>.</p>
   <p><strong>Kalshi's unclassified band is excluded, not hidden.</strong> A material share of Kalshi parlay volume sits in an "unclassified (pending legs)" bucket &mdash; the left-join miss for tickers the leg classifier has not yet reached. It is a processing state, not a leg count. Including it as a bar would imply a leg count nobody measured; excluding it silently would misstate the denominator. It is excluded from the percentages and reported underneath them.</p>
+  <p><strong>Underdog's window is shorter than its data.</strong> Its parlay column begins on 2026-07-30 &mdash; before that, nine consecutive days record exactly zero parlay contracts and every day after records real ones. That shape is a tracking cutover, not nine parlay-free days, so those days are excluded rather than averaged in as zeros, which would have understated the venue by roughly three points.</p>
   <p><strong>Why the cost chart has one venue.</strong> Parlay P&amp;L needs a settled outcome per contract. Underdog runs parlays as the large majority of its volume and publishes no outcome; Novig publishes the aggressor on every trade and no outcome; ProphetX records that a contract resolved but not which side won. Polymarket US does settle and its parlay P&amp;L is on the <a href="./pnl-venues">cross-venue P&amp;L page</a>, but the product launched on 2026-08-06 and six days cannot carry a per-leg breakdown. This is a data-availability limit, not an editorial choice.</p>
 </details>
 
