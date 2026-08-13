@@ -117,41 +117,12 @@ Plot.plot({
   <p><strong>Coverage.</strong> The tape is available from 2026-06-16; earlier dates return 403. There are no gaps in the ${recon.length} sessions since.</p>
 </details>
 
-## What the market thinks home advantage is worth
 
-<div class="instruction-line">ProphetX quotes one price per market, and it is the <strong>home side's</strong> probability. Averaged over every head-to-head moneyline in a sport, that becomes a direct read on how much the market prices home advantage &mdash; a series no other venue here can produce, because no other venue publishes a single home-referenced price. <strong>Tennis is the control:</strong> matches are at neutral venues, so if the number meant anything other than the home side it would not land on a coin flip. It lands on 50.3%.</div>
 
 ```js
-const HA = await DataAttachment("data/prophetx_home_advantage.csv").csv({typed: true});
 const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
 const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
 ```
-
-```js
-Plot.plot({
-  width,
-  height: 60 + HA.length * 46,
-  marginLeft: 96,
-  marginRight: 92,
-  x: {label: "Home side's mean price above an even market (percentage points)", grid: true, nice: true},
-  y: {label: null, domain: HA.map(d => d.sport)},
-  marks: [
-    Plot.ruleX([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.barX(HA, {
-      y: "sport", x: "home_edge_pp", fill: PX, rx1: 4, insetTop: 3, insetBottom: 3,
-      title: d => `${d.sport}\nhome side prices at ${(100 * d.mean_home_price).toFixed(2)}% on average\n${d.home_edge_pp >= 0 ? "+" : ""}${d.home_edge_pp.toFixed(2)}pp above an even market\n${d3.format(",")(d.n_markets)} head-to-head moneylines\nmiddle 80% runs ${(100 * d.p10).toFixed(0)}%–${(100 * d.p90).toFixed(0)}%`,
-      tip: true
-    }),
-    Plot.text(HA, {
-      y: "sport", x: "home_edge_pp",
-      text: d => `${d.home_edge_pp >= 0 ? "+" : ""}${d.home_edge_pp.toFixed(2)}pp`,
-      textAnchor: "start", dx: 6, fill: "var(--theme-foreground)", fontWeight: 600
-    })
-  ]
-})
-```
-
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Ordered smallest to largest, the ranking matches the home advantage each sport is independently known to have: tennis effectively none, baseball the smallest of the team sports, soccer the largest. That ordering is the evidence the price means what this page says it means &mdash; a number that meant nothing could not reproduce it.</div>
 
 ## Where the volume sits on the probability axis
 
