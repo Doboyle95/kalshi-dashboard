@@ -410,7 +410,7 @@ function tipText(d) {
 
 ## Actual vs. implied win rate
 
-<p class="section-intro">Each dot is one 5-cent price bin at one venue. The dashed diagonal is perfect calibration. Vertical bars are &plusmn;2 event-clustered standard errors &mdash; a bar that reaches the diagonal is a bin with no measurable bias. There are deliberately <strong>no connecting lines</strong>: a line through these points would assert a smooth curve that none of these samples supports.</p>
+<p class="section-intro">Each dot is one 5-cent price bin at one venue. The dashed diagonal is perfect calibration. Solid dots clear two event-clustered standard errors; hollow dots do not and mean <em>no measurable bias</em>; a cross means too few independent events to say. Intervals are deliberately <strong>not</strong> drawn here &mdash; eighty of them across four venues obscure the very line they sit on, and they are shown at a readable scale in the next chart. There are also <strong>no connecting lines</strong>: a line through these points would assert a smooth curve none of these samples supports.</p>
 
 ```js
 shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.plot({
@@ -431,21 +431,12 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
       x: "x", y: "y",
       stroke: "var(--theme-foreground-fainter)", strokeWidth: 1
     }),
-    // +/-2 event-clustered SE, split into two marks rather than one mark with a
-    // variable opacity: a strokeOpacity channel would be pushed through Plot's
-    // opacity SCALE and silently remapped.
-    Plot.ruleX(noiseRows.concat(unmeasRows), {
-      x: "implied",
-      y1: d => Math.max(0, d.actual - 2 * d.se),
-      y2: d => Math.min(1, d.actual + 2 * d.se),
-      stroke: "venue", strokeOpacity: 0.3, strokeWidth: 1.1, strokeLinecap: "round"
-    }),
-    Plot.ruleX(clearRows, {
-      x: "implied",
-      y1: d => Math.max(0, d.actual - 2 * d.se),
-      y2: d => Math.min(1, d.actual + 2 * d.se),
-      stroke: "venue", strokeOpacity: 0.95, strokeWidth: 2.2, strokeLinecap: "round"
-    }),
+    // NO error bars here, deliberately. Four venues x 20 bins put 80 vertical rules
+    // through a 45-degree line, and at this scale a few cents of interval is ink
+    // rather than information. The intervals are shown at a readable scale in
+    // "Calibration error by price bin" below; this chart answers only "where does
+    // each venue sit". Significance still reads from the mark: solid clears 2 SE,
+    // hollow does not, x means too few independent events to say.
     // NOT distinguishable from calibrated: hollow.
     Plot.dot(noiseRows, {
       x: "implied", y: "actual", r: 4,
@@ -503,10 +494,13 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
       height: 40 + 170 * shown.length,
       marginLeft: 62,
       marginRight: 16,
-      marginTop: 10,
+      marginTop: 28,
       x: {label: "Contract price (¢)", domain: [0, 100], grid: true},
       y: {label: "Calibration error, actual − implied (¢)", domain: [-lim, lim], grid: true},
-      fy: {label: null, domain: domainNames},
+      // Each panel already carries its venue name in its own title, so the right-hand
+      // facet axis only repeated it -- and truncated it to "K" / "P" / "F" against a
+      // 16px right margin. Dropped rather than widened.
+      fy: {label: null, domain: domainNames, axis: null},
       color: {domain: domainNames, range: domainColors},
       marks: [
         Plot.frame({stroke: "var(--theme-foreground-fainter)"}),
