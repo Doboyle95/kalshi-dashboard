@@ -99,6 +99,7 @@ export default {
     {name: "Parlay P&L", path: "/parlay"},
     {name: "Parlay Anatomy", path: "/parlay-analytics"},
     {name: "Cross-Venue Parlays", path: "/parlay-venues"},
+    {name: "Cross-Venue Categories", path: "/categories-venues"},
     {name: "Calibration", path: "/calibration"},
     {name: "Cross-Venue Calibration", path: "/calibration-venues"},
     {name: "Cross-Venue P&L", path: "/pnl-venues"},
