@@ -8,12 +8,15 @@ title: Competitors
   <p class="page-lead">Every US regulated prediction-market venue on one chart — Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, CME (where FanDuel and DraftKings clear), and Rothera (Robinhood's own exchange). Kalshi is the story; switch to log scale to see the rest underneath it. CME is collected by hand from daily bulletins, so its line is sparse.</p>
   <p class="page-lead">DKeX (DraftKings, formerly Railbird) is included as the orange line from its public daily reports.</p>
   <p class="page-lead">Underdog Exchange (Underdog Fantasy's own exchange) is included as the yellow line from its public daily reports — it's a brand-new, very low-volume venue, so expect a mostly-flat line with the occasional spike.</p>
+  <p class="page-lead">ProphetX (pink) and Novig (indigo) are peer-to-peer sports exchanges rather than CFTC-designated contract markets, and both publish a full public trade tape — so both are on the chart. Leaving them off did not make this page partial, it made it <em>wrong</em>: over its ${leadStats.px.days} complete days ProphetX has traded <strong>${fmtLead(leadStats.px.contracts)} contracts</strong>, ${leadStats.px.vsUnderdog}&times; Underdog Exchange and ${leadStats.px.vsDkex}&times; DKeX across that same window, and Novig traded <strong>${fmtLead(leadStats.novig.contracts)}</strong> in its first ${leadStats.novig.days} days, ${leadStats.novig.vsUnderdog}&times; Underdog and ${leadStats.novig.vsDkex}&times; DKeX over those days.${leadStats.rankSentence} Neither venue publishes a fee schedule, so neither appears on any fee chart here.</p>
 </div>
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Kalshi comes from cleaned internal daily aggregates; competitor series come from public daily platform reports normalized into <code>competitor_daily.csv</code>. The brush changes the visible window, not the underlying all-time source data.</p>
   <p><strong>Fee convention.</strong> Kalshi bills the taker on almost every market — it also charges the resting side on a named subset — soccer, tennis, rate and inflation markets, and most major sports game markets — about 9% of its 2026 fee revenue and 11% all-time. ForecastEx, Crypto.com/Nadex, Rothera and Underdog Exchange bill both sides in full; DKeX bills the taker plus a smaller $0.0025 maker fee; Polymarket US bills the taker alone and pays the maker a rebate. The metric toggle therefore never mixes the two: <em>Fees</em> is the <strong>per-side</strong> cost &mdash; what one trader pays to execute &mdash; which is the number that stays comparable to Kalshi, and <em>Exchange revenue</em> is everything the venue collects from all sides less any maker rebate it pays out. Plotting raw fee numbers side by side would draw every competitor as roughly twice as expensive as it really is. Kalshi is measured the same way as everyone else on this page: its <em>Fees</em> figure is the taker side alone and its <em>Exchange revenue</em> figure adds the resting side back, a ratio of 1.12 against 2.00 at ForecastEx, Crypto.com/Nadex and Underdog Exchange, 2.50 at Rothera, 1.25 at DKeX and 0.77 at Polymarket US. <strong>That is why Kalshi’s fee total here, about $1.54bn, is smaller than the about $1.73bn on <a href="./fees">Kalshi’s own fee page</a> — this page counts what one trader pays, that page counts all the revenue Kalshi keeps.</strong> Both are correct, and the difference between them is the maker component charted there.</p>
+  <p><strong>Two venues carry no fee number at all.</strong> ProphetX and Novig publish volume and no fee schedule, and their files have no fee column, so every fee chart on this page leaves them out and <em>names</em> them underneath rather than drawing them on the zero line. Novig advertises commission-free trading and the spread implied by its own tape measures at zero on <a href="./novig">its page</a> — but a measured spread is not a published per-side fee, and a $0.000 per-contract line would state a precision we do not have. Absent here means not measured, never free.</p>
+  <p><strong>Two venues also cover far less history than the rest.</strong> ProphetX's tape starts 2026-06-16 and Novig's 2026-08-04, so on any window opening before those dates their lines simply do not exist — that is missing history, not zero volume. ProphetX's trading session runs 16:30 to 16:30 ET, so a calendar date always spans two of its session files and its newest date is always incomplete; this page reads the <code>complete</code> flag the file itself carries and drops that day rather than drawing a half-day as a collapse. Novig's files are published a day in arrears and whole, so its last row is a full day.</p>
   <p>On a linear scale, Kalshi turns every other platform into a flat line. Log scale is where the smaller-platform race becomes visible.</p>
   <p><strong>This page compares how much trades and what it costs, not whether the prices are right.</strong> That question &mdash; do a venue's prices actually predict outcomes &mdash; is on the <a href="./calibration-venues">cross-venue calibration page</a>, which puts Kalshi, Polymarket US, ForecastEx and DKeX on one axis with event-clustered error bars. Three venues that appear on this page are deliberately absent there, each with the reason stated.</p>
 </details>
@@ -32,6 +35,19 @@ const cme        = await DataAttachment("data/cme_daily_distributed.csv").csv({t
 // become redundant rather than wrong.
 const dkexDaily     = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
 const underdogDaily = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
+// ProphetX has NO rows in competitor_daily.csv, so it is read from its own daily file --
+// the same pattern CME uses below. Its trading session runs 16:30->16:30 ET, so a calendar
+// date spans two session files and the NEWEST date is ALWAYS partial: 2026-08-14 reads
+// 2,334,935 contracts against a 4,553,549/day mean over the 59 complete days. Drawing it
+// would put a ~50% collapse on the end of the line every single day, which is the exact
+// failure the Kalshi partial-day treatment below exists to avoid. The file carries its own
+// `complete` flag for this; trust it, and if the column ever disappears fall back to
+// dropping the newest date, which is the row that is partial by construction.
+const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
+const pxHasCompleteFlag = prophetxDaily.some(d => d.complete != null && d.complete !== "");
+const pxNewestDate      = d3.max(prophetxDaily, d => +d.date);
+const prophetxComplete  = prophetxDaily.filter(d =>
+  pxHasCompleteFlag ? +d.complete === 1 : +d.date < pxNewestDate);
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 // Kalshi's end-of-day open-interest snapshot. It has to come from its own file rather
 // than from the open_interest column of competitor_daily.csv, for the same reason the
@@ -52,13 +68,14 @@ display(freshnessPanel({
   items: [
     {label: "Kalshi", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
     {label: "Competitors", date: latestDate(competitor.filter(d => d.platform !== "Kalshi")), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public platform files/scrapes", tone: "competitor"},
+    {label: "ProphetX", date: latestDate(prophetxComplete), updatedAt: fileUpdatedAt(freshness, "prophetx_daily.csv"), meta: "Its own tape file, not competitor_daily.csv. Sessions run 16:30–16:30 ET, so the newest calendar date is always partial and is dropped — this is the last COMPLETE day", tone: "competitor"},
     {label: "Open interest (Kalshi)", date: latestDate(kalshiOi), updatedAt: fileUpdatedAt(freshness, "kalshi_oi_daily.csv"), meta: "End-of-day snapshot written for the PREVIOUS day at about 04:00 ET, so it always trails the volume rows by a day"}
   ],
-  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, DKeX, Underdog Exchange, Crypto.com/Nadex, and Rothera update when their external files are downloaded and rebuilt."
+  note: "Kalshi rows can be fresher than competitor rows. Polymarket, ForecastEx, DKeX, Underdog Exchange, Novig, Crypto.com/Nadex, and Rothera update when their external files are downloaded and rebuilt; ProphetX comes from its own tape file on the same cadence."
 }));
 display(askPageLink({
-  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, DKeX, Underdog Exchange, Crypto.com/Nadex, and Rothera, noting any freshness caveats.",
-  context: "Platform Comparison page using daily_overall.csv and competitor_daily.csv."
+  question: "Compare the latest Kalshi volume with Polymarket US, ForecastEx, DKeX, Underdog Exchange, ProphetX, Novig, Crypto.com/Nadex, and Rothera, noting any freshness caveats.",
+  context: "Platform Comparison page using daily_overall.csv, competitor_daily.csv and prophetx_daily.csv."
 }));
 ```
 
@@ -177,6 +194,31 @@ const platforms = [
     data: fromCompetitor("Underdog Exchange", underdogTradedValue)
   },
   {
+    // ProphetX and Novig publish NO fee schedule and no fee column anywhere in their feeds.
+    // fees and revenue stay null on purpose so both venues are ABSENT from every fee chart
+    // and named underneath it, never drawn on the zero line: `+null` is 0, and a 0.000c
+    // per-contract rate would be a claim about price we cannot make. tradedValue is null for
+    // the same reason -- neither file carries one, so neither can appear in basis points.
+    name: "ProphetX", color: "#DB2777",
+    data: prophetxComplete.map(d => ({
+      date: d.date,
+      contracts: num(d.contracts),
+      fees: null,
+      revenue: null,
+      tradedValue: null
+    }))
+  },
+  {
+    // Novig's rows DO live in competitor_daily.csv, so it reads through fromCompetitor like
+    // the other venues. Its fees/fees_exchange_revenue cells are empty, which num() turns
+    // into null rather than 0 -- the guard that keeps it off the fee charts instead of
+    // drawing it as free. Its contracts are the ONE-SIDE figure: Novig's tape prints every
+    // trade twice (TAKER and MAKER) and the producer takes one side, which is the same unit
+    // every other venue here reports.
+    name: "Novig", color: "#6366F1",
+    data: fromCompetitor("Novig")
+  },
+  {
     name: "Crypto.com/Nadex", color: "#9c27b0",
     data: fromCompetitor("Crypto.com/Nadex")
   },
@@ -230,6 +272,74 @@ const metricLabels  = {contracts: "Volume", fees: "Fees (one side)", revenue: "E
 const bpsCapable  = platforms.filter(p => p.data.some(d => d.fees > 0 && d.tradedValue > 0));
 const rateUnitOptions = bpsCapable.length >= 2 ? ["cents", "bps"] : ["cents"];
 const rateUnitLabels  = {cents: "Cents per contract", bps: "Basis points of traded value"};
+
+// -- Lead-paragraph figures ---------------------------------------------------
+// Every number the hero paragraph quotes about ProphetX and Novig is COMPUTED here and
+// interpolated up there. Those numbers used to be typed in, and they went stale the next
+// morning: ProphetX gains a complete session every day, Novig's window widens every day,
+// and the market-share ranking moves with both. Inline expressions in Framework are
+// reactive cells rather than sequential ones, so this fence may sit BELOW the paragraph
+// it feeds -- calibration-venues.md uses the same arrangement.
+const fmtLead  = n => Math.round(n).toLocaleString("en-US");
+const rankWord = n => ["", "largest", "second-largest", "third-largest", "fourth-largest",
+                       "fifth-largest", "sixth-largest", "seventh-largest", "eighth-largest",
+                       "ninth-largest", "tenth-largest"][n] ?? `number ${n}`;
+
+const leadStats = (() => {
+  const dataOf = name => (platforms.find(p => p.name === name)?.data ?? [])
+    .filter(d => d.contracts != null);
+  // Underdog and DKeX denominators come from their OWN daily files, not from
+  // competitor_daily.csv, for the reason platforms[0] gives for Kalshi: competitor_daily
+  // is only copied on a slow cadence, and a hero ratio must not jump when it lags.
+  const byDay = rows => new Map((rows ?? []).map(d => [+d.date, num(d.contracts) ?? 0]));
+  const udDay = byDay(underdogDaily);
+  const dkDay = byDay(dkexDaily);
+  // The window is the quoted venue's OWN dates, so a venue that had not launched yet
+  // contributes zero to the denominator rather than silently shortening the window.
+  // That is what "across that same window" means in the paragraph.
+  // Ratios come back PREFORMATTED: a missing denominator has to render as a dash in the
+  // hero, never throw a TypeError into the first paragraph on the page.
+  const span = rows => {
+    const contracts = d3.sum(rows, d => d.contracts);
+    const ud = d3.sum(rows, d => udDay.get(+d.date) ?? 0);
+    const dk = d3.sum(rows, d => dkDay.get(+d.date) ?? 0);
+    return {days: rows.length, contracts,
+            vsUnderdog: ud > 0 ? (contracts / ud).toFixed(1) : "\u2014",
+            vsDkex:     dk > 0 ? (contracts / dk).toFixed(1) : "\u2014"};
+  };
+
+  // Market share on the newest day more than one venue reported -- the SAME denominator
+  // the share chart below uses (CME excluded, Kalshi's still-filling row dropped), so the
+  // hero and that chart can never rank the venues differently.
+  const rows   = platforms.filter(p => !p.name.includes("CME")).flatMap(p =>
+    p.data.filter(d => d.contracts != null && !d.partial)
+          .map(d => ({day: +d.date, name: p.name, contracts: d.contracts})));
+  const perDay = d3.rollup(rows, rs => rs, d => d.day);
+  const day    = d3.max(Array.from(perDay).filter(([, rs]) => rs.length > 1).map(([k]) => k));
+  const onDay  = (perDay.get(day) ?? []).slice().sort((a, b) => b.contracts - a.contracts);
+  const total  = d3.sum(onDay, d => d.contracts);
+  const at = name => { const i = onDay.findIndex(d => d.name === name);
+                       return (i < 0 || !(total > 0)) ? null
+                            : {place: i + 1, pct: 100 * onDay[i].contracts / total}; };
+  const nv = at("Novig"), ud = at("Underdog Exchange");
+
+  return {
+    px:    span(dataOf("ProphetX")),
+    novig: span(dataOf("Novig")),
+    // One prebuilt sentence rather than five loose interpolations: if either venue is
+    // missing from the newest stackable day the whole claim disappears instead of
+    // rendering half a ranking. The "ahead of" wording is only written when the ranking
+    // actually puts Novig ahead, so the sentence cannot outlive the fact it states.
+    rankSentence: (nv && ud)
+      ? html` On ${new Date(day).toISOString().slice(0, 10)} Novig was the
+          <strong>${rankWord(nv.place)}</strong> venue on this chart at
+          ${nv.pct.toFixed(2)}% of US contracts, ${nv.place < ud.place
+            ? `ahead of Underdog Exchange at ${ud.pct.toFixed(2)}%`
+            : `against Underdog Exchange at ${ud.pct.toFixed(2)}%`} \u2014 a ranking the old
+          seven-venue chart could not show at all.`
+      : ""
+  };
+})();
 ```
 
 ```js
@@ -395,9 +505,9 @@ const dr_abs = view(makeDateBrush(new Date("2025-01-01")));
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem"><strong>Fees here means what ONE trader pays to execute.</strong> Kalshi bills the taker on almost every market (it also charges the resting side on soccer, tennis, rate and inflation markets, and most major sports game markets, about 9% of its 2026 fee revenue, which this series leaves out for Kalshi exactly as it counts a single side at every other venue — so Kalshi’s total here runs about 11% below the one on <a href="./fees">its own fee page</a>, which reports all revenue). ForecastEx, Crypto.com/Nadex, Rothera, Underdog Exchange and CME bill both sides; DKeX bills the taker plus a $0.0025 maker fee; Polymarket US bills the taker alone and pays the maker a rebate, so it keeps less than its per-side figure. This series is the per-side amount at every venue, so a both-sides venue is not drawn as twice as expensive as it is; <em>Exchange revenue</em>, where offered, is the other question — everything the venue collects from all sides, less any maker rebate it pays out. Underdog Exchange charges Kalshi's exact 0.07 coefficient but to both sides, so its per-side line is comparable to Kalshi's while it collects about twice as much per matched trade. Polymarket US pays its makers a rebate, so its revenue is <em>below</em> its taker fee.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem"><strong>Fees here means what ONE trader pays to execute.</strong> Kalshi bills the taker on almost every market (it also charges the resting side on soccer, tennis, rate and inflation markets, and most major sports game markets, about 9% of its 2026 fee revenue, which this series leaves out for Kalshi exactly as it counts a single side at every other venue — so Kalshi’s total here runs about 11% below the one on <a href="./fees">its own fee page</a>, which reports all revenue). ForecastEx, Crypto.com/Nadex, Rothera, Underdog Exchange and CME bill both sides; DKeX bills the taker plus a $0.0025 maker fee; Polymarket US bills the taker alone and pays the maker a rebate, so it keeps less than its per-side figure. This series is the per-side amount at every venue, so a both-sides venue is not drawn as twice as expensive as it is; <em>Exchange revenue</em>, where offered, is the other question — everything the venue collects from all sides, less any maker rebate it pays out. Underdog Exchange charges Kalshi's exact 0.07 coefficient but to both sides, so its per-side line is comparable to Kalshi's while it collects about twice as much per matched trade. Polymarket US pays its makers a rebate, so its revenue is <em>below</em> its taker fee. <strong>ProphetX and Novig drop off this chart entirely on the Fees and Exchange revenue settings</strong>, because neither venue publishes a fee number of any kind; their lines are not flat at the bottom, they are absent, and the metric toggle is the only place on this page where a venue can vanish without a note under the frame.</p>
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem"><strong>Approximations you are looking at.</strong> <em>Rothera is the softest number on the chart, twice over:</em> its published file is end-of-day market data rather than a trade tape, so a daily price per market stands in for each trade's price, and the fee curve is bowed enough that collapsing a day's price path to a single point does not average out; and it charges professional trading firms six times retail while publishing no participant type at all, so the split between them is assumed, not measured. <em>Polymarket US</em> has changed fee schedule six times since launch and only two of those boundary dates are confirmed from a filing index — the rest are inferred from the standard "one business day following certification" language, so earlier fees carry date risk; its 2026-06-15 and 2026-06-18 fee columns are missing upstream and are drawn as gaps rather than zeros. <em>CME</em> has no upstream fee series: its line is computed on this page from the published flat $0.01 per contract per side effective 2025-12-08, and no fee is shown for any earlier CME date because the rate was tiered and the contract was 100x larger. <em>Crypto.com/Nadex</em> is the published $0.02 per contract per side for $1 contracts, but the last five weeks of it rest on a help-centre article rather than a filed schedule. <strong>Its fees before August 2025 are not a published rate at all</strong> — that era traded $100-denominated contracts at a higher per-contract fee, and the tier drawn here is inferred from a partially-reproduced extraction of the bulletin PDFs plus the traded price scale in the venue's own time-and-sales. Part of that window was still $100-denominated, so the figure is a floor rather than a measurement. And its "per side" wording has not been settled between buyer-and-seller and open-and-close — if it means the latter, its exchange-revenue line is up to twice what it should be. <strong>Every venue's number is an upper bound</strong> — volume-tier rebates and confidential market-maker programs are real, are granted in perpetuity at several venues, and are unobservable to us. Exchange fees only: FanDuel, DraftKings, Robinhood and Underdog's app charge their own commissions on top (Robinhood's is several times Rothera's exchange fee), except DraftKings on DKeX, whose retail fee is inclusive of it.</p>
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume; its quantity counts matched pairs, not single contracts. Crypto.com/Nadex = event binary contracts only (from the exchange's own daily bulletins, starts Dec 2024). CME = FanDuel + DraftKings combined event-contract volume (both clear through CME), hand-collected from daily bulletins so it's sparse. CME lumps each weekend's volume into the following Monday's bulletin, so here we spread Monday (and holiday-weekend) volume back across the days it actually traded, so the line reflects when activity happened rather than spiking every Monday. (The CME page itself shows the raw bulletin numbers.) DraftKings no longer routes exclusively to CME — it owns DKeX — so the CME line may not capture all DraftKings activity after May 2026. Today's Kalshi point is still filling, so it is drawn as a dashed segment ending in an orange dot instead of a solid line — the dip into it is how much has been collected so far, not a real fall in trading.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Shared Y-axis — the scale gap is real. Kalshi = US exchange trade records. Polymarket US = US-accessible volume only (separate from global Polymarket). ForecastEx = full exchange volume; its quantity counts matched pairs, not single contracts. Crypto.com/Nadex = event binary contracts only (from the exchange's own daily bulletins, starts Dec 2024). CME = FanDuel + DraftKings combined event-contract volume (both clear through CME), hand-collected from daily bulletins so it's sparse. CME lumps each weekend's volume into the following Monday's bulletin, so here we spread Monday (and holiday-weekend) volume back across the days it actually traded, so the line reflects when activity happened rather than spiking every Monday. (The CME page itself shows the raw bulletin numbers.) DraftKings no longer routes exclusively to CME — it owns DKeX — so the CME line may not capture all DraftKings activity after May 2026. ProphetX = its own publicly disclosed time-and-sales tape, not its daily bulletin, whose volume column reconciles with the tape on only 2 of 59 sessions; its sessions run 16:30 to 16:30 ET, so a calendar day spans two files and the newest day is always incomplete and is dropped, which is why its line ends a day short of Kalshi's. Novig = one side of each trade (its tape prints every trade twice, once as taker and once as maker), which is the same unit as everyone else here, from 2026-08-04. Both are peer-to-peer sports exchanges rather than CFTC-designated contract markets; this page does not attempt to classify their regulatory footing, it counts what they publish. Today's Kalshi point is still filling, so it is drawn as a dashed segment ending in an orange dot instead of a solid line — the dip into it is how much has been collected so far, not a real fall in trading.</p>
 
 <div class="control-strip">
 
@@ -520,7 +630,7 @@ const rateUnit = view(Inputs.radio(rateUnitOptions, {value: "cents", label: "Rat
 
 </div>
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Per-side fee divided by the day's contracts (or by the day's traded value, in basis points). This is the realized rate a venue actually collected, not its posted schedule, so it moves with the venue's price mix. <strong>Cents per contract is the honest cross-venue unit here.</strong> Basis points of traded value flatters flat-rate venues at high prices and punishes them at low ones — DKeX's published $0.01 per contract works out at about 260bp of traded value purely because its average traded price is near 47c, which is arithmetic about price mix, not a pricing difference in spirit. Basis points also need a traded-value denominator, which we hold for only some venues; the note under the chart names the ones that cannot appear. All the caveats under the volume chart apply here too — Rothera's daily-price proxy and assumed participant mix, Polymarket US's inferred regime dates, and the fact that unobservable volume-tier rebates make every one of these an upper bound. ForecastEx's count is matched pairs, which is one contract per side, so its per-contract rate is on the same footing as the rest.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Per-side fee divided by the day's contracts (or by the day's traded value, in basis points). This is the realized rate a venue actually collected, not its posted schedule, so it moves with the venue's price mix. <strong>Cents per contract is the honest cross-venue unit here.</strong> Basis points of traded value flatters flat-rate venues at high prices and punishes them at low ones — DKeX's published $0.01 per contract works out at about 260bp of traded value purely because its average traded price is near 47c, which is arithmetic about price mix, not a pricing difference in spirit. Basis points also need a traded-value denominator, which we hold for only some venues; the note under the chart names the ones that cannot appear. All the caveats under the volume chart apply here too — Rothera's daily-price proxy and assumed participant mix, Polymarket US's inferred regime dates, and the fact that unobservable volume-tier rebates make every one of these an upper bound. ForecastEx's count is matched pairs, which is one contract per side, so its per-contract rate is on the same footing as the rest. <strong>ProphetX and Novig can never appear on this chart</strong>, in any window: neither publishes a fee schedule and neither file carries a fee column, so there is no numerator. The note above names them alongside any venue that is merely missing a number in the selected window — for these two the absence is permanent until the venues themselves publish something, and in both cases absent means unmeasured, not cheap.</p>
 
 ## Fee schedules side by side
 
@@ -547,6 +657,12 @@ const rateUnit = view(Inputs.radio(rateUnitOptions, {value: "cents", label: "Rat
     {name: "ForecastEx",                f: () => 1.00, curve: "linear", dash: null},
     {name: "CME (FanDuel + DraftKings)",f: () => 1.00, curve: "linear", dash: "2,3"}
   ];
+  // The legend on THIS chart is the curves, not every venue on the page. ProphetX and Novig
+  // publish no fee schedule at all, and a legend swatch with no line next to it reads as a
+  // venue drawn at zero -- the exact false claim this page's fee guards exist to prevent.
+  // They are named in the caption underneath instead.
+  const curveNames  = curves.map(c => c.name);
+  const curveColors = curveNames.map(n => colorRange[colorDomain.indexOf(n)]);
   const prices = d3.range(1, 100).map(c => c / 100);
   const pivot = prices.map(p => {
     const o = {cents: Math.round(p * 100)};
@@ -562,7 +678,7 @@ const rateUnit = view(Inputs.radio(rateUnitOptions, {value: "cents", label: "Rat
     marginRight: 16,
     x: {label: "Contract price (cents)", domain: [1, 99], grid: true, tickFormat: d => d + "c"},
     y: {label: "Fee per contract, one side (cents)", grid: true, domain: [0, 2.2], tickFormat: d => d.toFixed(1) + "c"},
-    color: {legend: true, domain: colorDomain, range: colorRange},
+    color: {legend: true, domain: curveNames, range: curveColors},
     marks: [
       ...curves.map(c =>
         Plot.line(prices.map(p => ({x: Math.round(p * 100), y: c.f(p), platform: c.name})), {
@@ -583,7 +699,7 @@ const rateUnit = view(Inputs.radio(rateUnitOptions, {value: "cents", label: "Rat
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Per-side exchange fee per contract at each price, from each venue's published schedule. Five venues charge the same parabola with a different coefficient: Kalshi and Underdog Exchange both use 0.07 (the lines coincide exactly — Underdog is dashed so both are visible — but Underdog charges it to <em>both</em> sides, so it collects roughly twice per matched trade), Polymarket US 0.06 on the taker with a 0.0125 rebate back to the maker, Rothera 0.02 for retail. Three are flat: Crypto.com/Nadex $0.02, ForecastEx $0.01 (per side since 2026-05-01; before that a single penny per matched pair), CME $0.01. DKeX is a step, $0.01 across almost the whole book and half that only at 1c and 99c. <strong>The crossings are the point:</strong> CME and DKeX are cheaper than Kalshi through the middle of the book and dearer at the tails, so no single ranking holds everywhere. Rounding is omitted; Rothera's professional tier is 6x the retail line drawn here and its participant mix is unobservable; broker commissions are excluded throughout.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Per-side exchange fee per contract at each price, from each venue's published schedule. Four venues charge the same parabola with a different coefficient: Kalshi and Underdog Exchange both use 0.07 (the lines coincide exactly — Underdog is dashed so both are visible — but Underdog charges it to <em>both</em> sides, so it collects roughly twice per matched trade), Polymarket US 0.06 on the taker with a 0.0125 rebate back to the maker, Rothera 0.02 for retail. Three are flat: Crypto.com/Nadex $0.02, ForecastEx $0.01 (per side since 2026-05-01; before that a single penny per matched pair), CME $0.01. DKeX is a step with three levels, not two: $0.01 across the body of the book, $0.0085 at 2c, and half a cent at 1c and 99c — and the 2c step has no counterpart at 98c, so the ladder is not symmetric about the middle of the book. <strong>The crossings are the point:</strong> CME and DKeX are cheaper than Kalshi through the middle of the book and dearer at the tails, so no single ranking holds everywhere. Rounding is omitted; Rothera's professional tier is 6x the retail line drawn here and its participant mix is unobservable; broker commissions are excluded throughout. <strong>Two venues on the volume chart above have no line here at all:</strong> ProphetX and Novig publish no fee schedule, so there is no curve to draw and they are left out of the legend rather than given a swatch with nothing under it. Novig advertises commission-free trading and the spread implied by its own tape measures at zero, but that is a measurement of its book, not a published per-side rate, so it is not drawn as a flat zero line here.</p>
 
 ## Market share
 
@@ -660,7 +776,11 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
         y: "contracts",
         fill: "platform",
         offset: "expand",
-        order: ["Underdog Exchange", "DKeX", "Rothera", "Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
+        // Every venue in sharePlatforms MUST be named here. Plot stacks unlisted series in
+        // its own order, so a venue added to `platforms` and forgotten here appears in the
+        // volume chart above and then lands in an arbitrary band in this one. The existing
+        // sequence is left untouched; ProphetX and Novig are inserted at the small end.
+        order: ["Underdog Exchange", "DKeX", "ProphetX", "Novig", "Rothera", "Crypto.com/Nadex", "ForecastEx", "Polymarket US", "Kalshi"],
         curve: "monotone-x",
         fillOpacity: 0.85
       }),
@@ -687,7 +807,7 @@ const dr_share = view(makeDateBrush(new Date("2025-01-01")));
 }
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Share of total reported US prediction market contracts. Kalshi dominates; growing slivers at the bottom show ForecastEx and Polymarket US gaining ground. A venue that reported zero for a day is drawn at zero rather than dropped, so a dead feed reads as dead. The stack stops at the last day on which more than one venue reported, so Kalshi is never shown at 100% merely because the competitor files have not landed yet; when a venue has not reported for the most recent days, those days are hatched and labelled with its name.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Share of total reported US prediction market contracts, across all nine venues drawn above. Kalshi dominates; growing slivers at the bottom show ForecastEx and Polymarket US gaining ground. <strong>Adding ProphetX and Novig moved the denominator, not just the picture:</strong> on 2026-08-13 they are 1.75% of US contracts between them, which takes Kalshi from 85.14% to 83.65% of the same day, and Novig at 1.43% slots in <em>fifth</em>, above Underdog Exchange at 1.07%. CME is still excluded from this stack — it is hand-collected and sparse, so including it would renormalize every other venue's share on CME's days only. A venue that reported zero for a day is drawn at zero rather than dropped, so a dead feed reads as dead. The stack stops at the last day on which more than one venue reported, so Kalshi is never shown at 100% merely because the competitor files have not landed yet; when a venue has not reported for the most recent days, those days are hatched and labelled with its name.</p>
 
 ## Open interest
 
@@ -716,16 +836,77 @@ const kalshiOiByDay  = new Map(kalshiOiSeries.map(d => [+d.date, d.open_interest
 // Why a venue is not on this chart. Absent means NOT PUBLISHED or NOT MEASURABLE --
 // never zero. Drawing any of these on the zero line would say something false about the
 // venue, which is the specific failure this page exists to avoid.
+// Both "not shown" reasons below quote LEVELS, and levels move. They are therefore
+// measured off each venue's own daily file -- the same file this page already reads their
+// traded value from -- instead of being typed in. The last hand-written version of these
+// strings said Underdog's book had "never exceeded 366,538 contracts": that was its
+// 2026-08-05 value, and three days later the book was nine times larger, which turned the
+// stated reason for excluding the venue into a claim its own data contradicted. A level
+// quoted in prose is a level that will be wrong, so none of them are quoted in prose now.
+const bookStats = rows => {
+  const iso = d => d.toISOString().slice(0, 10);
+  const oi  = (rows ?? [])
+    .map(d => ({date: d.date, oi: num(d.open_interest), vol: num(d.contracts) ?? 0}))
+    .filter(d => d.oi != null && d.date instanceof Date)
+    .sort((a, b) => a.date - b.date);
+  const zero = oi.filter(d => d.oi === 0);
+  const pos  = oi.filter(d => d.oi > 0);
+  const peak = pos.length ? pos.reduce((a, b) => (b.oi > a.oi ? b : a)) : null;
+  const dash = "\u2014";
+  return {
+    dates:      oi.length,
+    zeroCount:  zero.length,
+    posDates:   pos.length,
+    firstDate:  oi.length ? iso(oi[0].date) : dash,
+    lastZero:   zero.length ? iso(zero[zero.length - 1].date) : dash,
+    zeroMaxVol: zero.length ? fmtLead(d3.max(zero, d => d.vol)) : dash,
+    latest:     oi.length ? fmtLead(oi[oi.length - 1].oi) : dash,
+    peak:       peak ? fmtLead(peak.oi) : dash,
+    peakDate:   peak ? iso(peak.date) : dash
+  };
+};
+const underdogBook = bookStats(underdogDaily);
+const dkexBook     = bookStats(dkexDaily);
+const kalshiOiNow  = (() => {
+  const s = kalshiOiSeries.filter(d => Number.isFinite(d.open_interest));
+  return s.length ? fmtLead(s.reduce((a, b) => (b.date > a.date ? b : a)).open_interest)
+                  : "\u2014";
+})();
+
 const OI_ABSENT = new Map([
   ["Crypto.com/Nadex",           "publishes no open interest at all"],
   ["CME (FanDuel + DraftKings)", "publishes no open interest at all"],
-  ["DKeX",                       "reports open interest as zero on 78% of its market rows (12,198 of 15,642) and on 15 of its 57 days, and its latest book is 33,100 contracts against Kalshi's 760,650,224, so what it publishes is overnight carry on a handful of markets rather than the venue's standing book"],
-  ["Underdog Exchange",          "reports zero open interest across every market row on four of its sixteen dates, including one carrying 911,855 contracts of volume, and its book has never exceeded 366,538 contracts. The field is returned and non-null on 100% of rows on every date, so those zeros are what the venue reported, not a missing feed — but whatever the figure measures, it is not an end-of-day venue book comparable to the others here. It is charted on Underdog's own page instead"]
+  ["DKeX",                       `reports its entire venue book as zero on ${dkexBook.zeroCount} of the ${dkexBook.dates} dates in its daily file, and on the days it does report one the level is small against every venue drawn here: ${dkexBook.latest} contracts at the latest date against Kalshi's ${kalshiOiNow}, and never more than ${dkexBook.peak} in its whole history. What it publishes is overnight carry on a handful of markets rather than the venue's standing book`],
+  ["Underdog Exchange",          `does publish a real end-of-day book — ${underdogBook.latest} contracts at the latest date, peaking at ${underdogBook.peak} on ${underdogBook.peakDate} — but it reaches this site only through Underdog's own daily file: the open_interest column of competitor_daily.csv, which is the column this chart reads, is empty on all ${underdogBook.dates} of its rows, so there is no Underdog series here to draw. Its own file also reports zero across every market row on ${underdogBook.zeroCount} of those dates, none later than ${underdogBook.lastZero} against a file that opens ${underdogBook.firstDate}, one of them carrying ${underdogBook.zeroMaxVol} contracts of volume. The book it does publish is charted on Underdog's own page instead`],
+  ["ProphetX",                   "publishes an open-interest column only inside its daily bulletin, and the bulletin is the one ProphetX file this site deliberately does not read: it stamps a single aggregate value across thousands of multi-event rows and lists every contract at least twice, so its volume reconciles with the trade tape on just 2 of its 59 sessions. Its volume here comes from the tape instead, and the tape carries no open interest. An open-interest figure drawn from a file that wrong would be worse than none"]
 ]);
 
 const oiRowsOf = p => p.name === "Kalshi"
   ? kalshiOiSeries.map(d => ({date: d.date, openInterest: d.open_interest}))
   : p.data.map(d => ({date: d.date, openInterest: d.openInterest}));
+
+// A book that is real but only days old cannot carry a LEVEL comparison or a 7-day turnover
+// ratio, and letting it through would put a line on both charts that is mostly noise --
+// while dropping it silently would read as "this venue publishes nothing", which is false.
+// So the cut is MEASURED and it lets a venue in by itself once its own history is long
+// enough: nothing is hardcoded by name here. Novig is the only venue it currently catches --
+// it publishes an end-of-day book from 2026-08-04, ten days of it, and that book swings from
+// 1,070,327 contracts on 08-09 to 9,955,745 on 08-10 (+830%) against a steady ~19M contracts
+// of daily volume. Ten days yields three points on a 7-day smoother. Every other venue that
+// publishes a book at all has 84 days or more, so this threshold moves none of them.
+const OI_MIN_DAYS = 21;
+const OI_SHORT = new Map(platforms
+  .filter(p => !OI_ABSENT.has(p.name))
+  .map(p => [p.name, oiRowsOf(p).filter(d => d.openInterest > 0).length])
+  .filter(([, n]) => n > 0 && n < OI_MIN_DAYS));
+
+// ONE reason string, shared by the "Not shown" note under the open-interest chart and the
+// one under the turnover chart, so the two can never give a reader different explanations
+// for the same absent venue.
+const oiAbsentReason = (name, fallback) => OI_ABSENT.get(name)
+  ?? (OI_SHORT.has(name)
+    ? `publishes an end-of-day book, but only ${OI_SHORT.get(name)} days of it so far against the ${OI_MIN_DAYS} this chart needs before a level or a 7-day turnover ratio means anything, and it has swung more than eightfold between adjacent days inside that span. Its daily figure is on its own venue page, and it appears here automatically once the history is long enough`
+    : fallback);
 
 // Rows whose snapshot is missing are KEPT, carrying null, so the line BREAKS at the
 // gap. Filtering them is the bug: an `open_interest > 0` filter deletes the row and
@@ -733,7 +914,7 @@ const oiRowsOf = p => p.name === "Kalshi"
 // has no daily market report for 2026-06-15 or 2026-06-18 -- 337.8M contracts traded
 // between those two days -- and they have to read as holes, not as a dip to zero.
 const oiPlatforms = platforms
-  .filter(p => !OI_ABSENT.has(p.name))
+  .filter(p => !OI_ABSENT.has(p.name) && !OI_SHORT.has(p.name))
   .map(p => ({name: p.name, color: p.color, rows: oiRowsOf(p)}))
   .filter(p => p.rows.some(d => d.openInterest > 0));
 
@@ -757,18 +938,47 @@ const hasOi = oiPlatforms.some(p => p.name === "Kalshi") && oiCompetitors.length
 //
 // It is a SETTLEMENT, not a change in how open interest is reported, and the caption
 // says so. Measured from kalshi_oi_daily.csv itself: it is only the SIXTH largest
-// single-day fall in the 490 days of that series, and five larger ones -- -76.4% on
-// 2025-05-09, -55.3% on 2025-06-22, -46.1% on 2025-12-15, -45.3% on 2025-12-12 and
+// single-day fall in the 499 days that series charts, and five larger ones -- -76.4% on
+// 2025-05-09, -55.3% on 2025-06-22, -46.0% on 2025-12-15, -45.3% on 2025-12-12 and
 // -43.5% on 2025-04-07 -- predate it by up to fifteen months, so no single July 2026
-// methodology change can produce the shape. 20 of those 490 days fall by 20% or more,
-// and the median Sunday falls 8.15%, because event books settle on a weekly sports
-// rhythm. Across this particular boundary the number of markets in the source file GREW
+// methodology change can produce the shape. 20 of the 498 day-over-day moves fall by 20%
+// or more, and the median Sunday falls 8.02%, because event books settle on a weekly
+// sports rhythm. Those last three are re-measured live in kalshiOiMoves below and the
+// caption reads them from there; the figures in this paragraph are the 2026-08-14
+// readings, kept as the worked example rather than as the source of truth. The previous
+// version of this comment said 490 days, -46.1% and 8.15%, all three of which had drifted. Across this particular boundary the number of markets in the source file GREW
 // (5,204,715 -> 5,427,588) while the number holding open positions roughly halved
 // (90,574 -> 47,584): markets settled, the file did not change shape.
 const KALSHI_OI_BREAK = {
   date: new Date("2026-07-19T00:00:00Z"),
   label: "-42.8%: large event books settle"
 };
+
+// How ORDINARY a 20%+ fall is on this series is the caption's answer to "is the feed
+// broken", and every part of that answer moves as the file grows: the denominator gains a
+// day each morning and the 2026-07-19 step can be overtaken by a later one. Measured here
+// rather than typed -- the typed version had drifted to "20 of 490 days" and a median
+// Sunday of 8.2% against a true 498 and 8.0%. Steps are taken over the series AS CHARTED,
+// which drops 2025-04-01 (see kalshiOiRows), so the step count is one below the days drawn.
+const kalshiOiMoves = (() => {
+  const s = kalshiOiSeries
+    .filter(d => Number.isFinite(d.open_interest) && d.open_interest > 0)
+    .slice().sort((a, b) => a.date - b.date);
+  const steps = [];
+  for (let i = 1; i < s.length; i++)
+    steps.push({date: s[i].date,
+                pct: (s[i].open_interest - s[i - 1].open_interest) / s[i - 1].open_interest});
+  const sundays = steps.filter(d => d.date.getUTCDay() === 0).map(d => d.pct).sort(d3.ascending);
+  const ranked  = steps.slice().sort((a, b) => a.pct - b.pct);
+  const place   = ranked.findIndex(d => +d.date === +KALSHI_OI_BREAK.date) + 1;
+  return {
+    steps:    steps.length,
+    bigDrops: steps.filter(d => d.pct <= -0.20).length,
+    medianSundayPct: sundays.length
+      ? Math.abs(100 * d3.quantile(sundays, 0.5)).toFixed(1) : "\u2014",
+    breakRank: place > 0 ? rankWord(place) : "\u2014"
+  };
+})();
 ```
 
 ```js
@@ -886,7 +1096,7 @@ const dr_oi = view(makeDateBrush(new Date("2025-04-01")));
     const notShown = platforms.map(p => p.name).filter(n => !names.includes(n));
     if (notShown.length) {
       display(html`<p class="chart-note"><strong>Not shown:</strong>
-        ${notShown.map(n => html`<span>${n} — ${OI_ABSENT.get(n) ?? "no open-interest figure has reached the pipeline for this venue yet"}. </span>`)}
+        ${notShown.map(n => html`<span>${n} — ${oiAbsentReason(n, "no open-interest figure has reached the pipeline for this venue yet")}. </span>`)}
         Absent from this chart means unmeasured or unpublished. It does not mean zero.</p>`);
     }
   }
@@ -919,7 +1129,7 @@ const oiScale = view(Inputs.radio(["Log", "Linear"], {value: "Log", label: "Scal
 
 </div>
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Contracts still open at the close of each day, summed across every market at the venue. <strong>Log scale by default</strong> — on a linear axis Kalshi fills the frame and the other three venues sit inside the bottom tenth of it, and each venue's own history spans six or seven orders of magnitude from launch to peak. The default window covers 8.2 decades, so today's four levels use only the top quarter of the axis; <strong>brush into the last few weeks</strong> and the axis narrows to two and a half decades, which is the view for comparing where the venues stand now. <strong>Kalshi's line steps down 42.8% on 2026-07-19</strong>, from 1.21B to 689M contracts, and stays about a third lower: large event books settled together. It is annotated because a fall that size reads as a broken feed, but it is only the sixth largest single-day fall in the series and five larger ones stretch back to May 2025, so it is the weekly settlement rhythm at its most extreme rather than a change in what is being counted — 20 of 490 days fall by 20% or more, and the median Sunday falls 8.2%. <strong>Four venues are missing and none of them is at zero.</strong> Crypto.com/Nadex and CME publish no open interest at all. DKeX reports it as zero on 78% of its market rows (12,198 of 15,642) and on 15 of its 57 days, and its latest book is 33,100 contracts against Kalshi's 760,650,224, so what it publishes is overnight carry on a handful of markets rather than a venue book. Underdog Exchange reports zero open interest across every market row on four of its sixteen dates, including one carrying 911,855 contracts of volume; the field is returned non-null on 100% of rows on every date, so those are reported zeros rather than a missing feed, but whatever it measures is not an end-of-day venue book comparable to the others here. Polymarket US has no daily market report for 2026-06-15 or 2026-06-18 and those two days are drawn as gaps. Kalshi's snapshot is written for the previous day at about 04:00 ET, so this chart always ends one day behind the volume charts above. ForecastEx counts matched pairs, one contract per side, which is the same unit as everyone else here.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Contracts still open at the close of each day, summed across every market at the venue. <strong>Log scale by default</strong> — on a linear axis Kalshi fills the frame and the other three venues sit inside the bottom tenth of it, and each venue's own history spans six or seven orders of magnitude from launch to peak. The default window covers 8.2 decades, so today's four levels use only the top quarter of the axis; <strong>brush into the last few weeks</strong> and the axis narrows to two and a half decades, which is the view for comparing where the venues stand now. <strong>Kalshi's line steps down 42.8% on 2026-07-19</strong>, from 1.21B to 689M contracts, and stays about a third lower: large event books settled together. It is annotated because a fall that size reads as a broken feed, but it is only the ${kalshiOiMoves.breakRank} single-day fall in the series and a larger one, -76.4% on 2025-05-09, predates it by more than a year, so it is the weekly settlement rhythm at its most extreme rather than a change in what is being counted — ${kalshiOiMoves.bigDrops} of ${kalshiOiMoves.steps} day-over-day moves are falls of 20% or more, and the median Sunday falls ${kalshiOiMoves.medianSundayPct}%. <strong>Six venues are missing and none of them is at zero.</strong> Crypto.com/Nadex and CME publish no open interest at all. ProphetX publishes one only inside the daily bulletin this site deliberately does not read — the file whose volume reconciles with its trade tape on 2 of 59 sessions — so no ProphetX book is drawn. Novig does publish a real end-of-day book, but only ten days of it so far (2026-08-04 onward), and it swings from 1,070,327 contracts to 9,955,745 between 08-09 and 08-10; ten days yields three points on the 7-day turnover smoother below, so it is held back until its history reaches three weeks, at which point it appears on its own with no edit here. DKeX reports its whole venue book as zero on ${dkexBook.zeroCount} of the ${dkexBook.dates} dates in its file, and everywhere else the level is small against every venue drawn here — ${dkexBook.latest} contracts at the latest date against Kalshi's ${kalshiOiNow}, and never more than ${dkexBook.peak} in its whole history — so what it publishes is overnight carry on a handful of markets rather than a venue book. Underdog Exchange does publish a real end-of-day book — ${underdogBook.latest} contracts at the latest date, peaking at ${underdogBook.peak} on ${underdogBook.peakDate} — but it reaches this site only through Underdog's own daily file: the open_interest column of competitor_daily.csv, which is what this chart reads, is empty on all ${underdogBook.dates} of its rows, so there is no series here to draw. Its own file also reports zero across every market row on ${underdogBook.zeroCount} of those dates, none later than ${underdogBook.lastZero} against a file that opens ${underdogBook.firstDate}, one of them carrying ${underdogBook.zeroMaxVol} contracts of volume. The book it does publish is charted on Underdog's own page. Polymarket US has no daily market report for 2026-06-15 or 2026-06-18 and those two days are drawn as gaps. Kalshi's snapshot is written for the previous day at about 04:00 ET, so this chart always ends one day behind the volume charts above. ForecastEx counts matched pairs, one contract per side, which is the same unit as everyone else here.</p>
 
 ## Turnover
 
@@ -1080,7 +1290,7 @@ const dr_turn = view(makeDateBrush(new Date("2026-06-15")));
       const missing = platforms.map(p => p.name).filter(n => !names.includes(n));
       if (missing.length) {
         display(html`<p class="chart-note"><strong>Not shown:</strong>
-          ${missing.map(n => html`<span>${n} — ${OI_ABSENT.get(n) ?? "no open-interest denominator for this venue yet"}. </span>`)}
+          ${missing.map(n => html`<span>${n} — ${oiAbsentReason(n, "no open-interest denominator for this venue yet")}. </span>`)}
           A venue with no open interest cannot have a turnover, and a venue whose open
           interest is near zero would be dividing by almost nothing. Absent means
           unmeasured.</p>`);
@@ -1171,4 +1381,4 @@ display(marketLeaderboard({
 }));
 ```
 
-<p class="chart-note">Two rows near the top are pools rather than markets and are labelled as such rather than dropped. Crypto.com/Nadex publishes <code>COMBOS</code> as a single line covering every parlay leg it books — 1.09bn contracts, about a third of its ranked volume — so it sorts first on that venue and is not comparable to a single market. Underdog Exchange's parlay tickets go the other way and are excluded from its file entirely: each is a one-off basket keyed by a 19-digit hash carrying no leg information, so it can be neither ranked nor searched. That is 8.45% of Underdog's contracts.</p>
+<p class="chart-note">Two rows near the top are pools rather than markets and are labelled as such rather than dropped. Crypto.com/Nadex publishes <code>COMBOS</code> as a single line covering every parlay leg it books — 1.09bn contracts, about a third of its ranked volume — so it sorts first on that venue and is not comparable to a single market. Underdog Exchange's parlay tickets go the other way and are excluded from its file entirely: each is a one-off basket keyed by a 19-digit hash carrying no leg information, so it can be neither ranked nor searched. That is 8.45% of Underdog's contracts. <strong>ProphetX and Novig are not in this table yet, and that is a gap in this table rather than in the venues:</strong> both publish a per-market file and both are drawn on every volume chart above, but the shared table component this page and the venue pages share carries no venue definition for either, and adding one is outside this page. They are named here rather than left silently missing.</p>

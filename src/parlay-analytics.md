@@ -93,7 +93,12 @@ const he = heRaw.map(d => ({
   house_edge: -d.pnl_per_100,        // positive = cost to the bettor
   win_rate: d.win_rate_pct,
   n_parlays: d.n_parlays,
-  total_vol: d.total_vol
+  // total_vol is round(sum(taker_contracts),0) -- a CONTRACT COUNT, not dollars.
+  // Across this file that is 43.2bn contracts against $3.05bn actually staked (14.1x).
+  // taker_stake is the dollar column; never format total_vol with a $.
+  total_vol: d.total_vol,
+  taker_stake: d.taker_stake,
+  taker_pnl: d.taker_pnl
 })).sort((a,b) => a.legsN - b.legsN);
 ```
 
@@ -112,7 +117,7 @@ Plot.plot({
     Plot.line(he, {x: "legsLabel", y: "house_edge", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.dot(he, {x: "legsLabel", y: "house_edge", fill: "kind", r: 4}),
     Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "house_edge", stroke: "kind",
-      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})`})),
+      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtCount(d.total_vol)} contracts\nTaker stakes: ${fmtUSD(d.taker_stake)}`})),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 })
@@ -186,7 +191,7 @@ const volDay = (() => {
 
 ## The rise of multi-leg betting
 
-_Parlay volume — from a standing start in late 2025 to billions per month. The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
+_Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. These are contract counts, not dollars: a parlay contract typically sells for a few cents, so the money staked is far smaller (the house-edge chart above shows both side by side). The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
 
 ```js
 const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View"}));
@@ -198,13 +203,13 @@ display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 72,
   x: {type: "utc", label: null},
-  y: {label: riseDaily ? "Daily parlay volume" : "Monthly parlay volume", grid: true, tickFormat: d => "$" + (d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")},
+  y: {label: riseDaily ? "Daily parlay volume (contracts)" : "Monthly parlay volume (contracts)", grid: true, tickFormat: d => d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M"},
   marks: [
     riseDaily
       ? Plot.rectY(volDay, {x: "date", interval: d3.utcDay, y: "total_vol", fill: "#f4a736",
-          tip: true, title: d => `${d.day}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})\nPending classification: ${pct1(d.pct_pending)}`})
+          tip: true, title: d => `${d.day}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nPending classification: ${pct1(d.pct_pending)}`})
       : Plot.rectY(tline, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
-          tip: true, title: d => `${d.month}\nVolume: ${fmtUSD(d.total_vol)} ($${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
+          tip: true, title: d => `${d.month}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
     Plot.ruleY([0])
   ]
 }))
@@ -359,13 +364,15 @@ classification is what determines the pricing math.
 
 ## How much sports dominates parlays
 
-<p class="section-intro">Almost every parlay dollar is a pure-sports parlay. Each month's bar is split by mix — the green is all-sports, and the thin slivers on top are cross-category "mixed" and all-non-sports parlays.</p>
+<p class="section-intro">Almost every parlay contract is a pure-sports parlay. Each month's bar is split by mix — the green is all-sports, and the thin slivers on top are cross-category "mixed" and all-non-sports parlays. The bars are shares of <strong>contracts</strong>, not dollars.</p>
 
 ```js
 // All three sport-mix categories, monthly, for the 100%-stacked dominance view.
+// total_vol here is round(sum(contracts_traded),0) over taker-yes trades -- a CONTRACT
+// COUNT (44.75bn), not dollars. taker_stake is the dollar column ($3.29bn), 13.6x smaller.
 const mixAll = mixRaw
   .map(d => ({date: d3.utcParse("%Y-%m")(monthStr(d.month)), month: monthStr(d.month),
-              sportmix: String(d.sportmix), total_vol: +d.total_vol}))
+              sportmix: String(d.sportmix), total_vol: +d.total_vol, taker_stake: +d.taker_stake}))
   .filter(d => d.date).sort((a, b) => a.date - b.date);
 const SHARE_DOMAIN = ["all-sports", "mixed", "all-nonsports"];
 const SHARE_COLORS = ["#1a9641", "#7048e8", "#00C2A8"];
@@ -375,6 +382,12 @@ const sportsShareAll = (() => {
   const sports = d3.sum(mixAll.filter(d => d.sportmix === "all-sports"), d => d.total_vol);
   return tot ? sports / tot * 100 : 0;
 })();
+// Same share measured on money rather than contracts -- the two answer different questions.
+const sportsShareStake = (() => {
+  const tot = d3.sum(mixAll, d => d.taker_stake);
+  const sports = d3.sum(mixAll.filter(d => d.sportmix === "all-sports"), d => d.taker_stake);
+  return tot ? sports / tot * 100 : 0;
+})();
 ```
 
 ```js
@@ -382,7 +395,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 240, marginLeft: 60,
   x: {type: "utc", label: null},
-  y: {label: "Share of monthly volume", percent: true, grid: true},
+  y: {label: "Share of monthly volume (contracts)", percent: true, grid: true},
   color: {legend: true, domain: SHARE_DOMAIN, range: SHARE_COLORS, tickFormat: shareLabel},
   marks: [
     Plot.rectY(mixAll, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix",
@@ -392,7 +405,7 @@ Plot.plot({
 })
 ```
 
-<p class="chart-note">All-sports parlays are <strong>${sportsShareAll.toFixed(1)}%</strong> of all parlay volume. The chart below zooms into the rest — the cross-category and all-non-sports sliver.</p>
+<p class="chart-note">All-sports parlays are <strong>${sportsShareAll.toFixed(1)}%</strong> of all parlay contracts, and <strong>${sportsShareStake.toFixed(1)}%</strong> of the money staked. The chart below zooms into the rest — the cross-category and all-non-sports sliver.</p>
 
 ## Mixed and non-sports parlays over time
 
@@ -406,7 +419,8 @@ const mixMonthly = mixRaw
     month: monthStr(d.month),
     sportmix: d.sportmix,
     n_parlays: +d.n_parlays,
-    total_vol: +d.total_vol
+    total_vol: +d.total_vol,      // contracts
+    taker_stake: +d.taker_stake   // dollars
   }))
   .sort((a, b) => a.date - b.date);
 
@@ -417,6 +431,7 @@ const mixTipData = (() => {
     if (!m.has(k)) m.set(k, {date: r.date, month: r.month});
     m.get(k)[r.sportmix] = r.total_vol;
     m.get(k)[r.sportmix + "_n"] = r.n_parlays;
+    m.get(k)[r.sportmix + "_s"] = r.taker_stake;
   }
   return [...m.values()].sort((a, b) => +a.date - +b.date);
 })();
@@ -430,7 +445,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 280, marginLeft: 80,
   x: {type: "utc", label: null},
-  y: {label: "Monthly parlay volume", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
+  y: {label: "Monthly parlay volume (contracts)", grid: true, tickFormat: d => d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k"},
   color: {legend: true, domain: MIX_DOMAIN, range: MIX_COLORS, tickFormat: mixLabel},
   marks: [
     Plot.rectY(mixMonthly, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix", order: MIX_DOMAIN}),
@@ -439,7 +454,7 @@ Plot.plot({
       x: "date",
       title: d => [
         d.month,
-        ...MIX_DOMAIN.map(k => d[k] > 0 ? `${mixLabel(k)}: ${fmtUSD(d[k])} (${d[k+"_n"].toLocaleString()} parlays)` : null).filter(Boolean)
+        ...MIX_DOMAIN.map(k => d[k] > 0 ? `${mixLabel(k)}: ${fmtCount(d[k])} contracts, ${fmtUSD(d[k+"_s"])} staked (${d[k+"_n"].toLocaleString()} parlays)` : null).filter(Boolean)
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -463,7 +478,7 @@ const games = gamesRaw
 
 ## The games that drive parlay money
 
-_Top 20 underlying games by parlay volume touching them. A parlay's volume is counted for every distinct game it includes, so totals are non-exclusive (a measure of how "parlayed" each game is). Raw game keys shown for non-dated/futures markets._
+_Top 20 underlying games by parlay volume touching them, measured in **contracts** (taker-yes side) — this source carries no dollar column, so no stake figure is shown. A parlay's volume is counted for every distinct game it includes, so totals are non-exclusive (a measure of how "parlayed" each game is). Raw game keys shown for non-dated/futures markets._
 
 ```js
 display(
@@ -480,11 +495,11 @@ display(
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 560, marginLeft: 150,
-  x: {label: "Parlay volume touching game", grid: true, tickFormat: d => "$" + (d>=1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
+  x: {label: "Parlay volume touching game (contracts)", grid: true, tickFormat: d => d>=1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k"},
   y: {label: null, domain: games.map(d=>d.label)},
   marks: [
     Plot.barX(games, {x: "parlay_vol", y: "label", fill: "#3b82a0",
-      tip: true, title: d => `${d.label}\n(${d.game_key})\nParlay volume: ${fmtUSD(d.parlay_vol)} ($${d.parlay_vol.toLocaleString()})\nParlays touching: ${d.n_parlays.toLocaleString()}`}),
+      tip: true, title: d => `${d.label}\n(${d.game_key})\nParlay volume: ${fmtCount(d.parlay_vol)} contracts (${d.parlay_vol.toLocaleString()})\nParlays touching: ${d.n_parlays.toLocaleString()}`}),
     Plot.ruleX([0])
   ]
 })
@@ -492,7 +507,7 @@ Plot.plot({
 
 ## The most popular parlays
 
-_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. The colored chip is the **audited leg-level correlation** (same classifier as the charts above) — not Kalshi's product family. **Volume** is total contracts traded on the ticket, both sides — at Kalshi's \$1-per-contract convention the dollar figure is the same number. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
+_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. The colored chip is the **audited leg-level correlation** (same classifier as the charts above) — not Kalshi's product family. **Volume** is total contracts traded on the ticket, both sides — a contract count, not dollars. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
 
 ```js
 const popDmin = d3.min(popDailyRaw, d => d.date);
@@ -551,7 +566,7 @@ html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin
     <th style="padding:5px 6px;">Parlay</th>
     <th style="padding:5px 6px;text-align:right;width:46px;">Legs</th>
     <th style="padding:5px 6px;text-align:right;width:66px;">Trades</th>
-    <th style="padding:5px 6px;text-align:right;width:118px;">Volume</th>
+    <th style="padding:5px 6px;text-align:right;width:118px;">Volume (contracts)</th>
     <th style="padding:5px 6px;text-align:right;width:88px;">Taker stakes</th>
     <th style="padding:5px 6px;text-align:right;width:74px;">Avg price</th>
     <th style="padding:5px 6px;width:72px;">Result</th>
@@ -561,7 +576,7 @@ html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin
     <td style="padding:5px 6px;" title=${d.label}>${popKindChip(d)}${popLabel(d)}</td>
     <td style="padding:5px 6px;text-align:right;">${popLegs(d)}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.trades.toLocaleString()}</td>
-    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.ct > 0 ? html`${d.ct.toLocaleString()} <span style="color:var(--theme-foreground-muted,#888);">($${fmtCount(d.ct)})</span>` : "—"}</td>
+    <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${d.ct > 0 ? d.ct.toLocaleString() : "—"}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${fmtUSD(d.yn)}</td>
     <td style="padding:5px 6px;text-align:right;font-variant-numeric:tabular-nums;">${popFmtPrice(d.avg_c)}</td>
     <td style="padding:5px 6px;">${popResult(d.result)}</td>
@@ -579,7 +594,7 @@ const misp = mispRaw.map(d => ({
   actual:  +d.actual_pct,
   gap:     +d.gap,
   n_parlays: +d.n_parlays,
-  total_vol: +d.total_vol
+  total_vol: +d.total_vol   // contracts (sum of taker_contracts), NOT dollars -- currently unrendered
 })).sort((a,b) => a.bucketOrder - b.bucketOrder);
 const bucketDomain = [...new Set(misp.map(d => d.bucket))];
 ```

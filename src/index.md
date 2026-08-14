@@ -5,7 +5,7 @@ title: Overview
 <div class="page-hero">
   <div class="page-eyebrow">Market Structure</div>
   <h1>US Prediction Market Dashboard</h1>
-  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, Underdog Exchange, Rothera, and Crypto.com/Nadex remain a small fraction of its scale.</p>
+  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets, plus the peer-to-peer sports exchanges that publish a comparable public tape. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, Underdog Exchange, Novig, ProphetX, Rothera, and Crypto.com/Nadex remain a small fraction of its scale. This chart carries nine venues — exactly the nine behind the market-share chart on the <a href="./competitors">platform comparison page</a>, so those two cannot rank the field differently. That page's volume chart adds a tenth, CME (where FanDuel and DraftKings clear), which is hand-collected from daily bulletins and too sparse to line up against a daily series; on the days CME does report it out-trades several of the venues drawn here, so that one chart can order the middle of the field differently from this one.</p>
 </div>
 
 ```js
@@ -15,6 +15,15 @@ display(DataAttachment.marker);
 const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
 const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
+// ProphetX has NO rows in competitor_daily.csv, so it comes from its own daily file. Its
+// trading session runs 16:30->16:30 ET, so a calendar date spans two session files and the
+// NEWEST date is ALWAYS partial -- 2026-08-14 reads 2,334,935 contracts against a
+// 4,553,549/day mean across its 59 complete days. Drawing it would put a ~50% collapse on
+// the end of the line every single day, and would drop a half-day figure into the table
+// below as though it were a finished one. The file carries its own `complete` flag; trust
+// it, and fall back to dropping the newest date if that column ever disappears.
+// The competitors page applies the identical guard -- keep the two in sync.
+const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -24,13 +33,14 @@ display(freshnessPanel({
   items: [
     {label: "Kalshi aggregates", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Local pipeline can refresh within minutes when the collector is running"},
     {label: "Trades by hour", date: latestDate(hourly), updatedAt: fileUpdatedAt(freshness, "trades_by_hour.csv"), meta: "Refreshes on the same near-live cycle as the aggregates above"},
-    {label: "Competitor comparison", date: latestDate(competitor), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public competitor sources + Kalshi API rows", tone: "competitor"}
+    {label: "Competitor comparison", date: latestDate(competitor), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public competitor sources + Kalshi API rows", tone: "competitor"},
+    {label: "ProphetX", date: latestDate(prophetxTidy), updatedAt: fileUpdatedAt(freshness, "prophetx_daily.csv"), meta: "Its own tape file, not the competitor file. Sessions run 16:30–16:30 ET, so the newest calendar date is always partial and is dropped — this is the last COMPLETE day", tone: "competitor"}
   ],
-  note: "This static application reads the VM's latest verified immutable data generation at page load. The public generation can advance without a new GitHub Pages build."
+  note: "This static application reads the VM's latest verified immutable data generation at page load. The public generation can advance without a new GitHub Pages build. Novig rides in the competitor comparison file; ProphetX has its own."
 }));
 display(askPageLink({
-  question: "Summarize the latest platform comparison and identify what changed most recently.",
-  context: "Overview page with daily_overall.csv and competitor_daily.csv."
+  question: "Summarize the latest platform comparison across all nine venues, including ProphetX and Novig, and identify what changed most recently.",
+  context: "Overview page with daily_overall.csv, competitor_daily.csv and prophetx_daily.csv."
 }));
 ```
 
@@ -79,7 +89,8 @@ const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Volume here means contracts traded: one contract is one yes/no bet, worth $1 at settlement — so this figure is a dollar total too, just not discounted by the price each contract actually traded at. Kalshi's figures come from its own trade records; competitor lines come from public sources, including the exchange's daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026; Underdog Exchange data begins with its public CFTC reports in late June 2026 and is still extremely sparse — most days report no trades at all.</p>
+  <p>Volume here means contracts traded: one contract is one yes/no bet, worth $1 at settlement — so this figure is a dollar total too, just not discounted by the price each contract actually traded at. Kalshi's figures come from its own trade records; competitor lines come from public sources, including the exchange's daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026; Underdog Exchange data begins with its public CFTC reports on 2026-07-17. ProphetX and Novig are peer-to-peer sports exchanges rather than CFTC-designated contract markets, and both publish a full public trade tape, which is why they are counted here: leaving them out made the ranking wrong, not merely short. ProphetX begins 2026-06-16 and Novig 2026-08-04, so before those dates their lines are absent rather than at zero. <strong>Neither publishes any fee schedule</strong>, so neither carries a fee number anywhere on this site — absent means not measured, never free.</p>
+  <p>ProphetX's trading session runs 16:30 to 16:30 ET, so a calendar date spans two of its session files and its newest date is always incomplete; both this page and the <a href="./competitors">platform comparison page</a> read the <code>complete</code> flag its file carries and drop that day, which is why its row in the table below stops one day short of Kalshi's rather than showing a collapse. Novig's files are published a day in arrears and whole. Novig reports one side of each trade — its tape prints every trade twice, once as taker and once as maker — which is the same unit every other venue here reports.</p>
   <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
 </details>
 
@@ -101,10 +112,20 @@ const competitorTidy = competitor
     date: new Date(d.date),
     platform: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform,
     contracts: +d.contracts || 0,
-    fees: +d.fees || 0
+    // `+d.fees || 0` turned an EMPTY fee cell into a real 0. Novig and ProphetX publish no
+    // fee at all, so that would have recorded them as charging nothing rather than as not
+    // measured. Nothing on this page charts fees today, but the value is carried, so it has
+    // to be honest: empty stays null.
+    fees: (d.fees == null || d.fees === "") ? null : (+d.fees || 0)
   }));
 
-const allPlatforms = [...kalshiTidy, ...competitorTidy];
+const pxHasCompleteFlag = prophetxDaily.some(d => d.complete != null && d.complete !== "");
+const pxNewestDate      = d3.max(prophetxDaily, d => +d.date);
+const prophetxTidy = prophetxDaily
+  .filter(d => pxHasCompleteFlag ? +d.complete === 1 : +d.date < pxNewestDate)
+  .map(d => ({date: d.date, platform: "ProphetX", contracts: +d.contracts || 0, fees: null}));
+
+const allPlatforms = [...kalshiTidy, ...competitorTidy, ...prophetxTidy];
 ```
 
 ```js
@@ -165,9 +186,16 @@ const indexBrush = view((() => {
 {
   const [s, e] = indexBrush;
   const fmt = d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
+  // These two objects ARE the allowlist for this chart: a venue absent from pColors has no
+  // legend entry and a venue absent from byPlatform has no line, even when its rows are
+  // already sitting in competitorTidy. Novig was in the data and filtered out here, which is
+  // how this page came to rank the field differently from the competitors page. Both objects
+  // must name every venue on that page, minus CME (hand-collected and too sparse to line up
+  // against daily series). Colours follow the site-wide entity palette.
   const pColors = {
     Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
     ForecastEx: "#E53535", DKeX: "#F97316", "Underdog Exchange": "#EAB308",
+    ProphetX: "#DB2777", Novig: "#6366F1",
     Rothera: "#00C805", "Crypto.com/Nadex": "#9c27b0"
   };
 
@@ -177,6 +205,9 @@ const indexBrush = view((() => {
     ForecastEx:         competitorTidy.filter(d => d.platform === "ForecastEx"),
     DKeX:               competitorTidy.filter(d => d.platform === "DKeX"),
     "Underdog Exchange": competitorTidy.filter(d => d.platform === "Underdog Exchange"),
+    // ProphetX comes from its own file, already trimmed to complete sessions above.
+    ProphetX:           prophetxTidy,
+    Novig:              competitorTidy.filter(d => d.platform === "Novig"),
     Rothera:            competitorTidy.filter(d => d.platform === "Rothera"),
     "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
   };
@@ -235,18 +266,23 @@ const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", lab
 
 ## Recent daily volume
 
-<p class="section-intro">Exact daily volume (contracts traded) by platform for the last two weeks — for when you want the number, not the trend. The newest row (bold) is a partial, in-progress day, and the competitor sources lag 1–3 days behind Kalshi.</p>
+<p class="section-intro">Exact daily volume (contracts traded) by platform for the last two weeks — for when you want the number, not the trend. The newest row (bold) is a partial, in-progress day <em>for Kalshi</em>, and the competitor sources lag 1–3 days behind it, so a "—" in the newest row means that venue has not reported yet rather than that it did not trade. ProphetX's newest calendar day is always a partial session and is deliberately withheld, so its "—" on the last row is permanent, not a lag.</p>
 
 <div class="surface-card" style="overflow-x:auto">
 
 ```js
 display((() => {
+  // Same nine-venue set as the chart above, in the same order, for the same reason: a venue
+  // dropped from this list is not shown as "—", it is shown not at all, and the reader has
+  // no way to tell the difference.
   const platforms = [
     {key: "Kalshi", color: "#00C2A8"},
     {key: "Polymarket US", color: "#3B7DD8"},
     {key: "ForecastEx", color: "#E53535"},
     {key: "DKeX", color: "#F97316"},
     {key: "Underdog Exchange", color: "#EAB308"},
+    {key: "ProphetX", color: "#DB2777"},
+    {key: "Novig", color: "#6366F1"},
     {key: "Rothera", color: "#00C805"},
     {key: "Crypto.com/Nadex", color: "#9c27b0"}
   ];
