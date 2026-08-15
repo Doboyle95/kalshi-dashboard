@@ -270,11 +270,15 @@ function dist(venue, rows, legField, contractField) {
 // Kalshi arrives pre-bucketed. Its "unknown" band is the honest left-join miss bucket for
 // tickers not yet classified, NOT a leg count -- it is excluded from the denominator here
 // and reported separately below rather than silently folded into a bar.
-const kAug = kParlay.filter(d => d.n_legs_bucket !== "unknown");
-const kUnknown = d3.sum(kParlay.filter(d => d.n_legs_bucket === "unknown"), d => d.contracts);
+const kAug = kParlay.filter(d => String(d.n_legs_bucket) !== "unknown");
+const kUnknown = d3.sum(kParlay.filter(d => String(d.n_legs_bucket) === "unknown"), d => d.contracts);
 const kKnown = d3.sum(kAug, d => d.contracts);
 const kDist = (() => {
-  const agg = d3.rollup(kAug, v => d3.sum(v, d => d.contracts), d => d.n_legs_bucket);
+  // csv({typed:true}) coerces the bucket LABELS "2","3","4" to NUMBERS while "5-7" and
+  // "8+" stay strings, so a string-keyed lookup missed exactly the numeric buckets and
+  // drew Kalshi at zero for 2, 3 and 4 legs -- which is 34.8% of its parlay volume.
+  // Coerce the key to String on both sides.
+  const agg = d3.rollup(kAug, v => d3.sum(v, d => d.contracts), d => String(d.n_legs_bucket));
   const tot = d3.sum(agg.values());
   return BUCKETS.map(b => ({venue: "Kalshi", bucket: b, pct: tot > 0 ? 100 * (agg.get(b) ?? 0) / tot : 0, contracts: agg.get(b) ?? 0}));
 })();

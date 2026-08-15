@@ -266,8 +266,7 @@ Plot.plot({
       x: "date", y: "contracts", fill: "category", interval: "day",
       insetLeft: 1, insetRight: 1, inset: 0.5,
       tip: true,
-      title: d => [fmtDate(d.date), d.category + ": " + fmtCount(d.contracts) + " contracts"].join("
-")
+      title: d => fmtDate(d.date) + " · " + d.category + ": " + fmtCount(d.contracts) + " contracts"
     }),
     Plot.ruleY([0])
   ]
@@ -346,8 +345,7 @@ Plot.plot({
       x: "date", y: "contracts", fill: "bet_type", interval: "day",
       insetLeft: 1, insetRight: 1, inset: 0.5,
       tip: true,
-      title: d => [fmtDate(d.date), d.bet_type + ": " + fmtCount(d.contracts) + " contracts"].join("
-")
+      title: d => fmtDate(d.date) + " · " + d.bet_type + ": " + fmtCount(d.contracts) + " contracts"
     }),
     Plot.ruleY([0])
   ]
