@@ -29,13 +29,14 @@ const VENUE_COLOR = {
   "Kalshi": "#00C2A8",
   "Polymarket US": "#3B7DD8",
   "ForecastEx": "#E53535",
-  "DKeX": "#F97316"
+  "DKeX": "#F97316",
+  "ProphetX": "#DB2777"
 };
 
 // How each row was priced. This is the single most important thing to disclose, because
 // only one of these is exact and the differences are worth real cents.
 const BASIS_NOTE = {
-  exact_contract_weighted: "exact — the venue publishes a contract-weighted sum of prices paid",
+  exact_contract_weighted: "exact — every contract is priced at what was actually paid for it, contract-weighted, never at a bin midpoint",
   bin_midpoint: "approximate — priced at the 5¢ bin midpoint, because the venue publishes no contract-weighted price sum",
   venue_price_range_midpoint: "approximate — priced at the midpoint of the venue's own daily traded range"
 };
@@ -44,8 +45,16 @@ const BASIS_NOTE = {
 // twice on this dashboard, so it is carried on the row rather than inferred in a caption.
 const LEG_NOTE = {
   taker: "the aggressor who crossed the spread",
-  named: "whoever bought the leg the venue names — NOT necessarily the taker"
+  named: "whoever bought the leg the venue names — NOT necessarily the taker",
+  // ProphetX publishes no aggressor flag at all, and its prints are two-sided exchange
+  // trades, so there is no taker to name. The venue quotes one nominated side and this
+  // is that side's P&L -- a convention, not a fact about who initiated anything.
+  priced_home: "the priced side — ProphetX publishes no aggressor flag, so this is the second-named/home side by convention, and the away side's P&L is its exact mirror. NOT taker P&L"
 };
+
+// Kept beside LEG_NOTE so a new leg value cannot be rendered under an older one's name:
+// the previous ternary silently labelled anything that was not "taker" as "Named leg".
+const LEG_LABEL = {taker: "Taker", named: "Named leg", priced_home: "Priced side"};
 
 const GROUP_LABEL = {
   ALL: "All markets",
@@ -54,6 +63,13 @@ const GROUP_LABEL = {
   ALL_DEEP: "All markets",
   ALL_EX_ELECTION: "All markets (ex-election)"
 };
+
+// GROUP_LABEL is keyed by group alone, which is wrong for exactly one series: ProphetX's
+// producer emits group='ALL', but its parlays are excluded by construction, so "All
+// markets" would be a false label on the one venue whose missing half is the point.
+const SERIES_LABEL = {"ProphetX||ALL": "Single markets"};
+const seriesLabel = (venue, group) =>
+  `${venue} · ${SERIES_LABEL[`${venue}||${group}`] ?? GROUP_LABEL[group] ?? group}`;
 
 const fmtCents = d => `${d >= 0 ? "+" : "−"}${Math.abs(d * 100).toFixed(2)}¢`;
 const fmtUSD = d => {
@@ -78,7 +94,7 @@ const rolled = Array.from(
     const stake = d3.sum(rows, d => d.contracts * d.price_paid);
     return {
       venue, group,
-      label: `${venue} · ${GROUP_LABEL[group] ?? group}`,
+      label: seriesLabel(venue, group),
       leg: rows[0].leg,
       basis: rows[0].basis,
       contracts, pnl: total, stake,
@@ -104,23 +120,24 @@ const detail0 = parlayDetail[0] ?? {};
 ```
 
 <div class="instruction-line" style="border-left-color:#3B7DD8">
-<strong>Two venues price parlays, and they agree.</strong> Kalshi's parlay bettors lose <strong>${fmtCents(parlayRows.find(d => d.venue === "Kalshi")?.perContract ?? 0)}</strong> per contract; Polymarket US's lose <strong>${fmtCents(parlayRows.find(d => d.venue === "Polymarket US")?.perContract ?? 0)}</strong>. Separate venues, separate pipelines, separate settlement sources &mdash; and the same answer to within a fraction of a cent. That agreement is the strongest evidence on this page that the method is measuring what it claims to.
+<strong>Two venues’ parlays can be priced, and they agree.</strong> Kalshi's parlay bettors lose <strong>${fmtCents(parlayRows.find(d => d.venue === "Kalshi")?.perContract ?? 0)}</strong> per contract; Polymarket US's lose <strong>${fmtCents(parlayRows.find(d => d.venue === "Polymarket US")?.perContract ?? 0)}</strong>. Separate venues, separate pipelines, separate settlement sources &mdash; and the same answer to within a fraction of a cent. That agreement is the strongest evidence on this page that the method is measuring what it claims to.
 </div>
 
 <details class="surface-card compact-details">
   <summary>About this page — read before quoting any number</summary>
   <p><strong>Realised, not expected.</strong> Every figure here is what happened: contracts bought, stake paid, payout received, difference taken. That is arithmetic and needs no significance test, which is why nothing on this page is suppressed for having a small sample. It is also why no figure here may be read as an <em>edge</em> without checking how much data stands behind it. Polymarket's parlay series is the sharp case: it is <strong>${(+detail0.pct_resolved || 0).toFixed(0)}% resolved</strong> across a product that launched on 2026-08-06, with an effective sample size of <strong>${(+detail0.eff_n || 0).toFixed(1)}</strong> and a 95% interval of <strong>${(+detail0.ci_lo_pct || 0).toFixed(0)}% to ${(+detail0.ci_hi_pct || 0).toFixed(0)}%</strong> of stake. Those bettors really did lose that money. Nobody should conclude from six days what parlays cost on Polymarket in general.</p>
-  <p><strong>Whose P&amp;L.</strong> Kalshi is the only venue publishing an aggressor flag, so it is the only venue whose single-market number is <em>true taker</em> P&amp;L. DKeX, Polymarket US and ForecastEx publish one price per print against a symbol naming a leg, with no flag, so theirs is the P&amp;L of whoever bought <em>that leg</em> — labelled <code>named</code> and never called taker. <strong>Parlays are the exception:</strong> they are priced by request-for-quote, so the customer lifts a quote the venue makes and the taker is almost always the YES buyer. Polymarket's own feed carries that out exactly — <code>Strike Price</code> is <code>YES</code> on all 347 parlay rows, with no NO side listed — so its parlay series is genuinely taker P&amp;L. The producer asserts that property on every run and fails rather than mislabel it.</p>
-  <p><strong>Only one venue is priced exactly.</strong> P&amp;L is contract-weighted, so it wants a contract-weighted sum of prices paid. <strong>DKeX is the only venue that publishes one.</strong> The rest fall back to the 5&cent; bin midpoint, which is a real and measurable approximation, not a rounding detail: on Kalshi's longshot band the midpoint convention accounts for about 0.94&cent; of a 2.17&cent; reading, roughly 43% of it. Every row carries its <code>basis</code> and the table below shows it. Making all four exact needs one column added to three producers — it is a known, costed gap, not an unknown.</p>
-  <p><strong>What validates the method.</strong> For DKeX, the one venue where two independent routes are both available, the exact route gives +$201,267 and an independent payout-minus-cost check gives +$201,263 — agreement to 0.002%. Separately, Polymarket's parlay volume reconciles between its daily report and its trade tape to <strong>0 contracts of 59,472</strong>, and the two sources' volume-weighted prices agree to four decimal places.</p>
+  <p><strong>Whose P&amp;L.</strong> Kalshi is the only venue publishing an aggressor flag, so it is the only venue whose single-market number is <em>true taker</em> P&amp;L. DKeX, Polymarket US and ForecastEx publish one price per print against a symbol naming a leg, with no flag, so theirs is the P&amp;L of whoever bought <em>that leg</em> — labelled <code>named</code> and never called taker. <strong>ProphetX is a third case, and it needed a third label.</strong> Its prints are two-sided exchange trades with a willing counterparty on each side and no aggressor flag anywhere in the feed, and the single price it publishes belongs to one nominated side &mdash; the second-named, home side of the fixture. That series is labelled <code>priced_home</code>: the away side’s P&amp;L is the exact mirror of it, sign for sign, and calling either side the taker would invent a fact the venue does not record. The request-for-quote argument set out next, which makes Polymarket’s parlays genuinely taker P&amp;L, does not carry over &mdash; nobody is lifting a venue’s quote here. <strong>Parlays are the exception:</strong> they are priced by request-for-quote, so the customer lifts a quote the venue makes and the taker is almost always the YES buyer. Polymarket's own feed carries that out exactly — <code>Strike Price</code> is <code>YES</code> on all 347 parlay rows, with no NO side listed — so its parlay series is genuinely taker P&amp;L. The producer asserts that property on every run and fails rather than mislabel it.</p>
+  <p><strong>Two of five venues are priced exactly.</strong> P&amp;L is contract-weighted, so it wants a contract-weighted sum of prices paid. <strong>DKeX and ProphetX have one</strong> &mdash; DKeX publishes it, ProphetX’s is summed print by print off the raw tape &mdash; so every contract in those two series is priced at what was actually paid for it. Kalshi, ForecastEx and Polymarket US fall back to the 5&cent; bin midpoint, which is a real and measurable approximation and not a rounding detail. <strong>ProphetX is the proof of how much it can matter:</strong> scored against bin midpoints, 2 of its 10 deciles appear to clear two standard errors; scored against the price actually paid in each bin, <strong>none of them do</strong>. Publishing the midpoint version would have asserted an edge the tape does not support. Every row carries its <code>basis</code> and the table below shows it. Making the remaining three exact needs one column added to three producers — a known, costed gap, not an unknown.</p>
+  <p><strong>What validates the method.</strong> Each exactly-priced venue is aggregated a second way and the two answers are compared on every build. DKeX’s folded series and a payout-minus-cost sum over the same calibration file agree to <strong>one cent on 21,485,019 contracts</strong>; ProphetX’s two published files, built by different aggregation paths, agree to <strong>$6 on $2.28M</strong>, or 0.0003%. Those are checks on the arithmetic, not confirmation of the resolution rules the two paths share — ProphetX’s rule is checked on its own terms instead, and its producer refuses to write anything at all if settlement polarity ever flips. Separately, Polymarket's parlay volume reconciles between its daily report and its trade tape to <strong>0 contracts of 59,472</strong>, and the two sources' volume-weighted prices agree to four decimal places.</p>
   <p><strong>Kalshi's aggregate is held out of the chart.</strong> Kalshi publishes an all-markets series as well as its parlay and single-market halves; drawing all three would count the same contracts twice in one comparison. The aggregate is ${kalshiAll ? html`<strong>${fmtCents(kalshiAll.perContract)}</strong> per contract over ${fmtCount(kalshiAll.contracts)} contracts` : "not currently available"}, and is quoted here rather than plotted.</p>
-  <p><strong>Which venues are absent, and why.</strong> Underdog and Novig both run parlays — Underdog's <code>UDXCOMBO</code> is the large majority of its records — but neither publishes a settlement outcome, so no P&amp;L of any kind is constructible for them and none is guessed. DKeX lists no parlay product at all: its 19 contract types are single-leg throughout.</p>
-  <p><strong>ProphetX: derivable, not built.</strong> ProphetX has been described as a venue that records <em>that</em> a contract resolved but not <em>which side won</em>. That holds only for its <strong>parlays</strong>. On single markets the outcome is recoverable &mdash; a contract that has been delisted, whose last bulletin session falls on or after its event date, and whose terminal mark is exactly 0 or 1 &mdash; and a calibration built on that rule is now published, covering 918,445 prints and 191,575,583 contracts across 3,450 distinct fixtures. It finds <strong>no measurable bias</strong>: buyers paid 44.15&cent; on average and the priced side won 42.96% of the time, a gap that does not clear two fixture-clustered standard errors, and <strong>zero of the ten price bins</strong> clear two either once each bin is measured against the price actually paid in it rather than against its midpoint. So a ProphetX P&amp;L series is <em>derivable and simply not built</em> &mdash; a known, costed gap rather than an impossibility &mdash; and no bar is drawn and no figure quoted here, because nothing in the pipeline produces one yet. It would also arrive needing its own <code>leg</code> label: ProphetX publishes no aggressor flag, so the series would be the <strong>priced side</strong> &mdash; the second-named side of each fixture, which is the one the venue quotes &mdash; and never a taker series. Its <strong>parlays</strong> stay out of reach: not one of the 80,543 distinct parlay contracts listed in its bulletin carries a parseable event date, so the maturity test that makes the single markets safe cannot be applied to a parlay at all, and 94.92% of those that do reach a terminal mark of 0 or 1 mark to <code>1</code> &mdash; which cannot be a multi-leg win rate, so those marks are not outcomes.</p>
+  <p><strong>Which venues are absent, and why.</strong> Underdog and Novig both run parlays — Underdog's <code>UDXCOMBO</code> is the large majority of its records — but neither publishes a settlement outcome, so no P&amp;L of any kind is constructible for them and none is guessed. DKeX lists no parlay product at all: its 19 contract types are single-leg throughout. <strong>ProphetX runs parlays too, and they are absent for a third reason:</strong> not one of the 80,543 distinct <code>MULTI-EVENT-</code> contracts in its bulletin carries a parseable event date, so the maturity test that makes its single markets safe cannot be applied to a parlay at all &mdash; <strong>31,899,248 contracts left out, not estimated</strong>. Their terminal marks are no help either: of the 79,279 ProphetX parlays that settle to exactly 0 or 1, <strong>94.92% mark to 1</strong>, which cannot be a multi-leg win rate, so those marks are not outcomes.</p>
+  <p><strong>ProphetX: built, and no measurable edge.</strong> ProphetX has been described as a venue that records <em>that</em> a contract resolved but not <em>which side won</em>. That holds only for its <strong>parlays</strong>. On single markets the outcome is recoverable &mdash; a contract that has been delisted, whose last bulletin session falls on or after its event date, and whose terminal mark is exactly 0 or 1 &mdash; and a P&amp;L series built on that rule is now <strong>on the chart above</strong>, covering 918,445 prints and 191,575,583 contracts across 3,450 distinct fixtures over the 60 sessions from 2026-06-16 to 2026-08-14. <strong>It finds no measurable edge.</strong> The priced side paid 44.15&cent; on average and won 42.96% of the time, and that gap stands at <strong>t&nbsp;=&nbsp;1.50</strong> against a fixture-clustered standard error of 0.79&cent; &mdash; it does not clear two &mdash; while <strong>zero of the 20 price bins</strong> clear two either, once each bin is measured against the price actually paid in it rather than against its midpoint. The money did change hands, and that part is arithmetic; what is missing is any way to tell ProphetX’s quoted side apart from a fair one. Its bar is drawn hollow for exactly that reason, and no per-contract figure on this page should be quoted as a ProphetX edge or ranked against the venues whose figures are measurable.</p>
+  <p><strong>What ProphetX still cannot show.</strong> The series covers <strong>80.13% of ProphetX’s single-market contracts</strong> (191,575,583 of 239,095,073). The other 19.87% sits behind 194,030 prints that could not be joined to an outcome &mdash; 193,271 on contracts still unresolved at the end of the window, 657 on contracts never listed in the bulletin, 102 priced off-scale &mdash; and is excluded, not imputed. Its <strong>parlays are absent entirely</strong>: 31,899,248 contracts with no derivable outcome, for the reason set out above. So ProphetX appears on this page for <strong>single markets only</strong>, and its bar is labelled that way rather than &ldquo;all markets&rdquo;.</p>
 </details>
 
 ## What a contract costs its buyer
 
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX’s bar points right, and must not be read as traders profiting there</strong> — <strong>zero of its 30 price bins</strong> clear two event-clustered standard errors, and its aggregate miss is +0.11¢ against a ±3.80¢ interval. It is drawn hollow for that reason: the money really did change hands, but the edge is not distinguishable from zero. It also moved 24% between two builds hours apart, which a real edge on 41 million contracts would not do.</div>
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>Two bars are hollow and dashed, and neither is a finding.</strong> <strong>DKeX’s points right</strong>, but zero of its 20 price bins clear two event-clustered standard errors across 21,485,019 contracts, so it is not evidence of traders profiting there. <strong>ProphetX’s points left</strong>, but its whole-sample test reaches t&nbsp;=&nbsp;1.50 where two standard errors is the bar, and zero of its 20 bins clear either, so it is not evidence of a house edge. In both cases the money really did change hands; it is the <em>edge</em> that is indistinguishable from zero. Solid bars are venues that publish no comparable clustered standard error at all &mdash; unknown, which is not the same as refuted.</div>
 
 ```js
 Plot.plot({
@@ -141,7 +158,9 @@ Plot.plot({
       strokeDasharray: "3,2", rx1: 4, insetTop: 2, insetBottom: 2,
       title: d => `${d.label}
 ${fmtCents(d.perContract)} per contract - NOT measurable
+${fmtUSD(d.pnl)} over ${fmtCount(d.contracts)} contracts
 ${d.binsClearing} of ${d.binsTested} bins clear 2 clustered SE
+${LEG_LABEL[d.leg] ?? d.leg} · ${BASIS_NOTE[d.basis]?.split(" — ")[0] ?? d.basis}
 realised, but not an edge`,
       tip: true
     }),
@@ -149,7 +168,7 @@ realised, but not an edge`,
       y: "label", x: "perContract", fill: "venue",
       // 4px rounded data-end anchored to the zero baseline; a 2px gap to the surface.
       rx1: 4, insetTop: 2, insetBottom: 2,
-      title: d => `${d.label}\n${fmtCents(d.perContract)} per contract\n${fmtUSD(d.pnl)} total\n${fmtCount(d.contracts)} contracts\n${d.leg === "taker" ? "Taker" : "Named leg"} · ${BASIS_NOTE[d.basis]?.split(" — ")[0] ?? d.basis}`,
+      title: d => `${d.label}\n${fmtCents(d.perContract)} per contract\n${fmtUSD(d.pnl)} total\n${fmtCount(d.contracts)} contracts\n${LEG_LABEL[d.leg] ?? d.leg} · ${BASIS_NOTE[d.basis]?.split(" — ")[0] ?? d.basis}`,
       tip: true
     }),
     // Direct-label every bar: there are few enough that a value axis alone would be
@@ -174,7 +193,7 @@ realised, but not an edge`,
 const MIN_BIN_CONTRACTS = 1000;
 const byBin = pnl
   .filter(d => d.contracts >= MIN_BIN_CONTRACTS)
-  .map(d => ({...d, label: `${d.venue} · ${GROUP_LABEL[d.group] ?? d.group}`}));
+  .map(d => ({...d, label: seriesLabel(d.venue, d.group)}));
 const dropped = pnl.length - byBin.length;
 ```
 
@@ -225,7 +244,7 @@ Inputs.table(rolled, {
     pnl: d => fmtUSD(d),
     pctOfStake: d => d == null ? "—" : `${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}%`,
     contracts: d => fmtCount(d),
-    leg: d => html`<span title=${LEG_NOTE[d] ?? ""}>${d === "taker" ? "Taker" : "Named leg"}</span>`,
+    leg: d => html`<span title=${LEG_NOTE[d] ?? ""}>${LEG_LABEL[d] ?? d}</span>`,
     basis: d => html`<span title=${BASIS_NOTE[d] ?? ""}>${d === "exact_contract_weighted" ? "Exact" : "Approximate"}</span>`
   },
   align: {perContract: "right", pnl: "right", pctOfStake: "right", contracts: "right"},
@@ -243,7 +262,11 @@ Plot.plot({
   width,
   height: 240,
   marginLeft: 64,
-  x: {label: null, type: "band", tickFormat: d => d.slice(5)},
+  // csv({typed: true}) parses the ISO date column into a Date, so d is a Date object and
+  // d.slice does not exist -- this threw "d.slice is not a function" and killed the chart
+  // at runtime while the build passed, because a build never executes the page.
+  x: {label: null, type: "band",
+      tickFormat: d => d instanceof Date ? d.toISOString().slice(5, 10) : String(d).slice(5)},
   y: {label: "Contracts traded", grid: true, tickFormat: fmtCount},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
