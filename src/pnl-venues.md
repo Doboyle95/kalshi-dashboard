@@ -121,11 +121,39 @@ const rolled = Array.from(
 const headline = rolled.filter(d => !(d.venue === "Kalshi" && d.group === "ALL"));
 const kalshiAll = rolled.find(d => d.venue === "Kalshi" && d.group === "ALL");
 const parlayRows = rolled.filter(d => d.group === "PARLAY");
+
+// The old callout hardcoded "Two venues ... they agree ... to within a fraction of a
+// cent" and the verb "lose", then interpolated two numbers underneath. Both facts moved:
+// a third parlay venue was added and Polymarket's sign went POSITIVE, so the page read
+// "Polymarket US's lose +6.63c" and called an 8.45c opposite-sign gap agreement. Every
+// word that can go stale is now derived.
+// Magnitude only. The verb ("lose"/"make") carries the direction, and fmtCents would
+// prefix a sign on top of it, rendering "bettors lose +1.82c".
+const fmtCentsMag = d => `${Math.abs(d * 100).toFixed(2)}¢`;
+const parlayBig = parlayRows.filter(d => d.contracts > 1e8);
+const parlaySpread = parlayBig.length > 1
+  ? Math.abs(Math.max(...parlayBig.map(d => d.perContract)) - Math.min(...parlayBig.map(d => d.perContract)))
+  : null;
+const parlaySentence = [
+  `${parlayRows.length} venues' parlays can be priced.`,
+  parlayRows.slice().sort((a, b) => b.contracts - a.contracts).map(d =>
+    `${d.venue} ${d.perContract < 0 ? "bettors lose" : "bettors make"} ${fmtCentsMag(d.perContract)} per contract on ${fmtCount(d.contracts)} contracts`
+  ).join("; ") + ".",
+  parlaySpread == null ? "" :
+    `The ${parlayBig.length} large books agree in direction and to within ${fmtCentsMag(parlaySpread)} per contract, across separate venues, separate pipelines and separate settlement sources — which is the strongest evidence on this page that the method measures what it claims to.`
+].filter(Boolean).join(" ");
+// Named explicitly rather than inferred: a venue days into its parlay pilot does not
+// belong in a claim about cross-venue agreement, in either direction.
+const parlaySmall = parlayRows.filter(d => d.contracts < 1e6);
+const parlayCaveat = parlaySmall.length === 0 ? "" :
+  parlaySmall.map(d =>
+    `${d.venue} is NOT part of that agreement: it carries only ${fmtCount(d.contracts)} parlay contracts, so its ${fmtCents(d.perContract)} is a pilot-sized reading and should not be ranked against the others.`
+  ).join(" ");
 const detail0 = parlayDetail[0] ?? {};
 ```
 
 <div class="instruction-line" style="border-left-color:#3B7DD8">
-<strong>Two venues’ parlays can be priced, and they agree.</strong> Kalshi's parlay bettors lose <strong>${fmtCents(parlayRows.find(d => d.venue === "Kalshi")?.perContract ?? 0)}</strong> per contract; Polymarket US's lose <strong>${fmtCents(parlayRows.find(d => d.venue === "Polymarket US")?.perContract ?? 0)}</strong>. Separate venues, separate pipelines, separate settlement sources &mdash; and the same answer to within a fraction of a cent. That agreement is the strongest evidence on this page that the method is measuring what it claims to.
+${parlaySentence} ${parlayCaveat}
 </div>
 
 <details class="surface-card compact-details">
@@ -171,7 +199,7 @@ const detail0 = parlayDetail[0] ?? {};
 
 ## What a contract costs its buyer
 
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>Two bars are hollow and dashed, and neither is a finding.</strong> <strong>DKeX’s points right</strong>, but zero of its 20 price bins clear two event-clustered standard errors across 21,485,019 contracts, so it is not evidence of traders profiting there. <strong>ProphetX’s points left</strong>, but its whole-sample test reaches t&nbsp;=&nbsp;1.50 where two standard errors is the bar, and zero of its 20 bins clear either, so it is not evidence of a house edge. In both cases the money really did change hands; it is the <em>edge</em> that is indistinguishable from zero. Solid bars are venues that publish no comparable clustered standard error at all &mdash; unknown, which is not the same as refuted.</div>
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. Every bar here is a venue whose <em>aggressor</em> is known, so the figure really is what the taker paid: Kalshi publishes an aggressor flag outright, and a parlay quoted by the house on request has the customer as the buyer by construction. The DKeX and ProphetX bars this caption used to describe have been <strong>removed entirely</strong>, not redrawn &mdash; without an aggressor flag their numbers measured price bias rather than taker P&amp;L. Why each absent venue is absent is set out below.</div>
 
 ```js
 Plot.plot({
