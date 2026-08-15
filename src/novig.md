@@ -26,9 +26,23 @@ const fmtDate = d => d instanceof Date ? d.toLocaleDateString("en-US", {timeZone
 
 const totalContracts = d3.sum(daily, d => d.contracts);
 const meanEdge = tm.length ? d3.mean(tm, d => d.implied_edge) : null;
-// Parlay share is computed from the leg breakdown: anything with more than one leg.
+// Parlay share, and the denominator is the subtle part. This file USED to carry the
+// singles as rows with legs=1, so summing every row gave all taker volume. It no longer
+// does -- a one-leg parlay is not a thing and those rows were removed at the producer --
+// so summing every row now gives PARLAY volume and the share would read a flat 100%.
+//
+// pct_of_day is each row's share of ALL taker volume that day, singles included, so the
+// day's true total is recoverable: sum(pct) = 100*sum(v)/total, hence
+// total = 100*sum(v)/sum(pct). Recomputed per day and summed, because the mix of parlay
+// to single volume moves day to day and a single blended ratio would smear it.
 const parlayTotal = d3.sum(parlay.filter(d => d.legs > 1), d => d.contracts);
-const parlayAll = d3.sum(parlay, d => d.contracts);
+const parlayAll = d3.sum(
+  d3.rollup(
+    parlay.filter(d => +d.pct_of_day > 0),
+    v => 100 * d3.sum(v, d => d.contracts) / d3.sum(v, d => +d.pct_of_day),
+    d => String(d.date)
+  ).values()
+);
 const maxLegs = d3.max(parlay, d => d.legs);
 ```
 
@@ -301,7 +315,7 @@ Plot.plot({
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
     Plot.barY(legAgg, {
       x: "legs", y: "contracts", fill: NV, ry2: 4, insetLeft: 2, insetRight: 2,
-      title: d => `${d.legs === 1 ? "Single-leg" : `${d.legs}-leg parlays`}\n${d3.format(",.0f")(d.contracts)} contracts`,
+      title: d => `${d.legs}-leg parlays\n${d3.format(",.0f")(d.contracts)} contracts`,
       tip: true
     })
   ]
