@@ -528,17 +528,26 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
     // "Calibration error by price bin" below; this chart answers only "where does
     // each venue sit". Significance still reads from the mark: solid clears 2 SE,
     // hollow does not, x means too few independent events to say.
-    // NOT distinguishable from calibrated: hollow.
+    // ALL DOTS ARE SOLID. Hollow-versus-filled was the old significance encoding and it
+    // failed at this density: a hundred small rings across five venues read as noise, and
+    // the eye cannot separate an unfilled dot from a gap. Significance now rides on a
+    // DARK RING plus full opacity, which stays legible at r=4 because it changes the dot's
+    // outline rather than its interior. Colour still means venue and nothing else.
+    //
+    // Not distinguishable from calibrated: solid, no ring, half opacity.
     Plot.dot(noiseRows, {
       x: "implied", y: "actual", r: 4,
-      fill: "none", stroke: "venue", strokeWidth: 1.3, strokeOpacity: 0.85
+      fill: "venue", fillOpacity: 0.45,
+      stroke: "var(--theme-background)", strokeWidth: 1
     }),
-    // Clears 2 clustered SE: solid.
+    // Clears 2 clustered SE: solid, full opacity, DARK RING.
     Plot.dot(clearRows, {
       x: "implied", y: "actual", r: 5,
-      fill: "venue", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 2
+      fill: "venue", fillOpacity: 1,
+      stroke: "var(--theme-foreground)", strokeWidth: 1.6
     }),
-    // Standard error itself untrustworthy (too few effective clusters).
+    // Standard error itself untrustworthy (too few effective clusters) -- kept as a cross,
+    // because that is a THIRD state and must not be confusable with either dot.
     Plot.dot(unmeasRows, {
       x: "implied", y: "actual", r: 4.5, symbol: "times",
       stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
@@ -552,7 +561,7 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
 })
 ```
 
-<span style="font-weight:600">&#9679; Clears 2 event-clustered SE</span> &nbsp; <span style="color:var(--theme-foreground-muted)">&#9675; Not distinguishable from calibrated</span> &nbsp; <span style="color:var(--theme-foreground-muted)">&#10005; Too few independent events to say</span> &nbsp; Bars are &plusmn;2 event-clustered SE &nbsp; Dot area &prop; events in the bin, scaled within each venue.
+<span style="font-weight:600">&#9679; Clears 2 event-clustered SE (ringed)</span> &nbsp; <span style="color:var(--theme-foreground-muted)">&#9679; Not distinguishable from calibrated (pale, no ring)</span> &nbsp; <span style="color:var(--theme-foreground-muted)">&#10005; Too few independent events to say</span> &nbsp; Bars are &plusmn;2 event-clustered SE &nbsp; Dot area &prop; events in the bin, scaled within each venue.
 
 ## Calibration error by price bin
 
@@ -612,7 +621,7 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
         }),
         Plot.dot(noiseRows, {
           fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err,
-          r: 3.6, fill: "none", stroke: "venue", strokeWidth: 1.3
+          r: 3.6, fill: "venue", fillOpacity: 0.45, stroke: "var(--theme-background)", strokeWidth: 1
         }),
         Plot.dot(clearRows, {
           fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err,
@@ -1479,7 +1488,7 @@ const volCalibGroupByVenue = new Map(built.filter(v => v.usable).map(v => [v.nam
         Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeOpacity: 0.55, strokeWidth: 1}),
         Plot.dot(noiseRows2, {
           fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err, r: "radius",
-          fill: "none", stroke: "venue", strokeWidth: 1.3, strokeOpacity: 0.9
+          fill: "venue", fillOpacity: 0.45, stroke: "var(--theme-background)", strokeWidth: 1, strokeOpacity: 0.9
         }),
         Plot.dot(clearsRows, {
           fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err, r: "radius",
