@@ -417,23 +417,31 @@ Plot.plot({
   y: {label: "Open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
     Plot.ruleY([0]),
-    Plot.dot(oiReported, {
-      x: "date", y: "open_interest",
-      r: 4, fill: UNDERDOG,
+    Plot.rectY(oiReported, {
+      x: "date", interval: "day", y: "open_interest",
+      fill: UNDERDOG, fillOpacity: 0.92,
       tip: true,
       title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.open_interest || 0)}`
     }),
     // Explicit gap treatment: the old chart filtered these rows out entirely, so
     // four dates vanished and the series read as continuous across them.
-    Plot.dot(oiNotReported, {
+    //
+    // These days are a genuine ZERO, and a zero-height bar is invisible -- which is the
+    // one thing this mark exists to prevent. So they carry an explicit "0" glyph at the
+    // baseline instead. Not a dot: a dot would read as a measured magnitude sitting on
+    // the axis rather than as a day that reported nothing open.
+    Plot.text(oiNotReported, {
       x: "date", y: 0,
-      r: 5, stroke: "#94A3B8", strokeWidth: 1.5, strokeDasharray: "2,2",
+      text: () => "0", dy: -7, fontSize: 11, fontWeight: 600,
+      fill: "#94A3B8",
       tip: true,
       title: d => `${fmtDate(d.date)}\nNothing still open at capture\nEvery market row returned 0. ${fmtCount(d.contracts)} contracts traded.`
     }),
-    Plot.dot(oiCollapse, {
-      x: "date", y: "open_interest",
-      r: 9, stroke: "#EF4444", strokeWidth: 1.5
+    // Emphasis on the 08-02 dip rides as an OUTLINE ON ITS OWN BAR rather than a ring
+    // floating at its tip, so the highlight cannot be mistaken for a separate series.
+    Plot.rectY(oiCollapse, {
+      x: "date", interval: "day", y: "open_interest",
+      fill: "none", stroke: "#EF4444", strokeWidth: 1.8
     }),
     Plot.text(oiCollapse, {
       x: "date", y: "open_interest",
