@@ -37,7 +37,14 @@ const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d 
 const iso = d => d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
 
 // Kalshi's parlay volume is spread across classes and leg buckets; total it per day and
-// divide by the venue's own all-markets total from daily_overall.
+// divide by the venue's own ALL-MARKETS total from daily_overall.
+//
+// NOT LIKE FOR LIKE, and the page now says so. Every other venue here is a sportsbook, so
+// its denominator is sports by construction; Kalshi's includes politics, economics and
+// crypto, which understates its parlay share against the venues it sits beside.
+// daily_overall carries no sports-only column (contracts_total and fees_total only), so a
+// comparable denominator cannot be built here without a new producer -- disclosed rather
+// than silently compared, and rather than guessed at.
 const kByDay = d3.rollup(kParlay, v => d3.sum(v, d => d.contracts), d => iso(d.date));
 const kTotalByDay = new Map(kOverall.map(d => [iso(d.date), d.contracts_total]));
 const kShare = Array.from(kByDay, ([date, parlay]) => {
@@ -163,7 +170,7 @@ Plot.plot({
 
 ## Parlay share over time
 
-<div class="instruction-line">Only venues with at least two weeks of history are drawn; a three-day line reads as a trend when it is nothing of the kind. Crypto.com/Nadex enters at the far left and runs flat along zero for thirteen months before anything else on this page starts: that flat line is real trading with no parlay product, not missing data. The dashed rule is the first day its bulletin reports any parlay volume.</div>
+<div class="instruction-line"><strong>Kalshi's bar is measured against a different base.</strong> Every other venue here is a sportsbook, so its denominator is sport by construction. Kalshi's is its whole book &mdash; politics, economics and crypto included &mdash; which understates its parlay share against the venues beside it. Read Kalshi's bar as a share of ALL Kalshi volume, not of its sports volume. Only venues with at least two weeks of history are drawn; a three-day line reads as a trend when it is nothing of the kind. Crypto.com/Nadex enters at the far left and runs flat along zero for thirteen months before anything else on this page starts: that flat line is real trading with no parlay product, not missing data. The dashed rule is the first day its bulletin reports any parlay volume.</div>
 
 ```js
 const longEnough = new Set(headline.filter(d => d.days >= 14).map(d => d.venue));

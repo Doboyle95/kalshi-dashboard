@@ -489,7 +489,7 @@ function calibTip(d) {
 
 <div class="instruction-line">
   <strong>${calibClear.length} of ${calibRows.length}</strong> price bins are distinguishable from perfect calibration at 2 event-clustered standard errors.
-  Solid dots clear that bar; hollow dots do not, and should be read as <em>no measurable bias</em> rather than as a small one.
+  Every bin is drawn the same way; how precisely each is pinned down is carried by its interval, not by hollowing the dot.
 </div>
 
 ```js

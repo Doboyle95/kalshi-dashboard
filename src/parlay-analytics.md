@@ -661,7 +661,12 @@ Plot.plot({
   x: {label: "Implied win % (price)", domain: [0, 100], grid: true, tickFormat: d => d + "%"},
   y: {label: "Actual win %", domain: [0, 100], grid: true, tickFormat: d => d + "%"},
   color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
-  marks: [
+  // r is PRE-SQRT-ED below, so the scale must be identity. Plot's default r scale is
+    // itself sqrt, and feeding it an already-square-rooted value squares the root
+    // twice -- area then grows as sqrt(n), not n, and every large bubble is
+    // understated. calibration.md solves it the same way.
+    r: {type: "identity"},
+    marks: [
     Plot.line([[0,0],[100,100]], {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
     Plot.dot(misp, {x: "implied", y: "actual", fill: "kind", r: d => Math.sqrt(d.n_parlays)/120 + 4, fillOpacity: 0.75, stroke: "var(--theme-background)",
       tip: true, title: d => `${kindShort(d.kind)} · ${d.bucket}\nImplied: ${pct1(d.implied)}\nActual: ${pct1(d.actual)}\nGap: ${d.gap > 0 ? "+" : ""}${pct1(d.gap)}\nParlays: ${d.n_parlays.toLocaleString()}`})

@@ -234,7 +234,7 @@ else if (calibUnjoined > 0) display(html`<p class="chart-note"><strong>${calibUn
   rebuilds without the other. Those bins carry no interval, so they are drawn without whiskers.</p>`);
 ```
 
-## Taker-side actual vs. implied win rate
+## ${side === "taker" ? "Taker-side" : "Both-sides"} calibration: actual vs. implied
 
 Each point is a price bin (5¢ increments). The diagonal is perfect calibration. Points above the line = contracts underpriced (market overestimates difficulty). Points below = contracts overpriced.
 
@@ -275,10 +275,8 @@ Plot.plot({
       })
     ] : []),
     // Colour still says WHICH WAY the bin misses. Fill says whether the miss is
-    // measurable at all: hollow means the error does not clear two clustered
-    // standard errors, and must be read as no measurable bias rather than a small
-    // one. With no clustered SEs published, nothing is claimed and everything is
-    // drawn hollow.
+    // (Historic note: this used to draw non-significant bins hollow. That encoding was
+    // removed -- it dressed a statement about PRECISION up as one about VALIDITY.)
     // ONE MARK FOR EVERY BIN. Colour is direction; area is how many independent events
     // stand behind it. Nothing is hollowed out or crossed through: a bin whose interval
     // happens to cross zero is still the best estimate of that bin, and saying otherwise
