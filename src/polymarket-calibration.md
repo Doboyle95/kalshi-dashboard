@@ -104,25 +104,16 @@ Plot.plot({
       x: d => +d.implied_prob,
       y1: d => +d.actual_win_rate_wt - 2*(+d.se_wt),
       y2: d => +d.actual_win_rate_wt + 2*(+d.se_wt),
-      stroke: d => +d.se_reliable === 0 ? "#9aa0a6" : (+d.significant === 1 ? "#b2182b" : "#8c9196"),
-      strokeWidth: 1.4, strokeOpacity: 0.85
+      stroke: "#8c9196", strokeWidth: 1.4, strokeOpacity: 0.85
     }),
-    // NOT measurably mispriced: hollow
-    Plot.dot(notsig, {
+    // One mark for every bin, sized by independent events. The whiskers above carry the
+    // precision; the dot itself no longer encodes whether that precision was enough to
+    // exclude zero, because that was reading as a verdict on the bin's validity.
+    Plot.dot(data, {
       x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt,
       r: d => +d.n_events,
-      fill: "#6b7280", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6
-    }),
-    // measurably mispriced: solid
-    Plot.dot(sig, {
-      x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt,
-      r: d => +d.n_events,
-      fill: "#b2182b", fillOpacity: 1, stroke: "var(--theme-foreground)", strokeWidth: 2
-    }),
-    // SE itself untrustworthy (too few independent events)
-    Plot.dot(unrel, {
-      x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt,
-      r: 4, symbol: "times", stroke: "#9aa0a6", strokeWidth: 1.8
+      fill: "#b2182b", fillOpacity: 0.9,
+      stroke: "var(--theme-background)", strokeWidth: 1.4
     }),
     Plot.dot(data, {
       x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt, r: 10, fill: "transparent",
@@ -147,7 +138,7 @@ Plot.plot({
 
 ## Calibration error, with the honest error bars
 
-<p class="section-intro">Bars are the measured error &mdash; <strong>green where the contract was underpriced, red where it was overpriced</strong>; whiskers are &plusmn;2 event-clustered standard errors. Full-strength bars clear that noise; the faded bars are consistent with zero, and grey bars are bins with too few independent events to judge either way.</p>
+<p class="section-intro">Bars are the measured error &mdash; <strong>green where the contract was underpriced, red where it was overpriced</strong>; whiskers are &plusmn;2 event-clustered standard errors. Every bin is drawn the same way: the whiskers say how precisely each one is pinned down, and a bar whose whiskers cross zero is a real measurement with a wide interval, not a discarded one.</p>
 
 ```js
 Plot.plot({
@@ -160,15 +151,11 @@ Plot.plot({
     Plot.rectY(data, {
       x1: d => +d.price_bin, x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
-      // EVERY BAR SOLID, same rule as the Kalshi calibration-error chart. Hollow
-      // read as a gap in the data rather than as a weaker finding, and one flat red
-      // threw away the sign -- an overpriced bin and an underpriced one looked
-      // identical. Colour now carries DIRECTION and opacity carries CONFIDENCE.
-      fill: d => +d.se_reliable === 0
-        ? "var(--theme-foreground-muted)"                       // no claim made
-        : (+d.calib_error > 0 ? "#1a9641" : "#d7191c"),         // under- / over-priced
-      fillOpacity: d => +d.se_reliable === 0 ? 0.28
-        : (+d.significant === 1 ? 1 : 0.42),
+      // Colour carries DIRECTION only. Opacity no longer encodes confidence: a bin whose
+      // interval crosses zero is still a measurement, and the whiskers already say how
+      // wide it is. Fading it implied the reading was invalid, which it is not.
+      fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
+      fillOpacity: 0.92,
       stroke: "var(--theme-background)", strokeWidth: 1
     }),
     Plot.ruleX(data, {

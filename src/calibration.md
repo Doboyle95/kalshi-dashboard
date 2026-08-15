@@ -221,7 +221,7 @@ if (!hasClustered) display(html`<p class="chart-note"><strong>Error bars unavail
 else if (calibUnjoined > 0) display(html`<p class="chart-note"><strong>${calibUnjoined} of
   ${calib.length} bins carry no clustered standard error.</strong> The calibration curve and its
   clustered-error sidecar disagree about which price bins exist, which is what happens when one
-  rebuilds without the other. Those bins are drawn as &#10005; and nothing is claimed from them.</p>`);
+  rebuilds without the other. Those bins carry no interval, so they are drawn without whiskers.</p>`);
 ```
 
 ## Taker-side actual vs. implied win rate
@@ -269,29 +269,17 @@ Plot.plot({
     // standard errors, and must be read as no measurable bias rather than a small
     // one. With no clustered SEs published, nothing is claimed and everything is
     // drawn hollow.
-    Plot.dot(dataNoise, {
-      x: d => +d.implied_prob,
-      y: d => +d.actual_win_rate_wt,
-      r: dotR,
-      fill: "none",
-      stroke: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
-      strokeWidth: 1.4, strokeOpacity: 0.85
-    }),
-    Plot.dot(dataClear, {
+    // ONE MARK FOR EVERY BIN. Colour is direction; area is how many independent events
+    // stand behind it. Nothing is hollowed out or crossed through: a bin whose interval
+    // happens to cross zero is still the best estimate of that bin, and saying otherwise
+    // dressed a statement about PRECISION up as a statement about VALIDITY.
+    Plot.dot(data, {
       x: d => +d.implied_prob,
       y: d => +d.actual_win_rate_wt,
       r: dotR,
       fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
-      fillOpacity: 0.75,
+      fillOpacity: 0.9,
       stroke: "var(--theme-background)", strokeWidth: 1
-    }),
-    // Too few effective independent events for the standard error itself to be
-    // trustworthy: no claim is made from these bins in either direction.
-    Plot.dot(dataUnmeasurable, {
-      x: d => +d.implied_prob,
-      y: d => +d.actual_win_rate_wt,
-      r: 4.5, symbol: "times",
-      stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
     }),
     // Transparent hit area so a small dot stays hoverable.
     Plot.dot(data, {
@@ -311,7 +299,7 @@ Plot.plot({
         // calling that "too few independent events" would assert a measurement of the
         // sample that was never taken. Missing-measurement is reported first.
         d.se == null ? "NO CLUSTERED STANDARD ERROR for this bin — nothing claimed"
-          : !d.reliable ? "TOO FEW INDEPENDENT EVENTS — standard error unreliable"
+          : !d.reliable ? "Few independent events — wide interval, read it loosely"
           : d.clears ? "Clears 2 event-clustered SE"
                      : "NOT distinguishable from perfectly calibrated"
       ].filter(Boolean).join("\n")
@@ -320,7 +308,7 @@ Plot.plot({
 })
 ```
 
-<span style="color:#1a9641">● Above diagonal</span> (actual > implied — contracts underpriced) &nbsp; <span style="color:#d7191c">● Below diagonal</span> (actual < implied — contracts overpriced) &nbsp; <span style="color:var(--theme-foreground-muted)">○ hollow = does not clear 2 event-clustered SE — no measurable bias</span> &nbsp; <span style="color:var(--theme-foreground-muted)">✕ too few independent events to say</span> &nbsp; Circle area ∝ independent events in the bin
+<span style="color:#1a9641">● Above diagonal</span> (actual > implied — contracts underpriced) &nbsp; <span style="color:#d7191c">● Below diagonal</span> (actual < implied — contracts overpriced) &nbsp; Circle area ∝ independent events in the bin, so a small dot is a bin measured on little evidence — pinned down less precisely, not disqualified
 
 <div class="instruction-line"><strong>Useful trick:</strong> switch the market group below to <em>Parlay only</em> — long-shot parlay legs are where the mispricing runs widest, since cheap contracts rarely win as often as their price implies.</div>
 
@@ -339,39 +327,16 @@ Plot.plot({
     // Solid bar = the miss clears two event-clustered standard errors. Hollow bar
     // = it does not, and its whisker crosses zero, so it is not evidence of
     // mispricing in either direction however tall it looks.
-    Plot.rectY(dataClear, {
-      x1: d => +d.price_bin,
-      x2: d => +d.price_bin + 5,
+    // ONE BAR PER BIN, drawn the same way regardless of how tight its interval is.
+    // Colour carries DIRECTION (green underpriced, red overpriced) and the whiskers below
+    // carry the uncertainty. The old three-state fill -- solid / faded / grey-with-a-cross
+    // -- was reading as "this bin is invalid", which is not what a wide interval means.
+    Plot.rectY(data, {
+      x1: d => +d.price_bin, x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
       fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
-      fillOpacity: 0.8
-    }),
-    Plot.rectY(dataNoise, {
-      x1: d => +d.price_bin,
-      x2: d => +d.price_bin + 5,
-      y: d => +d.calib_error,
-      // SOLID, same sign colour as a measurable bin, at reduced opacity. Hollow read as a
-      // gap in the data rather than as a weaker finding, which is the opposite of the point.
-      fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
-      fillOpacity: 0.42,
+      fillOpacity: 0.92,
       stroke: "var(--theme-background)", strokeWidth: 1
-    }),
-    // Third state: the standard error itself is untrustworthy here. Dashed grey
-    // outline plus a cross, so the bar cannot be read as a finding.
-    Plot.rectY(dataUnmeasurable, {
-      x1: d => +d.price_bin,
-      x2: d => +d.price_bin + 5,
-      y: d => +d.calib_error,
-      // Third state kept visually distinct, but SOLID: a neutral grey that belongs to no
-      // sign, so it cannot be read as a direction. The cross below still marks it.
-      fill: "var(--theme-foreground-muted)", fillOpacity: 0.28,
-      stroke: "var(--theme-foreground-muted)", strokeOpacity: 0.55, strokeWidth: 1
-    }),
-    Plot.dot(dataUnmeasurable, {
-      x: d => +d.price_bin + 2.5,
-      y: d => +d.calib_error,
-      r: 4.5, symbol: "times",
-      stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
     }),
     ...(hasClustered ? [Plot.ruleX(data, {
       x: d => +d.price_bin + 2.5,
@@ -438,4 +403,4 @@ const extremeQualifier = hasClustered
 
 ${sideNote ? html`<div class="instruction-line"><strong>No error bars on this view yet.</strong> ${sideNote}</div>` : ""}
 
-<p style="font-size:0.82em;color:#888;margin-top:1.5rem">${side === "taker" ? "Contract-weighted win rates using settled TAKER-SIDE contracts (void filter applied)" : "Contract-weighted win rates using BOTH SIDES of every settled contract (void filter applied) — each trade counted once as the taker bought it and once as the maker held its mirror, at 100 minus the price"} &mdash; <code>yes_contracts / n_contracts</code>. ${side === "taker" ? "The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won" : "The price bin is the price paid for whichever side is being counted, and the actual win rate is whether that side won. Because every cent one side wins the other loses, THIS CURVE IS FORCED TO NET TO ZERO across the whole book — it can only show where bias sits, never that an edge exists. It nets to zero exactly against the mean traded price; against the bin midpoint a residual of about -0.34c remains, because a price sitting exactly on a bin floor mirrors one bin too high"}; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area is proportional to the independent settlement events behind a bin, never to its trade count</strong>, and the error bars are cluster-robust with the Kalshi event ticker as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. On the bins drawn here the nominal event count collapses to an effective (Kish) count by a median factor of about ${effCollapse ? Math.round(effCollapse).toLocaleString() : "\u2014"}&times;, because contract weighting concentrates a bin on its busiest events &mdash; that collapse, not the print count, is what sets the width of every bar above. A bin whose effective count falls below ${MIN_EFF_CLUSTERS} is drawn as &#10005; and claims nothing in either direction. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>
+<p style="font-size:0.82em;color:#888;margin-top:1.5rem">${side === "taker" ? "Contract-weighted win rates using settled TAKER-SIDE contracts (void filter applied)" : "Contract-weighted win rates using BOTH SIDES of every settled contract (void filter applied) — each trade counted once as the taker bought it and once as the maker held its mirror, at 100 minus the price"} &mdash; <code>yes_contracts / n_contracts</code>. ${side === "taker" ? "The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won" : "The price bin is the price paid for whichever side is being counted, and the actual win rate is whether that side won. Because every cent one side wins the other loses, THIS CURVE IS FORCED TO NET TO ZERO across the whole book — it can only show where bias sits, never that an edge exists. It nets to zero exactly against the mean traded price; against the bin midpoint a residual of about -0.34c remains, because a price sitting exactly on a bin floor mirrors one bin too high"}; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area is proportional to the independent settlement events behind a bin, never to its trade count</strong>, and the error bars are cluster-robust with the Kalshi event ticker as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. On the bins drawn here the nominal event count collapses to an effective (Kish) count by a median factor of about ${effCollapse ? Math.round(effCollapse).toLocaleString() : "\u2014"}&times;, because contract weighting concentrates a bin on its busiest events &mdash; that collapse, not the print count, is what sets the width of every bar above. Bins resting on few effective events are drawn the same as any other and simply carry wide intervals; that width is the honest statement about them, and treating them as unusable would discard a real measurement because it is imprecise. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>

@@ -517,8 +517,8 @@ Plot.plot({
       x: d => +d.n_events < 2 ? NaN : +d.implied_prob,
       y1: d => Math.max(0, +d.ci_low),
       y2: d => Math.min(1, +d.ci_high),
-      stroke: d => +d.clears_2se === 1 ? DKEX : "var(--theme-foreground-fainter)",
-      strokeWidth: d => +d.clears_2se === 1 ? 2 : 1.25,
+      // Uniform: a bin whose interval crosses zero is measured, not provisional.
+      stroke: DKEX, strokeWidth: 1.6,
       strokeLinecap: "round"
     }),
     Plot.dot(calibNoise, {
@@ -554,8 +554,8 @@ Plot.plot({
       x: d => +d.n_events < 2 ? NaN : +d.price_bin + +d.bin_width / 2,
       y1: d => 100 * (+d.calib_error - 2 * +d.se_clustered),
       y2: d => 100 * (+d.calib_error + 2 * +d.se_clustered),
-      stroke: d => +d.clears_2se === 1 ? DKEX : "var(--theme-foreground-fainter)",
-      strokeWidth: d => +d.clears_2se === 1 ? 2 : 1.25,
+      // Uniform: a bin whose interval crosses zero is measured, not provisional.
+      stroke: DKEX, strokeWidth: 1.6,
       strokeLinecap: "round"
     }),
     Plot.dot(calibNoise, {

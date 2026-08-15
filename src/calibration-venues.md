@@ -525,7 +525,7 @@ function tipText(d) {
 
 ## Actual vs. implied win rate
 
-<p class="section-intro">Each dot is one 5-cent price bin at one venue. The dashed diagonal is perfect calibration. Solid dots clear two event-clustered standard errors; hollow dots do not and mean <em>no measurable bias</em>; a cross means too few independent events to say. Intervals are deliberately <strong>not</strong> drawn here &mdash; a hundred of them across five venues obscure the very line they sit on, and they are shown at a readable scale in the next chart. There are also <strong>no connecting lines</strong>: a line through these points would assert a smooth curve none of these samples supports.</p>
+<p class="section-intro">Each dot is one 5-cent price bin at one venue. The dashed diagonal is perfect calibration. Every bin is drawn the same way &mdash; a dot is a measurement, and how precisely it is pinned down is shown by its interval in the next chart rather than by withholding the dot. Intervals are deliberately <strong>not</strong> drawn here &mdash; a hundred of them across five venues obscure the very line they sit on, and they are shown at a readable scale in the next chart. There are also <strong>no connecting lines</strong>: a line through these points would assert a smooth curve none of these samples supports.</p>
 
 ```js
 shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.plot({
@@ -564,26 +564,15 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
     // DARK RING plus full opacity, which stays legible at r=4 because it changes the dot's
     // outline rather than its interior. Colour still means venue and nothing else.
     //
-    // Not distinguishable from calibrated: solid, no ring, half opacity.
-    Plot.dot(noiseRows, {
-      x: "implied", y: "actual", r: 6,
-      // 0.9, NOT the old 0.45. Significance is carried by the dark ring and the larger
-      // radius, so the interior no longer has to be washed out to say "weaker" -- and at
-      // 0.45 over a white surface these read as absent rather than as unconfirmed.
-      fill: "venue", fillOpacity: 0.9,
+    // ONE MARK FOR EVERY BIN. There is no longer a significant / not-significant /
+    // unmeasurable split in how a point is DRAWN. Each bin is a measurement, and the
+    // uncertainty around it belongs in its interval and its tooltip, not in whether the
+    // reader is allowed to see it. The previous three-state encoding said "this bin does
+    // not count", which no amount of noise actually justifies.
+    Plot.dot(rowsAll, {
+      x: "implied", y: "actual", r: 6.5,
+      fill: "venue", fillOpacity: 0.92,
       stroke: "var(--theme-background)", strokeWidth: 1.4
-    }),
-    // Clears 2 clustered SE: solid, full opacity, DARK RING.
-    Plot.dot(clearRows, {
-      x: "implied", y: "actual", r: 7,
-      fill: "venue", fillOpacity: 1,
-      stroke: "var(--theme-foreground)", strokeWidth: 1.6
-    }),
-    // Standard error itself untrustworthy (too few effective clusters) -- kept as a cross,
-    // because that is a THIRD state and must not be confusable with either dot.
-    Plot.dot(unmeasRows, {
-      x: "implied", y: "actual", r: 6.5, symbol: "times",
-      stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
     }),
     // Transparent hit area, so a small dot is still hoverable.
     Plot.dot(rowsAll, {
@@ -594,7 +583,7 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
 })
 ```
 
-<span style="font-weight:600">&#9679; Clears 2 event-clustered SE (ringed)</span> &nbsp; <span style="color:var(--theme-foreground-muted)">&#9679; Not distinguishable from calibrated (no ring)</span> &nbsp; <span style="color:var(--theme-foreground-muted)">&#10005; Too few independent events to say</span> &nbsp; Bars are &plusmn;2 event-clustered SE &nbsp; Dot area &prop; events in the bin, scaled within each venue.
+<span style="font-weight:600">&#9679; One 5-cent price bin at one venue</span> &nbsp; Bars are &plusmn;2 event-clustered SE &mdash; a wide bar is an imprecise bin, not an invalid one &nbsp; Dot area &prop; events in the bin, scaled within each venue.
 
 ## Calibration error by price bin
 
@@ -652,17 +641,13 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
           y2: d => 100 * d.err + 200 * d.se,
           stroke: "venue", strokeOpacity: 0.95, strokeWidth: 2.2, strokeLinecap: "round"
         }),
-        Plot.dot(noiseRows, {
+        // One mark. The interval drawn behind each point already says how precisely it
+        // is pinned down; splitting the dots by whether that interval happens to exclude
+        // zero told the reader some bins were not results.
+        Plot.dot(rowsAll, {
           fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err,
-          r: 3.6, fill: "venue", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6
-        }),
-        Plot.dot(clearRows, {
-          fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err,
-          r: 4.2, fill: "venue", stroke: "var(--theme-background)", strokeWidth: 1
-        }),
-        Plot.dot(unmeasRows, {
-          fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err,
-          r: 4.5, symbol: "times", stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
+          r: 4.2, fill: "venue", fillOpacity: 0.92,
+          stroke: "var(--theme-background)", strokeWidth: 1.2
         }),
         Plot.text(caps, {
           fy: "venue", text: "text", frameAnchor: "top-left",
@@ -1519,17 +1504,10 @@ const volCalibGroupByVenue = new Map(built.filter(v => v.usable).map(v => [v.nam
       marks: [
         Plot.frame({stroke: "var(--theme-foreground-fainter)"}),
         Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeOpacity: 0.55, strokeWidth: 1}),
-        Plot.dot(noiseRows2, {
+        Plot.dot(sized, {
           fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err, r: "radius",
-          fill: "venue", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6, strokeOpacity: 0.9
-        }),
-        Plot.dot(clearsRows, {
-          fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err, r: "radius",
-          fill: "venue", fillOpacity: 0.8, stroke: "var(--theme-background)", strokeWidth: 1
-        }),
-        Plot.dot(unmeasRows2, {
-          fy: "venue", x: d => d.price_bin + 2.5, y: d => 100 * d.err,
-          r: 4.5, symbol: "times", stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
+          fill: "venue", fillOpacity: 0.92,
+          stroke: "var(--theme-background)", strokeWidth: 1.2
         }),
         Plot.text(caps, {
           fy: "venue", text: "text", frameAnchor: "top-left",
