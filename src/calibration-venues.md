@@ -42,6 +42,7 @@ const calForecastex = await DataAttachment("data/forecastex_calibration.csv").cs
 // dkex_calibration.csv, which is why it needs no new normalisation path -- only a
 // different REFERENCE PRICE, for the reason set out on its registry entry below.
 const calProphetx   = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
+const calNadex      = await DataAttachment("data/nadex_parlay_calibration.csv").csv({typed: true});
 const freshness     = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 
@@ -222,6 +223,35 @@ const VENUES = [
         n_contracts: num(r.n_contracts)
       };
     }
+  },
+  {
+    // Crypto.com COMBOS. PARLAYS ONLY, and that is not a limitation of the data --
+    // it is the whole reason this venue can appear here at all. Nadex publishes no
+    // aggressor flag, so a single-market curve could not say who paid the spread;
+    // a combo is quoted by the house on request, so the customer is the buyer.
+    name: "Crypto.com", color: "#9c27b0", accent: "nadex", src: calNadex,
+    file: "nadex_parlay_calibration.csv",
+    leg: "buyer (the customer side of a house-quoted combo)",
+    // Effective PARLAYS, not prints. One combo can print dozens of times and every
+    // print shares a single settlement, so prints are not independent draws.
+    effCol: "n_eff",
+    groups: {headline: "PARLAY", reported: "PARLAY"},
+    // The x axis is the CONTRACT-WEIGHTED PRICE ACTUALLY PAID, off Nadex's own
+    // time-and-sales tape -- not a bin midpoint. This venue carries no midpoint
+    // approximation anywhere, which is why its dots sit at true prices.
+    impliedBasis: "paid",
+    binFilter: r => num(r.bin_width) == null || +r.bin_width === 5,
+    rows: r => ({
+      price_bin: +r.price_bin,
+      implied: num(r.implied),
+      actual: num(r.actual),
+      err: num(r.calib_error),
+      se: num(r.se_calib_error),
+      n_eff: num(r.n_eff),
+      n_events: num(r.n_eff),
+      n_trades: num(r.n_trades),
+      n_contracts: num(r.contracts)
+    })
   },
   {
     name: "DKeX", color: "#F97316", accent: "dkex", src: calDkex,

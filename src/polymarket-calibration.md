@@ -147,7 +147,7 @@ Plot.plot({
 
 ## Calibration error, with the honest error bars
 
-<p class="section-intro">Bars are the measured error; whiskers are ±2 event-clustered standard errors. Only the solid bars clear noise. Hollow bars are consistent with zero.</p>
+<p class="section-intro">Bars are the measured error &mdash; <strong>green where the contract was underpriced, red where it was overpriced</strong>; whiskers are &plusmn;2 event-clustered standard errors. Full-strength bars clear that noise; the faded bars are consistent with zero, and grey bars are bins with too few independent events to judge either way.</p>
 
 ```js
 Plot.plot({
@@ -160,9 +160,16 @@ Plot.plot({
     Plot.rectY(data, {
       x1: d => +d.price_bin, x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
-      fill: d => +d.significant === 1 ? "#b2182b" : "transparent",
-      stroke: d => +d.se_reliable === 0 ? "#9aa0a6" : "#6b7280",
-      strokeWidth: 1.1, fillOpacity: 0.85
+      // EVERY BAR SOLID, same rule as the Kalshi calibration-error chart. Hollow
+      // read as a gap in the data rather than as a weaker finding, and one flat red
+      // threw away the sign -- an overpriced bin and an underpriced one looked
+      // identical. Colour now carries DIRECTION and opacity carries CONFIDENCE.
+      fill: d => +d.se_reliable === 0
+        ? "var(--theme-foreground-muted)"                       // no claim made
+        : (+d.calib_error > 0 ? "#1a9641" : "#d7191c"),         // under- / over-priced
+      fillOpacity: d => +d.se_reliable === 0 ? 0.28
+        : (+d.significant === 1 ? 1 : 0.42),
+      stroke: "var(--theme-background)", strokeWidth: 1
     }),
     Plot.ruleX(data, {
       x: d => +d.price_bin + 2.5,
