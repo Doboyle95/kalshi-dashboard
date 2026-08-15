@@ -45,11 +45,18 @@ const kShare = Array.from(kByDay, ([date, parlay]) => {
   return tot > 0 ? {venue: "Kalshi", date: new Date(date), share: 100 * parlay / tot, parlay, tot} : null;
 }).filter(Boolean).sort((a, b) => a.date - b.date);
 
-// Novig publishes contracts per leg-count per day; anything above one leg is a parlay.
-const nvByDay = d3.rollup(nvParlay, v => ({
-  parlay: d3.sum(v.filter(x => x.legs > 1), x => x.contracts),
-  tot: d3.sum(v, x => x.contracts)
-}), d => iso(d.date));
+// Novig publishes contracts per leg-count per day, PARLAYS ONLY -- the singles were
+// removed from that file at the producer, because a one-leg parlay is not a thing.
+// So `tot` must NOT be the file's own row sum: that is parlay volume, and the share
+// renders a flat 100% (it did, live, against a true 34.1%). pct_of_day is each row's
+// share of ALL taker volume that day, singles included, so the day total comes back as
+// sum(pct) = 100*sum(v)/total. The fallback keeps the old behaviour if the column ever
+// disappears, rather than dividing by zero.
+const nvByDay = d3.rollup(nvParlay, v => {
+  const parlay = d3.sum(v.filter(x => x.legs > 1), x => x.contracts);
+  const pct = d3.sum(v, x => +x.pct_of_day);
+  return {parlay, tot: pct > 0 ? 100 * d3.sum(v, x => x.contracts) / pct : d3.sum(v, x => x.contracts)};
+}, d => iso(d.date));
 const nvShare = Array.from(nvByDay, ([date, o]) => o.tot > 0
   ? {venue: "Novig", date: new Date(date), share: 100 * o.parlay / o.tot, parlay: o.parlay, tot: o.tot} : null)
   .filter(Boolean).sort((a, b) => a.date - b.date);

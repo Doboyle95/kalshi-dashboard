@@ -53,8 +53,9 @@ const hasSides = sideCurve.length > 0;
 // is a separate producer run. Until it lands, sideClusters is empty, no bin joins an
 // SE, and hasClustered/declaresEff below both read false -- so the combined view draws
 // its points with no error bars and NO significance encoding rather than claiming a
-// precision it does not have. The taker view is unaffected: it keeps the legacy
-// clusters file and its error bars throughout.
+// precision it does not have. The taker view keeps the legacy clusters file and its
+// error bars throughout -- which is what the fallback in clusterRows below enforces.
+// An earlier version asserted that in a comment while the code did the opposite.
 const sideBarsReady = sideClusters.length > 0;
 ```
 
@@ -84,7 +85,16 @@ const side = hasSides
 // calibration_three_way pair -- the producer asserts that bin by bin -- so switching
 // the source cannot silently move the default view.
 const curveRows = hasSides ? sideCurve.filter(d => d.side === side) : calibCurve;
-const clusterRows = hasSides ? sideClusters.filter(d => d.side === side) : calibClusters;
+// FALL BACK TO THE LEGACY SIDECAR FOR TAKER. hasSides only means the side-aware CURVE
+// arrived; the side-aware CLUSTERS file is produced separately and may not exist yet.
+// Keying off hasSides alone made calibClusters unreachable and silently stripped the
+// DEFAULT view of its error bars, its event-based dot sizing, its significance
+// encoding and its event count -- 42.3M independent events rendered as 0.
+// The taker rows of the by-side curve are asserted identical to calibration_three_way,
+// so the legacy clusters file joins them 1:1 on (group, price_bin).
+const clusterRows = (hasSides && sideClusters.length)
+  ? sideClusters.filter(d => d.side === side)
+  : (side === "taker" ? calibClusters : []);
 
 const clusterByBin = new Map(clusterRows.map(d => [`${d.group}|${d.price_bin}`, d]));
 const calib = curveRows.map(d => {

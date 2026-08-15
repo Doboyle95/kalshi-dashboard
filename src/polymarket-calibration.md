@@ -127,14 +127,14 @@ Plot.plot({
         `Trades:  ${(+d.n_trades).toLocaleString()}`,
         +d.se_reliable === 0
           ? "TOO FEW INDEPENDENT EVENTS — standard error unreliable"
-          : (+d.significant === 1 ? "Measurably mispriced" : "Not distinguishable from calibrated")
+          : (+d.significant === 1 ? "Error exceeds 2 clustered SE" : "Interval includes zero")
       ].join("\n")
     })
   ]
 })
 ```
 
-<span style="color:#b2182b">● Measurably mispriced</span> (error exceeds 2 clustered SE) &nbsp; <span style="color:#6b7280">○ Not distinguishable from calibrated</span> &nbsp; <span style="color:#9aa0a6">✕ Too few independent events to say</span> &nbsp; **Circle area ∝ number of events**, not trades.
+<span style="color:#b2182b">● One 5-cent price bin</span> &nbsp; Whiskers are &plusmn;2 event-clustered SE &mdash; a wide interval is an imprecise bin, not an invalid one &nbsp; **Circle area ∝ number of events**, not trades.
 
 ## Calibration error, with the honest error bars
 

@@ -557,7 +557,7 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
     // rather than information. The intervals are shown at a readable scale in
     // "Calibration error by price bin" below; this chart answers only "where does
     // each venue sit". Significance still reads from the mark: solid clears 2 SE,
-    // hollow does not, x means too few independent events to say.
+    // (all bins drawn identically since the significance encoding was removed).
     // ALL DOTS ARE SOLID. Hollow-versus-filled was the old significance encoding and it
     // failed at this density: a hundred small rings across five venues read as noise, and
     // the eye cannot separate an unfilled dot from a gap. Significance now rides on a
@@ -1536,10 +1536,10 @@ const volCalibGroupByVenue = new Map(built.filter(v => v.usable).map(v => [v.nam
     }));
 
     display(html`<p class="chart-note"><strong>Dot area &prop; share of the venue's ${unit} in that bin</strong>
-      &mdash; not events, as in the charts higher up the page. Fill is the same rule used throughout:
-      solid clears two event-clustered standard errors, hollow does not, &#10005; means the standard error
-      itself cannot be trusted. One radius scale is shared across all panels, because a share of a venue's own
-      volume means the same thing at every venue.
+      &mdash; not events, as in the charts higher up the page. Every bin is drawn the same way,
+      as everywhere else on this page: how precisely one is pinned down is carried by its interval,
+      not by withholding or hollowing the mark. One radius scale is shared across all panels,
+      because a share of a venue's own volume means the same thing at every venue.
       ${noCal.length ? html`<strong>Not in this overlay:</strong> ${noCal.map(v => html`<span>${v.name} &mdash;
       ${v.noCalibration ?? "it has no calibration curve on this page"}. </span>`)}It is still drawn on the
       volume chart above; only the vertical axis here is unavailable to it.` : ""}</p>`);
