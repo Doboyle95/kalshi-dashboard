@@ -25,7 +25,14 @@ const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d 
 const fmtDate = d => d instanceof Date ? d.toLocaleDateString("en-US", {timeZone: "UTC", month: "short", day: "numeric"}) : d;
 
 const totalContracts = d3.sum(daily, d => d.contracts);
+// meanEdge is retained only to document that it is identically zero; it is NOT a spread.
 const meanEdge = tm.length ? d3.mean(tm, d => d.implied_edge) : null;
+// What Novig actually takes: the fee, from its published schedule.
+const feeMeanPct = (() => {
+  const r = fees.filter(d => +d.fees > 0 && +d.contracts > 0);
+  if (!r.length) return null;
+  return 100 * d3.sum(r, d => +d.fees) / d3.sum(r, d => +d.contracts);
+})();
 // Parlay share, and the denominator is the subtle part. This file USED to carry the
 // singles as rows with legs=1, so summing every row gave all taker volume. It no longer
 // does -- a one-leg parlay is not a thing and those rows were removed at the producer --
@@ -48,7 +55,7 @@ const maxLegs = d3.max(parlay, d => d.legs);
 
 <div class="grid grid-cols-4">
   <div class="card"><h2>Contracts traded</h2><span class="big">${fmtCount(totalContracts)}</span><span class="muted">${daily.length} days</span></div>
-  <div class="card"><h2>Implied spread</h2><span class="big">${meanEdge == null ? "—" : `${(100 * meanEdge).toFixed(2)}%`}</span><span class="muted">measured &mdash; the fee is separate</span></div>
+  <div class="card"><h2>Fee, mean</h2><span class="big">${feeMeanPct == null ? "—" : `${feeMeanPct.toFixed(2)}%`}</span><span class="muted">from the published schedule &mdash; the spread is not measurable here</span></div>
   <div class="card"><h2>Parlays</h2><span class="big">${parlayAll ? `${(100 * parlayTotal / parlayAll).toFixed(1)}%` : "—"}</span><span class="muted">of volume, up to ${maxLegs} legs</span></div>
   <div class="card"><h2>Markets traded</h2><span class="big">${fmtCount(d3.max(daily, d => d.markets_traded) ?? 0)}</span><span class="muted">busiest day</span></div>
 </div>
@@ -75,9 +82,9 @@ Plot.plot({
 })
 ```
 
-## The spread, measured at zero
+## Why this page shows no spread measurement
 
-<div class="instruction-line"><strong>This measures the spread, and nothing else.</strong> One way an exchange can take money is in the price: the two sides sum to more than 1.00 and the venue keeps the difference. That is what is computed here &mdash; mean taker price plus mean maker price, minus one, <strong>recomputed from the tape every run rather than hardcoded</strong> &mdash; and it comes out at zero. <strong>A separate per-contract commission cannot appear in this test at all</strong>, and Novig charges one: see <a href="#what-novig-charges">what Novig charges</a> below. If Novig ever starts taking a spread as well, this line moves on its own instead of continuing to publish a zero.</div>
+<div class="instruction-line"><strong>This chart used to claim Novig's spread measures at zero. It could never have measured anything else.</strong> The quantity computed was mean taker price plus mean maker price minus one &mdash; but every Novig trade is a <em>matched</em> binary contract, so the two sides' costs sum to the contract value by construction. Checked on the raw tape: taker quantity equals maker quantity exactly, and taker cost plus maker cost equals that quantity to within 0.000003 on 22.2 million contracts, every day. So the expression is identically zero for <em>any</em> venue charging <em>any</em> spread, and the old promise that &ldquo;if Novig ever starts taking a spread this chart will show it&rdquo; was false &mdash; it would read zero regardless. <strong>A spread needs the quoted bid and ask, which this feed does not carry.</strong> What Novig takes is charged in the fee, and that is measured from its published schedule further down this page.</div>
 
 ```js
 Plot.plot({
@@ -324,7 +331,7 @@ Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>About this page — read before quoting any number</summary>
-  <p><strong>The zero spread is measured, not taken from a press release &mdash; and it was never evidence that Novig is free.</strong> Across 92,087 paired trade groups the mean of taker price plus maker price came to 1.0000, with no group outside 0.98&ndash;1.05 &mdash; an implied venue cut of 0.00% <em>in the price</em>. That measurement stands unaltered. What changed on 2026-08-15 is what this page infers from it: Novig was widely reported as commission-free and this page repeated it, but the venue publishes a taker fee schedule charged per contract on top of the price, and a per-contract commission is invisible to a spread test by construction. The two findings are about different things and both are true. The producer recomputes the spread daily rather than writing a constant, so if Novig ever adds a spread on top of the commission, the chart moves on its own.</p>
+  <p><strong>There is no spread measurement on this page, and the one that used to be here was vacuous.</strong> It computed taker price plus maker price minus one across paired trade groups and reported 1.0000. That sum is fixed at one by the definition of a matched binary contract, so it would have read 1.0000 for a venue charging ten cents a side. Novig's take is in its fee, which is charged in the quoted price and is recovered by inverting the published schedule in <a href="#what-novig-charges">what Novig charges</a>.</p>
   <p><strong>Every trade appears twice</strong> in Novig's feed, once as the taker and once as the maker. Volume, trade sizes and leaderboard totals here are <strong>taker-side only</strong>; summing both would double the venue. The one place both sides are used deliberately is the spread above, which is about the two sides by definition. The daily volume is verified against Novig's own <code>dailyVolume</code> figure on every date and the build fails if they ever diverge.</p>
   <p><strong>No calibration or P&amp;L, and this will not change without a feed change.</strong> Novig publishes no settlement outcome anywhere. Markets carry a status and a closing price, but on finalised markets that price spreads across the whole range &mdash; thousands of rows sit in the 0&ndash;9 band and hundreds in the 90&ndash;99 band, with only a handful at either extreme. That is a last traded price, not a resolution, and it must not be dressed up as one. Novig is the frustrating inverse of most venues here: it publishes who was the aggressor on every trade, which almost nobody does, but never publishes who won.</p>
   <p><strong>The leaderboard is keyed on contract type, not on individual markets.</strong> Novig's market identifiers are bare UUIDs and the feed carries no per-event name &mdash; no teams, no fixture, no description. The only published label is a series ticker covering many markets at once, so a per-market board would have produced a thousand rows sharing about 126 repeating names. Keyed on the contract type instead, every label is meaningful and the chart answers a real question: what does Novig actually trade?</p>
