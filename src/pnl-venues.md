@@ -30,7 +30,12 @@ const VENUE_COLOR = {
   "Polymarket US": "#3B7DD8",
   "ForecastEx": "#E53535",
   "DKeX": "#F97316",
-  "ProphetX": "#DB2777"
+  "ProphetX": "#DB2777",
+  // Without this entry the bar still occupied a row and printed its label, but the
+  // colour scale had no value for it so Plot rendered it with NO FILL -- a venue that
+  // looked present and measured nothing. #9c27b0 is the accent this site already uses
+  // for Crypto.com/Nadex (--accent-nadex in styles.css).
+  "Crypto.com": "#9c27b0"
 };
 
 // How each row was priced. This is the single most important thing to disclose, because
