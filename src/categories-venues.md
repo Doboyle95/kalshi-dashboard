@@ -4,7 +4,7 @@ title: Cross-Venue Categories
 
 # What does each venue actually trade?
 
-<p class="page-lead">Kalshi's <a href="./categories">categories page</a> asks what its own book is made of. This page asks it of all eight venues on one axis. Every venue publishes its own category vocabulary at its own level of detail, so the comparison is only possible after a harmonisation &mdash; and the harmonisation is where this kind of chart usually goes wrong, so what it does and what it destroys are both set out below.</p>
+<p class="page-lead">Kalshi's <a href="./categories">categories page</a> asks what its own book is made of. This page asks it of eight of the nine venues on one axis &mdash; Novig publishes no category dimension. Every venue publishes its own category vocabulary at its own level of detail, so the comparison is only possible after a harmonisation &mdash; and the harmonisation is where this kind of chart usually goes wrong, so what it does and what it destroys are both set out below.</p>
 
 <div class="instruction-line"><strong>Parlays count as sport, and are shown as a lighter band inside it.</strong> A two-leg parlay on two baseball games is baseball volume; being a parlay is a property of the <em>bet</em>, not of the subject. Splitting it out as a peer of "Politics" would be a category error, and would also make Kalshi &mdash; which books parlays inside Sports &mdash; look 38 points more sports-heavy than venues that report theirs separately. The band shows the composition without breaking the comparison. Parlay <em>structure</em>, share and leg counts live on <a href="./parlay-venues">Cross-Venue Parlays</a>.</div>
 
@@ -153,7 +153,7 @@ Plot.plot({
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi is the only venue whose sport volume is a minority of its book once you look past it: <strong>${nonSport("Kalshi").toFixed(1)}%</strong> of its contracts are not sport, against <strong>${nonSport("ForecastEx").toFixed(1)}%</strong> at ForecastEx &mdash; which trades no sport at all &mdash; and under 2% at four of the eight.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi is the only sports-led venue with a materially non-sport book: <strong>${nonSport("Kalshi").toFixed(1)}%</strong> of its contracts are not sport, against <strong>${nonSport("ForecastEx").toFixed(1)}%</strong> at ForecastEx &mdash; which trades no sport at all &mdash; and under 2% at five of the eight.</div>
 
 ## The same thing, without the sport
 
@@ -191,7 +191,7 @@ Plot.plot({
   <p><strong>What the roll-up destroys.</strong> Seven venues name the sport — Baseball, Tennis, Golf, Table tennis, Esports — and Kalshi publishes one undivided "Sports". The taxonomy is therefore pinned to the <em>broadest</em> venue, and every sport-level distinction is collapsed. That is a real loss: Polymarket US is tennis-led while ProphetX and Rothera are baseball-led, and this chart cannot show it. The alternative — splitting Kalshi's Sports by joining to its series list — was rejected because that join covers only ~95% of current volume and would fabricate a dimension Kalshi does not publish. Sport-level detail is on each venue's own page.</p>
   <p><strong>Contracts, not dollars, and the difference is not neutral.</strong> Contract share overweights cheap longshot books: on this window Kalshi's Crypto is 18.4% of contracts but ~29.6% of yes-side dollars, and ProphetX's Golf is 12% of contracts against roughly 2% of dollars. A dollar version is impossible rather than merely unbuilt — ForecastEx and Nadex publish no price or notional anywhere in their feeds.</p>
   <p><strong>A "day" is not the same day at every venue.</strong> Nadex's date is its bulletin date, one day after the trading session; Polymarket's labelled day runs 17:00 ET to 17:00 ET and moves with daylight saving; ProphetX's session runs 16:30 to 16:30 ET; the rest are calendar days. Over a 30-day window this shifts boundaries, not totals, but it means the window is not literally identical across venues.</p>
-  <p><strong>Underdog is a launch ramp, not a peer.</strong> It has 22 of the window's 30 days and roughly three quarters of its window volume falls in the final week, across a 10,000-fold ramp. Its mix is an early-August reading with a 30-day label. ProphetX's feed also stops two days before the window ends.</p>
+  <p><strong>Underdog is a launch ramp, not a peer.</strong> It has 22 of the window's 30 days and roughly three quarters of its window volume falls in the final week, across a 10,000-fold ramp. Its mix is an early-August reading with a 30-day label. </p>
 </details>
 
 ## Every venue and bucket

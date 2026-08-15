@@ -171,7 +171,7 @@ Plot.plot({
 
 ## League mix
 
-<p class="section-intro">Every symbol DKeX has listed since its first public file belongs to a sports league, so a sports-vs-non-sports split would be a flat line at 100% and is no longer shown. The cut that carries information is the league: MLB is the majority, but NPB (Japan) and KBO (Korea) together are about a third of the venue.</p>
+<p class="section-intro">Almost every symbol DKeX has listed belongs to a sports league; a small club-friendly bucket began appearing on 2026-08-13, so a sports-vs-non-sports split would sit just under 100% and is no longer shown. The cut that carries information is the league: MLB is the majority, but NPB (Japan) and KBO (Korea) together are about a third of the venue.</p>
 
 ```js
 const brushLeague = view(makeBrush(split, DKEX));
@@ -223,7 +223,7 @@ Plot.plot({
 display(leagueGrand
   ? html`<p class="section-intro">Share of the selected window: ${leagueTotals
       .map(t => `${t.label} ${(100 * t.value / leagueGrand).toFixed(1)}%`)
-      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - today NWSL, NASCAR and INDYCAR.</p>`
+      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - today NWSL, NASCAR, INDYCAR and club friendlies.</p>`
   : html`<p class="section-intro">League columns arrive with the next competitor data refresh (~6h); this chart fills in then.</p>`);
 ```
 
@@ -598,7 +598,7 @@ const calibGap = 100 * (calibActual - calibPaid);
   </div>
 </div>
 
-<div class="instruction-line"><strong>How to read this:</strong> across ${calibEvents.toLocaleString()} settled events DKeX prices land close to outcomes, and the honest summary is that <em>no price band shows a bias this sample can measure</em>. The tails lean the textbook way &mdash; cheap contracts a little rich, favourites a little cheap &mdash; but each of those gaps sits inside its own error bar. Switching to 5&cent; bins puts one or two bands across the line, which is about what twenty draws produce by chance; treat them as noise unless they persist as the sample grows.</div>
+<div class="instruction-line"><strong>How to read this:</strong> across ${calibEvents.toLocaleString()} settled events DKeX prices land close to outcomes, and the honest summary is that <em>one price band (80&cent;) does show a bias this sample can measure, and the rest do not</em>. The tails lean the textbook way &mdash; cheap contracts a little rich, favourites a little cheap &mdash; but each of those gaps sits inside its own error bar. Switching to 5&cent; bins puts one or two bands across the line, which is about what twenty draws produce by chance; treat them as noise unless they persist as the sample grows.</div>
 
 ## Individual markets
 

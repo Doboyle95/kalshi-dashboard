@@ -128,7 +128,7 @@ Plot.plot({
 // FEES -- deliberately loaded through a SECOND attachment instance.
 //
 // novig_fees_daily.csv is registered in sync_dashboard_data.py and in the repo
-// copy of files.json, but NOT in the deployed /opt allowlist, and /opt is the
+// copy of files.json, and, since 2026-08-15, in the deployed /opt allowlist too, and /opt is the
 // list that decides what is actually served. Until it is added there, this
 // fetch 404s. Two consequences, both handled here:
 //   1. the page's main DataAttachment must not carry this load. A failure on it

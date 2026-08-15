@@ -8,7 +8,7 @@ How accurately do Kalshi contract prices predict outcomes? A perfectly calibrate
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Settled contracts are grouped into 5-cent price bins. The x-axis is implied probability from contract price; the y-axis is the realized win rate for contracts in that bin using the contract-weighted outcome rate (yes contracts divided by total contracts). Bins below 5 cents and above 95 cents are excluded to keep sparse tails from dominating the visual.</p>
+  <p>Settled contracts are grouped into 5-cent price bins. The x-axis is implied probability from contract price; the y-axis is the realized win rate for contracts in that bin using the contract-weighted outcome rate (yes contracts divided by total contracts). The bin below 5 cents is excluded to keep the sparsest tail from dominating the visual; the 95&ndash;100 cent bin IS plotted, so the truncation is asymmetric.</p>
   <p>On the scatter, points above the diagonal mean outcomes happened more often than the price implied; points below mean less often. The error chart shows where that gap is widest by price band.</p>
   <p><strong>Read the error bars, not the dots.</strong> Every interval is clustered on the underlying event ticker, because thousands of prints on one event share a single outcome and are therefore one observation, not thousands. Dot area is proportional to the independent events behind a bin, never to its trade count &mdash; sizing by trades would make the busiest bin look like the most certain one, which is backwards. Hollow dots are bins that do not clear two clustered standard errors: read them as <em>no measurable bias</em>, never as a small one.</p>
 </details>
@@ -318,7 +318,7 @@ Plot.plot({
 
 <span style="color:#1a9641">● Above diagonal</span> (actual > implied — contracts underpriced) &nbsp; <span style="color:#d7191c">● Below diagonal</span> (actual < implied — contracts overpriced) &nbsp; Circle area ∝ independent events in the bin, so a small dot is a bin measured on little evidence — pinned down less precisely, not disqualified
 
-<div class="instruction-line"><strong>Useful trick:</strong> switch the market group below to <em>Parlay only</em> — long-shot parlay legs are where the mispricing runs widest, since cheap contracts rarely win as often as their price implies.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> switch the market group above to <em>Parlay only</em> — long-shot parlay legs are where the mispricing runs widest, since cheap contracts rarely win as often as their price implies.</div>
 
 ## Calibration error by price bin
 

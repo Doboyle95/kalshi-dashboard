@@ -10,7 +10,10 @@ money, and whether the implied odds match what actually happens — split by
 **same-game (correlated)** vs **multi-game (independent)** tickets.
 
 ```js
-const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k"
+  // Under 1,000 this used to fall through to String(a), so a fractional dollar value
+  // printed its full float expansion -- $41.769999999999996 in the Taker stakes column.
+  : (Number.isInteger(a) ? String(a) : a.toFixed(2))); };
 const fmtUSD   = n => "$" + fmtCount(n);
 const pct1     = n => (n == null ? "n/a" : n.toFixed(1) + "%");
 ```
@@ -102,9 +105,9 @@ const he = heRaw.map(d => ({
 })).sort((a,b) => a.legsN - b.legsN);
 ```
 
-## House edge climbs steeply with parlay length
+## House edge climbs with parlay length
 
-_Cost to the bettor per \$100 staked (taker P&L, before fees — real cost is worse). Each added leg compounds the margin._
+_Cost to the bettor per \$100 staked (taker P&L, before fees — real cost is worse). Each added leg compounds the margin on same-game tickets; the multi-game series is noisier and dips at 7 legs before climbing again at 10+._
 
 ```js
 Plot.plot({
@@ -215,7 +218,7 @@ display(Plot.plot({
 }))
 ```
 
-_Mean legs per parlay (left) crept up and stabilised near 6._
+_Mean legs per parlay crept up past 6 and is still rising &mdash; 7.2 in the latest month._
 
 ```js
 Plot.plot({
@@ -645,7 +648,7 @@ display(html`<div class="surface-card compact-details" style="font-size:13px;pad
 <strong>How often do they hit?</strong> Of ${lotterySummary.n_qualifying.toLocaleString()} qualifying
 tickets, ${lotterySummary.n_settled.toLocaleString()} (${lotterySummary.pct_settled}%) have settled so
 far — <strong>${lotterySummary.n_hit.toLocaleString()} hit, ${lotterySummary.n_miss.toLocaleString()} missed</strong>,
-a <strong>${lotterySummary.hit_rate_pct}% win rate</strong>. That's well below the ~14-20% win rate for
+a <strong>${lotterySummary.hit_rate_pct}% win rate</strong>. That's well below the ~roughly 11% win rate for
 parlays generally — these are, in fact, lottery tickets.
 </div>`);
 ```
@@ -674,7 +677,7 @@ Plot.plot({
 })
 ```
 
-_Calibration gap by price band (actual − implied). Negative bars = embedded margin the bettor pays. Same-game tickets carry a wider gap through the mid-range._
+_Calibration gap by price band (actual − implied). Negative bars = embedded margin the bettor pays. Same-game tickets carry a wider gap in every band, and the spread widens toward the favourites._
 
 ```js
 Plot.plot({
