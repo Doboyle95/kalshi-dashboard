@@ -537,8 +537,11 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
     // Not distinguishable from calibrated: solid, no ring, half opacity.
     Plot.dot(noiseRows, {
       x: "implied", y: "actual", r: 6,
-      fill: "venue", fillOpacity: 0.45,
-      stroke: "var(--theme-background)", strokeWidth: 1
+      // 0.9, NOT the old 0.45. Significance is carried by the dark ring and the larger
+      // radius, so the interior no longer has to be washed out to say "weaker" -- and at
+      // 0.45 over a white surface these read as absent rather than as unconfirmed.
+      fill: "venue", fillOpacity: 0.9,
+      stroke: "var(--theme-background)", strokeWidth: 1.4
     }),
     // Clears 2 clustered SE: solid, full opacity, DARK RING.
     Plot.dot(clearRows, {
