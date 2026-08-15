@@ -536,25 +536,25 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
     //
     // Not distinguishable from calibrated: solid, no ring, half opacity.
     Plot.dot(noiseRows, {
-      x: "implied", y: "actual", r: 4,
+      x: "implied", y: "actual", r: 6,
       fill: "venue", fillOpacity: 0.45,
       stroke: "var(--theme-background)", strokeWidth: 1
     }),
     // Clears 2 clustered SE: solid, full opacity, DARK RING.
     Plot.dot(clearRows, {
-      x: "implied", y: "actual", r: 5,
+      x: "implied", y: "actual", r: 7,
       fill: "venue", fillOpacity: 1,
       stroke: "var(--theme-foreground)", strokeWidth: 1.6
     }),
     // Standard error itself untrustworthy (too few effective clusters) -- kept as a cross,
     // because that is a THIRD state and must not be confusable with either dot.
     Plot.dot(unmeasRows, {
-      x: "implied", y: "actual", r: 4.5, symbol: "times",
+      x: "implied", y: "actual", r: 6.5, symbol: "times",
       stroke: "var(--theme-foreground-muted)", strokeWidth: 1.8
     }),
     // Transparent hit area, so a small dot is still hoverable.
     Plot.dot(rowsAll, {
-      x: "implied", y: "actual", r: 9, fill: "transparent",
+      x: "implied", y: "actual", r: 11, fill: "transparent",
       tip: true, title: tipText
     })
   ]

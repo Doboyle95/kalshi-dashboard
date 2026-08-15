@@ -293,10 +293,11 @@ Plot.plot({
       x1: d => +d.price_bin,
       x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
-      fill: hasClustered ? "none" : "var(--theme-foreground-fainter)",
-      fillOpacity: hasClustered ? 1 : 0.5,
-      stroke: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
-      strokeOpacity: 0.7, strokeWidth: 1.1
+      // SOLID, same sign colour as a measurable bin, at reduced opacity. Hollow read as a
+      // gap in the data rather than as a weaker finding, which is the opposite of the point.
+      fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
+      fillOpacity: 0.42,
+      stroke: "var(--theme-background)", strokeWidth: 1
     }),
     // Third state: the standard error itself is untrustworthy here. Dashed grey
     // outline plus a cross, so the bar cannot be read as a finding.
@@ -304,9 +305,10 @@ Plot.plot({
       x1: d => +d.price_bin,
       x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
-      fill: "none",
-      stroke: "var(--theme-foreground-muted)", strokeOpacity: 0.6,
-      strokeWidth: 1, strokeDasharray: "3,2"
+      // Third state kept visually distinct, but SOLID: a neutral grey that belongs to no
+      // sign, so it cannot be read as a direction. The cross below still marks it.
+      fill: "var(--theme-foreground-muted)", fillOpacity: 0.28,
+      stroke: "var(--theme-foreground-muted)", strokeOpacity: 0.55, strokeWidth: 1
     }),
     Plot.dot(dataUnmeasurable, {
       x: d => +d.price_bin + 2.5,

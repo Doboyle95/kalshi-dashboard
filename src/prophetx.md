@@ -254,12 +254,12 @@ Plot.plot({
     }),
     Plot.dot(calBins.filter(d => !(d.tPaid >= 2)), {
       x: d => 100 * d.paid, y: d => 100 * d.wt, r: "fixtures",
-      fill: "none", stroke: PX, strokeWidth: 1.75,
+      fill: PX, fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6,
       tip: true, title: calTip
     }),
     Plot.dot(calBins.filter(d => d.tPaid >= 2), {
       x: d => 100 * d.paid, y: d => 100 * d.wt, r: "fixtures",
-      fill: PX, fillOpacity: 0.85, stroke: "var(--theme-background)", strokeWidth: 1,
+      fill: PX, fillOpacity: 1, stroke: "var(--theme-foreground)", strokeWidth: 2,
       tip: true, title: calTip
     })
   ]

@@ -111,13 +111,13 @@ Plot.plot({
     Plot.dot(notsig, {
       x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt,
       r: d => +d.n_events,
-      fill: "none", stroke: "#6b7280", strokeWidth: 1.6, strokeOpacity: 0.9
+      fill: "#6b7280", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6
     }),
     // measurably mispriced: solid
     Plot.dot(sig, {
       x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt,
       r: d => +d.n_events,
-      fill: "#b2182b", fillOpacity: 0.85, stroke: "#7f1220", strokeWidth: 1.2
+      fill: "#b2182b", fillOpacity: 1, stroke: "var(--theme-foreground)", strokeWidth: 2
     }),
     // SE itself untrustworthy (too few independent events)
     Plot.dot(unrel, {

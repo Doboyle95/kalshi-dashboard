@@ -523,7 +523,7 @@ Plot.plot({
     }),
     Plot.dot(calibNoise, {
       x: d => +d.implied_prob, y: d => +d.actual_win_rate_wt, r: d => +d.n_events,
-      fill: "none", stroke: "var(--theme-foreground-muted)", strokeWidth: 1.25,
+      fill: "var(--theme-foreground-muted)", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6,
       tip: true, title: calibTip
     }),
     Plot.dot(calibClear, {
@@ -560,7 +560,7 @@ Plot.plot({
     }),
     Plot.dot(calibNoise, {
       x: d => +d.price_bin + +d.bin_width / 2, y: d => 100 * +d.calib_error,
-      r: 4, fill: "none", stroke: "var(--theme-foreground-muted)", strokeWidth: 1.25,
+      r: 4, fill: "var(--theme-foreground-muted)", fillOpacity: 0.9, stroke: "var(--theme-background)", strokeWidth: 1.6,
       tip: true, title: calibTip
     }),
     Plot.dot(calibClear, {
