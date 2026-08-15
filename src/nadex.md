@@ -20,6 +20,7 @@ const catDaily  = await DataAttachment("data/nadex_categories_daily.csv").csv({t
 // x order) draw a line that zigzags backward through time.
 const split     = (await DataAttachment("data/nadex_sports_split_daily.csv").csv({typed: true}))
   .sort((a, b) => a.date - b.date);
+const parlayDaily = await DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -167,6 +168,98 @@ Plot.plot({
 ```
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of Nadex's own daily bulletins. $1 per contract denomination. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
+
+## Parlay P&L
+
+<p class="section-intro">Crypto.com is one of only three venues on this site with a real
+parlay P&amp;L, and the only competitor whose every contract is priced at what was actually
+paid for it. A combo is quoted by the house on request, so the customer is necessarily the
+buyer &mdash; which is what makes buyer P&amp;L the same thing as taker P&amp;L here, with no
+aggressor flag needed. Outcomes come from Nadex's own settlement file and prices from its
+time-and-sales tape, joined on the contract ID. <strong>Gross of fees</strong>: Crypto.com
+publishes no fee schedule this site has been able to verify, and a guessed fee would be
+worse than an absent one.</p>
+
+```js
+const pdSorted = parlayDaily
+  .map(d => ({
+    ...d,
+    // typed:true turns the date column into a Date; everything below wants one.
+    date: d.date instanceof Date ? d.date : new Date(String(d.date)),
+    prov: String(d.is_provisional) === "true"
+  }))
+  .sort((a, b) => a.date - b.date);
+
+// Cumulative is built here rather than in the producer so the two charts can never
+// disagree about which days they include.
+let _c = 0;
+const pdCumul = pdSorted.map(d => {
+  _c += +d.gross_pnl;
+  return {...d, cumul: _c};
+});
+
+const pdTotal = _c;
+const pdContracts = d3.sum(pdSorted, d => +d.contracts_settled);
+const pdParlays = d3.sum(pdSorted, d => +d.parlays_settled);
+const pdProv = pdSorted.filter(d => d.prov).length;
+const fmtM = d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(2) + "M"
+                       : Math.abs(d) >= 1e3 ? (d / 1e3).toFixed(0) + "k"
+                       : d.toFixed(0));
+```
+
+<div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(pdTotal)}</strong> gross &mdash; ${(100 * pdTotal / pdContracts).toFixed(3)}&cent; per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
+  x: {type: "utc", label: null},
+  y: {label: "Daily parlay P&L, gross (USD)", grid: true,
+      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  marks: [
+    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.2}),
+    // Colour carries DIRECTION (did the bettor win that day), opacity carries how much
+    // of the day the window can actually account for. Solid throughout: a faded bar is
+    // a weaker reading, never a missing one.
+    Plot.rectY(pdCumul, {
+      x: "date", interval: "day", y: "gross_pnl",
+      fill: d => +d.gross_pnl > 0 ? "#1a9641" : "#d7191c",
+      fillOpacity: d => d.prov ? 0.4 : 0.92,
+      title: d => `${d.date.toISOString().slice(0, 10)}${d.prov ? " — PROVISIONAL" : ""}
+Gross P&L: ${fmtM(+d.gross_pnl)}
+Staked: ${fmtM(+d.stake_usd)}
+${(+d.contracts_settled).toLocaleString()} contracts on ${(+d.parlays_settled).toLocaleString()} parlays
+${(+d.gross_pnl_cents_per_contract).toFixed(2)}¢ per contract
+Coverage: ${(+d.coverage_pct).toFixed(1)}%`,
+      tip: true
+    })
+  ]
+})
+```
+
+_Green days are days the parlay bettors came out ahead; red days they did not. Because a parlay is settled as one contract, a single large winning combo can turn a day green on its own._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative parlay P&L, gross (USD)", grid: true,
+      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  marks: [
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
+    Plot.areaY(pdCumul, {x: "date", y: "cumul", fill: "#9c27b0", fillOpacity: 0.12}),
+    Plot.line(pdCumul, {x: "date", y: "cumul", stroke: "#9c27b0", strokeWidth: 2}),
+    Plot.dot(pdCumul, {
+      x: "date", y: "cumul", r: 9, fill: "transparent",
+      title: d => `${d.date.toISOString().slice(0, 10)}
+Cumulative: ${fmtM(d.cumul)}
+That day: ${fmtM(+d.gross_pnl)}`,
+      tip: true
+    })
+  ]
+})
+```
+
+<div class="instruction-line">The line only goes one way. <strong>There is no run of days on which Crypto.com's parlay bettors were collectively ahead</strong>, which is the same shape Kalshi's parlay book shows and the expected one: a parlay's price is the product of its legs plus the house's margin on each, so the edge compounds with every leg added. Crypto.com's buyers lose <strong>${(100 * pdTotal / pdContracts).toFixed(2)}&cent; per contract</strong> against Kalshi parlay takers' 1.82&cent; and Kalshi single-market takers' 1.21&cent; &mdash; but read that gap carefully, because this figure is gross and the Kalshi ones are net of fees.</div>
 
 ## Sports vs. non-sports
 
