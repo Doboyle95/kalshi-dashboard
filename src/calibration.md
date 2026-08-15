@@ -48,7 +48,14 @@ import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness
 // fail-closed guard below reads it as unmeasurable and draws it as a cross rather than
 // as a finding. That is the right direction to fail: a bin whose standard error did not
 // arrive has not been shown to be calibrated OR mispriced.
-const hasSides = sideCurve.length > 0 && sideClusters.length > 0;
+const hasSides = sideCurve.length > 0;
+// Error bars for the both-sides curve need their own clustered recomputation, which
+// is a separate producer run. Until it lands, sideClusters is empty, no bin joins an
+// SE, and hasClustered/declaresEff below both read false -- so the combined view draws
+// its points with no error bars and NO significance encoding rather than claiming a
+// precision it does not have. The taker view is unaffected: it keeps the legacy
+// clusters file and its error bars throughout.
+const sideBarsReady = sideClusters.length > 0;
 ```
 
 ```js
@@ -95,6 +102,13 @@ const calib = curveRows.map(d => {
 // bin sets this is the number that says so, and it is surfaced on the page below.
 const calibUnjoined = calib.filter(d => d.se_calib_error_mid === undefined).length;
 const sideLabel = side === "taker" ? "taker-side" : "both-sides";
+const sideNote = (side === "both" && !sideBarsReady)
+  ? "Error bars and the significance encoding are OFF for this view. A both-sides "
+    + "standard error cannot be pooled from the taker one -- within a bin the mirrored "
+    + "rows are positively correlated with the taker rows, so pooling shrinks it "
+    + "spuriously -- and the recomputation has not finished. The points are exact; "
+    + "no claim of significance is made from them yet."
+  : null;
 ```
 
 ```js
@@ -421,5 +435,7 @@ const extremeQualifier = hasClustered
     <div style="font-size:0.75em;color:var(--theme-foreground-muted)">${extremeQualifier}</div>
   </div>
 </div>
+
+${sideNote ? html`<div class="instruction-line"><strong>No error bars on this view yet.</strong> ${sideNote}</div>` : ""}
 
 <p style="font-size:0.82em;color:#888;margin-top:1.5rem">${side === "taker" ? "Contract-weighted win rates using settled TAKER-SIDE contracts (void filter applied)" : "Contract-weighted win rates using BOTH SIDES of every settled contract (void filter applied) — each trade counted once as the taker bought it and once as the maker held its mirror, at 100 minus the price"} &mdash; <code>yes_contracts / n_contracts</code>. ${side === "taker" ? "The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won" : "The price bin is the price paid for whichever side is being counted, and the actual win rate is whether that side won. Because every cent one side wins the other loses, THIS CURVE IS FORCED TO NET TO ZERO across the whole book — it can only show where bias sits, never that an edge exists. It nets to zero exactly against the mean traded price; against the bin midpoint a residual of about -0.34c remains, because a price sitting exactly on a bin floor mirrors one bin too high"}; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area is proportional to the independent settlement events behind a bin, never to its trade count</strong>, and the error bars are cluster-robust with the Kalshi event ticker as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. On the bins drawn here the nominal event count collapses to an effective (Kish) count by a median factor of about ${effCollapse ? Math.round(effCollapse).toLocaleString() : "\u2014"}&times;, because contract weighting concentrates a bin on its busiest events &mdash; that collapse, not the print count, is what sets the width of every bar above. A bin whose effective count falls below ${MIN_EFF_CLUSTERS} is drawn as &#10005; and claims nothing in either direction. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>
