@@ -260,10 +260,14 @@ Plot.plot({
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
   marks: [
-    Plot.dot(catDailyF.filter(d => topCats.includes(d.category)), {
-      x: "date", y: "contracts", fill: "category", r: 4,
+    // Daily volume by category is a FLOW, so it stacks as bars. Dots implied a level and
+    // left the day total unreadable, because the eye cannot sum scattered points.
+    Plot.rectY(catDailyF.filter(d => topCats.includes(d.category)), {
+      x: "date", y: "contracts", fill: "category", interval: "day",
+      insetLeft: 1, insetRight: 1, inset: 0.5,
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtCount(d.contracts)} contracts`
+      title: d => [fmtDate(d.date), d.category + ": " + fmtCount(d.contracts) + " contracts"].join("
+")
     }),
     Plot.ruleY([0])
   ]
@@ -319,6 +323,13 @@ const topBetTypes = [...betTypeTotals.entries()].sort((a, b) => b[1] - a[1]).map
 
 const betTypeTidy = market.filter(d => d.trade_volume > 0)
   .map(d => ({...d, bet_type: betTypeLabel(d)}));
+
+// betTypeTidy is one row PER MARKET per day, so the old dot mark drew a cloud of thousands of
+// points with no readable daily total. Stacked bars need it rolled up to (date, bet_type).
+const betTypeDaily = Array.from(
+  d3.rollup(betTypeTidy, v => d3.sum(v, d => d.trade_volume), d => +d.date, d => d.bet_type),
+  ([ms, m]) => Array.from(m, ([bet_type, contracts]) => ({date: new Date(ms), bet_type, contracts}))
+).flat();
 ```
 
 ```js
@@ -331,10 +342,12 @@ Plot.plot({
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, domain: topBetTypes, scheme: "set2"},
   marks: [
-    Plot.dot(betTypeTidy, {
-      x: "date", y: "trade_volume", fill: "bet_type", r: 3, fillOpacity: 0.75,
+    Plot.rectY(betTypeDaily, {
+      x: "date", y: "contracts", fill: "bet_type", interval: "day",
+      insetLeft: 1, insetRight: 1, inset: 0.5,
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${d.bet_type}: ${fmtCount(d.trade_volume)} contracts (${d.symbol})`
+      title: d => [fmtDate(d.date), d.bet_type + ": " + fmtCount(d.contracts) + " contracts"].join("
+")
     }),
     Plot.ruleY([0])
   ]
