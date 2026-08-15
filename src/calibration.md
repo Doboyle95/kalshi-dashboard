@@ -25,6 +25,17 @@ const calibCurve = await DataAttachment("data/calibration_three_way.csv").csv({t
 // after it in the same weekly flow (refresh_calibration_clusters runs wait_for=[calib])
 // so the pair always describes one date set.
 const calibClusters = await DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true});
+// SIDE-AWARE pair. Same statistics keyed by side as well as (group, price_bin): the
+// taker rows are byte-for-byte the legacy files (the producer asserts that), and the
+// `both` rows add the maker's mirror of every trade.
+//
+// Loaded defensively. If either file is absent -- a producer that has not run yet, or a
+// transport allowlist that has not caught up -- the toggle simply does not appear and
+// the page behaves exactly as it did before. A missing file must never blank the chart.
+const sideCurve = await DataAttachment("data/calibration_by_side.csv")
+  .csv({typed: true}).catch(() => []);
+const sideClusters = await DataAttachment("data/calibration_by_side_clusters.csv")
+  .csv({typed: true}).catch(() => []);
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 
@@ -37,8 +48,39 @@ import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness
 // fail-closed guard below reads it as unmeasurable and draws it as a cross rather than
 // as a finding. That is the right direction to fail: a bin whose standard error did not
 // arrive has not been shown to be calibrated OR mispriced.
-const clusterByBin = new Map(calibClusters.map(d => [`${d.group}|${d.price_bin}`, d]));
-const calib = calibCurve.map(d => {
+const hasSides = sideCurve.length > 0 && sideClusters.length > 0;
+```
+
+```js
+// WHOSE SIDE THE CURVE DESCRIBES. These are two different questions, not two views of
+// one number:
+//   taker  -- of the contracts the AGGRESSOR bought at this price, how many won? An
+//             edge, and it can be nonzero in either direction.
+//   both   -- of ALL contracts trading at this price, how many resolved that way? This
+//             is market calibration, and it is FORCED to net to zero across the book,
+//             because one side's cent is the other's. It shows WHERE bias sits, never
+//             that a profit exists.
+// Default stays taker, which is what this page has always shown.
+const side = hasSides
+  ? view(Inputs.radio(["taker", "both"], {
+      label: "Side",
+      value: "taker",
+      format: v => v === "taker"
+        ? "Takers only (the aggressor)"
+        : "Both sides (takers and makers)"
+    }))
+  : "taker";
+```
+
+```js
+// Join the selected side. When side is "taker" these rows are identical to the legacy
+// calibration_three_way pair -- the producer asserts that bin by bin -- so switching
+// the source cannot silently move the default view.
+const curveRows = hasSides ? sideCurve.filter(d => d.side === side) : calibCurve;
+const clusterRows = hasSides ? sideClusters.filter(d => d.side === side) : calibClusters;
+
+const clusterByBin = new Map(clusterRows.map(d => [`${d.group}|${d.price_bin}`, d]));
+const calib = curveRows.map(d => {
   const c = clusterByBin.get(`${d.group}|${d.price_bin}`);
   return c == null ? d : {
     ...d,
@@ -52,6 +94,7 @@ const calib = calibCurve.map(d => {
 // Counted, not assumed: if the curve and the sidecar ever rebuild against different
 // bin sets this is the number that says so, and it is surfaced on the page below.
 const calibUnjoined = calib.filter(d => d.se_calib_error_mid === undefined).length;
+const sideLabel = side === "taker" ? "taker-side" : "both-sides";
 ```
 
 ```js
@@ -379,4 +422,4 @@ const extremeQualifier = hasClustered
   </div>
 </div>
 
-<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Contract-weighted win rates using settled taker-side contracts (void filter applied) &mdash; <code>yes_contracts / n_contracts</code>, which is what this chart has always plotted whatever the axis said. The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area is proportional to the independent settlement events behind a bin, never to its trade count</strong>, and the error bars are cluster-robust with the Kalshi event ticker as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. On the bins drawn here the nominal event count collapses to an effective (Kish) count by a median factor of about ${effCollapse ? Math.round(effCollapse).toLocaleString() : "\u2014"}&times;, because contract weighting concentrates a bin on its busiest events &mdash; that collapse, not the print count, is what sets the width of every bar above. A bin whose effective count falls below ${MIN_EFF_CLUSTERS} is drawn as &#10005; and claims nothing in either direction. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>
+<p style="font-size:0.82em;color:#888;margin-top:1.5rem">${side === "taker" ? "Contract-weighted win rates using settled TAKER-SIDE contracts (void filter applied)" : "Contract-weighted win rates using BOTH SIDES of every settled contract (void filter applied) — each trade counted once as the taker bought it and once as the maker held its mirror, at 100 minus the price"} &mdash; <code>yes_contracts / n_contracts</code>. ${side === "taker" ? "The price bin is the price paid for the side the taker bought and the actual win rate is whether that side won" : "The price bin is the price paid for whichever side is being counted, and the actual win rate is whether that side won. Because every cent one side wins the other loses, THIS CURVE IS FORCED TO NET TO ZERO across the whole book — it can only show where bias sits, never that an edge exists. It nets to zero exactly against the mean traded price; against the bin midpoint a residual of about -0.34c remains, because a price sitting exactly on a bin floor mirrors one bin too high"}; implied probability is the bin midpoint, so the half-cent by which the average traded price sits below that midpoint is booked here as mispricing. Parlay markets = KXMVE* and PREPACK* series. <strong>Bubble area is proportional to the independent settlement events behind a bin, never to its trade count</strong>, and the error bars are cluster-robust with the Kalshi event ticker as the cluster: thousands of prints on one event share one outcome, so they are one observation, and a trade-level interval would be one to two orders of magnitude too narrow. On the bins drawn here the nominal event count collapses to an effective (Kish) count by a median factor of about ${effCollapse ? Math.round(effCollapse).toLocaleString() : "\u2014"}&times;, because contract weighting concentrates a bin on its busiest events &mdash; that collapse, not the print count, is what sets the width of every bar above. A bin whose effective count falls below ${MIN_EFF_CLUSTERS} is drawn as &#10005; and claims nothing in either direction. See the <a href="./calibration-venues">cross-venue page</a> for the same measurement at Polymarket US, ForecastEx and DKeX.</p>
