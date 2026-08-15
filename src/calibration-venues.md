@@ -10,10 +10,10 @@ title: Cross-Venue Calibration
 
 <details class="surface-card compact-details">
   <summary>About this page &mdash; read before quoting any number</summary>
-  <p><strong>Weighting: contract-weighted, everywhere.</strong> Of every contract bought near 25&cent;, what share paid out. This is the series Kalshi's own calibration page plots (<code>yes_contracts / n_contracts</code>) and it is the only weighting for which all four venues publish a matching event-clustered standard error, so it is the only one on which a cross-venue comparison is defined. The ForecastEx producer leads with the <em>trade</em>-weighted series measured against the mean traded price instead, and on that venue the two conventions disagree by several cents and in sign in a number of bins, so the ForecastEx curve here will not match figures quoted from its own file. The divergence is counted from the file, with the bins driving it, above the favourite&ndash;longshot table below. It is a weighting difference, not a disagreement about the data.</p>
-  <p><strong>Implied probability is the bin midpoint</strong> at every venue, not the average price actually paid, because Polymarket US publishes no traded-price sum &mdash; its <code>sum_price</code> column is derived from the midpoint &mdash; so a mean-price axis is not available for all four venues and the midpoint is the only shared choice. That is not free. Contracts trade a little below their bin midpoint: over Kalshi's full settled history the contract-weighted mean price sits 0.47&cent; below the midpoint averaged across the 5&ndash;95&cent; bins, and 1.23&cent; below it in the cheapest bin, and this convention books that gap as mispricing rather than as a binning artefact. Kalshi is now drawn here from its live history, and because it is the one venue publishing both axes the size of that bias can be measured instead of assumed: on the longshot band it accounts for <strong>${midpointCost ? `${fmtCents(midpointCost.gap)} of a ${fmtCents(midpointCost.mid)} reading, about ${Math.abs(midpointCost.share)}% of it` : "a share this page cannot currently compute"}</strong>${midpointCost ? html`, and the direction ${midpointCost.clearsMean ? html`survives on a mean-price axis (${fmtCents(midpointCost.mean)}, still clearing two clustered standard errors)` : html`does <em>not</em> survive on a mean-price axis (${fmtCents(midpointCost.mean)}, inside its own interval)`}` : ""}. The convention is applied identically to every venue, so the <em>comparison</em> is clean even though the level carries that bias.</p>
-  <p><strong>Whose price.</strong> A binary has two legs and the venues do not all bin the same one. Kalshi bins the <strong>taker's</strong> own side. DKeX and Polymarket US publish one price per print against a symbol naming a specific leg, and neither publishes an aggressor flag, so those are <strong>leg</strong>-price curves. ForecastEx matches a YES buyer against a NO buyer with no taker flag at all, so it is the <strong>YES leg</strong> and its NO-leg curve is the mirror. Small level differences between venues should not be over-read.</p>
-  <p><strong>Two venues appear only on the volume panel at the foot of this page, and one of them needs a caution before any of its numbers are quoted.</strong> Underdog Exchange publishes a traded price but no settled outcome, so it can be counted but not scored. ProphetX is a different case, and a correction: its daily bulletin does carry a per-contract outcome that works on the venue's single markets, so the reason this page gave for excluding it until 2026-08-14 was wrong, and it now sits off the calibration charts only because no producer has built the curve. Both are named with their reason in the omitted list under the calibration charts. ProphetX is the one to read carefully. It publishes a <em>single</em> price per market that describes both sides at once &mdash; on a head-to-head moneyline that number is the probability of the second-named, <strong>home</strong> side, and the away side is one minus it &mdash; so only half of that venue is on the axis and its curve is not a two-sided distribution. Head-to-head moneylines are also only 30.8% of the volume drawn there, or 34.0% counting three-way moneylines; a further 32.3% is game spreads and totals, lines an oddsmaker sets so that both sides sit near a coin flip, which is why that venue clusters at even money for reasons that have nothing to do with how well it prices. Player and team props are a separate 11.6% and are not oddsmaker lines, so they are counted on their own rather than folded into that figure. Its multi-event parlays, 11.8% of its contracts, cannot be separated out of the published volume file, which carries no single-or-parlay split &mdash; the raw tape does carry one, and that split is what overturned this page's former reason for leaving the venue off the calibration charts.</p>
+  <p><strong>Weighting: contract-weighted, everywhere.</strong> Of every contract bought near 25&cent;, what share paid out. This is the series Kalshi's own calibration page plots (<code>yes_contracts / n_contracts</code>) and it is the only weighting for which all five venues publish a matching event-clustered standard error, so it is the only one on which a cross-venue comparison is defined. The ForecastEx producer leads with the <em>trade</em>-weighted series measured against the mean traded price instead, and on that venue the two conventions disagree by several cents and in sign in a number of bins, so the ForecastEx curve here will not match figures quoted from its own file. The divergence is counted from the file, with the bins driving it, above the favourite&ndash;longshot table below. It is a weighting difference, not a disagreement about the data.</p>
+  <p><strong>Implied probability is the bin midpoint at four of the five venues</strong>, not the average price actually paid, because Polymarket US publishes no traded-price sum &mdash; its <code>sum_price</code> column is derived from the midpoint &mdash; so a mean-price axis is not available for all of them and the midpoint is the only shared choice. That is not free. Contracts trade a little below their bin midpoint: over Kalshi's full settled history the contract-weighted mean price sits 0.47&cent; below the midpoint averaged across the 5&ndash;95&cent; bins, and 1.23&cent; below it in the cheapest bin, and this convention books that gap as mispricing rather than as a binning artefact. Kalshi is now drawn here from its live history, and because it is the one venue publishing both axes the size of that bias can be measured instead of assumed: on the longshot band it accounts for <strong>${midpointCost ? `${fmtCents(midpointCost.gap)} of a ${fmtCents(midpointCost.mid)} reading, about ${Math.abs(midpointCost.share)}% of it` : "a share this page cannot currently compute"}</strong>${midpointCost ? html`, and the direction ${midpointCost.clearsMean ? html`survives on a mean-price axis (${fmtCents(midpointCost.mean)}, still clearing two clustered standard errors)` : html`does <em>not</em> survive on a mean-price axis (${fmtCents(midpointCost.mean)}, inside its own interval)`}` : ""}. The convention is applied identically to the four venues drawn on it, so the <em>comparison</em> is clean even though the level carries that bias. <strong>ProphetX is the exception, and it is drawn on the price actually paid.</strong> It is the venue where the two conventions do not merely differ in level &mdash; they disagree about whether there is anything to report. On its own 10-cent deciles, 2 of 10 bins clear two clustered standard errors against the midpoint and <strong>0 of 10</strong> against the price paid; on the 5-cent bins this page draws, 4 of 20 against 1 of 20. Its cheapest decile is the reason: recounted on 2026-08-14, those contracts were bought at a mean of 2.44&cent;, not at the 5&cent; midpoint, which alone converts a &minus;0.57&cent; miss into a &minus;3.13&cent; one. Applying the shared convention there would have this page assert a mispricing the venue's tape does not support, which is the failure it exists to prevent. The cost of the exception is stated rather than hidden: ProphetX's dots sit on a slightly different x-axis from the other four, and the axis label says so.</p>
+  <p><strong>Whose price.</strong> A binary has two legs and the venues do not all bin the same one. Kalshi bins the <strong>taker's</strong> own side. DKeX and Polymarket US publish one price per print against a symbol naming a specific leg, and neither publishes an aggressor flag, so those are <strong>leg</strong>-price curves. ForecastEx matches a YES buyer against a NO buyer with no taker flag at all, so it is the <strong>YES leg</strong> and its NO-leg curve is the mirror. ProphetX is a fourth construction and the furthest from Kalshi's: it publishes no aggressor flag either, and it prints <em>one</em> price per market that describes both sides at once, so there is no leg to pick at all. On a head-to-head moneyline that number is the probability of the second-named &mdash; <strong>home</strong> &mdash; side, with the away side at one minus it, so what its curve scores is the <strong>priced side</strong>. Nothing in the measurement depends on naming that side: price and settlement are the same series on the same side, so a contract's outcome is simply its own priced side winning. It is one definitional step from Kalshi's taker curve and it is never a taker curve. Small level differences between venues should not be over-read.</p>
+  <p><strong>One venue appears only on the volume panel at the foot of this page.</strong> Underdog Exchange publishes a traded price but no settled outcome, so it can be counted but not scored, and it is named with its reason in the omitted list under the calibration charts. <strong>ProphetX used to be the second, and is not any more.</strong> Its curve is drawn from 2026-08-14, and the reason this page gave for excluding it &mdash; that its settlement column could not separate winners from losers &mdash; was refuted rather than revised: the claim was true of the venue's parlays and was never true of its single markets. Recounted from the raw tape on 2026-08-14 across the 60 sessions from 2026-06-16, on a basis stated rather than assumed &mdash; the unit is the <em>contract id</em>, each id priced at its own contract-weighted mean traded price, and &ldquo;cheap&rdquo; means that mean is 5&cent; or below &mdash; the contracts that claim was built on do carry a final mark of exactly 1.00 on 83.9% of the 16,375 such ids the bulletin marks, when singles and parlays are pooled; but that is 0.5% of the 1,171 singles against 90.3% of the 15,204 parlays. Among single markets that reached a 0-or-1 resolution, those bought below 10&cent; won 4.2% of the time (2,397 ids; 1.2% if the same group is weighted by contracts instead of ids) and those bought at 90&cent; or above won 94.8% (249 ids, the thinnest group quoted here; 98.7% contract-weighted). Rates are given to one decimal and with their recount date because they drift as the tape grows: they are a measurement of this corpus, not a fixed property of the venue. What is still absent is the parlay half, and it is absent permanently rather than pending: none of the 80,543 parlay contract ids in this venue's bulletin carries a parseable event date, so the maturity rule that makes the single markets scoreable cannot even be applied to them. Those parlays are 31,899,248 contracts, 11.77% of the venue. They are <em>in</em> the volume panel, at their combination price, and <em>out</em> of every calibration chart above &mdash; the one place on this page where a venue's two populations differ by construction rather than by sampling, and it is called out again under the overlay. Two further cautions belong with any ProphetX number quoted from these charts. Its curve is one side's view: the venue publishes a <em>single</em> price per market describing both sides at once, which on a head-to-head moneyline is the probability of the second-named, <strong>home</strong> side, so the away half is not on the axis. And what the curve is drawn <em>over</em> is a specific product mix &mdash; oddsmaker-set spreads and totals sit near a coin flip by construction, and golf outrights sit in the cheap tail by construction &mdash; which is sized from the venue's own tape under the volume chart below and should be read before the shape of the curve is interpreted.</p>
   <p><strong>Significance is recomputed here, not copied.</strong> The producers do not agree on what significance means, and one of them does not publish a verdict at all: ForecastEx flags its <em>trade</em>-weighted series, and Kalshi publishes no flag but two different standard errors &mdash; one against the bin midpoint, one against the mean traded price &mdash; which differ by a median 0.50&cent; and by as much as 1.54&cent;, so pairing the wrong one with this page's gap would misdraw every Kalshi bar. This page ignores every published verdict and applies one rule to every bin: <em>does the contract-weighted error exceed twice its own event-clustered standard error, measured on the same axis as the gap</em>. Nothing else counts as measurable.</p>
   <p><strong>Twenty bins per venue is twenty tests.</strong> About one bin in twenty crosses two standard errors by chance alone, so a single isolated solid dot is not evidence. The counts below are there to be read against that expectation, and the crossings that survive a Bonferroni correction at twenty bins per venue (|t| &ge; 2.96) are counted under the panels below &mdash; computed from the venues actually drawn, not asserted here.</p>
   <p><strong>Dot area is proportional to the number of independent events</strong> in the bin, never to trade count. The scale is set separately for each venue, because an &ldquo;event&rdquo; is not the same object at every venue &mdash; a Kalshi event ticker, a DKeX ball game, a Polymarket contest, a ForecastEx city-day settlement. Dots are drawn at a uniform size. The <em>length of the interval</em> is what shows precision, and unlike a dot area it is comparable across venues, because every interval is in the same probability units.</p>
@@ -38,6 +38,10 @@ const calKalshiClusters = await DataAttachment("data/calibration_three_way_clust
 const calDkex       = await DataAttachment("data/dkex_calibration.csv").csv({typed: true});
 const calPolymarket = await DataAttachment("data/calibration_polymarket.csv").csv({typed: true});
 const calForecastex = await DataAttachment("data/forecastex_calibration.csv").csv({typed: true});
+// ProphetX joined these charts on 2026-08-14. Its file is schema-identical to
+// dkex_calibration.csv, which is why it needs no new normalisation path -- only a
+// different REFERENCE PRICE, for the reason set out on its registry entry below.
+const calProphetx   = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
 const freshness     = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 
@@ -124,7 +128,10 @@ const sample = view(Inputs.radio(["headline", "reported"], {
 //
 // Each entry turns one venue's rows into the SAME shape:
 //   {price_bin, implied, actual, err, se, n_events, n_eff, n_trades, n_contracts}
-// where every field is CONTRACT-weighted and `implied` is the bin MIDPOINT.
+// where every field is CONTRACT-weighted. `implied` is the bin MIDPOINT at four of
+// the five venues; ProphetX is drawn on the price actually PAID and declares that
+// with impliedBasis, so nothing downstream has to guess which axis it is reading.
+// That entry explains why the choice changes the answer there and only there.
 // Everything venue-specific lives in `rows`; nothing after this block knows
 // which venue it is looking at.
 //
@@ -238,6 +245,70 @@ const VENUES = [
       n_trades: num(r.n_trades),
       n_contracts: num(r.n_contracts)
     })
+  },
+  {
+    name: "ProphetX", color: "#DB2777", accent: "prophetx", src: calProphetx,
+    file: "prophetx_calibration.csv",
+    // ProphetX publishes NO aggressor flag, so "whose calibration" is a convention
+    // here, not a measurement. It prints ONE price per market describing both sides
+    // at once; on a head-to-head moneyline that number is the probability of the
+    // second-named -- HOME -- side, and the away side is one minus it. What is
+    // scored is therefore the PRICED side. Nothing in the measurement depends on
+    // naming it: price and settlement are the same series on the same side, so a
+    // contract's outcome is its own priced side winning. It is one definitional
+    // step from Kalshi's taker curve and must never be labelled a taker curve.
+    leg: "priced side \u2014 the second-named, home side (this venue publishes no aggressor flag)",
+    // Schema-identical to dkex_calibration.csv, and like it the file publishes no
+    // effective-cluster column. null, so the fail-closed guard below does not
+    // punish it for shipping fewer diagnostics than its neighbours.
+    effCol: null,
+    groups: {headline: "ALL", reported: "ALL"},
+    // Both 10c deciles and 5c bins ship in one file, tagged by bin_width, exactly
+    // as DKeX does. Only the 5c rows share this page's axis.
+    binFilter: r => num(r.bin_width) == null || +r.bin_width === 5,
+    // THE ONE VENUE NOT DRAWN ON THE BIN MIDPOINT.
+    //
+    // The file's published implied_prob and calib_error ARE the midpoint, kept for
+    // schema compatibility with dkex. They are deliberately not used. At every
+    // other venue the midpoint convention shifts a LEVEL; here it changes the
+    // VERDICT. Measured against the midpoint 4 of these 20 bins clear two clustered
+    // standard errors; measured against the price contracts were actually bought
+    // at, 1 does -- and on the venue's own 10c deciles it is 2 of 10 against 0 of
+    // 10. The cheapest decile is why: its contracts were bought at a mean of 2.44c,
+    // not at the 5c midpoint, which alone turns a -0.57c miss into a -3.13c one.
+    // Drawing this venue on the shared convention would have the page assert a
+    // mispricing its own tape does not support. The producer prints both readings
+    // and warns on every run for the same reason.
+    impliedBasis: "paid",
+    rows: r => {
+      const nc = num(r.n_contracts);
+      const sp = num(r.sum_price_contracts);
+      // Guarded rather than assumed: a bin with no contracts, or a file that ever
+      // drops sum_price_contracts, yields null and is filtered out below instead
+      // of dividing by zero into a plausible-looking number.
+      const implied = (nc != null && nc > 0 && sp != null) ? sp / nc / 100 : null;
+      const actual = num(r.actual_win_rate_wt);
+      return {
+        price_bin: +r.price_bin,
+        implied,
+        actual,
+        err: (implied == null || actual == null) ? null : actual - implied,
+        // se_clustered is clustered on the FIXTURE -- the game, tournament or bout
+        // named in the contract description, so a game's player props cluster with
+        // its own moneyline. It is a standard error of the win rate, so it applies
+        // unchanged whichever reference price the gap is measured against.
+        se: num(r.se_clustered),
+        n_events: num(r.n_events),
+        // Distinct fixtures in the WHOLE eligible sample, constant across this
+        // venue's rows by construction: bins share fixtures, so summing n_events
+        // would multiple-count badly. Carried only by this venue, and read only by
+        // the note under the error panel, which needs the honest sample size and
+        // must not be left quoting a frozen one.
+        n_events_total: num(r.n_events_total),
+        n_trades: num(r.n_trades),
+        n_contracts: nc
+      };
+    }
   }
 ];
 
@@ -246,14 +317,20 @@ const VENUES = [
 // which is the failure this page exists to avoid -- the same rule the effective
 // fee-rate chart on /competitors follows.
 //
-// Rothera was measured and ruled out on the result. The other three fail earlier
-// than that: the question needs a traded price per print AND a settled outcome
-// per contract, and the feeds collected for them do not carry both. Columns
-// re-checked against the live files on 2026-08-07.
+// Rothera was measured and ruled out on the result. Three of the others fail
+// earlier than that: the question needs a traded price per print AND a settled
+// outcome per contract, and the feeds collected for them do not carry both.
+// Columns re-checked against the live files on 2026-08-07.
+//
+// The ProphetX row is a fourth kind of entry and is deliberately NOT a venue: the
+// venue itself moved onto these charts on 2026-08-14. What is named there is the
+// half of it that still cannot appear, because a venue whose parlays silently drop
+// out of a curve reads as a venue with no parlays. Do not delete that row when
+// tidying this list -- it is the anti-silence contract, not a leftover.
 const OMITTED = [
   ["Rothera (Robinhood)", "measured and ruled out on the sample, not on the inputs. Its settlements are clean and a daily-price proxy is accurate to within about half a cent, but only 71 independent events sit behind its trade tape: 70 baseball games and one inflation release. Its World Cup, roughly 92% of all-time volume, settled before the tape begins on 2026-07-27, and everything earlier is permanently unavailable. The comparable DKeX measurement rests on 424–654 independent games per decile; Rothera offers 22–51 effective events per 5-cent bin, an order of magnitude short, with its one large block being a single tournament."],
   ["Underdog Exchange", "the trade tape does carry a price on every print, but the market file's status column has exactly one value, \"Finalized\", and no win/loss field appears anywhere in the feed, so there is no outcome to score those prices against. The collection window is also only 40 days."],
-  ["ProphetX", "the reason this page gave for excluding ProphetX did not survive re-checking, and the exclusion is now under review. The price was never the problem: ProphetX publishes one price per market describing both sides, and on a head-to-head moneyline it is the probability of the second-named, HOME side (the one after the at-sign), with the away side at one minus it. The settlement was believed unusable because contracts trading at 5¢ or below carry settlement_price 1.00 on 85.1% of their 16,137 resolutions. That figure reproduces exactly — contract-weighted mean traded price at or below 5¢, joined to each contract's last row in the daily bulletin — and it is a PARLAY POOLING ARTEFACT. 14,969 of those 16,137 contracts are multi-event parlays, and the bulletin publishes no per-parlay settlement at all: it stamps one aggregate row across every parlay of the same leg count on a date, so that 618 of the 640 such groups holding more than one parlay give every parlay in them the same settlement_price AND the same daily_volume, and 95.8% of parlay contract ids sit in such a group. Split the sample and the column behaves like an outcome on the single markets: among cheap contracts that reached a 0-or-1 resolution, single markets settle 1.00 on 0.68% (n=877) against 92.71% for parlays, and at the dear end — mean price at or above 95¢, all 105 of them single markets — 93.02% settle 1.00 (n=86). Three checks no resolved-and-paid flag could pass: within one game a spread's settlement is correctly ordered in the handicap on all 14,732 line pairs across 653 informative ladders, against 79.2% for a within-ladder permutation of the same outcomes; over/under ladders are 94.5% ordered against an 80.3% null; and a home side that won outright also wins its positive handicap on 98.95% of 1,521 checks. A single-market curve would rest on as recounted on 2026-08-14, 64,152 resolved contracts, 3,487 independent events and 69.4% of this venue's traded contracts, with 332 to 2,579 events per 5-cent bin. It is not drawn here because building it is a producer change rather than a page change: ProphetX is off these charts for want of a producer, not for want of an outcome column. It IS drawn on the volume panel below, which needs only the price."],
+  ["ProphetX parlays — the venue itself is now drawn", "ProphetX's single markets ARE on these charts from 2026-08-14, and the reason this page previously gave for keeping the whole venue off them was refuted rather than revised. That reason was that cheap contracts carry a final settlement_price of 1.00 on the overwhelming majority of their resolutions, so the column could not tell winners from losers. Recounted from the raw tape on 2026-08-14 the pooled figure holds. STATE THE BASIS with any of these numbers, because they differ by basis and that is how the earlier mess arose: the unit here is the CONTRACT ID, each id is priced at its own contract-weighted mean traded price, a final mark is settlement_price on the last bulletin session listing that id, and the window is the 60 sessions 2026-06-16 to 2026-08-14. On that basis, of the 16,375 traded contract ids the bulletin marks whose mean traded price was 5¢ or below, 83.9% carry a final mark of exactly 1.00 — and the conclusion does not follow, because it is a PARLAY artefact. Split that same sample and the single markets mark to 1.00 on 0.5% of 1,171 against 90.3% of 15,204 parlays. All 80,543 parlay contract ids in this venue's bulletin lack a parseable event date, so the maturity rule that makes the single markets scoreable cannot even be applied to them, and 93.43% of them carry a final mark of exactly 1.00 — an impossible outcome rate for multi-leg combinations, which is how you know those marks are not outcomes at all. On single markets the same column separates cleanly: among contracts that reached a 0-or-1 resolution, those bought below 10¢ won 4.2% of the time (2,397 contract ids; 1.2% if the same group is weighted by contracts instead of ids) and those bought at 90¢ or above won 94.8% (249 ids, the thinnest group quoted on this page, so read it as “nearly all” rather than as a decimal; 98.7% contract-weighted). So what remains omitted is the parlay half, and it is a large half: 31,899,248 contracts, 11.77% of everything this venue traded. Parlays are IN the volume panel at the foot of this page, at their combination price, and OUT of every calibration chart above."],
   ["Crypto.com/Nadex", "what is collected is a daily bulletin: one volume number per market description, with no traded price and no settlement."],
   ["CME (FanDuel + DraftKings)", "hand-collected daily bulletins carrying call, put and total volume only, with no trade prices and no per-contract settlements."]
 ];
@@ -305,11 +382,15 @@ const built = VENUES.map(v => {
       return {
         ...r,
         venue: v.name, color: v.color,
+        // "midpoint" or "paid" -- WHAT `implied` is on this row, carried through so
+        // a tooltip or an axis label can NAME the reference instead of assuming the
+        // shared one. A venue that declares nothing is on the midpoint, as before.
+        basis: v.impliedBasis ?? "midpoint",
         hasSe, reliable,
         clears: reliable && Math.abs(r.err) > 2 * r.se,
         // The standard error a chart treating every print as independent would
         // have drawn: the binomial error over prints at this bin's win rate.
-        // Computed the same way for all four venues rather than read from four
+        // Computed the same way for all five venues rather than read from five
         // differently-defined "naive SE" columns.
         seNaive: r.n_trades > 0
           ? Math.sqrt(Math.max(r.actual * (1 - r.actual), 1e-12) / r.n_trades)
@@ -343,7 +424,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Across the prediction-market venues, which price bands are measurably mispriced once standard errors are clustered on events, and which are NOT distinguishable from perfectly calibrated? Say plainly where the answer is that nothing is measurable.",
-  context: "Cross-venue calibration page: contract-weighted win rates, bin-midpoint implied probability, event-clustered standard errors."
+  context: "Cross-venue calibration page: contract-weighted win rates and event-clustered standard errors. Implied probability is the bin midpoint at Kalshi, Polymarket US, ForecastEx and DKeX, but at ProphetX it is the contract-weighted mean price actually paid in the bin, not the midpoint -- ProphetX is the one venue where the choice changes the verdict rather than the level."
 }));
 ```
 
@@ -399,7 +480,9 @@ const unmeasRows = rowsAll.filter(d => !d.reliable);
 function tipText(d) {
   return [
     `${d.venue} — ${d.price_bin}–${d.price_bin + 5}¢`,
-    `Actual ${(100 * d.actual).toFixed(2)}%  vs implied ${(100 * d.implied).toFixed(1)}%`,
+    `Actual ${(100 * d.actual).toFixed(2)}%  vs ${d.basis === "paid"
+        ? `mean price PAID ${(100 * d.implied).toFixed(2)}¢`
+        : `implied ${(100 * d.implied).toFixed(1)}% (bin midpoint)`}`,
     `Error ${fmtCents(100 * d.err)} ± ${(200 * d.se).toFixed(2)}¢ (2 event-clustered SE)`,
     `Events ${fmtInt(d.n_events)}${d.n_eff != null ? ` · effective ${fmtInt(d.n_eff)}` : ""}`,
     `Prints ${fmtInt(d.n_trades)} · contracts ${fmtInt(d.n_contracts)} (NOT the sample size)`,
@@ -412,7 +495,7 @@ function tipText(d) {
 
 ## Actual vs. implied win rate
 
-<p class="section-intro">Each dot is one 5-cent price bin at one venue. The dashed diagonal is perfect calibration. Solid dots clear two event-clustered standard errors; hollow dots do not and mean <em>no measurable bias</em>; a cross means too few independent events to say. Intervals are deliberately <strong>not</strong> drawn here &mdash; eighty of them across four venues obscure the very line they sit on, and they are shown at a readable scale in the next chart. There are also <strong>no connecting lines</strong>: a line through these points would assert a smooth curve none of these samples supports.</p>
+<p class="section-intro">Each dot is one 5-cent price bin at one venue. The dashed diagonal is perfect calibration. Solid dots clear two event-clustered standard errors; hollow dots do not and mean <em>no measurable bias</em>; a cross means too few independent events to say. Intervals are deliberately <strong>not</strong> drawn here &mdash; a hundred of them across five venues obscure the very line they sit on, and they are shown at a readable scale in the next chart. There are also <strong>no connecting lines</strong>: a line through these points would assert a smooth curve none of these samples supports.</p>
 
 ```js
 shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.plot({
@@ -421,7 +504,13 @@ shown.length === 0 ? html`<p class="chart-note">No venue selected.</p>` : Plot.p
   height: 470,
   marginLeft: 62,
   marginRight: 16,
-  x: {label: "Implied probability (bin midpoint)", domain: [0, 1], tickFormat: "%", grid: true},
+  // The label is derived, not written: a venue drawn on the price actually paid
+  // sits on a different x than one drawn on the bin midpoint, and an axis that
+  // says "midpoint" over both would be the quiet kind of wrong.
+  x: {label: shown.some(v => v.impliedBasis === "paid")
+        ? `Implied probability \u2014 bin midpoint (${shown.filter(v => v.impliedBasis === "paid").map(v => v.name).join(", ")}: mean price actually paid)`
+        : "Implied probability (bin midpoint)",
+      domain: [0, 1], tickFormat: "%", grid: true},
   y: {label: "Actual win rate (contract-weighted)", domain: [0, 1], tickFormat: "%", grid: true},
   // Radii are computed above and passed through untouched. An identity scale is
   // required: Plot's default r scale is itself sqrt, which would square-root the
@@ -578,6 +667,63 @@ else {
 }
 ```
 
+```js
+// ProphetX's reading, placed with the significance rule because this is the venue
+// where the shared convention and the honest one disagree about whether there is a
+// finding at all. Every figure here is computed from the rows on screen; the two
+// that CANNOT be computed from a binned file are labelled as measured off-page and
+// dated, rather than quietly presented as live.
+{
+  const px = shown.find(v => v.name === "ProphetX");
+  const rs = px ? rowsAll.filter(d => d.venue === "ProphetX" && d.n_contracts > 0) : [];
+  if (px && rs.length) {
+    const w = d3.sum(rs, d => d.n_contracts);
+    const paid = d3.sum(rs, d => d.implied * d.n_contracts) / w;
+    const win  = d3.sum(rs, d => d.actual  * d.n_contracts) / w;
+    const gap  = 100 * (win - paid);
+    // The same conservative triangle-inequality bound the favourite-longshot table
+    // uses: bins SHARE fixtures, so their clustered standard errors cannot be pooled
+    // in quadrature, and the weighted average of the standard errors is the bound
+    // that holds under any correlation between them.
+    const seBound = 100 * d3.sum(rs, d => d.se * d.n_contracts) / w;
+    // Recomputed here rather than read from the file's calib_error column, so the
+    // two readings are compared on exactly the rows being drawn.
+    const kPaid = rs.filter(d => Math.abs(d.err) > 2 * d.se).length;
+    const kMid  = rs.filter(d => Math.abs(d.actual - (d.price_bin + 2.5) / 100) > 2 * d.se).length;
+    // The honest sample size, from the file's own column rather than frozen here.
+    const fixtures = d3.max(rs, d => d.n_events_total);
+    // The cheapest decile's mean price paid, rebuilt from the two cheapest 5c bins
+    // on screen -- the single number that carries the whole midpoint argument, so
+    // it is the last one that should be a quotation.
+    const cheap = rs.filter(d => d.price_bin < 10);
+    const cheapW = d3.sum(cheap, d => d.n_contracts);
+    const cheapPaid = cheapW > 0 ? d3.sum(cheap, d => d.implied * d.n_contracts) / cheapW : null;
+    const cheapWin = cheapW > 0 ? d3.sum(cheap, d => d.actual * d.n_contracts) / cheapW : null;
+    display(html`<p class="chart-note"><strong>ProphetX: no measurable bias &mdash; and the reference price is
+      why that has to be said carefully.</strong> Across ${fmtInt(d3.sum(rs, d => d.n_trades))} prints and
+      ${fmtInt(w)} contracts, the contract-weighted mean price paid was
+      <strong>${(100 * paid).toFixed(2)}&cent;</strong> and <strong>${(100 * win).toFixed(2)}%</strong> of those
+      contracts won: a tilt of ${fmtCents(gap)} against the priced side. That is not a finding.
+      On this page's own conservative bound the tilt is ${fmtCents(gap)} &plusmn;${(2 * seBound).toFixed(2)}&cent;;
+      clustered on the fixture over the whole sample at once its standard error is <strong>0.79&cent;</strong>,
+      giving <strong>|t| = 1.50</strong> on the ${fmtInt(fixtures)} independent fixtures this venue's file
+      counts. Measured either way it does not clear two standard errors, so the honest headline is
+      <em>no measurable bias</em>, not the cent figure. That whole-sample standard error is the one figure
+      here not computed live: bins share fixtures, so a file binned by price cannot carry it, and it was
+      measured directly from the venue's fixture-level residuals on 2026-08-14.
+      <strong>This is also the venue where the choice of reference price changes the verdict.</strong>
+      Against the bin midpoint, ${kMid} of its ${rs.length} bins clear two clustered standard errors; against
+      the price contracts were actually bought at, ${kPaid} ${kPaid === 1 ? "does" : "do"}. The difference is
+      the binning convention and not the venue${cheapPaid == null ? "" : html`: everything under 10&cent; here
+      was bought at a mean of <strong>${(100 * cheapPaid).toFixed(2)}&cent;</strong>, not at the 5&cent;
+      midpoint the shared convention would score it against, and ${(100 * cheapWin).toFixed(2)}% of it won
+      &mdash; a miss of ${fmtCents(100 * (cheapWin - cheapPaid))} against what was paid and
+      ${fmtCents(100 * (cheapWin - 0.05))} against the midpoint`}. This page draws the first of those two
+      readings, and its x-axis says so.</p>`);
+  }
+}
+```
+
 ## Favourite&ndash;longshot summary
 
 <p class="section-intro">The one-number version, and the reason most of it is blank. Longshots are every bin under 30&cent;, favourites every bin from 70&cent; up, each averaged over contracts. <strong>A venue gets a headline number only when the tail clears two standard errors.</strong> Where it does not, the interval is shown and no number is claimed.</p>
@@ -704,7 +850,7 @@ else {
 //      be absent without taking the page down with it; and
 //   2. a failed load on the shared attachment sets that attachment's marker to
 //      data-dashboard-data-source="error" for the WHOLE page. That marker is the
-//      transport's health signal for the four calibration files, and a file that
+//      transport's health signal for the five calibration files, and a file that
 //      has simply not shipped yet must not be able to raise it. A second
 //      attachment instance carries its own marker, which is deliberately never
 //      displayed. The transport manifest promise is cached at module scope, so
@@ -873,12 +1019,20 @@ const VOLUME_VENUES = [
     // The consequence for THIS chart, stated under it as well: the away half of
     // every ProphetX market is not drawn, so the curve is one side's view.
     leg: "home side — the second-named team or player, on the markets that have one",
-    // NOTE ON accent: styles.css defines no --accent-prophetx and no
-    // .kpi-card[data-accent="prophetx"] rule. Nothing on this page paints a
-    // ProphetX accent -- the only consumer is the calibration KPI grid, which
-    // ProphetX is deliberately absent from -- so this value is inert. If a
-    // volume-side accent is ever wired up, the stylesheet needs the variable
-    // FIRST or the card silently falls back to the Kalshi primary.
+    // NOTE ON accent: styles.css still defines no --accent-prophetx and no
+    // .kpi-card[data-accent="prophetx"] rule -- re-checked 2026-08-14, and that
+    // half of this note stands. The rest of it went stale when ProphetX joined
+    // the calibration charts: that KPI grid DOES paint a ProphetX accent now,
+    // from an inline --kpi-accent fallback the grid supplies for any venue the
+    // stylesheet has no variable for. This field is still inert, but for a
+    // different reason than the one that used to be written here, and the new
+    // reason is the durable one: data-accent is emitted in exactly ONE place on
+    // this page, the calibration KPI grid, and that grid reads the CALIBRATION
+    // registry's accent (the ProphetX entry near the top of this file), never
+    // this volume-side copy. Nothing reads this one. If a volume-side accent is
+    // ever wired up, either add the variable to the stylesheet FIRST or copy the
+    // KPI grid's inline fallback, or the card silently falls back to the Kalshi
+    // primary.
     //
     // popCol resolves to null -- prophetx_volume_at_price.csv carries no
     // population column -- so this fallback IS what the card renders, and it has
@@ -892,9 +1046,13 @@ const VOLUME_VENUES = [
     // HOME is the only group the producer writes today. Naming it means a future
     // second group cannot silently change which series this page draws.
     groupCol: "group", prefer: ["HOME"],
-    // No calibration curve exists for this venue and none can, so it cannot
-    // appear in the overlay. Stated there rather than left as an unexplained gap.
-    noCalibration: "no producer has built one yet — which is a correction. Until 2026-08-14 this page said its outcome was unpublishable, on the grounds that contracts trading at 5¢ or below carry settlement_price 1.00 on 85.1% of their 16,137 resolutions. That number reproduces, but it is a parlay pooling artefact: 14,969 of those contracts are multi-event parlays, whose settlement the bulletin stamps as one aggregate per leg-count per day. On single markets the column separates almost perfectly — of the cheap ones that resolved, 0.68% settle 1.00, against 93.02% of the dear ones — so a curve covering 69.4% of this venue's contracts looks buildable and is under review",
+    // A calibration curve DOES exist for this venue from 2026-08-14, so in normal
+    // operation ProphetX is in the overlay and this string is never rendered. It is
+    // kept, and kept accurate, because it is still reachable: if
+    // prophetx_calibration.csv arrives without an event-clustered standard error
+    // the venue is deferred above and lands here. It must not go on asserting the
+    // refuted claim in that case.
+    noCalibration: "its calibration curve is drawn on this page from prophetx_calibration.csv, so if it is missing from this overlay that file did not land or arrived without event-clustered standard errors — not because the venue cannot be scored. It can: the old claim that its settlement column could not separate winners from losers was true of its parlays and never of its single markets, where resolved single-market contract ids, each priced at its own contract-weighted mean traded price, won 4.2% of the time when bought below 10¢ (n=2,397 ids) and 94.8% when bought at 90¢ or above (n=249 ids), recounted from the raw tape on 2026-08-14",
     rows: r => ({contracts: num(r.n_contracts),
                  dollars: num(r.dollars), pubPct: num(r.pct_contracts), coverage: null})
   }
@@ -1374,7 +1532,12 @@ const volCalibGroupByVenue = new Map(built.filter(v => v.usable).map(v => [v.nam
       cheap tail. On the series drawn here the Polymarket curve scores <strong>73.8%</strong> of that venue's
       contracts overall but only <strong>35.0% in the 0&ndash;5&cent; bin</strong>, and the ForecastEx curve
       scores just <strong>49.9%</strong> of its venue's contracts, falling to 26.7% in one bin, because a
-      single large election event is excluded from it. That last one matters for the reading above: ForecastEx
+      single large election event is excluded from it. ProphetX is the sharpest case of all, and its gap is
+      structural rather than statistical: its dot <em>sizes</em> include 31,899,248 multi-event parlay
+      contracts, 11.77% of the venue, that no calibration curve can ever score &mdash; none of the 80,543
+      parlay contract ids in its bulletin carries a parseable event date &mdash; while its dot
+      <em>heights</em> come from a curve covering <strong>80.1%</strong> of the venue's single-market
+      contracts and none of its parlays at all. That last one matters for the reading above: ForecastEx
       is the venue whose measurable bins carry as much money as they do volume, and that curve is built from
       half its traded volume. Per-bin coverage appears in the tooltip only where a producer publishes it
       <em>for the same calibration group this page is drawing</em>; otherwise it is withheld rather than
@@ -1406,7 +1569,15 @@ else {
       bins: rs.length
     };
   });
-  display(html`<div class="kpi-grid">${cards.map(c => html`<div class="kpi-card" data-accent="${c.v.accent}">
+  // styles.css defines --accent-kalshi/polymarket/forecastex/dkex/underdog and a
+  // .kpi-card[data-accent="..."] rule for each, but NOTHING for prophetx: that card
+  // would fall through to var(--accent-primary) and render in Kalshi teal, which is
+  // worse than no colour. The stylesheet is not this page's to edit, so the missing
+  // variable is supplied inline and ONLY for a venue that has none -- setting it for
+  // every card would override the stylesheet's dark-mode accent overrides for the
+  // four venues that do have them.
+  const KPI_ACCENT_IN_CSS = new Set(["kalshi", "polymarket", "forecastex", "dkex", "underdog"]);
+  display(html`<div class="kpi-grid">${cards.map(c => html`<div class="kpi-card" data-accent="${c.v.accent}" style="${KPI_ACCENT_IN_CSS.has(c.v.accent) ? "" : `--kpi-accent:${c.v.color}`}">
     <div class="kpi-label">${c.v.name}</div>
     <div class="kpi-value">${c.infl ? c.infl.toFixed(0) + "×" : "—"}</div>
     <div class="kpi-meta">wider than a trade-level error bar &middot; ${c.clears} of ${c.bins} bins clear 2 SE</div>
@@ -1417,4 +1588,4 @@ else {
 
 <div class="instruction-line"><strong>Effective events, where a venue publishes them, are the number to believe.</strong> Contract weighting concentrates a bin's weight on its busiest games, so a bin holding tens of thousands of nominal events can carry the independent information of a few hundred. Where that effective count falls below ${MIN_EFF_CLUSTERS} the bin is drawn as &#10005; and no claim is made from it, however large its error looks.</div>
 
-<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Contract-weighted win rates over settled binary contracts, binned in 5-cent floors on an integer-cent axis so every venue shares one x-axis. Implied probability is the bin midpoint. Standard errors are cluster-robust with the underlying event as the cluster &mdash; a Kalshi event ticker, a DKeX game or race, a Polymarket contest, a ForecastEx settlement event &mdash; computed by each venue's own producer and re-tested here against one common rule. Voids and refunded events are excluded by each producer before binning, because a refunded event has no outcome, and the size of that exclusion is worth stating. DKeX drops 3,941 void prints, 1,366 pro-rated partials and 557 prints on markets that had not settled &mdash; 0.43% of its tape as of 2026-08-07 &mdash; and scoring those voids as wins instead moved its 10&ndash;20&cent; band from &minus;0.67&cent; to +4.01&cent;. Polymarket US reaches a resolved, unambiguously attributable market on 89.8% of prints and 89.4% of traded value: 2.11% is dropped because the symbol names more than one contract, and the 1.46% delisted before maturity is reported as its own band rather than counted as losses. ForecastEx counts a contract as settled only where its mark on or after expiry is exactly 0.00 or 1.00 &mdash; 168,912 of 203,776 expired contracts &mdash; which removes whole crypto and metals families but touches only 3.5% of the weather book. The naive comparison figure is the binomial error over prints at each bin's win rate, computed identically for every venue rather than read from four differently-defined columns. Traded value and per-side fee comparisons live on the <a href="./competitors">Platform Comparison</a> page; this page uses no fee number at all.</p>
+<p style="font-size:0.82em;color:#888;margin-top:1.5rem">Contract-weighted win rates over settled binary contracts, binned in 5-cent floors on an integer-cent axis so every venue shares one x-axis. Implied probability is the bin midpoint at Kalshi, Polymarket US, ForecastEx and DKeX; <strong>ProphetX alone is drawn on the contract-weighted mean price actually paid</strong> in each bin (its file's <code>sum_price_contracts / n_contracts</code>), because that is the one venue where the two conventions disagree about whether there is anything to report at all &mdash; the reason is set out in full at the top of this page, and the x-axis label names the exception too. Standard errors are cluster-robust with the underlying event as the cluster &mdash; a Kalshi event ticker, a DKeX game or race, a Polymarket contest, a ForecastEx settlement event, a ProphetX fixture (the game, tournament or bout named in the contract description, so a game's player props cluster with its own moneyline rather than forming their own pseudo-events) &mdash; computed by each venue's own producer and re-tested here against one common rule. Voids and refunded events are excluded by each producer before binning, because a refunded event has no outcome, and the size of that exclusion is worth stating. DKeX drops 3,941 void prints, 1,366 pro-rated partials and 557 prints on markets that had not settled &mdash; 0.43% of its tape as of 2026-08-07 &mdash; and scoring those voids as wins instead moved its 10&ndash;20&cent; band from &minus;0.67&cent; to +4.01&cent;. Polymarket US reaches a resolved, unambiguously attributable market on 89.8% of prints and 89.4% of traded value: 2.11% is dropped because the symbol names more than one contract, and the 1.46% delisted before maturity is reported as its own band rather than counted as losses. ForecastEx counts a contract as settled only where its mark on or after expiry is exactly 0.00 or 1.00 &mdash; 168,912 of 203,776 expired contracts &mdash; which removes whole crypto and metals families but touches only 3.5% of the weather book. ProphetX resolves 63,915 of its listed single-market contracts and excludes 11,536 void or pushed and 2,742 still listed, plus 657 prints on contracts never seen in a bulletin and 102 off-scale, and that exclusion is not evenly spread: void or pushed contracts are 24.5% of the contracts traded in the 0&ndash;10&cent; band and 22.9% of those in the 90&ndash;100&cent; band, against 9.8&ndash;19.9% across the middle of the book. The two ends are conditioned by different products &mdash; 93.0% of the voided volume in the cheap band is golf-outright fields, where a withdrawal voids the contract, while 57.2% of it in the dear band is moneylines &mdash; and the dear end is also the thinnest place on the venue, 655,132 contracts in the 95&ndash;100&cent; bin against 36,675,101 at 50&ndash;55&cent;. Read both ProphetX tails as the most conditioned bins it has. The naive comparison figure is the binomial error over prints at each bin's win rate, computed identically for every venue rather than read from four differently-defined columns. Traded value and per-side fee comparisons live on the <a href="./competitors">Platform Comparison</a> page; this page uses no fee number at all.</p>
