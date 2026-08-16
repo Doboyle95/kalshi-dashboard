@@ -19,7 +19,7 @@ const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true})
 const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
 const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
 const cmeDaily = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
-const takerNotional = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerSideVolume = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
 const takerPnl = await DataAttachment("data/taker_pnl_daily.csv").csv({typed: true});
 const parlayPnl = await DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
 
@@ -175,8 +175,8 @@ const feeByDate = Array.from(d3.rollup(feeRows, rows => ({
   venues: new Set(rows.map(row => row.venue)).size
 }), row => +row.date), ([, value]) => value).sort((a, b) => a.date - b.date);
 
-const takerNotionalSorted = takerNotional.slice().sort((a, b) => a.date - b.date);
-const latestTakerNotional = takerNotionalSorted.at(-1);
+const takerSideVolumeSorted = takerSideVolume.slice().sort((a, b) => a.date - b.date);
+const latestTakerSideVolume = takerSideVolumeSorted.at(-1);
 const matureTakerPnl = takerPnl.filter(row => row.pct_settled == null || row.pct_settled >= 40).sort((a, b) => a.date - b.date);
 const takerPnl30 = matureTakerPnl.slice(-30);
 const takerPnl30Value = d3.sum(takerPnl30, row => row.pnl_net || 0);
@@ -209,9 +209,9 @@ function sparkline(rows, value, color) {
   </a>
   <a class="pulse-card" href="./taker#daily-taker-side-volume">
     <div class="pulse-topline"><span>Taker-side volume</span><span class="coverage-badge is-limited">Kalshi only</span></div>
-    <strong>${fmtUSD(latestTakerNotional?.notional_total ?? 0)}</strong>
-    <small>${fmtDay(latestTakerNotional?.date)} · aggressor dollars</small>
-    ${sparkline(takerNotionalSorted.slice(-45), row => row.notional_total, "#00C2A8")}
+    <strong>${fmtUSD(latestTakerSideVolume?.notional_total ?? 0)}</strong>
+    <small>${fmtDay(latestTakerSideVolume?.date)} · aggressor dollars</small>
+    ${sparkline(takerSideVolumeSorted.slice(-45), row => row.notional_total, "#00C2A8")}
   </a>
   <a class="pulse-card" href="./taker-pnl#cumulative-taker-p-and-l">
     <div class="pulse-topline"><span>Taker P&amp;L</span><span class="coverage-badge is-limited">Kalshi only</span></div>
