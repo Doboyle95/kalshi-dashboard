@@ -1,546 +1,418 @@
 ---
-title: Overview
+title: Briefing
 ---
 
-<div class="page-hero">
-  <div class="page-eyebrow">Market Structure</div>
-  <h1>US Prediction Market Dashboard</h1>
-  <p class="page-lead">A side-by-side look at the United States' regulated prediction markets, plus the peer-to-peer sports exchanges that publish a comparable public tape. Kalshi runs away with the volume; ForecastEx, Polymarket US, DKeX, Underdog Exchange, Novig, ProphetX, Rothera, and Crypto.com/Nadex remain a small fraction of its scale. This chart carries nine venues — exactly the nine behind the market-share chart on the <a href="./competitors">platform comparison page</a>, so those two cannot rank the field differently. That page's volume chart adds a tenth, CME (where FanDuel and DraftKings clear), which is hand-collected from daily bulletins and too sparse to line up against a daily series; on the days CME does report it out-trades several of the venues drawn here, so that one chart can order the middle of the field differently from this one.</p>
+<div class="page-hero briefing-hero">
+  <div class="page-eyebrow">Industry briefing</div>
+  <h1>US prediction markets, at a glance</h1>
+  <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports. Kalshi has the deepest tape; every coverage-limited number says so directly.</p>
 </div>
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard, recentCalendarDates, valueLookup} from "./components/venue-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+
 const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
-const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
-// ProphetX has NO rows in competitor_daily.csv, so it comes from its own daily file. Its
-// trading session runs 16:30->16:30 ET, so a calendar date spans two session files and the
-// NEWEST date is ALWAYS partial -- 2026-08-14 reads 2,334,935 contracts against a
-// 4,553,549/day mean across its 59 complete days. Drawing it would put a ~50% collapse on
-// the end of the line every single day, and would drop a half-day figure into the table
-// below as though it were a finished one. The file carries its own `complete` flag; trust
-// it, and fall back to dropping the newest date if that column ever disappears.
-// The competitors page applies the identical guard -- keep the two in sync.
 const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
-import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+const cmeDaily = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
+const takerNotional = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerPnl = await DataAttachment("data/taker_pnl_daily.csv").csv({typed: true});
+const parlayPnl = await DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
+
+const kCat = await DataAttachment("data/category_daily.csv").csv({typed: true});
+const kParlay = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const dkexCat = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const fxCat = await DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
+const nadexCat = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
+const pmCat = await DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
+const pxCat = await DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
+const rotheraCat = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
+const underdogCat = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
 ```
 
 ```js
-display(freshnessPanel({
-  items: [
-    {label: "Kalshi aggregates", date: latestDate(kalshi), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Local pipeline can refresh within minutes when the collector is running"},
-    {label: "Trades by hour", date: latestDate(hourly), updatedAt: fileUpdatedAt(freshness, "trades_by_hour.csv"), meta: "Refreshes on the same near-live cycle as the aggregates above"},
-    {label: "Competitor comparison", date: latestDate(competitor), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Public competitor sources + Kalshi API rows", tone: "competitor"},
-    {label: "ProphetX", date: latestDate(prophetxTidy), updatedAt: fileUpdatedAt(freshness, "prophetx_daily.csv"), meta: "Its own tape file, not the competitor file. Sessions run 16:30–16:30 ET, so the newest calendar date is always partial and is dropped — this is the last COMPLETE day", tone: "competitor"}
-  ],
-  note: "This static application reads the VM's latest verified immutable data generation at page load. The public generation can advance without a new GitHub Pages build. Novig rides in the competitor comparison file; ProphetX has its own."
-}));
-display(askPageLink({
-  question: "Summarize the latest platform comparison across all nine venues, including ProphetX and Novig, and identify what changed most recently.",
-  context: "Overview page with daily_overall.csv, competitor_daily.csv and prophetx_daily.csv."
-}));
+const fmtCount = value => {
+  const n = +value || 0;
+  const a = Math.abs(n);
+  const sign = n < 0 ? "−" : "";
+  return sign + (a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : Math.round(a).toLocaleString());
+};
+const fmtUSD = value => `${value < 0 ? "−" : ""}$${fmtCount(Math.abs(value ?? 0))}`;
+const fmtPct = value => value == null ? "—" : `${value >= 0 ? "+" : ""}${(100 * value).toFixed(1)}%`;
+const fmtShare = value => value == null ? "—" : `${(100 * value).toFixed(1)}%`;
+const fmtDay = value => value?.toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"}) ?? "—";
+const fmtDayLong = value => value?.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"}) ?? "—";
+const isProvParlay = row => row.is_provisional === true || String(row.is_provisional).toLowerCase() === "true";
 ```
 
 ```js
-const fmtCount    = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B" : n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(0)+"k" : String(n ?? 0);
-const fmtUSD      = n => "$" + fmtCount(n);
-const fmtUSDWhole = n => "$" + (n >= 1e9 ? (n/1e9).toFixed(2)+"B" : Math.round(n/1e6)+"M");
-const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+const platformRows = buildPlatformSeries({kalshi, competitor, prophetx: prophetxDaily, cme: cmeDaily});
+const scoreboard = buildVenueScoreboard(platformRows);
+const nonSparseScoreboard = scoreboard.filter(row => !row.sparse);
+const commonThrough = nonSparseScoreboard.length ? new Date(d3.min(nonSparseScoreboard, row => +row.latest)) : null;
+const commonStart = commonThrough ? d3.utcDay.offset(commonThrough, -6) : null;
+const aligned7 = platformRows.filter(row => !row.partial && !row.sparse && row.date >= commonStart && row.date <= commonThrough);
+const alignedByVenue = d3.rollup(aligned7, rows => d3.sum(rows, row => row.contracts), row => row.venue);
+const alignedTotal = d3.sum(alignedByVenue.values());
+const alignedKalshi = alignedByVenue.get("Kalshi") ?? 0;
+const largestCompetitor = [...alignedByVenue.entries()].filter(([venue]) => venue !== "Kalshi").sort((a, b) => b[1] - a[1])[0];
+const fastestGrowth = scoreboard.filter(row => row.change != null && row.recentDays >= 14).sort((a, b) => b.change - a.change)[0];
 ```
 
-```js
-const totalContracts = d3.sum(kalshi, d => d.contracts_total);
-const totalFees = d3.sum(kalshi, d => d.fees_total);
-const peakDay = kalshi.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, kalshi[0]);
-// "Run rate" should reflect *current* pace, not all-time average. Use the trailing
-// 30 days of fee data (excluding today if it is partial, since today understates).
-// All-time average (the old calc) drags this down by ~10x because of sparse pre-2024 days.
-const isPartialIdx = d => d.is_partial === true || d.is_partial === "TRUE";
-const completedKalshi = kalshi.filter(d => !isPartialIdx(d));
-const recent30 = completedKalshi.slice(-30);
-const recentDailyFees = recent30.length > 0 ? d3.mean(recent30, d => d.fees_total) : 0;
-const annualizedFees = Math.round(recentDailyFees * 365 / 1e6) * 1e6;
-```
+<h2 class="briefing-scale-title">Volume across exchanges</h2>
 
-<div class="kpi-grid">
-  <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">Kalshi all-time volume</div>
-    <div class="kpi-value" title="${totalContracts.toLocaleString()} contracts">${fmtCount(totalContracts)}</div>
-    <div class="kpi-meta">contracts</div>
-  </div>
-  <div class="kpi-card" data-accent="secondary">
-    <div class="kpi-label">Kalshi all-time fee revenue</div>
-    <div class="kpi-value" title="$${totalFees.toLocaleString()}">${fmtUSD(totalFees)}</div>
-  </div>
-  <div class="kpi-card" data-accent="tertiary">
-    <div class="kpi-label">Kalshi annualized revenue run rate</div>
-    <div class="kpi-value" title="$${annualizedFees.toLocaleString()}/yr">${fmtUSDWhole(annualizedFees)}/yr</div>
-    <div class="kpi-meta">based on trailing 30 days</div>
-  </div>
-  <div class="kpi-card" data-accent="warning">
-    <div class="kpi-label">Kalshi peak single day volume</div>
-    <div class="kpi-value" title="${(peakDay?.contracts_total ?? 0).toLocaleString()} contracts">${fmtCount(peakDay?.contracts_total)}</div>
-    <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
-  </div>
-</div>
+<p class="section-intro">Reported daily contracts across every venue with a usable series. Linear preserves the real scale gap; log makes smaller venues readable.</p>
 
-<details class="surface-card compact-details">
-  <summary>About this page</summary>
-  <p>Volume here means contracts traded: one contract is one yes/no bet, worth $1 at settlement — so this figure is a dollar total too, just not discounted by the price each contract actually traded at. Kalshi's figures come from its own trade records; competitor lines come from public sources, including the exchange's daily bulletins and platform reports, so they update less often. Crypto.com/Nadex data begins in December 2024; DKeX data begins with its public DraftKings/Railbird reports in June 2026; Underdog Exchange data begins with its public CFTC reports on 2026-07-17. ProphetX and Novig are peer-to-peer sports exchanges and both ARE federally regulated: ProphetX holds CFTC designation as a contract market and clearing organisation from June 2026, and Novig trades on Ludlow Exchange, designated 2026-06-16. Both publish a full public trade tape, which is why they are counted here: leaving them out made the ranking wrong, not merely short. ProphetX begins 2026-06-16 and Novig 2026-08-04, so before those dates their lines are absent rather than at zero. <strong>Neither publishes any fee schedule</strong>, so neither carries a fee number anywhere on this site — absent means not measured, never free.</p>
-  <p>ProphetX's trading session runs 16:30 to 16:30 ET, so a calendar date spans two of its session files and its newest date is always incomplete; both this page and the <a href="./competitors">platform comparison page</a> read the <code>complete</code> flag its file carries and drop that day, which is why its row in the table below stops one day short of Kalshi's rather than showing a collapse. Novig's files are published a day in arrears and whole. Novig reports one side of each trade — its tape prints every trade twice, once as taker and once as maker — which is the same unit every other venue here reports.</p>
-  <p>Kalshi is so far ahead that the smaller platforms can disappear on a normal axis. Start on linear scale for market size, then switch to log scale to see the smaller lines more clearly.</p>
-</details>
-
-## Platform comparison
-
-<p class="section-intro">Daily trading volume by platform. Drag the brush to zoom into a stretch; switch to log scale when the smaller platforms vanish against Kalshi.</p>
+<div class="control-strip briefing-scale-controls">
 
 ```js
-const kalshiTidy = kalshi.map(d => ({
-  date: d.date,
-  platform: "Kalshi",
-  contracts: d.contracts_total,
-  fees: d.fees_total
-}));
-
-const competitorTidy = competitor
-  .filter(d => d.platform !== "Kalshi")
-  .map(d => ({
-    date: new Date(d.date),
-    platform: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform,
-    contracts: +d.contracts || 0,
-    // `+d.fees || 0` turned an EMPTY fee cell into a real 0. Novig and ProphetX publish no
-    // fee at all, so that would have recorded them as charging nothing rather than as not
-    // measured. Nothing on this page charts fees today, but the value is carried, so it has
-    // to be honest: empty stays null.
-    fees: (d.fees == null || d.fees === "") ? null : (+d.fees || 0)
-  }));
-
-const pxHasCompleteFlag = prophetxDaily.some(d => d.complete != null && d.complete !== "");
-const pxNewestDate      = d3.max(prophetxDaily, d => +d.date);
-const prophetxTidy = prophetxDaily
-  .filter(d => pxHasCompleteFlag ? +d.complete === 1 : +d.date < pxNewestDate)
-  .map(d => ({date: d.date, platform: "ProphetX", contracts: +d.contracts || 0, fees: null}));
-
-const allPlatforms = [...kalshiTidy, ...competitorTidy, ...prophetxTidy];
-```
-
-```js
-const indexBrush = view((() => {
-  const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
-  const w = width;
-  const x = d3.scaleUtc().domain(d3.extent(kalshi, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(kalshi, d => d.contracts_total) || 1;
-  const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
-
-  const svg = d3.create("svg")
-    .attr("width", w).attr("height", h)
-    .style("display", "block")
-    .style("background", "var(--theme-background-alt)")
-    .style("border", "1px solid var(--card-border)")
-    .style("border-radius", "4px")
-    .style("margin-bottom", "1.5rem");
-
-  svg.append("path").datum(kalshi)
-    .attr("fill", "#00C2A8").attr("fill-opacity", 0.2)
-    .attr("d", d3.area().x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total)).curve(d3.curveBasis));
-
-  svg.append("g").attr("transform", `translate(0,${h - mb})`)
-    .call(d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(d3.timeFormat("%Y")).tickSizeOuter(0))
-    .call(g => g.select(".domain").attr("stroke", "#ccc"))
-    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
-
-  const defaultStart = new Date("2025-01-01");
-  const defaultEnd   = d3.max(kalshi, d => d.date);
-  const brush = d3.brushX()
-    .extent([[ml, mt], [w - mr, h - mb]])
-    .on("brush end", event => {
-      if (!event.sourceEvent) return;
-      if (!event.selection) {
-        // Clearing the brush (a bare click) now means "show everything": reset to
-        // the full domain and redraw the selection so the visuals match the filter.
-        svg.property("value", x.domain());
-        brushG.call(brush.move, x.domain().map(x));   // programmatic move — guarded above, no re-fire
-        svg.dispatch("input");
-        return;
-      }
-      svg.property("value", event.selection.map(x.invert)); svg.dispatch("input");
-    });
-
-  const brushG = svg.append("g");
-
-
-  brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill", "#00C2A8").style("fill-opacity", 0.8);
-  svg.property("value", [defaultStart, defaultEnd]);
-  return svg.node();
-})());
-```
-
-<div class="plot-shell">
-
-```js
-{
-  const [s, e] = indexBrush;
-  const fmt = d => (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k");
-  // These two objects ARE the allowlist for this chart: a venue absent from pColors has no
-  // legend entry and a venue absent from byPlatform has no line, even when its rows are
-  // already sitting in competitorTidy. Novig was in the data and filtered out here, which is
-  // how this page came to rank the field differently from the competitors page. Both objects
-  // must name every venue on that page, minus CME (hand-collected and too sparse to line up
-  // against daily series). Colours follow the site-wide entity palette.
-  const pColors = {
-    Kalshi: "#00C2A8", "Polymarket US": "#3B7DD8",
-    ForecastEx: "#E53535", DKeX: "#F97316", "Underdog Exchange": "#EAB308",
-    ProphetX: "#DB2777", Novig: "#6366F1",
-    Rothera: "#00C805", "Crypto.com/Nadex": "#9c27b0"
-  };
-
-  const byPlatform = {
-    Kalshi:             kalshiTidy,
-    "Polymarket US":    competitorTidy.filter(d => d.platform === "Polymarket US"),
-    ForecastEx:         competitorTidy.filter(d => d.platform === "ForecastEx"),
-    DKeX:               competitorTidy.filter(d => d.platform === "DKeX"),
-    "Underdog Exchange": competitorTidy.filter(d => d.platform === "Underdog Exchange"),
-    // ProphetX comes from its own file, already trimmed to complete sessions above.
-    ProphetX:           prophetxTidy,
-    Novig:              competitorTidy.filter(d => d.platform === "Novig"),
-    Rothera:            competitorTidy.filter(d => d.platform === "Rothera"),
-    "Crypto.com/Nadex": competitorTidy.filter(d => d.platform === "Crypto.com/Nadex"),
-  };
-
-  // Per-date pivot for single combined tooltip
-  const tipPivot = Array.from(
-    d3.rollup(
-      allPlatforms.filter(d => d.contracts > 0 && d.date >= s && d.date <= e),
-      rs => { const o = {date: rs[0].date}; for (const r of rs) o[r.platform] = r.contracts; return o; },
-      d => +d.date
-    )
-  ).map(([, v]) => v).sort((a, b) => a.date - b.date);
-
-  display(Plot.plot({
-    style: {fontFamily: "var(--font-sans)"},
-    width,
-    height: 420,
-    marginLeft: 70,
-    marginRight: 16,
-    x: {type: "utc", label: null, domain: [s, e]},
-    y: {type: indexLogScale === "Log" ? "log" : "linear", label: "Daily volume (contracts)", grid: true, tickFormat: fmt},
-    color: {legend: true, domain: Object.keys(pColors), range: Object.values(pColors)},
-    marks: [
-      Plot.areaY(kalshiTidy.filter(d => d.date >= s && d.date <= e), {
-        x: "date", y: "contracts",
-        fill: pColors.Kalshi, fillOpacity: 0.08, curve: "monotone-x"
-      }),
-      ...Object.entries(byPlatform).map(([name, data]) =>
-        Plot.lineY(data.filter(d => d.contracts > 0 && d.date >= s && d.date <= e), {
-          x: "date", y: "contracts",
-          stroke: pColors[name],
-          strokeWidth: name === "Kalshi" ? 2.5 : 1.75,
-          curve: "monotone-x"
-        })
-      ),
-      Plot.ruleX(tipPivot, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-      Plot.tip(tipPivot, Plot.pointerX({
-        x: "date",
-        title: d => [fmtDate(d.date), ...Object.keys(pColors).map(p => d[p] != null ? `${p}: ${fmt(d[p])} (${d[p].toLocaleString()})` : null).filter(Boolean)].join("\n")
-      })),
-      ...(indexLogScale === "Log" ? [] : [Plot.ruleY([0])])
-    ]
-  }));
-}
-```
-
-</div>
-
-<div class="control-strip">
-
-```js
-const indexLogScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
-```
-
-</div>
-
-## Recent daily volume
-
-<p class="section-intro">Exact daily volume (contracts traded) by platform for the last two weeks — for when you want the number, not the trend. The newest row (bold) is a partial, in-progress day <em>for Kalshi</em>, and the competitor sources lag 1–3 days behind it, so a "—" in the newest row means that venue has not reported yet rather than that it did not trade. ProphetX's newest calendar day is always a partial session and is deliberately withheld, so its "—" on the last row is permanent, not a lag.</p>
-
-<div class="surface-card" style="overflow-x:auto">
-
-```js
-display((() => {
-  // Same nine-venue set as the chart above, in the same order, for the same reason: a venue
-  // dropped from this list is not shown as "—", it is shown not at all, and the reader has
-  // no way to tell the difference.
-  const platforms = [
-    {key: "Kalshi", color: "#00C2A8"},
-    {key: "Polymarket US", color: "#3B7DD8"},
-    {key: "ForecastEx", color: "#E53535"},
-    {key: "DKeX", color: "#F97316"},
-    {key: "Underdog Exchange", color: "#EAB308"},
-    {key: "ProphetX", color: "#DB2777"},
-    {key: "Novig", color: "#6366F1"},
-    {key: "Rothera", color: "#00C805"},
-    {key: "Crypto.com/Nadex", color: "#9c27b0"}
-  ];
-  // platform -> (epoch-date -> contracts), from the same tidy data the chart uses
-  const lookup = new Map(platforms.map(p => [p.key, new Map()]));
-  for (const r of allPlatforms) {
-    if (r.contracts != null && lookup.has(r.platform)) lookup.get(r.platform).set(+r.date, r.contracts);
-  }
-  // last 14 calendar days, newest first (Kalshi is the most complete date axis)
-  const dates = Array.from(new Set(kalshiTidy.map(d => +d.date))).sort((a, b) => b - a).slice(0, 14);
-  const fmtDay = dk => new Date(dk).toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"});
-  const cell = n => n == null ? html`<span style="color:var(--theme-foreground-muted)">—</span>` : html`<span title="${n.toLocaleString()}">${fmtCount(n)}</span>`;
-  return html`<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:0.92rem">
-    <thead><tr style="border-bottom:2px solid var(--card-border)">
-      <th style="text-align:left;padding:0.45rem 0.7rem">Date</th>
-      ${platforms.map(p => html`<th style="text-align:right;padding:0.45rem 0.7rem;color:${p.color}">${p.key}</th>`)}
-    </tr></thead>
-    <tbody>
-      ${dates.map((dk, i) => html`<tr style="border-bottom:1px solid var(--theme-background-alt)${i === 0 ? ";font-weight:600" : ""}">
-        <td style="text-align:left;padding:0.38rem 0.7rem;white-space:nowrap">${fmtDay(dk)}</td>
-        ${platforms.map(p => html`<td style="text-align:right;padding:0.38rem 0.7rem">${cell(lookup.get(p.key).get(dk))}</td>`)}
-      </tr>`)}
-    </tbody>
-  </table>`;
-})());
-```
-
-</div>
-
-<p class="section-intro" style="font-size:0.8rem;opacity:0.7">Volume is contracts traded (one contract = one yes/no bet, worth $1 at settlement — so it's a dollar total too, just not discounted by trade price). "—" means that platform has no figure for that day yet.</p>
-
-## Trading activity today
-
-<p class="section-intro">Kalshi trading volume (contracts) by hour (Eastern Time) for the current day, split into sports, parlays, and non-sports (sports and parlays are colored as one family since parlays are themselves mostly sports bets). This also works as a quick pulse check on the data pipeline: the newest bar is still filling in, and if it — or the "Trades by hour" freshness badge above — stops advancing for a long stretch, the trade collector has likely stopped running.</p>
-
-```js
-const isPartialHour = d => d.is_partial === true || d.is_partial === "TRUE";
-
-// The CSV keeps full history so this chart can grow to cover other days later,
-// but today's request is specifically "the current day" — filter to the latest
-// date present and reserve all 24 hour slots (band domain) so the axis doesn't
-// keep resizing as the day goes on.
-const hourlyToday = (() => {
-  const latest = d3.max(hourly, d => d.date);
-  return hourly.filter(d => +d.date === +latest).sort((a, b) => a.hour_et - b.hour_et);
-})();
-
-// Long format for the stacked bars — one row per hour x group. Plot's barY
-// stacks automatically when several rows share an x and a fill channel.
-// Sports/Parlay share a green family (matches volume.md's existing sports/
-// non-sports/parlay convention); Non-sports gets a distinct blue.
-// Bars are sized by CONTRACTS (volume), not trade count -- trade count looks
-// close to even between sports and non-sports since non-sports markets tend
-// toward more, smaller prints, which understates how sports-dominated the
-// actual volume is (contracts run roughly 2:1 sports on a typical hour).
-const hourlyLong = hourlyToday.flatMap(d => [
-  {hour_et: d.hour_et, group: "Non-sports", contracts: d.contracts_nonsports, partial: isPartialHour(d)},
-  {hour_et: d.hour_et, group: "Sports", contracts: d.contracts_sports, partial: isPartialHour(d)},
-  {hour_et: d.hour_et, group: "Parlay", contracts: d.contracts_parlay, partial: isPartialHour(d)}
-]);
-
-const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
-const groupColors = {"Non-sports": "#5b8def", Sports: "#1a9641", Parlay: "#74c476"};
-```
-
-<div class="plot-shell">
-
-```js
-if (!hourlyToday.length) {
-  display(html`<p class="section-intro">No trades recorded yet today.</p>`);
-} else {
-  display(Plot.plot({
-    style: {fontFamily: "var(--font-sans)"},
-    width,
-    height: 320,
-    marginLeft: 60,
-    marginRight: 16,
-    x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
-    y: {grid: true, label: "Contracts", tickFormat: fmtCount},
-    color: {legend: true, domain: Object.keys(groupColors), range: Object.values(groupColors)},
-    marks: [
-      Plot.barY(hourlyLong, {
-        x: "hour_et", y: "contracts", fill: "group",
-        fillOpacity: d => d.partial ? 0.45 : 1,
-        rx: 2
-      }),
-      Plot.text(hourlyToday.filter(isPartialHour), {
-        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay, dy: -10,
-        text: () => "still counting",
-        fontSize: 11,
-        fill: "currentColor"
-      }),
-      Plot.tip(hourlyToday, Plot.pointerX({
-        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay,
-        title: d => [
-          fmtHour12(d.hour_et),
-          `Sports: ${d.trades_sports.toLocaleString()} trades, ${d.contracts_sports.toLocaleString()} contracts, $${d.taker_side_notional_sports.toLocaleString()} taker-side volume`,
-          `Parlay: ${d.trades_parlay.toLocaleString()} trades, ${d.contracts_parlay.toLocaleString()} contracts, $${d.taker_side_notional_parlay.toLocaleString()} taker-side volume`,
-          `Non-sports: ${d.trades_nonsports.toLocaleString()} trades, ${d.contracts_nonsports.toLocaleString()} contracts, $${d.taker_side_notional_nonsports.toLocaleString()} taker-side volume`,
-          isPartialHour(d) ? "(hour still in progress)" : null
-        ].filter(Boolean).join("\n")
-      })),
-      Plot.ruleY([0])
-    ]
-  }));
-}
-```
-
-</div>
-
-## Typical trading week
-
-<p class="section-intro">Not one day's snapshot, but the average across many — when during the week Kalshi actually trades. Each bar is that hour's average across every matching day-of-week in the selected window (partial in-progress hours excluded).</p>
-
-```js
-const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function weeklyMetricValue(d, metric, segment) {
-  const key = metric === "Trades" ? "trades" : metric === "Contracts" ? "contracts" : "taker_side_notional";
-  const sports = d[`${key}_sports`] || 0;
-  const nonsports = d[`${key}_nonsports`] || 0;
-  const parlay = d[`${key}_parlay`] || 0;
-  if (segment === "Sports") return sports;
-  if (segment === "Parlay") return parlay;
-  if (segment === "Non-sports") return nonsports;
-  return sports + nonsports + parlay; // Combined
-}
-
-const weeklyLatest = d3.max(hourly, d => d.date);
-const weeklyWindowDays = {"Last 90 days": 90, "Last 180 days": 180, "Last 365 days": 365, "All time": Infinity};
-```
-
-<div class="control-strip">
-
-```js
-const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], {label: "Metric", value: "Contracts"}));
-```
-
-```js
-const weeklySegment = view(Inputs.radio(["Combined", "Sports", "Parlay", "Non-sports"], {label: "Segment", value: "Combined"}));
-```
-
-```js
-const weeklyWindow = view(Inputs.radio(Object.keys(weeklyWindowDays), {label: "Window", value: "Last 180 days"}));
+const scaleType = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));
 ```
 
 </div>
 
 ```js
-const weeklyRows = hourly.filter(d => {
-  if (isPartialHour(d)) return false;
-  const days = weeklyWindowDays[weeklyWindow];
-  return days === Infinity || d.date >= d3.utcDay.offset(weeklyLatest, -days);
-});
-
-const weeklyAgg = d3.rollup(
-  weeklyRows,
-  rows => ({value: d3.sum(rows, d => weeklyMetricValue(d, weeklyMetric, weeklySegment)), n: rows.length}),
-  d => d.date.getUTCDay(),
-  d => d.hour_et
-);
-
-const weeklyCells = [];
-for (let dow = 0; dow < 7; dow++) {
-  for (let h = 0; h < 24; h++) {
-    const cell = weeklyAgg.get(dow)?.get(h);
-    weeklyCells.push({
-      dow_label: DOW_LABELS[dow],
-      hour_et: h,
-      avg: cell ? cell.value / cell.n : 0,
-      n: cell ? cell.n : 0
-    });
-  }
-}
-
-const weeklyFmtValue = v => weeklyMetric === "Taker-side $" ? fmtUSD(v) : fmtCount(v);
-const busiestCell = weeklyCells.reduce((best, d) => (d.avg > best.avg ? d : best), weeklyCells[0]);
-const weeklyDaysCovered = new Set(weeklyRows.map(d => +d.date)).size;
-
-// Today's day-of-week gets highlighted in the chart below, plus an overlay
-// of today's actual hourly values (same metric/segment as the historical
-// bars) so readers can compare today so far against the typical pattern for
-// this day, not just see it labeled.
-const todayDowLabel = DOW_LABELS[weeklyLatest.getUTCDay()];
-const todayOverlayPoints = hourlyToday.map(d => ({
-  hour_et: d.hour_et,
-  dow_label: todayDowLabel,
-  value: weeklyMetricValue(d, weeklyMetric, weeklySegment),
-  partial: isPartialHour(d)
-}));
+// Keep the brush's miniature history chart on the complete available series.
+// Quick ranges below change the selection, not the brush's domain, so a user can
+// drag directly from a 30-day view back into older data.
+const scaleRows = platformRows.filter(row => !row.sparse && row.contracts > 0);
+const scaleLatest = d3.max(scaleRows, row => row.date);
+const scaleStart = d3.utcDay.offset(scaleLatest, -364);
+const scaleVenues = VENUE_ORDER.filter(venue => scaleRows.some(row => row.venue === venue));
+const scaleDateSel = Mutable([scaleStart, scaleLatest]);
+const setScaleDate = range => { scaleDateSel.value = range; };
 ```
-
-<div class="chart-note">${weeklyDaysCovered.toLocaleString()} days of history in this window (${fmtDate(weeklyRows.length ? d3.min(weeklyRows, d => d.date) : null)} to ${fmtDate(weeklyLatest)}). Busiest slot: <strong>${busiestCell.dow_label} ${fmtHour12(busiestCell.hour_et)} ET</strong>, averaging ${weeklyFmtValue(busiestCell.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour (${weeklySegment.toLowerCase()}).</div>
-
-<div class="plot-shell">
 
 ```js
-const weeklyBarColor = weeklySegment === "Combined" ? "#00786a" : groupColors[weeklySegment];
-// Warm amber, not the dashboard's purple secondary accent -- every segment
-// color here (teal/blue/green) sits on the cool half of the wheel, and
-// purple was only ~30 degrees from the Non-sports blue (too low-contrast
-// against it); amber sits 90-170 degrees from all four, so it stays legible
-// no matter which segment is selected.
-const TODAY_ACCENT = "#d97706";
-// Today's bars get a version of the same segment color blended toward the
-// accent (rather than an unrelated color) so today's row still visually
-// belongs to the same segment as every other row, just clearly marked.
-const TODAY_BAR_BLEND = {"Combined": "#41784c", "Non-sports": "#8186a9", "Sports": "#538d2f", "Parlay": "#92ad54"};
-const todayBarColor = TODAY_BAR_BLEND[weeklySegment];
+const [scaleBrushFrom, scaleBrushTo] = scaleDateSel;
+const scaleRowsBrushed = scaleRows.filter(row => row.date >= scaleBrushFrom && row.date <= scaleBrushTo);
 ```
+
+<div class="plot-shell briefing-lead-chart">
 
 ```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
-  height: 600,
-  marginLeft: 54,
-  marginRight: 56,
-  facet: {data: weeklyCells, y: "dow_label"},
-  fy: {domain: DOW_LABELS, label: null, tickFormat: d => d === todayDowLabel ? `${d} · Today` : d},
-  x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, ticks: [0, 6, 12, 18], label: "Hour (Eastern Time)"},
-  y: {grid: true, ticks: 3, label: weeklyMetric === "Taker-side $" ? "Avg $/hour" : `Avg ${weeklyMetric.toLowerCase()}/hour`, tickFormat: weeklyFmtValue},
+  height: 360,
+  marginLeft: 72,
+  x: {type: "utc", label: null},
+  y: {type: scaleType === "Log" ? "log" : "linear", label: "Daily reported volume (contracts)", grid: true, tickFormat: fmtCount},
+  color: {legend: true, domain: scaleVenues, range: scaleVenues.map(venue => VENUE_COLORS[venue])},
   marks: [
-    Plot.barY(weeklyCells, {
-      x: "hour_et", y: "avg", rx: 2,
-      fill: d => d.dow_label === todayDowLabel ? todayBarColor : weeklyBarColor,
-      stroke: TODAY_ACCENT, strokeWidth: 1.5,
-      strokeOpacity: d => d.dow_label === todayDowLabel ? 1 : 0
-    }),
-    Plot.line(todayOverlayPoints, {x: "hour_et", y: "value", fy: "dow_label", stroke: TODAY_ACCENT, strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(todayOverlayPoints, {
-      x: "hour_et", y: "value", fy: "dow_label",
-      fill: TODAY_ACCENT, fillOpacity: d => d.partial ? 0.55 : 1,
-      stroke: "var(--theme-background)", strokeWidth: 1, r: 3.5
-    }),
-    Plot.tip(weeklyCells, Plot.pointerX({
-      x: "hour_et", y: "avg",
-      title: d => {
-        const lines = [
-          `${d.dow_label} ${fmtHour12(d.hour_et)}`,
-          `Avg ${weeklyFmtValue(d.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour`,
-          `${weeklySegment} · based on ${d.n} day${d.n === 1 ? "" : "s"}`
-        ];
-        if (d.dow_label === todayDowLabel) {
-          const todayPt = todayOverlayPoints.find(t => t.hour_et === d.hour_et);
-          if (todayPt) lines.push(`Today so far: ${weeklyFmtValue(todayPt.value)}${todayPt.partial ? " (hour still counting)" : ""}`);
-        }
-        return lines.join("\n");
-      }
-    })),
-    Plot.ruleY([0])
+    Plot.lineY(scaleRowsBrushed.filter(row => !row.partial), {x: "date", y: "contracts", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(scaleRowsBrushed.filter(row => row.partial), {x: "date", y: "contracts", fill: "venue", r: 4, symbol: "diamond"}),
+    Plot.ruleX(scaleRowsBrushed, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(scaleRowsBrushed, Plot.pointerX({x: "date", y: "contracts", title: row => `${fmtDayLong(row.date)}\n${row.venue}: ${Math.round(row.contracts).toLocaleString()} contracts${row.partial ? "\nPartial day" : ""}`})),
+    ...(scaleType === "Linear" ? [Plot.ruleY([0])] : [])
   ]
 })
 ```
 
 </div>
 
-<details class="surface-card compact-details">
-  <summary>How this is calculated</summary>
-  <p>Each bar averages one hour-of-day × day-of-week combination (e.g. every Sunday 1 PM ET) across all matching days in the selected window, using the same hourly data as "Trading activity today" above. Hours still in progress when their day's snapshot was taken are excluded so a partial hour never drags an average down. Parlays are broken out as their own segment (as in the chart above) rather than folded into sports; pick "Combined" to see everything together. Today's row is outlined, its bars shifted toward a distinct accent color, and its label marked "· Today"; the connected dots on that row are today's actual values so far (hollow/faded for the hour still in progress), plotted against the historical average bars for the same comparison.</p>
-</details>
+```js
+display(renderDateBrush({
+  data: scaleRows,
+  dateAccessor: row => row.date,
+  valueAccessor: row => row.contracts,
+  initialRange: [scaleStart, scaleLatest],
+  quickRanges: [
+    {label: "30d", days: 30, title: "Last 30 days"},
+    {label: "90d", days: 90, title: "Last 90 days"},
+    {label: "365d", days: 365, title: "Last 365 days"},
+    {label: "All", days: Infinity, title: "All available history"}
+  ],
+  onSelect: setScaleDate,
+  color: "#00C2A8",
+  width
+}));
+```
+
+<div class="briefing-kicker">Aligned through ${fmtDay(commonThrough)} · seven calendar days · reported contracts</div>
+
+<div class="kpi-grid briefing-kpis">
+  <div class="kpi-card" data-accent="kalshi">
+    <div class="kpi-label">Reported industry volume</div>
+    <div class="kpi-value" title="${Math.round(alignedTotal).toLocaleString()} contracts">${fmtCount(alignedTotal)}</div>
+    <div class="kpi-meta">aligned 7-day window</div>
+  </div>
+  <div class="kpi-card" data-accent="secondary">
+    <div class="kpi-label">Kalshi share</div>
+    <div class="kpi-value">${fmtShare(alignedTotal ? alignedKalshi / alignedTotal : null)}</div>
+    <div class="kpi-meta">of aligned reported volume</div>
+  </div>
+  <div class="kpi-card" data-accent="tertiary">
+    <div class="kpi-label">Largest competitor</div>
+    <div class="kpi-value">${largestCompetitor?.[0] ?? "—"}</div>
+    <div class="kpi-meta">${fmtCount(largestCompetitor?.[1] ?? 0)} contracts</div>
+  </div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Fastest recent growth</div>
+    <div class="kpi-value">${fastestGrowth?.venue ?? "—"}</div>
+    <div class="kpi-meta">${fmtPct(fastestGrowth?.change)} vs prior reported 30 days</div>
+  </div>
+</div>
+
+## Economics and outcomes pulse
+
+<p class="section-intro">The important numbers should not require a venue-page expedition. Coverage badges are part of the measurement: a Kalshi-only result is useful evidence, not an industry total.</p>
+
+```js
+const feeRows = platformRows.filter(row => row.revenue != null && !row.partial);
+const latestFeeByVenue = Array.from(d3.group(feeRows, row => row.venue), ([venue, rows]) => ({
+  venue,
+  ...rows.slice().sort((a, b) => a.date - b.date).at(-1)
+}));
+const latestFeeTotal = d3.sum(latestFeeByVenue, row => row.revenue);
+const feeByDate = Array.from(d3.rollup(feeRows, rows => ({
+  date: rows[0].date,
+  value: d3.sum(rows, row => row.revenue),
+  venues: new Set(rows.map(row => row.venue)).size
+}), row => +row.date), ([, value]) => value).sort((a, b) => a.date - b.date);
+
+const takerNotionalSorted = takerNotional.slice().sort((a, b) => a.date - b.date);
+const latestTakerNotional = takerNotionalSorted.at(-1);
+const matureTakerPnl = takerPnl.filter(row => row.pct_settled == null || row.pct_settled >= 40).sort((a, b) => a.date - b.date);
+const takerPnl30 = matureTakerPnl.slice(-30);
+const takerPnl30Value = d3.sum(takerPnl30, row => row.pnl_net || 0);
+const matureParlayPnl = parlayPnl.filter(row => !isProvParlay(row)).sort((a, b) => a.date - b.date);
+const parlayPnl30 = matureParlayPnl.slice(-30);
+const parlayPnl30Value = d3.sum(parlayPnl30, row => row.realized_net || 0);
+
+function sparkline(rows, value, color) {
+  const clean = rows.filter(row => value(row) != null && Number.isFinite(+value(row)));
+  return Plot.plot({
+    width: 190,
+    height: 46,
+    margin: 2,
+    x: {axis: null},
+    y: {axis: null},
+    marks: [
+      Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.12}),
+      Plot.lineY(clean, {x: "date", y: value, stroke: color, strokeWidth: 2, curve: "monotone-x"})
+    ]
+  });
+}
+```
+
+<div class="pulse-grid">
+  <a class="pulse-card" href="./compare-fees#realized-fee-per-contract">
+    <div class="pulse-topline"><span>Latest reported fee revenue</span><span class="coverage-badge">${latestFeeByVenue.length} venues</span></div>
+    <strong>${fmtUSD(latestFeeTotal)}</strong>
+    <small>sum of each measured venue's latest available report</small>
+    ${sparkline(feeByDate.slice(-45), row => row.value, "#9A6D1F")}
+  </a>
+  <a class="pulse-card" href="./taker#daily-taker-side-volume">
+    <div class="pulse-topline"><span>Taker-side volume</span><span class="coverage-badge is-limited">Kalshi only</span></div>
+    <strong>${fmtUSD(latestTakerNotional?.notional_total ?? 0)}</strong>
+    <small>${fmtDay(latestTakerNotional?.date)} · aggressor dollars</small>
+    ${sparkline(takerNotionalSorted.slice(-45), row => row.notional_total, "#00C2A8")}
+  </a>
+  <a class="pulse-card" href="./taker-pnl#cumulative-taker-p-and-l">
+    <div class="pulse-topline"><span>Taker P&amp;L</span><span class="coverage-badge is-limited">Kalshi only</span></div>
+    <strong class="${takerPnl30Value < 0 ? "is-negative" : "is-positive"}">${fmtUSD(takerPnl30Value)}</strong>
+    <small>last ${takerPnl30.length} sufficiently settled report days</small>
+    ${sparkline(takerPnl30, row => row.pnl_net, "#d7191c")}
+  </a>
+  <a class="pulse-card" href="./parlay#what-parlay-bettors-actually-lost-after-cash-outs">
+    <div class="pulse-topline"><span>Realized parlay P&amp;L</span><span class="coverage-badge is-limited">Kalshi only</span></div>
+    <strong class="${parlayPnl30Value < 0 ? "is-negative" : "is-positive"}">${fmtUSD(parlayPnl30Value)}</strong>
+    <small>last ${parlayPnl30.length} non-provisional report days</small>
+    ${sparkline(parlayPnl30, row => row.realized_net, "#9B59B6")}
+  </a>
+</div>
+
+## Venue scoreboard
+
+<p class="section-intro">A comparable recent view of scale and momentum. Each venue's latest reported day is stated; short histories are not padded into a 30-day claim.</p>
+
+<div class="surface-card table-scroll">
+
+```js
+display(html`<table class="briefing-table scoreboard-table">
+  <thead><tr>
+    <th>Venue</th>
+    <th>Reporting through</th>
+    <th>Latest day</th>
+    <th>7-day average</th>
+    <th>Last 30 reported days</th>
+    <th>vs prior 30</th>
+    <th>Coverage</th>
+  </tr></thead>
+  <tbody>${scoreboard.map(row => html`<tr>
+    <td><span class="venue-dot" style="background:${VENUE_COLORS[row.venue]}"></span><strong>${row.venue}</strong></td>
+    <td>${fmtDay(row.latest)}</td>
+    <td title="${Math.round(row.latestVolume).toLocaleString()} contracts">${fmtCount(row.latestVolume)}</td>
+    <td title="${Math.round(row.average7 ?? 0).toLocaleString()} contracts">${fmtCount(row.average7)}</td>
+    <td title="${Math.round(row.recentTotal).toLocaleString()} contracts">${fmtCount(row.recentTotal)} <span class="cell-note">${row.recentDays}d</span></td>
+    <td class="${row.change == null ? "" : row.change >= 0 ? "is-positive" : "is-negative"}">${fmtPct(row.change)}</td>
+    <td>${row.sparse ? html`<span class="coverage-badge is-limited">sparse bulletin</span>` : row.coverage}</td>
+  </tr>`)}</tbody>
+</table>`);
+```
+
+</div>
+
+## Recent daily volume tape
+
+<p class="section-intro">Exact numbers for the most recent ten calendar dates. A tilde marks a still-filling report; an em dash means no figure was published for that venue and date, not zero trading.</p>
+
+```js
+const tapeDates = recentCalendarDates(platformRows, 10);
+const tapeLookup = valueLookup(platformRows);
+const rowLookup = new Map(platformRows.map(row => [`${row.venue}|${+row.date}`, row]));
+const tapeVenues = VENUE_ORDER.filter(venue => scoreboard.some(row => row.venue === venue));
+```
+
+<div class="surface-card table-scroll daily-tape">
+
+```js
+display(html`<table class="briefing-table">
+  <thead><tr>
+    <th>Venue</th>
+    ${tapeDates.map(date => html`<th>${fmtDayLong(date)}</th>`)}
+  </tr></thead>
+  <tbody>${tapeVenues.map(venue => html`<tr>
+    <td><span class="venue-dot" style="background:${VENUE_COLORS[venue]}"></span><strong>${venue}</strong></td>
+    ${tapeDates.map(date => {
+      const value = tapeLookup.get(venue)?.get(+date);
+      const row = rowLookup.get(`${venue}|${+date}`);
+      return html`<td class="${value == null ? "is-missing" : row?.partial ? "is-partial" : ""}" title="${value == null ? "No published figure" : Math.round(value).toLocaleString() + " contracts" + (row?.partial ? " · partial" : "")}">${value == null ? "—" : `${row?.partial ? "~" : ""}${fmtCount(value)}`}</td>`;
+    })}
+  </tr>`)}</tbody>
+</table>`);
+```
+
+</div>
+
+## What the industry trades
+
+<p class="section-intro">The current mix and how the sports share has moved. Categories are harmonized only to the broadest level every selected venue can support.</p>
+
+```js
+const SPORT = new Set(["Baseball", "Soccer", "Tennis", "Golf", "Basketball", "Basketball (pro)", "Basketball (college)", "Football", "Combat sports", "MMA", "Boxing", "Motorsport", "Hockey", "Cricket", "Rugby", "Table tennis", "Esports", "Aussie Rules", "Sports"]);
+const ECON = new Set(["Economics", "Financials", "Commodities", "Companies"]);
+const POLITICS = new Set(["Politics", "Elections"]);
+const WEATHER = new Set(["Weather", "Climate and Weather"]);
+const PARLAY_VALUE = {"Crypto.com/Nadex": new Set(["Parlays"]), ProphetX: new Set(["Parlay (multi-event)"]), "Underdog Exchange": new Set(["Other"])};
+const PRODUCT_BUCKETS = ["Sports", "Sports · parlays", "Crypto", "Politics & elections", "Economics & financials", "Weather & climate", "Other"];
+const PRODUCT_COLORS = {Sports: "#0E7C6B", "Sports · parlays": "#7FD4C6", Crypto: "#F97316", "Politics & elections": "#3B7DD8", "Economics & financials": "#9A6D1F", "Weather & climate": "#6366F1", Other: "#9AA3AE"};
+
+function productBucket(venue, raw) {
+  if ((PARLAY_VALUE[venue] ?? new Set()).has(raw)) return "Sports · parlays";
+  if (SPORT.has(raw)) return "Sports";
+  if (raw === "Crypto") return "Crypto";
+  if (POLITICS.has(raw)) return "Politics & elections";
+  if (ECON.has(raw)) return "Economics & financials";
+  if (WEATHER.has(raw)) return "Weather & climate";
+  return "Other";
+}
+
+function normalizeProduct(venue, rows, categoryColumn, valueColumn = "contracts") {
+  return rows.flatMap(row => {
+    const value = +row[valueColumn] || 0;
+    if (!(value > 0) || !row.date) return [];
+    const raw = String(row[categoryColumn] ?? "").trim();
+    return [{date: row.date, venue, bucket: productBucket(venue, raw), contracts: value}];
+  });
+}
+
+const productRowsBase = [
+  ...normalizeProduct("Kalshi", kCat, "kalshi_category"),
+  ...normalizeProduct("Polymarket US", pmCat, "category"),
+  ...normalizeProduct("Crypto.com/Nadex", nadexCat, "category"),
+  ...normalizeProduct("Rothera", rotheraCat, "category"),
+  ...normalizeProduct("DKeX", dkexCat, "category"),
+  ...normalizeProduct("ProphetX", pxCat, "category"),
+  ...normalizeProduct("Underdog Exchange", underdogCat, "category"),
+  ...normalizeProduct("ForecastEx", fxCat, "category")
+];
+const kalshiParlayByDate = new Map(Array.from(d3.rollup(kParlay, rows => d3.sum(rows, row => +row.contracts || 0), row => +row.date)));
+const productRows = productRowsBase.flatMap(row => {
+  if (row.venue !== "Kalshi" || row.bucket !== "Sports") return [row];
+  const parlay = Math.min(row.contracts, kalshiParlayByDate.get(+row.date) ?? 0);
+  return [
+    {...row, contracts: row.contracts - parlay},
+    {...row, bucket: "Sports · parlays", contracts: parlay}
+  ].filter(value => value.contracts > 0);
+});
+const latestProductDate = d3.max(productRows, row => row.date);
+const productStart = d3.utcDay.offset(latestProductDate, -29);
+const productRecent = productRows.filter(row => row.date >= productStart && row.date <= latestProductDate);
+const productByVenue = Array.from(d3.rollup(productRecent, rows => d3.sum(rows, row => row.contracts), row => row.venue, row => row.bucket), ([venue, buckets]) => {
+  const total = d3.sum(buckets.values());
+  return PRODUCT_BUCKETS.map(bucket => ({venue, bucket, contracts: buckets.get(bucket) ?? 0, share: total ? (buckets.get(bucket) ?? 0) / total : 0}));
+}).flat();
+const productVenueOrder = VENUE_ORDER.filter(venue => productByVenue.some(row => row.venue === venue));
+
+const monthlySports = Array.from(d3.rollup(productRows, rows => {
+  const total = d3.sum(rows, row => row.contracts);
+  const sports = d3.sum(rows.filter(row => row.bucket.startsWith("Sports")), row => row.contracts);
+  return {date: d3.utcMonth.floor(rows[0].date), share: total ? sports / total : null, contracts: total};
+}, row => row.venue, row => +d3.utcMonth.floor(row.date)), ([venue, months]) => Array.from(months, ([, value]) => ({venue, ...value}))).flat().filter(row => row.share != null).sort((a, b) => a.date - b.date);
+```
+
+<div class="control-strip">
+
+```js
+const productView = view(Inputs.radio(["Current mix", "Sports share trend"], {label: "View", value: "Current mix"}));
+```
+
+</div>
+
+<div class="plot-shell">
+
+```js
+if (productView === "Current mix") {
+  display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
+    width,
+    height: 65 + productVenueOrder.length * 38,
+    marginLeft: 155,
+    x: {label: "Share of reported contracts", percent: true, domain: [0, 1], grid: true},
+    y: {label: null, domain: productVenueOrder},
+    color: {legend: true, domain: PRODUCT_BUCKETS, range: PRODUCT_BUCKETS.map(bucket => PRODUCT_COLORS[bucket])},
+    marks: [
+      Plot.barX(productByVenue, {x: "share", y: "venue", fill: "bucket", order: PRODUCT_BUCKETS, tip: true, title: row => `${row.venue}\n${row.bucket}: ${(100 * row.share).toFixed(1)}%\n${Math.round(row.contracts).toLocaleString()} contracts`}),
+      Plot.ruleX([0, 1])
+    ]
+  }));
+} else {
+  display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
+    width,
+    height: 380,
+    marginLeft: 62,
+    x: {type: "utc", label: null},
+    y: {label: "Sports share of reported contracts", percent: true, domain: [0, 1], grid: true},
+    color: {legend: true, domain: productVenueOrder, range: productVenueOrder.map(venue => VENUE_COLORS[venue])},
+    marks: [
+      Plot.lineY(monthlySports.filter(row => row.date >= scaleBrushFrom && row.date <= scaleBrushTo), {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+      Plot.dot(monthlySports.filter(row => row.date >= scaleBrushFrom && row.date <= scaleBrushTo), {x: "date", y: "share", fill: "venue", r: 2.5, tip: true, title: row => `${row.venue} · ${row.date.toLocaleDateString("en-US", {month: "short", year: "numeric", timeZone: "UTC"})}\nSports share: ${(100 * row.share).toFixed(1)}%\n${Math.round(row.contracts).toLocaleString()} contracts`}),
+      Plot.ruleY([0, 1])
+    ]
+  }));
+}
+```
+
+</div>
+
+<div class="module-links">
+  <a href="./categories-venues">Compare product mix in detail →</a>
+  <a href="./bet-types">Compare sports contract types →</a>
+  <a href="./parlay-venues">Compare parlay adoption →</a>
+</div>
+
+## Go deeper
+
+<div class="destination-grid">
+  <a class="destination-card" href="./compare-scale"><strong>Compare venues</strong><span>Scale, liquidity, fees, products, trading behavior, and accuracy.</span></a>
+  <a class="destination-card" href="./volume"><strong>Kalshi deep dive</strong><span>Activity, products, economics, outcomes, and parlays from the richest tape.</span></a>
+  <a class="destination-card" href="./market-explorer"><strong>Explore markets</strong><span>Venue leaders, top markets, and one searchable finder.</span></a>
+  <a class="destination-card" href="./methodology"><strong>Data &amp; methodology</strong><span>Coverage, definitions, mappings, and the limits of every comparison.</span></a>
+</div>

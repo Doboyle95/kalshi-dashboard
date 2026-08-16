@@ -24,6 +24,7 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
+const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
 const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 const catLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
@@ -35,6 +36,7 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
+    {label: "Trades by hour", date: latestDate(hourly), updatedAt: fileUpdatedAt(freshness, "trades_by_hour.csv"), meta: "Current-day pulse in Eastern Time"},
     {label: "Sports split", date: latestDate(sports), updatedAt: fileUpdatedAt(freshness, "daily_sports_vs_nonsports.csv"), meta: "Can be within 15 minutes locally after near-live refresh"},
     {label: "Tracked categories", date: latestDate(topDaily), updatedAt: fileUpdatedAt(freshness, "daily_top_categories.csv"), meta: "Can be within 15 minutes locally after near-live refresh"}
   ],
@@ -567,17 +569,25 @@ const oiLast = oi.length ? oi[oi.length - 1] : null;
 ```
 
 ```js
+const drOI = oi.length ? view(makeDateBrush(new Date("2025-01-01"), d => d.total_oi_contracts, "#7048e8")) : [null, null];
+```
+
+```js
+const oiShown = oi.length ? oi.filter(d => d.date >= drOI[0] && d.date <= drOI[1]) : [];
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 75,
   x: {type: "utc", label: null},
   y: {label: "Contracts of open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
-    Plot.areaY(oi, {x: "date", y: "total_oi_contracts", fill: "#7048e8", fillOpacity: 0.18, curve: "monotone-x"}),
-    Plot.lineY(oi, {x: "date", y: "total_oi_contracts", stroke: "#7048e8", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(oiShown, {x: "date", y: "total_oi_contracts", fill: "#7048e8", fillOpacity: 0.18, curve: "monotone-x"}),
+    Plot.lineY(oiShown, {x: "date", y: "total_oi_contracts", stroke: "#7048e8", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0]),
-    Plot.ruleX(oi, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(oi, Plot.pointerX({x: "date", y: "total_oi_contracts",
+    Plot.ruleX(oiShown, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(oiShown, Plot.pointerX({x: "date", y: "total_oi_contracts",
       title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.total_oi_contracts)} contracts (${(d.total_oi_contracts||0).toLocaleString()})\n${fmtCount(d.n_with_oi)} markets with open positions`}))
   ]
 })
@@ -596,4 +606,178 @@ display(oiPeak && oiLast
 <details class="surface-card compact-details">
 <summary>What this measures</summary>
 <p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot updates on a periodic schedule rather than live, so the chart ends ${oiLast ? fmtDate(oiLast.date) : "—"} and may lag the other charts by a day or two.</p>
+</details>
+
+## Trading activity today
+
+<p class="section-intro">Contracts by hour (Eastern Time) on the latest day in the feed, split into sports, parlays, and non-sports. The faded bar is still counting.</p>
+
+```js
+const isPartialHour = d => d.is_partial === true || d.is_partial === "TRUE";
+const hourlyToday = (() => {
+  const latest = d3.max(hourly, d => d.date);
+  return hourly.filter(d => +d.date === +latest).sort((a, b) => a.hour_et - b.hour_et);
+})();
+const hourlyLong = hourlyToday.flatMap(d => [
+  {hour_et: d.hour_et, group: "Non-sports", contracts: d.contracts_nonsports, partial: isPartialHour(d)},
+  {hour_et: d.hour_et, group: "Sports", contracts: d.contracts_sports, partial: isPartialHour(d)},
+  {hour_et: d.hour_et, group: "Parlay", contracts: d.contracts_parlay, partial: isPartialHour(d)}
+]);
+const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
+const groupColors = {"Non-sports": "#5b8def", Sports: "#1a9641", Parlay: "#74c476"};
+```
+
+<div class="plot-shell">
+
+```js
+if (!hourlyToday.length) {
+  display(html`<p class="section-intro">No trades recorded yet today.</p>`);
+} else {
+  display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
+    width,
+    height: 320,
+    marginLeft: 60,
+    marginRight: 16,
+    x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, label: "Hour (Eastern Time)"},
+    y: {grid: true, label: "Contracts", tickFormat: fmtCount},
+    color: {legend: true, domain: Object.keys(groupColors), range: Object.values(groupColors)},
+    marks: [
+      Plot.barY(hourlyLong, {x: "hour_et", y: "contracts", fill: "group", fillOpacity: d => d.partial ? 0.45 : 1, rx: 2}),
+      Plot.text(hourlyToday.filter(isPartialHour), {
+        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay,
+        dy: -10, text: () => "still counting", fontSize: 11, fill: "currentColor"
+      }),
+      Plot.tip(hourlyToday, Plot.pointerX({
+        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay,
+        title: d => [
+          fmtHour12(d.hour_et),
+          `Sports: ${d.trades_sports.toLocaleString()} trades · ${d.contracts_sports.toLocaleString()} contracts · $${d.taker_side_notional_sports.toLocaleString()} taker-side`,
+          `Parlay: ${d.trades_parlay.toLocaleString()} trades · ${d.contracts_parlay.toLocaleString()} contracts · $${d.taker_side_notional_parlay.toLocaleString()} taker-side`,
+          `Non-sports: ${d.trades_nonsports.toLocaleString()} trades · ${d.contracts_nonsports.toLocaleString()} contracts · $${d.taker_side_notional_nonsports.toLocaleString()} taker-side`,
+          isPartialHour(d) ? "Hour still in progress" : null
+        ].filter(Boolean).join("\n")
+      })),
+      Plot.ruleY([0])
+    ]
+  }));
+}
+```
+
+</div>
+
+## Typical trading week
+
+<p class="section-intro">The average hour of the week across the selected window. Change both the metric and the segment; the current weekday also shows today's actual pace.</p>
+
+```js
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function weeklyMetricValue(d, metric, segment) {
+  const key = metric === "Trades" ? "trades" : metric === "Contracts" ? "contracts" : "taker_side_notional";
+  const sportsValue = d[`${key}_sports`] || 0;
+  const nonsportsValue = d[`${key}_nonsports`] || 0;
+  const parlayValue = d[`${key}_parlay`] || 0;
+  if (segment === "Sports") return sportsValue;
+  if (segment === "Parlay") return parlayValue;
+  if (segment === "Non-sports") return nonsportsValue;
+  return sportsValue + nonsportsValue + parlayValue;
+}
+const weeklyLatest = d3.max(hourly, d => d.date);
+const weeklyWindowDays = {"Last 90 days": 90, "Last 180 days": 180, "Last 365 days": 365, "All time": Infinity};
+```
+
+<div class="control-strip">
+
+```js
+const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], {label: "Metric", value: "Contracts"}));
+```
+
+```js
+const weeklySegment = view(Inputs.radio(["Combined", "Sports", "Parlay", "Non-sports"], {label: "Segment", value: "Combined"}));
+```
+
+```js
+const weeklyWindow = view(Inputs.radio(Object.keys(weeklyWindowDays), {label: "Window", value: "Last 180 days"}));
+```
+
+</div>
+
+```js
+const weeklyRows = hourly.filter(d => {
+  if (isPartialHour(d)) return false;
+  const days = weeklyWindowDays[weeklyWindow];
+  return days === Infinity || d.date >= d3.utcDay.offset(weeklyLatest, -days);
+});
+const weeklyAgg = d3.rollup(
+  weeklyRows,
+  rows => ({value: d3.sum(rows, d => weeklyMetricValue(d, weeklyMetric, weeklySegment)), n: rows.length}),
+  d => d.date.getUTCDay(),
+  d => d.hour_et
+);
+const weeklyCells = [];
+for (let dow = 0; dow < 7; dow++) {
+  for (let hour = 0; hour < 24; hour++) {
+    const cell = weeklyAgg.get(dow)?.get(hour);
+    weeklyCells.push({dow_label: DOW_LABELS[dow], hour_et: hour, avg: cell ? cell.value / cell.n : 0, n: cell?.n || 0});
+  }
+}
+const weeklyFmtValue = value => weeklyMetric === "Taker-side $" ? fmtUSD(value) : fmtCount(value);
+const busiestCell = weeklyCells.reduce((best, d) => d.avg > best.avg ? d : best, weeklyCells[0]);
+const weeklyDaysCovered = new Set(weeklyRows.map(d => +d.date)).size;
+const todayDowLabel = DOW_LABELS[weeklyLatest.getUTCDay()];
+const todayOverlayPoints = hourlyToday.map(d => ({
+  hour_et: d.hour_et,
+  dow_label: todayDowLabel,
+  value: weeklyMetricValue(d, weeklyMetric, weeklySegment),
+  partial: isPartialHour(d)
+}));
+```
+
+<div class="chart-note">${weeklyDaysCovered.toLocaleString()} days in this window. Busiest slot: <strong>${busiestCell.dow_label} ${fmtHour12(busiestCell.hour_et)} ET</strong>, averaging ${weeklyFmtValue(busiestCell.avg)} ${weeklyMetric === "Taker-side $" ? "" : weeklyMetric.toLowerCase()}/hour.</div>
+
+<div class="plot-shell">
+
+```js
+const weeklyBarColor = weeklySegment === "Combined" ? "#00786a" : groupColors[weeklySegment];
+const TODAY_ACCENT = "#d97706";
+const TODAY_BAR_BLEND = {Combined: "#41784c", "Non-sports": "#8186a9", Sports: "#538d2f", Parlay: "#92ad54"};
+const todayBarColor = TODAY_BAR_BLEND[weeklySegment];
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 600,
+  marginLeft: 54,
+  marginRight: 56,
+  facet: {data: weeklyCells, y: "dow_label"},
+  fy: {domain: DOW_LABELS, label: null, tickFormat: d => d === todayDowLabel ? `${d} · Today` : d},
+  x: {type: "band", domain: d3.range(24), tickFormat: fmtHour12, ticks: [0, 6, 12, 18], label: "Hour (Eastern Time)"},
+  y: {grid: true, ticks: 3, label: weeklyMetric === "Taker-side $" ? "Avg $/hour" : `Avg ${weeklyMetric.toLowerCase()}/hour`, tickFormat: weeklyFmtValue},
+  marks: [
+    Plot.barY(weeklyCells, {
+      x: "hour_et", y: "avg", rx: 2,
+      fill: d => d.dow_label === todayDowLabel ? todayBarColor : weeklyBarColor,
+      stroke: TODAY_ACCENT, strokeWidth: 1.5,
+      strokeOpacity: d => d.dow_label === todayDowLabel ? 1 : 0
+    }),
+    Plot.line(todayOverlayPoints, {x: "hour_et", y: "value", fy: "dow_label", stroke: TODAY_ACCENT, strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(todayOverlayPoints, {x: "hour_et", y: "value", fy: "dow_label", fill: TODAY_ACCENT, fillOpacity: d => d.partial ? 0.55 : 1, stroke: "var(--theme-background)", strokeWidth: 1, r: 3.5}),
+    Plot.tip(weeklyCells, Plot.pointerX({
+      x: "hour_et", y: "avg",
+      title: d => {
+        const lines = [`${d.dow_label} ${fmtHour12(d.hour_et)}`, `Average: ${weeklyFmtValue(d.avg)}`, `${weeklySegment} · ${d.n} observations`];
+        const todayPoint = d.dow_label === todayDowLabel && todayOverlayPoints.find(t => t.hour_et === d.hour_et);
+        if (todayPoint) lines.push(`Today: ${weeklyFmtValue(todayPoint.value)}${todayPoint.partial ? " (still counting)" : ""}`);
+        return lines.join("\n");
+      }
+    })),
+    Plot.ruleY([0])
+  ]
+}));
+```
+
+</div>
+
+<details class="surface-card compact-details">
+  <summary>What the weekly average means</summary>
+  <p>Each bar averages one day-of-week × hour combination across the selected window. In-progress hours are excluded. Parlays remain their own segment, and the connected dots on today's row show the latest day's actual values.</p>
 </details>

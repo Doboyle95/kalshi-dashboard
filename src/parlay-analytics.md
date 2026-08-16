@@ -20,6 +20,7 @@ const pct1     = n => (n == null ? "n/a" : n.toFixed(1) + "%");
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const heRaw   = await DataAttachment("data/parlay_house_edge_by_legs.csv").csv({typed: true});
@@ -82,6 +83,8 @@ display(askPageLink({
   context: "Parlay Anatomy page (parlay-analytics.md)."
 }));
 ```
+
+<a class="destination-card" href="./parlay"><strong>Parlay bettor P&amp;L and cash-outs</strong><span>Realized results, held-to-settlement counterfactual, cash-out effect, stakes, and return rate.</span></a>
 
 ```js
 const KIND_DOMAIN = ["multi-game(independent)", "same-game(correlated)"];
@@ -192,6 +195,25 @@ const volDay = (() => {
 })();
 ```
 
+<div class="instruction-line"><strong>Shared time window:</strong> drag the brush once to update every time-series chart on this page. The underlying tables and cross-sectional charts stay on their full available sample.</div>
+
+```js
+const parlayBrushSeries = volDay.map(d => ({date: d.date, value: d.total_vol}));
+const parlayDateSel = Mutable([d3.min(parlayBrushSeries, d => d.date), d3.max(parlayBrushSeries, d => d.date)]);
+display(renderDateBrush({
+  data: parlayBrushSeries,
+  initialRange: [d3.min(parlayBrushSeries, d => d.date), d3.max(parlayBrushSeries, d => d.date)],
+  onSelect: range => { parlayDateSel.value = range; },
+  color: "#f4a736",
+  width
+}));
+```
+
+```js
+const [parlayBrushFrom, parlayBrushTo] = parlayDateSel;
+const inParlayRange = row => row.date >= parlayBrushFrom && row.date <= parlayBrushTo;
+```
+
 ## The rise of multi-leg betting
 
 _Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. These are contract counts, not dollars: a parlay contract typically sells for a few cents, so the money staked is far smaller (the house-edge chart above shows both side by side). The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
@@ -209,9 +231,9 @@ display(Plot.plot({
   y: {label: riseDaily ? "Daily parlay volume (contracts)" : "Monthly parlay volume (contracts)", grid: true, tickFormat: d => d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M"},
   marks: [
     riseDaily
-      ? Plot.rectY(volDay, {x: "date", interval: d3.utcDay, y: "total_vol", fill: "#f4a736",
+      ? Plot.rectY(volDay.filter(inParlayRange), {x: "date", interval: d3.utcDay, y: "total_vol", fill: "#f4a736",
           tip: true, title: d => `${d.day}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nPending classification: ${pct1(d.pct_pending)}`})
-      : Plot.rectY(tline, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
+      : Plot.rectY(tline.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
           tip: true, title: d => `${d.month}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
     Plot.ruleY([0])
   ]
@@ -227,9 +249,9 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Mean legs / parlay", grid: true, domain: [0, d3.max(tline, d=>d.mean_legs)*1.15]},
   marks: [
-    Plot.line(tline, {x: "date", y: "mean_legs", stroke: "#7048e8", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.dot(tline, {x: "date", y: "mean_legs", fill: "#7048e8", r: 3}),
-    Plot.tip(tline, Plot.pointerX({x: "date", y: "mean_legs",
+    Plot.line(tline.filter(inParlayRange), {x: "date", y: "mean_legs", stroke: "#7048e8", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.dot(tline.filter(inParlayRange), {x: "date", y: "mean_legs", fill: "#7048e8", r: 3}),
+    Plot.tip(tline.filter(inParlayRange), Plot.pointerX({x: "date", y: "mean_legs",
       title: d => `${d.month}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}))
   ]
 })
@@ -249,9 +271,9 @@ display(Plot.plot({
   y: {label: "Share", grid: true, domain: [0, 100], tickFormat: d => d + "%"},
   color: {legend: true, domain: ["% volume in 4+-leg", "% same-game (correlated)"], range: ["#f4a736", "#e4572e"]},
   marks: [
-    Plot.line(compTidy, {x: "date", y: "value", stroke: "series", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.dot(compTidy, {x: "date", y: "value", fill: "series", r: 3}),
-    Plot.tip(compTidy, Plot.pointerX({x: "date", y: "value", stroke: "series",
+    Plot.line(compTidy.filter(inParlayRange), {x: "date", y: "value", stroke: "series", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.dot(compTidy.filter(inParlayRange), {x: "date", y: "value", fill: "series", r: 3}),
+    Plot.tip(compTidy.filter(inParlayRange), Plot.pointerX({x: "date", y: "value", stroke: "series",
       title: d => `${d.month}\n${d.series}: ${pct1(d.value)}`}))
   ]
 }))
@@ -314,7 +336,7 @@ display(Plot.plot({
   y: {label: "Monthly parlay volume (contracts)", grid: true, tickFormat: fmtCount},
   color: {legend: true, domain: VT_DOMAIN, range: VT_COLORS},
   marks: [
-    Plot.rectY(vtMonthly, {x: "date", interval: d3.utcMonth, y: "contracts", fill: "parlay_class",
+    Plot.rectY(vtMonthly.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "contracts", fill: "parlay_class",
       order: VT_DOMAIN, tip: true,
       title: d => `${d.month} · ${d.parlay_class}\nVolume: ${fmtCount(d.contracts)} contracts`}),
     Plot.ruleY([0])
@@ -334,10 +356,10 @@ Plot.plot({
   y: {label: "Cumulative bettor P&L (net of fees)", grid: true, tickFormat: fmtSignedUSD},
   color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
   marks: [
-    Plot.line(pnlCum, {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.line(pnlCum.filter(inParlayRange), {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
-    Plot.ruleX(pnlCum, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(pnlCum, Plot.pointerX({x: "date", y: "cum_pnl", stroke: "kind",
+    Plot.ruleX(pnlCum.filter(inParlayRange), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(pnlCum.filter(inParlayRange), Plot.pointerX({x: "date", y: "cum_pnl", stroke: "kind",
       title: d => `${fmtDay(d.date)}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
   ]
 })
@@ -401,7 +423,7 @@ Plot.plot({
   y: {label: "Share of monthly volume (contracts)", percent: true, grid: true},
   color: {legend: true, domain: SHARE_DOMAIN, range: SHARE_COLORS, tickFormat: shareLabel},
   marks: [
-    Plot.rectY(mixAll, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix",
+    Plot.rectY(mixAll.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix",
                         offset: "expand", order: SHARE_DOMAIN}),
     Plot.ruleY([0, 1])
   ]
@@ -451,9 +473,9 @@ Plot.plot({
   y: {label: "Monthly parlay volume (contracts)", grid: true, tickFormat: d => d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k"},
   color: {legend: true, domain: MIX_DOMAIN, range: MIX_COLORS, tickFormat: mixLabel},
   marks: [
-    Plot.rectY(mixMonthly, {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix", order: MIX_DOMAIN}),
-    Plot.ruleX(mixTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(mixTipData, Plot.pointerX({
+    Plot.rectY(mixMonthly.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix", order: MIX_DOMAIN}),
+    Plot.ruleX(mixTipData.filter(inParlayRange), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(mixTipData.filter(inParlayRange), Plot.pointerX({
       x: "date",
       title: d => [
         d.month,
@@ -627,7 +649,7 @@ display(Plot.plot({
   x: {type: "utc", label: null},
   y: {label: lotteryMetric === "volume" ? "Daily volume (contracts)" : "Daily taker stakes ($)", grid: true, tickFormat: lotteryFmt},
   marks: [
-    Plot.rectY(lotteryDaily.filter(d => d[lotteryMetric] != null), {
+    Plot.rectY(lotteryDaily.filter(d => d[lotteryMetric] != null && inParlayRange(d)), {
       x: "date", interval: d3.utcDay, y: lotteryMetric, fill: "#9b59b6",
       tip: true,
       title: d => `${d.date.toISOString().slice(0, 10)}\n`

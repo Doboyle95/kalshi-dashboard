@@ -23,6 +23,7 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const monthly = await DataAttachment("data/rh_monthly_estimates.csv").csv({typed: true});
 const weekly  = await DataAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
+import {renderDateBrush} from "./components/date-brush.js";
 import {freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -83,25 +84,54 @@ const peakShare  = weekly.reduce((best, d) => d.rh_share_pct > best.rh_share_pct
 const latestShare = weekly[weekly.length - 1];
 ```
 
-## Monthly estimated volume
+## Robinhood distribution estimate
 
-<p class="section-intro">Robinhood's estimated contracts traded on Kalshi each month, calibrated directly from CFTC filings. April 2025 is partial (filings begin April 7). April 2026 is a partial month.</p>
+```js
+const robinhoodMetric = view(Inputs.radio(
+  ["Estimated volume", "Share of Kalshi"],
+  {label: "View", value: "Estimated volume"}
+));
+```
+
+<p class="section-intro">${robinhoodMetric === "Estimated volume"
+  ? "Estimated monthly contracts distributed through Robinhood, calibrated from CFTC filings. April 2025 and April 2026 are partial months."
+  : "Robinhood's estimated weekly share of Kalshi volume. Use the range selector to inspect a shorter period."}</p>
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">Peak month (estimated)</div>
-    <div class="kpi-value">${fmtB(peakMonthly?.rh_est_billions)}</div>
-    <div class="kpi-meta">${fmtDate(peakMonthly?.month_date)} — ${fmtPct(peakMonthly?.rh_share_pct)} of Kalshi</div>
+    <div class="kpi-label">${robinhoodMetric === "Estimated volume" ? "Peak month" : "Peak weekly share"} (estimated)</div>
+    <div class="kpi-value">${robinhoodMetric === "Estimated volume" ? fmtB(peakMonthly?.rh_est_billions) : fmtPct(peakShare?.rh_share_pct)}</div>
+    <div class="kpi-meta">${robinhoodMetric === "Estimated volume" ? `${fmtDate(peakMonthly?.month_date)} — ${fmtPct(peakMonthly?.rh_share_pct)} of Kalshi` : `Week of ${fmtWeek(peakShare?.week_start)}`}</div>
   </div>
   <div class="kpi-card" data-accent="warning">
-    <div class="kpi-label">Latest month (estimated)</div>
-    <div class="kpi-value">${fmtB(latestMonthly?.rh_est_billions)}</div>
-    <div class="kpi-meta">${fmtDate(latestMonthly?.month_date)} — ${fmtPct(latestMonthly?.rh_share_pct)} of Kalshi</div>
+    <div class="kpi-label">${robinhoodMetric === "Estimated volume" ? "Latest month" : "Latest weekly share"} (estimated)</div>
+    <div class="kpi-value">${robinhoodMetric === "Estimated volume" ? fmtB(latestMonthly?.rh_est_billions) : fmtPct(latestShare?.rh_share_pct)}</div>
+    <div class="kpi-meta">${robinhoodMetric === "Estimated volume" ? `${fmtDate(latestMonthly?.month_date)} — ${fmtPct(latestMonthly?.rh_share_pct)} of Kalshi` : `Week of ${fmtWeek(latestShare?.week_start)}`}</div>
   </div>
 </div>
 
 ```js
-Plot.plot({
+const rhMonthFrom = d3.min(monthlyParsed, d => d.month_date);
+const rhMonthTo = d3.max(monthlyParsed, d => d.month_date);
+const rhMonthSel = Mutable([rhMonthFrom, rhMonthTo]);
+display(robinhoodMetric === "Estimated volume"
+  ? renderDateBrush({
+      data: monthlyParsed.map(d => ({date: d.month_date, value: d.rh_est_billions})),
+      initialRange: [rhMonthFrom, rhMonthTo],
+      onSelect: range => { rhMonthSel.value = range; },
+      color: "var(--accent-robinhood)",
+      width
+    })
+  : html``);
+```
+
+```js
+const [rhBrushFrom, rhBrushTo] = rhMonthSel;
+const monthlyBrushed = monthlyParsed.filter(d => d.month_date >= rhBrushFrom && d.month_date <= rhBrushTo);
+```
+
+```js
+robinhoodMetric === "Estimated volume" ? Plot.plot({
   marginLeft: 55, marginBottom: 50,
   height: 320,
   x: {
@@ -115,10 +145,10 @@ Plot.plot({
   y: {
     label: "Estimated contracts (billions)",
     grid: true,
-    tickFormat: d => d.toFixed(1) + "B"
+    tickFormat: d => (+d).toFixed(1) + "B"
   },
   marks: [
-    Plot.barY(monthlyParsed, {
+    Plot.barY(monthlyBrushed, {
       x: "month_date",
       y: "rh_est_billions",
       fill: "var(--accent-robinhood)",
@@ -133,30 +163,13 @@ Plot.plot({
     }),
     Plot.ruleY([0])
   ]
-})
+}) : null
 ```
 
----
-
-## Robinhood's share of Kalshi volume (weekly)
-
-<p class="section-intro">Week-by-week, Robinhood's estimated share of all Kalshi event contracts traded. The decline from ~55% during NFL season peak (Sep–Nov 2025) to ~20% by spring 2026 reflects a platform that grew faster than any single participant could keep up with.</p>
-
-<div class="kpi-grid">
-  <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">Peak weekly share (estimated)</div>
-    <div class="kpi-value">${fmtPct(peakShare?.rh_share_pct)}</div>
-    <div class="kpi-meta">Week of ${fmtWeek(peakShare?.week_start)}</div>
-  </div>
-  <div class="kpi-card" data-accent="warning">
-    <div class="kpi-label">Latest weekly share (estimated)</div>
-    <div class="kpi-value">${fmtPct(latestShare?.rh_share_pct)}</div>
-    <div class="kpi-meta">Week of ${fmtWeek(latestShare?.week_start)}</div>
-  </div>
-</div>
-
 ```js
-const brushWeekly = view(makeBrush());
+const brushWeekly = robinhoodMetric === "Share of Kalshi"
+  ? view(makeBrush())
+  : d3.extent(weekly, d => d.week_start);
 ```
 
 ```js
@@ -220,7 +233,7 @@ const weeklyFiltered = weekly.filter(d => d.week_start >= brushWeekly[0] && d.we
 ```
 
 ```js
-Plot.plot({
+robinhoodMetric === "Share of Kalshi" ? Plot.plot({
   marginLeft: 50,
   height: 340,
   x: { label: null },
@@ -248,5 +261,5 @@ Plot.plot({
       }
     })
   ]
-})
+}) : null
 ```

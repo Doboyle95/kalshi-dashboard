@@ -379,119 +379,7 @@ Plot.plot({
 })
 ```
 
-## Open interest
-
-<p class="section-intro">Contracts still open in Underdog markets at the nightly capture. This is <em>not</em> venue open interest in the sense the Kalshi and Rothera pages use it, and it is not comparable to them: Underdog's file is a single snapshot taken the following morning — the venue publishes no capture-time field, so that timing is inferred from the file itself — and its markets appear to settle when their game ends, so the only contracts left standing at capture are those in games still running, plus next-day markets that have already started trading. Grey <strong>0</strong> labels on the zero line are the four dates where nothing at all was still open — 2026-07-17, 07-22, 07-23 and 07-24. On each of those the latest same-day event started at 19:00 or 20:00 ET; on every date that does carry open interest there was a later start. That pattern holds across every date on file, but 16 dates is a thin basis, the start times are parsed out of ticker strings rather than published, and the parlay contracts carry no parseable date at all — so treat it as the most likely explanation, not a demonstrated one. Underdog returns the field, non-null, on 100% of market rows on every date, so those are reported zeros rather than missing data. The pattern is <em>consistent with</em> a capture-timing artifact rather than a demonstrated one: the venue publishes no capture time and no event-start field, so the start hours here are parsed from ticker strings across the dates on file. 2026-08-02 is the same effect in partial form: a Sunday day-game slate left the same-day component at exactly zero while 14,614 contracts of next-day (08-03) markets stayed open, which reads as a 92% drop. Traded volume that day was <em>up</em> 3.3%, the third-heaviest in the file. Because this tracks capture timing rather than standing capital, it is deliberately not carried into the cross-venue open-interest comparison.</p>
-
-```js
-// Four dates come back with every single market row at exactly 0 open interest:
-// 2026-07-17, 07-22, 07-23 and 07-24, on 1,012 / 56,132 / 220,210 / 911,855
-// contracts of volume respectively. This is capture timing, NOT a reporting gap:
-// the raw file carries the open_interest key, non-null, on 100% of market rows on
-// all 16 dates, and the snapshot appears to land ~00:49 ET the next morning (inferred; no capture-time
-// field is published) with every row
-// already status "Finalized". Underdog markets settle when the game ends, so a
-// date whose latest same-day start was 19:00-20:00 ET has nothing open left by
-// capture; every date with a 21:00+ ET start reports positive open interest -- a
-// pattern over only 16 dates, with start times parsed from tickers, not published, with
-// no counterexample in 16 dates. Derived from the data rather than hardcoded so a
-// future date behaves the same way.
-const oiReported = daily.filter(d => (d.open_interest || 0) > 0);
-const oiNotReported = daily.filter(d => !((d.open_interest || 0) > 0));
-// 2026-08-02: 182,306 -> 14,614 (-92.0%), back to 148,171 the next day. Neither an
-// unwind nor a fault -- a Sunday day-game slate (latest same-day start 19:00 ET)
-// left the same-day component at exactly 0.00, and the entire 14,614 residual is
-// next-day (08-03) markets: STLNYY26AUG03, TORHOU26AUG03, LVATL2026AUG03. Traded
-// volume that day was UP 3.3% (2,080,418 -> 2,149,082), the third-heaviest in the
-// file. Annotated inline so the dip is not read as a positioning change.
-const oiCollapse = daily.filter(d => d.date.toISOString().slice(0, 10) === "2026-08-02");
-```
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 260,
-  marginLeft: 70,
-  x: {type: "utc", label: null},
-  y: {label: "Open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
-  marks: [
-    Plot.ruleY([0]),
-    Plot.rectY(oiReported, {
-      x: "date", interval: "day", y: "open_interest",
-      fill: UNDERDOG, fillOpacity: 0.92,
-      tip: true,
-      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.open_interest || 0)}`
-    }),
-    // Explicit gap treatment: the old chart filtered these rows out entirely, so
-    // four dates vanished and the series read as continuous across them.
-    //
-    // These days are a genuine ZERO, and a zero-height bar is invisible -- which is the
-    // one thing this mark exists to prevent. So they carry an explicit "0" glyph at the
-    // baseline instead. Not a dot: a dot would read as a measured magnitude sitting on
-    // the axis rather than as a day that reported nothing open.
-    Plot.text(oiNotReported, {
-      x: "date", y: 0,
-      text: () => "0", dy: -7, fontSize: 11, fontWeight: 600,
-      fill: "#94A3B8",
-      tip: true,
-      title: d => `${fmtDate(d.date)}\nNothing still open at capture\nEvery market row returned 0. ${fmtCount(d.contracts)} contracts traded.`
-    }),
-    // Emphasis on the 08-02 dip rides as an OUTLINE ON ITS OWN BAR rather than a ring
-    // floating at its tip, so the highlight cannot be mistaken for a separate series.
-    Plot.rectY(oiCollapse, {
-      x: "date", interval: "day", y: "open_interest",
-      fill: "none", stroke: "#EF4444", strokeWidth: 1.8
-    }),
-    Plot.text(oiCollapse, {
-      x: "date", y: "open_interest",
-      text: () => "-92%: Sunday slate settled before capture, not an unwind",
-      dy: -16, textAnchor: "end", fontSize: 10, fill: "currentColor", fillOpacity: 0.75
-    })
-  ]
-})
-```
-
-## Active markets
-
-<p class="section-intro">Every Underdog market with reported volume or open interest.</p>
-
-<div class="surface-card" style="overflow-x:auto">
-
-```js
-display((() => {
-  const rows = market
-    .filter(d => (d.trade_volume || 0) > 0 || (d.open_interest || 0) > 0)
-    .sort((a, b) => d3.descending(a.trade_volume || 0, b.trade_volume || 0) || d3.descending(a.open_interest || 0, b.open_interest || 0))
-    .slice(0, 20);
-  return html`<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:0.9rem">
-    <thead><tr style="border-bottom:2px solid var(--card-border)">
-      <th style="text-align:left;padding:0.45rem 0.6rem">Date</th>
-      <th style="text-align:left;padding:0.45rem 0.6rem">Symbol</th>
-      <th style="text-align:left;padding:0.45rem 0.6rem">Category</th>
-      <th style="text-align:left;padding:0.45rem 0.6rem">Type</th>
-      <th style="text-align:right;padding:0.45rem 0.6rem">Volume</th>
-      <th style="text-align:right;padding:0.45rem 0.6rem">Open interest</th>
-      <th style="text-align:right;padding:0.45rem 0.6rem">Last</th>
-    </tr></thead>
-    <tbody>
-      ${rows.map(r => html`<tr style="border-bottom:1px solid var(--theme-background-alt)">
-        <td style="text-align:left;padding:0.38rem 0.6rem;white-space:nowrap">${fmtDate(r.date)}</td>
-        <td style="text-align:left;padding:0.38rem 0.6rem;white-space:nowrap">${r.symbol}</td>
-        <td style="text-align:left;padding:0.38rem 0.6rem">${r.category}</td>
-        <td style="text-align:left;padding:0.38rem 0.6rem">${r.market_type}</td>
-        <td style="text-align:right;padding:0.38rem 0.6rem">${fmtCount(r.trade_volume || 0)}</td>
-        <td style="text-align:right;padding:0.38rem 0.6rem">${fmtCount(r.open_interest || 0)}</td>
-        <td style="text-align:right;padding:0.38rem 0.6rem">${fmtPrice(r.last_price)}</td>
-      </tr>`)}
-    </tbody>
-  </table>`;
-})());
-```
-
-</div>
-
-## Individual markets
+## Top markets
 
 <p class="section-intro">Underdog Exchange's individual markets, ranked by volume. Underdog publishes no English name anywhere in its feed, so every label here is <strong>decoded from the ticker</strong> — readable down to the club code and the scheduled start time, and no further.</p>
 
@@ -509,6 +397,7 @@ import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/m
 ```js
 display(marketLeaderboard({
   hashPrefix: "udlb",
+  rowsPerPage: 20,
   venues: [{spec: LB_VENUES.underdog, rows: normalizeLeaderboard("underdog", lbRows)}]
 }));
 ```

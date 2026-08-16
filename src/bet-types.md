@@ -10,6 +10,7 @@ title: Bet Types
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -187,6 +188,21 @@ const dailyShare = (() => {
   }
   return out;
 })();
+const betTypeBrushSeries = Array.from(d3.rollup(dailyShare, group => d3.sum(group, d => d.contracts), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
+  .sort((a, b) => a.date - b.date);
+const betTypeDateSel = Mutable([d3.min(betTypeBrushSeries, d => d.date), d3.max(betTypeBrushSeries, d => d.date)]);
+display(renderDateBrush({
+  data: betTypeBrushSeries,
+  initialRange: [d3.min(betTypeBrushSeries, d => d.date), d3.max(betTypeBrushSeries, d => d.date)],
+  onSelect: range => { betTypeDateSel.value = range; },
+  color: "#00C2A8",
+  width
+}));
+```
+
+```js
+const [betTypeBrushFrom, betTypeBrushTo] = betTypeDateSel;
+const dailyShareBrushed = dailyShare.filter(d => d.date >= betTypeBrushFrom && d.date <= betTypeBrushTo);
 ```
 
 ```js
@@ -201,7 +217,7 @@ Plot.plot({
   fy: {label: null, domain: perVenue.map(d => d.venue)},
   color: {legend: true, domain: BUCKETS, range: BUCKETS.map(b => BC[b])},
   marks: [
-    Plot.rectY(dailyShare, {
+    Plot.rectY(dailyShareBrushed, {
       x: "date", y: "pct", fill: "bucket", fy: "venue",
       order: BUCKETS, interval: "day", inset: 0.5,
       title: d => `${VENUE_LONG[d.venue]} — ${fmtDate(d.date)}\n${d.bucket}: ${d.pct.toFixed(1)}% of the day\n${fmtCount(d.contracts)} contracts`,

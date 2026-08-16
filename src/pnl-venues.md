@@ -10,6 +10,7 @@ title: Cross-Venue P&L
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -320,6 +321,24 @@ Inputs.table(rolled, {
 <div class="instruction-line">Six days old and a rounding error in volume terms &mdash; but it settles, so it can be priced. Shown separately because its scale is not comparable to anything else on this page.</div>
 
 ```js
+const parlayPilotFrom = d3.min(parlayDaily, d => d.date);
+const parlayPilotTo = d3.max(parlayDaily, d => d.date);
+const parlayPilotSel = Mutable([parlayPilotFrom, parlayPilotTo]);
+display(renderDateBrush({
+  data: parlayDaily.map(d => ({date: d.date, value: d.contracts})),
+  initialRange: [parlayPilotFrom, parlayPilotTo],
+  onSelect: range => { parlayPilotSel.value = range; },
+  color: VENUE_COLOR["Polymarket US"],
+  width
+}));
+```
+
+```js
+const [parlayPilotBrushFrom, parlayPilotBrushTo] = parlayPilotSel;
+const parlayDailyBrushed = parlayDaily.filter(d => d.date >= parlayPilotBrushFrom && d.date <= parlayPilotBrushTo);
+```
+
+```js
 Plot.plot({
   width,
   height: 240,
@@ -332,7 +351,7 @@ Plot.plot({
   y: {label: "Contracts traded", grid: true, tickFormat: fmtCount},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.barY(parlayDaily, {
+    Plot.barY(parlayDailyBrushed, {
       x: "date", y: "contracts", fill: VENUE_COLOR["Polymarket US"],
       rx2: 4, insetLeft: 2, insetRight: 2,
       title: d => `${d.date}\n${fmtCount(d.contracts)} contracts across ${d.trades} trades\nmean price ${(d.mean_price * 100).toFixed(1)}¢\n${(+d.pct_of_venue).toFixed(4)}% of Polymarket's volume that day`,

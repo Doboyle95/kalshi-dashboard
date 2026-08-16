@@ -436,6 +436,8 @@ function lbStyles() {
     z-index: 1;
   }
   .lb-table thead th:not(:empty):hover { color: var(--accent-kalshi, #00C2A8); }
+  .lb-table thead th:first-child:empty,
+  .lb-table tbody td:first-child:empty { display: none; }
   /* Literal ↕ ↑ ↓ rather than the CSS numeric escapes categories.md uses. Inside a
      tagged template the backslash form is one transcription slip away from
      shipping a visible backslash — the exact class of bug that put a literal
@@ -681,13 +683,17 @@ export function marketLeaderboard({
     // that a blank means unpublished rather than zero. Do not "fix" this by
     // substituting a string for the null: the column would then sort as text.
     const any = f => view.some(f);
-    const labelValues = new Set(view.map(d => d.label));
     const cols = [];
     const header = {}, format = {}, align = {}, widths = {};
 
-    cols.push("rank");
-    header.rank = "#"; align.rank = "right"; widths.rank = 46;
-    format.rank = d => d;
+    // Rank is meaningful only inside one venue. The former all-venue table
+    // interleaved seven unrelated within-venue ranks and then needed a long
+    // paragraph to explain why #1 did not mean #1. Market Finder has no rank.
+    if (single) {
+      cols.push("rank");
+      header.rank = "#"; align.rank = "right"; widths.rank = 46;
+      format.rank = d => d;
+    }
 
     if (!single) {
       cols.push("venueLabel");
@@ -715,12 +721,10 @@ export function marketLeaderboard({
       return cell;
     };
 
-    // The provenance column earns its place only when the view mixes levels.
-    if (labelValues.size > 1) {
-      cols.push("label");
-      header.label = "Label"; widths.label = 96;
-      format.label = v => html`<span class="lb-src" data-src=${v} title=${LABEL_TITLE[v] ?? ""}>${LABEL_TEXT[v] ?? v}</span>`;
-    }
+    // Name provenance belongs in the Market cell's tooltip, not in a cryptic
+    // "Label" column. The tooltip above retains the full published/composed/
+    // derived/code-only distinction without spending a column on internal
+    // taxonomy.
 
     if (single && any(d => d.marketType)) {
       cols.push("marketType");
@@ -797,7 +801,7 @@ export function marketLeaderboard({
 
     const tbl = Inputs.table(view, {
       columns: cols, header, format, align, width: widths,
-      sort: "rank", reverse: false, rows: rowsPerPage, select: false
+      sort: single ? "rank" : "lastTrade", reverse: !single, rows: rowsPerPage, select: false
     });
     tbl.classList.add("lb-table");
     tableBox.append(tbl);
@@ -836,7 +840,7 @@ export function marketLeaderboard({
       // without this the mixed view never says it is a top slice, and a reader who
       // cannot find a mid-sized market concludes the venue never listed it.
       bits.push(html`<span>Each venue contributes its largest markets only (top 1,000 for Kalshi, Polymarket US, Crypto.com/Nadex and DKeX; all markets for ForecastEx, Rothera and Underdog Exchange), so an absent market may simply be below that cut.</span>`);
-      bits.push(html`<span><strong>#</strong> is the market's rank <em>within its own venue</em>, so the default order interleaves the venues and the first screen is each venue's biggest market side by side. There is deliberately no cross-venue ranking: ForecastEx counts matched pairs where the others count contracts, these files start anywhere from 2024-08 to 2026-07, and Kalshi's largest market is 4.9× Polymarket US's. Sorting by volume here compares venues of different ages in different units.</span>`);
+      bits.push(html`<span>This is a searchable finder, not a cross-venue rank: ForecastEx counts matched pairs where the others count contracts, and the source histories begin on different dates. The default sort is most recently traded; sorting by volume is available but does not make the units or windows comparable.</span>`);
       bits.push(html`<span>An empty fee or outcome cell means the venue does not publish that number for that market — never that it is zero.</span>`);
     }
     // flatMap, not map: htl renders a FLAT array of nodes and strings, but a

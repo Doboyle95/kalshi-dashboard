@@ -75,19 +75,24 @@ display(rows.length ? renderDateBrush({
 }) : html`<p>No CME data available.</p>`);
 ```
 
-## Daily volume
+## Daily volume · calls and puts
 
 <p class="section-intro">Each bar is one CME Daily Bulletin (FanDuel + DraftKings combined), shown exactly as CME publishes it. <strong>Mondays look huge because CME reports the whole weekend in the Monday bulletin</strong> — Saturday, Sunday and Monday volume all land on Monday (holiday weekends like Good Friday bundle in even more). Gaps are days we couldn't collect, not zero-volume days. On the <a href="./competitors">Platform Comparison</a> chart we spread those weekend lumps back across the days they actually traded; here we keep the raw bulletin figures.</p>
 
 ```js
 const inRange = rows.filter(d => d.date >= cmeDateSel[0] && d.date <= cmeDateSel[1]);
+const tidy = inRange.flatMap(d => [
+  {date: d.date, side: "Calls", vol: d.calls, total: d.total},
+  {date: d.date, side: "Puts", vol: d.puts, total: d.total}
+]);
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 64,
   x: {type: "utc", label: null},
   y: {label: "Contracts / day", grid: true, tickFormat: d => fmtCount(d)},
+  color: {legend: true, domain: ["Calls", "Puts"], range: [CME_COLORS.Calls, CME_COLORS.Puts]},
   marks: [
-    Plot.rectY(inRange, {x: "date", interval: d3.utcDay, y: "total", fill: "#9A6D1F"}),
+    Plot.rectY(tidy, {x: "date", interval: d3.utcDay, y: "vol", fill: "side", order: ["Calls", "Puts"]}),
     Plot.ruleY([0]),
     Plot.tip(inRange, Plot.pointerX({x: "date", y: "total",
       title: d => `${fmtDate(d.date)}\nTotal: ${fmtCount(d.total)} contracts\nCalls: ${fmtCount(d.calls)}\nPuts: ${fmtCount(d.puts)}`}))
@@ -96,28 +101,6 @@ display(Plot.plot({
 ```
 
 <p class="chart-note">Across the <strong>${inRange.length}</strong> days shown, FanDuel + DraftKings cleared <strong>${fmtCount(d3.sum(inRange, d => d.total))}</strong> contracts on CME.</p>
-
-## Calls vs puts
-
-<p class="section-intro">The same days split into call and put volume. Calls run roughly 2–3× puts — the usual favorite-heavy tilt of sports betting.</p>
-
-```js
-const tidy = inRange.flatMap(d => [
-  {date: d.date, side: "Calls", vol: d.calls},
-  {date: d.date, side: "Puts",  vol: d.puts}
-]);
-display(Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 280, marginLeft: 64,
-  x: {type: "utc", label: null},
-  y: {label: "Contracts / day", grid: true, tickFormat: d => fmtCount(d)},
-  color: {legend: true, domain: ["Calls", "Puts"], range: [CME_COLORS.Calls, CME_COLORS.Puts]},
-  marks: [
-    Plot.rectY(tidy, {x: "date", interval: d3.utcDay, y: "vol", fill: "side", order: ["Calls", "Puts"]}),
-    Plot.ruleY([0])
-  ]
-}))
-```
 
 <details class="surface-card compact-details">
   <summary>About this data</summary>

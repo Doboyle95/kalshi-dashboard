@@ -5,16 +5,16 @@ title: Novig
 <div class="page-hero">
   <div class="page-eyebrow">Competitor</div>
   <h1>Novig</h1>
-  <p class="page-lead">A peer-to-peer sports exchange that launched in early August 2026 and trades on Ludlow Exchange, a CFTC-designated contract market. This page covers what trades there, how it splits between takers and makers, and how much of it is parlays &mdash; plus the two numbers that only mean anything read together: <strong>Novig's spread measures at zero, and Novig still charges a commission</strong>. A venue that takes nothing in the price is not thereby free, and this page is built so that neither half can be quoted without the other.</p>
+  <p class="page-lead">Daily activity, published fees, parlay length, and leading markets on Novig.</p>
 </div>
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
 const daily = await DataAttachment("data/novig_daily.csv").csv({typed: true});
-const tm = await DataAttachment("data/novig_taker_maker_daily.csv").csv({typed: true});
 const parlay = await DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
 const board = await DataAttachment("data/novig_market_leaderboard.csv").csv({typed: true});
 ```
@@ -25,8 +25,6 @@ const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d 
 const fmtDate = d => d instanceof Date ? d.toLocaleDateString("en-US", {timeZone: "UTC", month: "short", day: "numeric"}) : d;
 
 const totalContracts = d3.sum(daily, d => d.contracts);
-// meanEdge is retained only to document that it is identically zero; it is NOT a spread.
-const meanEdge = tm.length ? d3.mean(tm, d => d.implied_edge) : null;
 // What Novig actually takes: the fee, from its published schedule.
 const feeMeanPct = (() => {
   const r = fees.filter(d => +d.fees > 0 && +d.contracts > 0);
@@ -51,6 +49,19 @@ const parlayAll = d3.sum(
   ).values()
 );
 const maxLegs = d3.max(parlay, d => d.legs);
+const novigDateSel = Mutable([d3.min(daily, d => d.date), d3.max(daily, d => d.date)]);
+display(renderDateBrush({
+  data: daily.map(d => ({date: d.date, value: d.contracts})),
+  initialRange: [d3.min(daily, d => d.date), d3.max(daily, d => d.date)],
+  onSelect: range => { novigDateSel.value = range; },
+  color: NV,
+  width
+}));
+```
+
+```js
+const [novigBrushFrom, novigBrushTo] = novigDateSel;
+const dailyBrushed = daily.filter(d => d.date >= novigBrushFrom && d.date <= novigBrushTo);
 ```
 
 <div class="grid grid-cols-4">
@@ -72,7 +83,7 @@ Plot.plot({
   y: {label: "Contracts", grid: true, tickFormat: fmtCount},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.rectY(daily, {
+    Plot.rectY(dailyBrushed, {
       x: "date", y: "contracts", fill: NV, interval: "day",
       ry2: 4, insetLeft: 1, insetRight: 1,
       title: d => `${fmtDate(d.date)}\n${d3.format(",.0f")(d.contracts)} contracts\n${d3.format(",")(d.markets_traded)} of ${d3.format(",")(d.markets_listed)} listed markets traded\nopen interest ${d3.format(",.0f")(d.open_interest)}`,
@@ -82,38 +93,11 @@ Plot.plot({
 })
 ```
 
-## Why this page shows no spread measurement
-
-<div class="instruction-line"><strong>This chart used to claim Novig's spread measures at zero. It could never have measured anything else.</strong> The quantity computed was mean taker price plus mean maker price minus one &mdash; but every Novig trade is a <em>matched</em> binary contract, so the two sides' costs sum to the contract value by construction. Checked on the raw tape: taker quantity equals maker quantity exactly, and taker cost plus maker cost equals that quantity to within 0.000003 on 22.2 million contracts, every day. So the expression is identically zero for <em>any</em> venue charging <em>any</em> spread, and the old promise that &ldquo;if Novig ever starts taking a spread this chart will show it&rdquo; was false &mdash; it would read zero regardless. <strong>A spread needs the quoted bid and ask, which this feed does not carry.</strong> What Novig takes is charged in the fee, and that is measured from its published schedule further down this page.</div>
-
-```js
-Plot.plot({
-  width,
-  height: 260,
-  marginLeft: 64,
-  marginBottom: 40,
-  x: {label: null, type: "utc", tickFormat: "%b %d"},
-  y: {label: "Implied spread (%)", grid: true, tickFormat: d => `${(100 * d).toFixed(2)}%`},
-  marks: [
-    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.line(tm, {x: "date", y: "implied_edge", stroke: NV, strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(tm, {
-      x: "date", y: "implied_edge", fill: NV, r: 4,
-      stroke: "var(--theme-background)", strokeWidth: 2,
-      title: d => `${fmtDate(d.date)}\nimplied spread ${(100 * d.implied_edge).toFixed(4)}%\nmean taker price ${d.mean_taker_price.toFixed(4)}\nmean maker price ${d.mean_maker_price.toFixed(4)}\n${d3.format(",")(d.taker_trades)} taker / ${d3.format(",")(d.maker_trades)} maker prints`,
-      tip: true
-    })
-  ]
-})
-```
-
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>Flat on zero &mdash; which is not the same as free.</strong> The zero is a real result about the book: across the paired tape the two sides sum to 1.00, so Novig takes nothing out of the price. It charges a per-contract commission instead, and a spread test cannot see one by construction. Both facts are below, and neither corrects the other.</div>
-
 <div id="what-novig-charges"></div>
 
 ## What Novig charges
 
-<div class="instruction-line"><strong>Novig is not commission-free, and this page said that it was until 2026-08-15.</strong> Its published schedule charges the <em>taker</em> a price-dependent fee per contract on two of its three trade types. The zero-spread measurement above is unchanged and unretracted &mdash; it measures the price, and on straight contracts the commission is not in the price. What is being corrected is the inference from one to the other: a venue that takes nothing in the spread can still charge for the trade.</div>
+<div class="instruction-line">The published schedule charges the taker a price-dependent fee on live straight bets and parlays. Pre-game straight trades are free.</div>
 
 | Trade type | Maker | Taker |
 |---|---|---|
@@ -263,6 +247,22 @@ display(Plot.plot({
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem"><strong>The peak is not a cap.</strong> The taker fee is a parabola in the contract price, so it is largest in the middle of the book and falls to nothing at both ends. The widely quoted figure of $0.0075 per contract is <em>this curve's value at 50&cent;</em> &mdash; its vertex &mdash; and not a ceiling that binds anywhere else; at 10&cent; or 90&cent; the live-straight fee is 0.27&cent;, roughly a third of it. Implementing that number as a cap would overstate the fee across most of the book. The parlay curve has the same shape with a vertex of 2.5&cent;. Pre-game straights sit on zero, which is a real zero and not a missing series. Rounding is to the nearest 1/100,000 of a dollar, midpoint up, and is omitted here.</p>
 
 ```js
+const novigFeeDateSel = Mutable(feeT ? [feeT.from, feeT.to] : [new Date("2000-01-01T00:00:00Z"), new Date("2000-01-02T00:00:00Z")]);
+display(feeT
+  ? renderDateBrush({
+      data: fees.map(d => ({date: d.date, value: d.parlay_fees_taker + d.straight_fees_taker_max})),
+      initialRange: [feeT.from, feeT.to],
+      onSelect: range => { novigFeeDateSel.value = range; },
+      color: NV,
+      width
+    })
+  : html``);
+```
+
+```js
+const [novigFeeBrushFrom, novigFeeBrushTo] = novigFeeDateSel;
+const feesBrushed = fees.filter(d => d.date >= novigFeeBrushFrom && d.date <= novigFeeBrushTo);
+
 if (feeT) display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
@@ -275,13 +275,13 @@ if (feeT) display(Plot.plot({
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
     // The uncertain remainder is drawn ON TOP of the exact floor and the two
     // rects do not overlap, so the tips cannot double-fire.
-    Plot.rectY(fees, {
+    Plot.rectY(feesBrushed, {
       x: "date", y1: d => d.parlay_fees_taker, y2: d => d.parlay_fees_taker + d.straight_fees_taker_max,
       fill: NV, fillOpacity: 0.22, interval: "day", insetLeft: 1, insetRight: 1,
       title: d => `${fmtDate(d.date)}\nstraight book: $0 to ${fmtUSD(d.straight_fees_taker_max)}\nthe range is real uncertainty, not an error bar\n${fmtCount(d.straight_contracts)} straight contracts`,
       tip: true
     }),
-    Plot.rectY(fees, {
+    Plot.rectY(feesBrushed, {
       x: "date", y: "parlay_fees_taker", fill: NV, interval: "day",
       insetLeft: 1, insetRight: 1,
       title: d => `${fmtDate(d.date)}\nparlay fees: ${fmtUSD(d.parlay_fees_taker)} exactly\n${fmtCount(d.parlay_contracts)} parlay contracts\ntaker-side value ${fmtUSD(d.parlay_taker_value)}`,

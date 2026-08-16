@@ -10,6 +10,7 @@ title: DKeX (DraftKings)
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const daily      = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
@@ -290,12 +291,13 @@ Plot.plot({
 })
 ```
 
-## Open interest
+<details class="surface-card compact-details">
+<summary>Secondary: reported open interest</summary>
 
-<p class="section-intro">Open interest reported across active DKeX markets.</p>
+<p class="section-intro">Latest reported open interest: <strong>${fmtCount(latestDay?.open_interest || 0)}</strong> contracts on ${fmtDate(latestDay?.date)}. The full diagnostic remains available on the legacy comparison page.</p>
 
 ```js
-Plot.plot({
+false ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 260,
@@ -312,47 +314,10 @@ Plot.plot({
     }),
     Plot.ruleY([0])
   ]
-})
+}) : null
 ```
 
-## Active markets
-
-<p class="section-intro">Top DKeX markets with reported volume or open interest.</p>
-
-<div class="surface-card" style="overflow-x:auto">
-
-```js
-display((() => {
-  const rows = market
-    .filter(d => (d.trade_volume || 0) > 0 || (d.open_interest || 0) > 0)
-    .sort((a, b) => d3.descending(a.trade_volume || 0, b.trade_volume || 0) || d3.descending(a.open_interest || 0, b.open_interest || 0))
-    .slice(0, 20);
-  return html`<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:0.9rem">
-    <thead><tr style="border-bottom:2px solid var(--card-border)">
-      <th style="text-align:left;padding:0.45rem 0.6rem">Date</th>
-      <th style="text-align:left;padding:0.45rem 0.6rem">Symbol</th>
-      <th style="text-align:left;padding:0.45rem 0.6rem">Category</th>
-      <th style="text-align:left;padding:0.45rem 0.6rem">Type</th>
-      <th style="text-align:right;padding:0.45rem 0.6rem">Volume</th>
-      <th style="text-align:right;padding:0.45rem 0.6rem">Open interest</th>
-      <th style="text-align:right;padding:0.45rem 0.6rem">Last</th>
-    </tr></thead>
-    <tbody>
-      ${rows.map(r => html`<tr style="border-bottom:1px solid var(--theme-background-alt)">
-        <td style="text-align:left;padding:0.38rem 0.6rem;white-space:nowrap">${fmtDate(r.date)}</td>
-        <td style="text-align:left;padding:0.38rem 0.6rem;white-space:nowrap">${r.symbol}</td>
-        <td style="text-align:left;padding:0.38rem 0.6rem">${r.category}</td>
-        <td style="text-align:left;padding:0.38rem 0.6rem">${r.market_type}</td>
-        <td style="text-align:right;padding:0.38rem 0.6rem">${fmtCount(r.trade_volume || 0)}</td>
-        <td style="text-align:right;padding:0.38rem 0.6rem">${fmtCount(r.open_interest || 0)}</td>
-        <td style="text-align:right;padding:0.38rem 0.6rem">${fmtPrice(r.last_price)}</td>
-      </tr>`)}
-    </tbody>
-  </table>`;
-})());
-```
-
-</div>
+</details>
 
 ## Settlements
 
@@ -386,19 +351,37 @@ const voidRate = daily
   .map(d => ({date: d.date, void_rate: +d.void_rate}))
   .sort((a, b) => a.date - b.date);
 const fmtPct = n => n == null || Number.isNaN(+n) ? "" : (100 * +n).toFixed(2) + "%";
+const settlementScaleMax = d3.max(settlementByDate, d => d.settlements) || 1;
+const voidRateScaled = voidRate.map(d => ({...d, scaled: d.void_rate * settlementScaleMax}));
+const settlementBrushSeries = settlementByDate.map(d => ({date: d.date, value: d.settlements}));
+const settlementDateSel = Mutable([d3.min(settlementBrushSeries, d => d.date), d3.max(settlementBrushSeries, d => d.date)]);
+display(renderDateBrush({
+  data: settlementBrushSeries,
+  initialRange: [d3.min(settlementBrushSeries, d => d.date), d3.max(settlementBrushSeries, d => d.date)],
+  onSelect: range => { settlementDateSel.value = range; },
+  color: DKEX,
+  width
+}));
+```
+
+```js
+const [settlementFrom, settlementTo] = settlementDateSel;
+const settlementTidyBrushed = settlementTidy.filter(d => d.date >= settlementFrom && d.date <= settlementTo);
+const voidRateScaledBrushed = voidRateScaled.filter(d => d.date >= settlementFrom && d.date <= settlementTo);
 ```
 
 ```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
-  height: 240,
+  height: 280,
   marginLeft: 70,
+  marginRight: 64,
   x: {type: "utc", label: null},
   y: {label: "Settled contracts", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, domain: ["Settled yes", "Settled no", "Voided ($0.50)", "Other"], range: ["#1a9641", "#d7191c", "#fdae61", "#9ca3af"]},
   marks: [
-    Plot.rectY(settlementTidy, {
+    Plot.rectY(settlementTidyBrushed, {
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: "count",
@@ -406,38 +389,22 @@ Plot.plot({
       tip: true,
       title: d => `${fmtDate(d.date)}\n${d.outcome}: ${fmtCount(d.count)}`
     }),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-<p class="section-intro">Share of each day&rsquo;s settlements that voided at $0.50. Spikes are postponement days &mdash; before this fix those legs were reported as wins.</p>
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 200,
-  marginLeft: 70,
-  x: {type: "utc", label: null},
-  y: {label: "Void rate", grid: true, zero: true, tickFormat: d => (100 * d).toFixed(0) + "%"},
-  marks: [
-    Plot.areaY(voidRate, {x: "date", y: "void_rate", fill: "#fdae61", fillOpacity: 0.3, curve: "monotone-x"}),
-    Plot.lineY(voidRate, {x: "date", y: "void_rate", stroke: "#b45309", strokeWidth: 1.5, curve: "monotone-x"}),
-    Plot.dot(voidRate, {
-      x: "date",
-      y: "void_rate",
-      r: 2,
-      fill: "#b45309",
-      tip: true,
-      title: d => fmtDate(d.date) + "\nVoid rate: " + fmtPct(d.void_rate)
+    Plot.lineY(voidRateScaledBrushed, {x: "date", y: "scaled", stroke: "#111827", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(voidRateScaledBrushed, {
+      x: "date", y: "scaled", r: 2.5, fill: "#111827", tip: true,
+      title: d => `${fmtDate(d.date)}\nVoid rate: ${fmtPct(d.void_rate)}`
     }),
+    Plot.axisY({anchor: "right", label: "Void rate", tickFormat: d => `${Math.round(100 * d / settlementScaleMax)}%`}),
     Plot.ruleY([0])
   ]
 })
 ```
 
-## Calibration
+<p class="chart-note">Bars show settlement counts on the left axis. The dark line shows the same day's void rate on the right axis.</p>
+
+<div hidden>
+
+## Calibration (legacy duplicate)
 
 <p class="section-intro">Do DKeX prices actually predict outcomes? Every settled print is grouped by the price paid and compared against how often that leg really won. The diagonal is perfect calibration.</p>
 
@@ -454,11 +421,7 @@ const calibDkex = await DataAttachment("data/dkex_calibration.csv").csv({typed: 
 ```
 
 ```js
-const calibWidth = view(Inputs.radio([10, 5], {
-  label: "Price bins",
-  value: 10,
-  format: w => w === 10 ? "Deciles (10¢)" : "5¢ bins (Kalshi axis)"
-}));
+const calibWidth = 10;
 ```
 
 ```js
@@ -493,7 +456,7 @@ function calibTip(d) {
 </div>
 
 ```js
-Plot.plot({
+false ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 430,
@@ -532,7 +495,7 @@ Plot.plot({
       tip: true, title: calibTip
     })
   ]
-})
+}) : null
 ```
 
 <span style="color:${DKEX}">● Clears 2 clustered SE</span> &nbsp; <span style="color:var(--theme-foreground-muted)">○ Indistinguishable from calibrated</span> &nbsp; Bars are &plusmn;2 event-clustered SE &nbsp; Dot area &prop; events in the bin
@@ -540,7 +503,7 @@ Plot.plot({
 <p class="section-intro">The same numbers as error, in cents. A bin whose interval crosses zero is not evidence of mispricing in either direction.</p>
 
 ```js
-Plot.plot({
+false ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
@@ -568,7 +531,7 @@ Plot.plot({
       r: 4.5, fill: DKEX, tip: true, title: calibTip
     })
   ]
-})
+}) : null
 ```
 
 ```js
@@ -600,7 +563,15 @@ const calibGap = 100 * (calibActual - calibPaid);
 
 <div class="instruction-line"><strong>How to read this:</strong> across ${calibEvents.toLocaleString()} settled events DKeX prices land close to outcomes, and the honest summary is that <em>one price band (80&cent;) does show a bias this sample can measure, and the rest do not</em>. The tails lean the textbook way &mdash; cheap contracts a little rich, favourites a little cheap &mdash; but each of those gaps sits inside its own error bar. Switching to 5&cent; bins puts one or two bands across the line, which is about what twenty draws produce by chance; treat them as noise unless they persist as the sample grows.</div>
 
-## Individual markets
+</div>
+
+## Calibration
+
+<p class="section-intro">DKeX is included in the canonical cross-venue calibration view. The standalone curves were removed so the same bins and uncertainty treatment are not presented twice.</p>
+
+<a class="destination-card" href="./compare-accuracy"><strong>View DKeX in Accuracy &amp; Outcomes</strong><span>Compare calibration error, actual versus implied results, and the favourite–longshot summary.</span></a>
+
+## Top markets
 
 <p class="section-intro">DKeX's individual markets, ranked by volume and searchable by club, driver or player. These names are <strong>composed</strong>: DKeX publishes an English name for each <em>outcome</em> in its settlement report but never for the market, so each title here is built from that published text plus the market type and the published settlement date.</p>
 
@@ -618,6 +589,7 @@ import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/m
 ```js
 display(marketLeaderboard({
   hashPrefix: "dklb",
+  rowsPerPage: 20,
   venues: [{spec: LB_VENUES.dkex, rows: normalizeLeaderboard("dkex", lbRows)}]
 }));
 ```

@@ -10,6 +10,7 @@ title: Crypto.com/Nadex
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const catDaily  = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
@@ -169,6 +170,68 @@ Plot.plot({
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of Nadex's own daily bulletins. $1 per contract denomination. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
 
+## Parlay adoption history
+
+<p class="section-intro">Nadex is the rare venue whose public history starts before its parlay product. Monthly share shows the launch without placing a one-venue case study in the cross-venue comparison.</p>
+
+```js
+const nadexParlayByDay = Array.from(
+  d3.rollup(catDaily, rows => ({
+    parlays: d3.sum(rows.filter(d => d.category === "Parlays"), d => +d.contracts || 0),
+    total: d3.sum(rows, d => +d.contracts || 0)
+  }), d => d3.utcFormat("%Y-%m-%d")(d.date)),
+  ([date, values]) => ({date: new Date(`${date}T00:00:00Z`), ...values})
+);
+const parlayAdoptionMonthly = Array.from(
+  d3.rollup(nadexParlayByDay, rows => ({
+    parlays: d3.sum(rows, d => d.parlays),
+    total: d3.sum(rows, d => d.total),
+    days: rows.length
+  }), d => d3.utcFormat("%Y-%m")(d.date)),
+  ([key, values]) => ({
+    key,
+    month: new Date(`${key}-01T00:00:00Z`),
+    share: values.total ? 100 * values.parlays / values.total : 0,
+    ...values
+  })
+).sort((a, b) => a.month - b.month);
+const firstParlayMonth = parlayAdoptionMonthly.find(d => d.parlays > 0)?.month;
+const nadexParlayDateSel = Mutable([d3.min(parlayAdoptionMonthly, d => d.month), d3.max(parlayAdoptionMonthly, d => d.month)]);
+display(renderDateBrush({
+  data: parlayAdoptionMonthly.map(d => ({date: d.month, value: d.share})),
+  initialRange: [d3.min(parlayAdoptionMonthly, d => d.month), d3.max(parlayAdoptionMonthly, d => d.month)],
+  onSelect: range => { nadexParlayDateSel.value = range; },
+  color: "#9c27b0",
+  width
+}));
+```
+
+```js
+const [nadexParlayFrom, nadexParlayTo] = nadexParlayDateSel;
+const parlayAdoptionMonthlyBrushed = parlayAdoptionMonthly.filter(d => d.month >= nadexParlayFrom && d.month <= nadexParlayTo);
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 300,
+  marginLeft: 58,
+  x: {type: "utc", label: null, tickFormat: "%b %y"},
+  y: {label: "Parlay share of contracts (%)", grid: true, zero: true},
+  marks: [
+    Plot.ruleY([0]),
+    firstParlayMonth ? Plot.ruleX([firstParlayMonth], {strokeDasharray: "4,3", stroke: "var(--theme-foreground-muted)"}) : null,
+    Plot.lineY(parlayAdoptionMonthlyBrushed, {x: "month", y: "share", stroke: "#9c27b0", strokeWidth: 2.2, curve: "monotone-x"}),
+    Plot.dot(parlayAdoptionMonthlyBrushed, {
+      x: "month", y: "share", fill: "#9c27b0", r: 3,
+      tip: true,
+      title: d => `${d.key}\n${d.share.toFixed(2)}% parlays\n${fmtCount(d.parlays)} of ${fmtCount(d.total)} contracts\n${d.days} reporting days`
+    })
+  ].filter(Boolean)
+})
+```
+
 ## Parlay P&L
 
 <p class="section-intro">Crypto.com is one of only three venues on this site with a real
@@ -205,6 +268,20 @@ const pdProv = pdSorted.filter(d => d.prov).length;
 const fmtM = d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(2) + "M"
                        : Math.abs(d) >= 1e3 ? (d / 1e3).toFixed(0) + "k"
                        : d.toFixed(0));
+const nadexPnlDateSel = Mutable([d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)]);
+display(renderDateBrush({
+  data: pdSorted.map(d => ({date: d.date, value: Math.abs(+d.gross_pnl) || 0})),
+  initialRange: [d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)],
+  onSelect: range => { nadexPnlDateSel.value = range; },
+  color: "#9c27b0",
+  width
+}));
+```
+
+```js
+const [nadexPnlFrom, nadexPnlTo] = nadexPnlDateSel;
+const pdSortedBrushed = pdSorted.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
+const pdCumulBrushed = pdCumul.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
 ```
 
 <div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(pdTotal)}</strong> gross &mdash; ${(100 * pdTotal / pdContracts).toFixed(3)}&cent; per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
@@ -220,7 +297,7 @@ Plot.plot({
     // Colour carries DIRECTION (did the bettor win that day), opacity carries how much
     // of the day the window can actually account for. Solid throughout: a faded bar is
     // a weaker reading, never a missing one.
-    Plot.rectY(pdCumul, {
+    Plot.rectY(pdSortedBrushed, {
       x: "date", interval: "day", y: "gross_pnl",
       fill: d => +d.gross_pnl > 0 ? "#1a9641" : "#d7191c",
       fillOpacity: d => d.prov ? 0.4 : 0.92,
@@ -246,9 +323,9 @@ Plot.plot({
       tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.areaY(pdCumul, {x: "date", y: "cumul", fill: "#9c27b0", fillOpacity: 0.12}),
-    Plot.line(pdCumul, {x: "date", y: "cumul", stroke: "#9c27b0", strokeWidth: 2}),
-    Plot.dot(pdCumul, {
+    Plot.areaY(pdCumulBrushed, {x: "date", y: "cumul", fill: "#9c27b0", fillOpacity: 0.12}),
+    Plot.line(pdCumulBrushed, {x: "date", y: "cumul", stroke: "#9c27b0", strokeWidth: 2}),
+    Plot.dot(pdCumulBrushed, {
       x: "date", y: "cumul", r: 9, fill: "transparent",
       title: d => `${d.date.toISOString().slice(0, 10)}
 Cumulative: ${fmtM(d.cumul)}
@@ -499,7 +576,7 @@ Plot.plot({
 })
 ```
 
-## Individual markets
+## Top markets
 
 <p class="section-intro">Crypto.com/Nadex's individual markets, ranked by volume. <strong>This is the least readable venue on the site and the table does not pretend otherwise</strong> — the daily bulletin publishes a ticker and a volume, and nothing that identifies a fixture.</p>
 
@@ -517,6 +594,7 @@ import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/m
 ```js
 display(marketLeaderboard({
   hashPrefix: "ndlb",
+  rowsPerPage: 20,
   venues: [{spec: LB_VENUES.nadex, rows: normalizeLeaderboard("nadex", lbRows)}]
 }));
 ```

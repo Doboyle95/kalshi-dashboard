@@ -17,6 +17,7 @@
 //   display(renderDateBrush({
 //     data: pnl, dateAccessor: d => d.date, valueAccessor: d => d.stakes,
 //     initialRange: [new Date("2025-01-01"), latestDate],
+//     quickRanges: [{label: "30d", days: 30}, {label: "All", days: Infinity}],
 //     onSelect: r => { parlayDateSel.value = r; }, width
 //   }));
 //
@@ -46,6 +47,14 @@ function ensureBrushStyles() {
 .kd-seg button:hover { color:var(--theme-foreground); background:rgba(127,127,127,.12); }
 .kd-seg button.active { color:#23170a; background:#f4a736; box-shadow:0 1px 2px rgba(0,0,0,.2); }
 .kd-seg button.active:hover { background:#f3b357; }
+.kd-quick { display:inline-flex; gap:1px; padding:2px; border-radius:999px;
+  background:var(--theme-background-alt); border:1px solid var(--card-border, var(--theme-foreground-faint)); }
+.kd-quick button { appearance:none; border:0; background:transparent; cursor:pointer;
+  padding:3px 8px; border-radius:999px; font:550 11.5px/1.5 var(--sans-serif, system-ui);
+  letter-spacing:.1px; color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
+.kd-quick button:hover { color:var(--theme-foreground); background:rgba(127,127,127,.12); }
+.kd-quick button.active { color:#23170a; background:#f4a736; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.kd-quick button.active:hover { background:#f3b357; }
 .kd-dr-inputs { display:none; align-items:center; gap:7px;
   font:12px/1.4 var(--sans-serif, system-ui); color:var(--theme-foreground-muted); }
 .kd-dr-lbl { letter-spacing:.3px; text-transform:uppercase; font-size:10.5px; opacity:.75; }
@@ -66,6 +75,7 @@ export function renderDateBrush({
   dateAccessor = d => d.date,
   valueAccessor = d => d.value,
   initialRange,               // [Date, Date] — defaults to data extent
+  quickRanges = [],           // [{label, days}] — optional compact range presets
   onSelect,                   // (range: [Date, Date]) => void
   width,
   height = 60,
@@ -158,6 +168,27 @@ export function renderDateBrush({
   const btnBrush = mkBtn(ICON_BRUSH, "Brush"), btnDates = mkBtn(ICON_CAL, "Dates");
   seg.append(btnBrush, btnDates);
 
+  // Optional quick ranges live beside the mode toggle instead of in a second
+  // full-width control strip. They select the same range as dragging the brush;
+  // the brush's sparkline still always shows the complete data domain.
+  const quick = document.createElement("div");
+  quick.className = "kd-quick";
+  const quickButtons = [];
+  const quickBounds = item => {
+    const days = Number(item?.days);
+    if (!Number.isFinite(days) || days <= 0) return [domainStart, domainEnd];
+    return [d3.utcDay.offset(domainEnd, -(days - 1)), domainEnd];
+  };
+  for (const item of quickRanges ?? []) {
+    if (!item?.label) continue;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = item.label;
+    b.title = item.title || `Show ${item.label}`;
+    quick.append(b);
+    quickButtons.push({button: b, item});
+  }
+
   // date inputs (hidden until "Dates" mode)
   const inputs = document.createElement("div");
   inputs.className = "kd-dr-inputs";
@@ -171,10 +202,21 @@ export function renderDateBrush({
   const dash = document.createElement("span"); dash.className = "kd-dr-dash"; dash.textContent = "to";
   inputs.append(lblFrom, inFrom, dash, inTo);
 
-  bar.append(seg, inputs);
+  bar.append(seg);
+  if (quickButtons.length) bar.append(quick);
+  bar.append(inputs);
   container.append(bar, svg.node());
 
+  const dayKey = date => fmtDay(date);
   function syncInputs() { inFrom.value = fmtDay(curStart); inTo.value = fmtDay(curEnd); }
+  function syncQuickButtons() {
+    for (const {button, item} of quickButtons) {
+      const [a, b] = quickBounds(item);
+      const selectedStart = a < domainStart ? domainStart : a;
+      const selectedEnd = b > domainEnd ? domainEnd : b;
+      button.classList.toggle("active", dayKey(selectedStart) === dayKey(curStart) && dayKey(selectedEnd) === dayKey(curEnd));
+    }
+  }
   function setMode(mode) {
     const dates = mode === "dates";
     btnBrush.classList.toggle("active", !dates);
@@ -195,11 +237,18 @@ export function renderDateBrush({
     curStart = a; curEnd = b;
     if (moveBrush) brushG.call(brush.move, [a, b].map(x));   // programmatic → won't refire onSelect
     syncInputs();
+    syncQuickButtons();
     if (fire && typeof onSelect === "function") onSelect([a, b]);
   }
 
   btnBrush.addEventListener("click", () => setMode("brush"));
   btnDates.addEventListener("click", () => setMode("dates"));
+  for (const {button, item} of quickButtons) {
+    button.addEventListener("click", () => {
+      const [a, b] = quickBounds(item);
+      applyRange(a, b, {moveBrush: true, fire: true});
+    });
+  }
   const onInput = () => {
     if (!inFrom.value || !inTo.value) return;
     applyRange(toUTCDate(inFrom.value), toUTCDate(inTo.value), {moveBrush: true, fire: true});
@@ -208,5 +257,6 @@ export function renderDateBrush({
   inTo.addEventListener("change", onInput);
 
   setMode("brush");
+  syncQuickButtons();
   return container;
 }

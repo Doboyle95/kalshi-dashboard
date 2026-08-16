@@ -1,10 +1,10 @@
 ---
-title: Cross-Venue Categories
+title: Products
 ---
 
-# What does each venue actually trade?
+# Products
 
-<p class="page-lead">Kalshi's <a href="./categories">categories page</a> asks what its own book is made of. This page asks it of eight of the nine venues on one axis &mdash; Novig publishes no category dimension. Every venue publishes its own category vocabulary at its own level of detail, so the comparison is only possible after a harmonisation &mdash; and the harmonisation is where this kind of chart usually goes wrong, so what it does and what it destroys are both set out below.</p>
+<p class="page-lead">What each venue sells, from broad category mix to sports contract types and parlay adoption.</p>
 
 <div class="instruction-line"><strong>Parlays count as sport, and are shown as a lighter band inside it.</strong> A two-leg parlay on two baseball games is baseball volume; being a parlay is a property of the <em>bet</em>, not of the subject. Splitting it out as a peer of "Politics" would be a category error, and would also make Kalshi &mdash; which books parlays inside Sports &mdash; look 38 points more sports-heavy than venues that report theirs separately. The band shows the composition without breaking the comparison. Parlay <em>structure</em>, share and leg counts live on <a href="./parlay-venues">Cross-Venue Parlays</a>.</div>
 
@@ -128,7 +128,24 @@ const nonSport = v => 100 - (perVenue.find(d => d.venue === v)?.shares.filter(s 
 
 ## The mix, venue by venue
 
-<div class="instruction-line">Share of each venue's contracts over ${WIN_LO} to ${WIN_HI}, ordered by how little of the book is sport. The two greens are one block: the pale band is the parlay share of that same sport volume.</div>
+<div class="control-strip">
+
+```js
+const categoryScope = view(Inputs.radio(["All products", "Excluding sports"], {label: "Scope", value: "All products"}));
+```
+
+</div>
+
+```js
+const categoryRows = categoryScope === "Excluding sports"
+  ? stacked.filter(d => !d.bucket.startsWith("Sports") && d.pct > 0)
+  : stacked;
+const categoryBuckets = categoryScope === "Excluding sports"
+  ? BUCKETS.filter(d => !d.startsWith("Sports"))
+  : BUCKETS;
+```
+
+<div class="instruction-line">Share of each venue's contracts over ${WIN_LO} to ${WIN_HI}. The pale green band is parlay volume inside sports. Use the scope control to inspect smaller non-sports categories without a second duplicate chart.</div>
 
 ```js
 Plot.plot({
@@ -136,11 +153,11 @@ Plot.plot({
   height: 70 + order.length * 46,
   marginLeft: 116,
   marginRight: 20,
-  x: {label: "Share of venue contracts (%)", domain: [0, 100], grid: true},
+  x: {label: "Share of venue contracts (%)", domain: categoryScope === "All products" ? [0, 100] : undefined, grid: true},
   y: {label: null, domain: order},
-  color: {legend: true, domain: BUCKETS, range: BUCKETS.map(b => BC[b])},
+  color: {legend: true, domain: categoryBuckets, range: categoryBuckets.map(b => BC[b])},
   marks: [
-    Plot.barX(stacked, {
+    Plot.barX(categoryRows, {
       y: "venue", x: "pct", fill: "bucket",
       order: BUCKETS, insetTop: 3, insetBottom: 3,
       // 2px surface gap between stacked segments
@@ -155,6 +172,8 @@ Plot.plot({
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi is the only sports-led venue with a materially non-sport book: <strong>${nonSport("Kalshi").toFixed(1)}%</strong> of its contracts are not sport, against <strong>${nonSport("ForecastEx").toFixed(1)}%</strong> at ForecastEx &mdash; which trades no sport at all &mdash; and under 2% at five of the eight.</div>
 
+<div hidden aria-hidden="true">
+
 ## The same thing, without the sport
 
 <div class="instruction-line">Sport dominates almost everywhere, which flattens everything else. Dropping it shows what each venue trades <em>besides</em> games &mdash; and how few of them trade anything else at all.</div>
@@ -164,7 +183,7 @@ const nonSportRows = stacked.filter(d => !d.bucket.startsWith("Sports") && d.pct
 ```
 
 ```js
-Plot.plot({
+categoryScope === "__legacy" ? Plot.plot({
   width,
   height: 70 + order.length * 46,
   marginLeft: 116,
@@ -180,8 +199,15 @@ Plot.plot({
     }),
     Plot.ruleX([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5})
   ]
-})
+}) : null
 ```
+
+</div>
+
+<div class="destination-grid">
+  <a class="destination-card" href="./bet-types"><strong>Sports contract types</strong><span>Moneylines, spreads, totals, props, and how the mix changes.</span></a>
+  <a class="destination-card" href="./parlay-venues"><strong>Parlays</strong><span>Venue share, adoption over time, and leg distribution.</span></a>
+</div>
 
 <details class="surface-card compact-details">
   <summary>About this page — read before quoting any number</summary>

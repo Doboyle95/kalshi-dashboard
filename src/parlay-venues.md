@@ -4,7 +4,7 @@ title: Cross-Venue Parlays
 
 # Who sells parlays, and how long are they?
 
-<p class="page-lead">Kalshi's own <a href="./parlay">parlay pages</a> ask how much of the venue is parlays, how many legs they carry, and what they cost the people buying them. This page asks the first two of those questions of every venue whose data can answer &mdash; and is explicit that the third, <strong>what parlays cost</strong>, remains a Kalshi-only chart, because no competitor here publishes a settled outcome.</p>
+<p class="page-lead">Compare parlay adoption, share of venue volume, and leg distribution. Bettor outcomes stay in the venue analyses because coverage is not comparable.</p>
 
 <div class="instruction-line"><strong>The headline contrast:</strong> parlays are a similar share of volume at several venues, but they are not the same product. Kalshi's are <em>long</em> &mdash; the largest single band is eight legs or more. ProphetX's are <em>short</em> &mdash; two-leg tickets dominate. A venue can look identical on share and be selling something quite different.</div>
 
@@ -12,6 +12,7 @@ title: Cross-Venue Parlays
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -127,6 +128,25 @@ const fmtWin = (a, b) => `${d3.utcFormat("%b %Y")(a)}–${d3.utcFormat("%b %Y")(
 const hv = n => headline.find(d => d.venue === n) ?? {share: 0, share30: 0, parlay: 0, days: 0};
 ```
 
+## Coverage and current share
+
+```js
+Inputs.table(headline, {
+  columns: ["venue", "share30", "share", "parlay", "days", "from", "to"],
+  header: {venue: "Venue", share30: `Latest ${RECENT_DAYS} days`, share: "Whole window",
+           parlay: "Parlay contracts", days: "Days", from: "From", to: "To"},
+  format: {
+    share30: d => d == null ? "—" : fmtPct(d),
+    share: fmtPct,
+    parlay: fmtCount,
+    from: iso,
+    to: iso
+  },
+  align: {share30: "right", share: "right", parlay: "right", days: "right"},
+  rows: 8
+})
+```
+
 ## How much of each venue is parlays
 
 <div class="instruction-line">Volume-weighted over each venue's own coverage, which differs a lot &mdash; Crypto.com/Nadex has twenty months, Kalshi close to a year, ProphetX two months, Novig and Polymarket days. <strong>Each bar carries its own window in grey beside the number</strong>, because these are not a like-for-like time comparison and the windows are the reason. Where a venue has more than ${RECENT_DAYS} days, a black tick marks the same venue's <strong>last ${RECENT_DAYS} days</strong>: for a venue that spans a product launch the two are very different numbers, and the gap between bar and tick is the point rather than an error. Share is not size: Crypto.com/Nadex's ${fmtCount(hv("Crypto.com/Nadex").parlay)} parlay contracts are the largest parlay book on this page outside Kalshi, ${(hv("Crypto.com/Nadex").parlay / d3.max(headline.filter(d => !["Kalshi", "Crypto.com/Nadex"].includes(d.venue)), d => d.parlay)).toFixed(0)}&times; the next venue's, and it still sits mid-table here because share and size are different questions.</div>
@@ -176,6 +196,21 @@ Plot.plot({
 const longEnough = new Set(headline.filter(d => d.days >= 14).map(d => d.venue));
 const overTime = series.filter(d => longEnough.has(d.venue));
 const shown = headline.filter(d => longEnough.has(d.venue)).map(d => d.venue);
+const parlayBrushSeries = Array.from(d3.rollup(overTime, group => d3.max(group, d => d.share) ?? 0, d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
+  .sort((a, b) => a.date - b.date);
+const parlayDateSel = Mutable([d3.min(overTime, d => d.date), d3.max(overTime, d => d.date)]);
+display(renderDateBrush({
+  data: parlayBrushSeries,
+  initialRange: [d3.min(overTime, d => d.date), d3.max(overTime, d => d.date)],
+  onSelect: range => { parlayDateSel.value = range; },
+  color: "#9c27b0",
+  width
+}));
+```
+
+```js
+const [parlayBrushFrom, parlayBrushTo] = parlayDateSel;
+const overTimeBrushed = overTime.filter(d => d.date >= parlayBrushFrom && d.date <= parlayBrushTo);
 
 // Nadex monthly, for the launch chart below. Volume-weighted inside the month, same as
 // everywhere else on this page -- a mean of daily shares would let a quiet day count as much
@@ -212,8 +247,8 @@ Plot.plot({
       fill: "var(--theme-foreground-muted)",
       text: () => `Nadex parlays begin ${iso(ndLaunch)}`
     }) : null,
-    Plot.line(overTime, {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(overTime, {
+    Plot.line(overTimeBrushed, {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(overTimeBrushed, {
       x: "date", y: "share", fill: "venue", r: 2.5,
       title: d => `${d.venue}\n${iso(d.date)}\n${d.share.toFixed(2)}% parlays\n${fmtCount(d.parlay)} of ${fmtCount(d.tot)} contracts`,
       tip: true
@@ -221,43 +256,6 @@ Plot.plot({
   ].filter(Boolean)
 })
 ```
-
-## The one venue that spans its own parlay launch
-
-<div class="instruction-line">Every other venue on this page either always sold parlays or arrived with them already running, so none of them can answer the question the page most wants answered: <strong>is a one-third parlay share a mature level or an early one?</strong> Crypto.com/Nadex's file starts ${ndFirstDate} and its parlay product starts ${ndLaunch ? iso(ndLaunch) : "—"}, which gives ${ndZeros.length} months of a real, busy, parlay-free book followed by ${ndMonthly.length - ndZeros.length} months of one. Monthly, so the daily noise does not drown the shape.</div>
-
-```js
-Plot.plot({
-  width,
-  height: 320,
-  marginLeft: 56,
-  marginRight: 20,
-  marginBottom: 40,
-  marginTop: 26,
-  x: {label: null, type: "utc", tickFormat: "%b %y"},
-  y: {label: "Parlay share of Nadex contracts (%)", grid: true, zero: true},
-  marks: [
-    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.line(ndMonthly, {x: "month", y: "share", stroke: C["Crypto.com/Nadex"], strokeWidth: 2.2, curve: "monotone-x"}),
-    Plot.dot(ndMonthly, {
-      x: "month", y: "share", fill: C["Crypto.com/Nadex"], r: 3.4,
-      title: d => `${d.key}${d.partial ? " (partial month)" : ""}\n${d.share.toFixed(2)}% parlays\n${fmtCount(d.parlay)} of ${fmtCount(d.tot)} contracts\n${d.days} days of bulletin`,
-      tip: true
-    }),
-    Plot.text(ndMonthly.filter(d => d.parlay > 0), {
-      x: "month", y: "share", text: d => `${d.share.toFixed(1)}%`,
-      dy: -11, fontSize: 10, fill: "var(--theme-foreground-muted)"
-    }),
-    ndZeroMid ? Plot.text([ndZeroMid], {
-      x: "month", y: 0, dy: -12, fontSize: 11, textAnchor: "middle",
-      fill: "var(--theme-foreground-muted)",
-      text: () => `${ndMonthly.filter(d => d.parlay === 0).length} months at exactly 0.00%`
-    }) : null
-  ].filter(Boolean)
-})
-```
-
-<div class="chart-note">Read it as one venue's launch curve, not a law. It says a book can sit at exactly zero parlays for over a year while trading hundreds of millions of contracts a month, reach ${hv("Crypto.com/Nadex").share30.toFixed(1)}% within eight months of launching them, and still be rising month on month at the end of the file &mdash; the last three months are ${ndMonthly.slice(-3).map(d => d.share.toFixed(1) + "%").join(", ")}. On this evidence a venue at a third of volume has not obviously finished climbing, which is the closest this page can get to saying whether ${hv("Underdog").share.toFixed(0)}% at Underdog or ${hv("Novig").share.toFixed(0)}% at Novig is a settled level. The final month is partial: ${ndLast.days} days of bulletin, not a full month.</div>
 
 ## How many legs
 
@@ -334,6 +332,8 @@ Plot.plot({
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi additionally carries <strong>${fmtCount(kUnknown)} contracts</strong> (${(100 * kUnknown / (kUnknown + kKnown)).toFixed(1)}% of its parlay volume) whose legs are not yet classified. That band is the honest left-join miss for tickers the classifier has not reached, not a leg count, so it is excluded from the percentages above rather than folded into a bar.</div>
 
+<div hidden aria-hidden="true">
+
 ## What parlays cost — still Kalshi only
 
 <div class="instruction-line">The chart every venue should have and only one can. Cost per parlay needs a settled outcome <strong>for the parlay itself</strong>, and of the venues here only Kalshi publishes one: Underdog, Novig and Crypto.com/Nadex all run parlays and none of them publish who won. <strong>ProphetX is the near miss.</strong> Its <em>single-market</em> outcomes turned out to be recoverable, and a calibration is now published from them &mdash; but not one of its 80,543 distinct parlay contracts carries a parseable event date, so the maturity test that recovers a single market's outcome cannot be applied to a parlay at all. Polymarket does settle, but its parlay product is days old.</div>
@@ -374,7 +374,7 @@ const costRMax = d3.max(edge, d => Math.max(100 * d.total_vol / edgeTotC,
 ```
 
 ```js
-Plot.plot({
+false ? Plot.plot({
   width,
   height: 380,
   marginLeft: 62,
@@ -398,11 +398,11 @@ Plot.plot({
       stroke: "var(--theme-background)", strokeWidth: 1
     })
   ]
-})
+}) : null
 ```
 
 ```js
-display(html`<div class="chart-note"><strong>Dot area is how big the bucket is, measured in
+false ? display(html`<div class="chart-note"><strong>Dot area is how big the bucket is, measured in
 contracts traded.</strong> On that measure the two ten-plus buckets are
 <strong>${shareC(tenPlus).toFixed(2)}%</strong> of the settled parlay book and the two two-leg
 buckets are <strong>${shareC(twoLeg).toFixed(2)}%</strong>. In dollars staked they change places:
@@ -414,7 +414,7 @@ arithmetic &mdash; a cheap contract is a small stake &mdash; and part is not: th
 the cheap end is also the worst-priced end, the worst bucket losing
 $${Math.abs(d3.min(edge, d => d.pnl_per_100)).toFixed(2)} per $100 staked against
 $${Math.abs(100 * d3.sum(edge, d => d.taker_pnl) / edgeTotD).toFixed(2)} across the whole book. Neither
-reading is the true one, and quoting either without the other is the thing to avoid.</div>`)
+reading is the true one, and quoting either without the other is the thing to avoid.</div>`) : null
 ```
 
 <details class="surface-card compact-details">
@@ -435,7 +435,7 @@ reading is the true one, and quoting either without the other is the thing to av
 ## Every venue, side by side
 
 ```js
-Inputs.table(headline, {
+false ? Inputs.table(headline, {
   columns: ["venue", "share", "share30", "parlay", "tot", "days", "from", "to"],
   header: {venue: "Venue", share: "Parlay share (whole window)", share30: `Last ${RECENT_DAYS} days`,
            parlay: "Parlay contracts", tot: "All contracts", days: "Days", from: "From", to: "To"},
@@ -449,5 +449,7 @@ Inputs.table(headline, {
   },
   align: {share: "right", share30: "right", parlay: "right", tot: "right", days: "right"},
   rows: 8
-})
+}) : null
 ```
+
+</div>

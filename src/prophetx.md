@@ -10,6 +10,7 @@ title: ProphetX
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -35,6 +36,21 @@ const totalTrades = d3.sum(complete, d => d.trade_count);
 const parlayContracts = d3.sum(complete, d => d.contracts_parlay);
 const meanDaily = totalContracts / complete.length;
 const usable = recon.filter(r => r.usable === 1).length;
+const pxBrushSeries = daily.map(d => ({date: d.date, value: d.contracts})).sort((a, b) => a.date - b.date);
+const pxDateSel = Mutable([d3.min(pxBrushSeries, d => d.date), d3.max(pxBrushSeries, d => d.date)]);
+display(renderDateBrush({
+  data: pxBrushSeries,
+  initialRange: [d3.min(pxBrushSeries, d => d.date), d3.max(pxBrushSeries, d => d.date)],
+  onSelect: range => { pxDateSel.value = range; },
+  color: PX,
+  width
+}));
+```
+
+```js
+const [pxBrushFrom, pxBrushTo] = pxDateSel;
+const completeBrushed = complete.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo);
+const partialBrushed = partial.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo);
 ```
 
 <div class="instruction-line"><strong>Volume here comes from the trade tape, not from ProphetX's daily bulletin.</strong> The bulletin's own <code>daily_volume</code> column agrees with the tape on <strong>${usable} of ${recon.length}</strong> sessions. On the rest it stamps one aggregate figure across thousands of multi-event rows — on 2026-08-11 the single value 198,771.64 appears on 1,204 separate rows, pushing the bulletin to 362.7M contracts against a real 5.3M. Anyone quoting the bulletin's volume for this venue is quoting that artifact.</div>
@@ -60,14 +76,14 @@ Plot.plot({
   y: {label: "Contracts", grid: true, tickFormat: fmtCount, zero: true},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.rectY(complete, {
+    Plot.rectY(completeBrushed, {
       x: "date", y: "contracts", fill: PX, interval: "day",
       // 4px rounded data-end, 2px gap to the surface on each side
       ry2: 4, insetLeft: 1, insetRight: 1,
       title: d => `${fmtDate(d.date)}\n${d3.format(",.0f")(d.contracts)} contracts\n${d3.format(",")(d.trade_count)} trades · avg ${d3.format(",.0f")(d.avg_trade_size)}\n${d3.format(",")(d.traded_markets)} markets traded\nparlays ${d.pct_parlay.toFixed(1)}%`,
       tip: true
     }),
-    Plot.rectY(partial, {
+    Plot.rectY(partialBrushed, {
       x: "date", y: "contracts", interval: "day",
       fill: "none", stroke: PX, strokeWidth: 2, strokeDasharray: "3,2",
       ry2: 4, insetLeft: 1, insetRight: 1,
@@ -77,7 +93,6 @@ Plot.plot({
   ]
 })
 ```
-
 ## How much of it is parlays
 
 <div class="instruction-line">ProphetX calls them multi-event contracts and lists them from 2 up to <strong>12</strong> legs. Parlay share is one of the few things measurable at every venue that runs them, so this sits alongside <a href="./parlay">Kalshi's parlay pages</a> without needing a settlement feed.</div>
@@ -92,8 +107,8 @@ Plot.plot({
   y: {label: "Parlay share of volume (%)", grid: true, zero: true},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.line(complete, {x: "date", y: "pct_parlay", stroke: PX, strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(complete, {
+    Plot.line(completeBrushed, {x: "date", y: "pct_parlay", stroke: PX, strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(completeBrushed, {
       x: "date", y: "pct_parlay", fill: PX, r: 3.5,
       stroke: "var(--theme-background)", strokeWidth: 2,
       title: d => `${fmtDate(d.date)}\n${d.pct_parlay.toFixed(2)}% of volume is parlays\n${d3.format(",.0f")(d.contracts_parlay)} of ${d3.format(",.0f")(d.contracts)} contracts`,
@@ -151,7 +166,9 @@ Plot.plot({
 })
 ```
 
-## Do those prices come true?
+<div hidden>
+
+## Do those prices come true? (legacy duplicate)
 
 <p class="section-intro">Every single-market contract that has finished is joined back to the prices actually paid for it on the tape, and the two are compared. The diagonal is perfect calibration. Parlays are excluded from this section and cannot be added &mdash; the reason is set out below.</p>
 
@@ -228,7 +245,7 @@ function calTip(d) {
 </details>
 
 ```js
-Plot.plot({
+false ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 430,
@@ -263,7 +280,7 @@ Plot.plot({
       tip: true, title: calTip
     })
   ]
-})
+}) : null
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><span style="color:${PX}">&#9679;</span> One 5-cent price bin. Every bin is drawn identically &mdash; the interval around it, not the fill, says how precisely it is measured.</div>
@@ -273,7 +290,7 @@ Plot.plot({
 <p class="section-intro">All ${calBins.length} bands, both readings side by side. <code>err_mid</code> is the published <code>calib_error</code> column, measured against the band midpoint; <code>err_paid</code> is the same win rate measured against the price actually paid. The fixture-clustered standard error applies to both, which is why the two <code>|t|</code> columns can disagree so sharply.</p>
 
 ```js
-Inputs.table(calBins, {
+false ? Inputs.table(calBins, {
   columns: ["band", "fixtures", "trades", "contracts", "paid", "wt", "errMid", "tMid", "errPaid", "tPaid"],
   header: {
     band: "Band", fixtures: "Fixtures", trades: "Trades", contracts: "Contracts",
@@ -296,8 +313,15 @@ Inputs.table(calBins, {
     wt: "right", errMid: "right", tMid: "right", errPaid: "right", tPaid: "right"
   },
   rows: 10
-})
+}) : null
 ```
+</div>
+
+## Do those prices come true?
+
+<p class="section-intro">ProphetX single-market calibration is now shown in the shared Accuracy &amp; Outcomes view. Parlays remain excluded because the published data does not support defensible parlay outcomes.</p>
+
+<a class="destination-card" href="./compare-accuracy"><strong>View ProphetX in Accuracy &amp; Outcomes</strong><span>Compare calibration error and actual versus implied results using one consistent presentation.</span></a>
 
 ## Parlays by leg count
 
@@ -319,29 +343,5 @@ Plot.plot({
       tip: true
     })
   ]
-})
-```
-
-## Every day
-
-```js
-Inputs.table(daily.slice().reverse(), {
-  columns: ["date", "contracts", "trade_count", "avg_trade_size", "traded_markets", "pct_parlay", "complete"],
-  header: {
-    date: "Date", contracts: "Contracts", trade_count: "Trades",
-    avg_trade_size: "Avg size", traded_markets: "Markets", pct_parlay: "Parlay %",
-    complete: "Complete"
-  },
-  format: {
-    date: fmtDate,
-    contracts: d => d3.format(",.0f")(d),
-    trade_count: d => d3.format(",")(d),
-    avg_trade_size: d => d3.format(",.0f")(d),
-    traded_markets: d => d3.format(",")(d),
-    pct_parlay: d => `${d.toFixed(2)}%`,
-    complete: d => d === 1 ? "yes" : html`<span style="color:var(--theme-foreground-muted)">collecting</span>`
-  },
-  align: {contracts: "right", trade_count: "right", avg_trade_size: "right", traded_markets: "right", pct_parlay: "right"},
-  rows: 14
 })
 ```

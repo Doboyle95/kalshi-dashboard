@@ -97,6 +97,19 @@ const provSpan = provDays.length === 1
 const provNote = provDays.length
   ? html`<p class="chart-note">○ The most recent ${provDays.length === 1 ? "day" : provDays.length + " days"} (<strong>${provSpan}</strong>) ${provDays.length === 1 ? "is" : "are"} <strong>provisional</strong> — covering only the parlays that have settled so far. Numerator and denominator move together, so the win rate stays honest; the figures fill in as the rest resolve.</p>`
   : html``;
+const parlayPnlDateSel = Mutable([d3.min(uniSorted, d => d.date), d3.max(uniSorted, d => d.date)]);
+display(renderDateBrush({
+  data: uniSorted.map(d => ({date: d.date, value: Math.abs(d.realized_net) || 0})),
+  initialRange: [d3.min(uniSorted, d => d.date), d3.max(uniSorted, d => d.date)],
+  onSelect: range => { parlayPnlDateSel.value = range; },
+  color: "#0A7B6C",
+  width
+}));
+```
+
+```js
+const [parlayPnlFrom, parlayPnlTo] = parlayPnlDateSel;
+const inParlayPnlRange = row => row.date >= parlayPnlFrom && row.date <= parlayPnlTo;
 ```
 
 ## What parlay bettors actually lost (after cash-outs)
@@ -114,13 +127,13 @@ display(Plot.plot({
   y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
   marks: [
-    Plot.areaY(cumU, {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumRealized, {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(cumU.filter(inParlayPnlRange), {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumRealized.filter(inParlayPnlRange), {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     // Provisional (unsealed) tail: hollow markers so it reads as "not final yet".
-    Plot.dot(provDays, {x: "date", y: "realized_gross", r: 4, fill: "var(--theme-background)", stroke: "#5FD0C2", strokeWidth: 2}),
-    Plot.dot(provDays, {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
+    Plot.dot(provDays.filter(inParlayPnlRange), {x: "date", y: "realized_gross", r: 4, fill: "var(--theme-background)", stroke: "#5FD0C2", strokeWidth: 2}),
+    Plot.dot(provDays.filter(inParlayPnlRange), {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
+    Plot.tip(cumU.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 }))
 ```
@@ -140,10 +153,10 @@ Plot.plot({
   y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   color: {legend: true, domain: ["Realized (after cash-outs)", "Held to settlement"], range: ["#0A7B6C", "#5FD0C2"]},
   marks: [
-    Plot.lineY(cumU.flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
+    Plot.lineY(cumU.filter(inParlayPnlRange).flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
       {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}\nCash-out effect: ${fmtUSD(d.realized - d.hold)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
+    Plot.tip(cumU.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}\nCash-out effect: ${fmtUSD(d.realized - d.hold)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 })
 ```
@@ -160,10 +173,10 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Cumulative cash-out edge (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
   marks: [
-    Plot.areaY(cumCo, {x: "date", y: "edge", fill: "#d7191c", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumCo, {x: "date", y: "edge", stroke: "#d7191c", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", fill: "#d7191c", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", stroke: "#d7191c", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumCo, Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
+    Plot.tip(cumCo.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
   ]
 })
 ```
@@ -190,7 +203,7 @@ Plot.plot({
   y: {label: "Daily stakes (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(0)+"M" : (d/1e3).toFixed(0)+"k")},
   color: {type: "diverging", scheme: "RdYlGn", domain: [-50, 50], label: "Return %", legend: true},
   marks: [
-    Plot.rectY(dailyDetail.filter(d => d.stakes >= 1000), {
+    Plot.rectY(dailyDetail.filter(d => d.stakes >= 1000 && inParlayPnlRange(d)), {
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "stakes",
       fill: d => Math.max(-50, Math.min(50, d.ret)),
       fillOpacity: d => d.prov ? 0.45 : 1,           // provisional day reads as faded
@@ -216,7 +229,7 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Return (% of stakes)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
   marks: [
-    Plot.rectY(dailyDetail.filter(d => d.stakes >= 25000), {
+    Plot.rectY(dailyDetail.filter(d => d.stakes >= 25000 && inParlayPnlRange(d)), {
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5),
       y: d => Math.max(-110, Math.min(150, d.ret)),
       fill: d => d.ret >= 0 ? "#1a9641" : "#d7191c", fillOpacity: 0.75,

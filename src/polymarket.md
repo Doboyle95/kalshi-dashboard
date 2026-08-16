@@ -152,16 +152,23 @@ Plot.plot({
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">US-accessible Polymarket volume only (separate from global Polymarket). Data from the exchange's own daily bulletins, starting Oct 30, 2025. Almost entirely sports.</p>
 
-## Sports vs. non-sports
+## Product mix
 
-<p class="section-intro">The book is lopsided: Polymarket US is overwhelmingly sports.</p>
+<p class="section-intro">Switch between the broad sports split, the daily sport mix, and the all-time ranking without repeating the same product story in three separate sections.</p>
 
 ```js
-const brushSports = view(makeBrush(split, "#3B7DD8"));
+const polymarketProductView = view(Inputs.radio(
+  ["Sports vs non-sports", "Sport trend", "All-time sport mix"],
+  {label: "View", value: "Sports vs non-sports"}
+));
 ```
 
 ```js
-const [sS, eS] = brushSports;
+const brushProducts = view(makeBrush(split, "#3B7DD8"));
+```
+
+```js
+const [sS, eS] = brushProducts;
 const splitFSports = split.filter(d => d.date >= sS && d.date <= eS);
 const tidySplit = splitFSports.flatMap(d => [
   {date: d.date, category: "Sports",     value: d.contracts_sports    || 0},
@@ -170,7 +177,7 @@ const tidySplit = splitFSports.flatMap(d => [
 ```
 
 ```js
-Plot.plot({
+polymarketProductView === "Sports vs non-sports" ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 240,
@@ -191,15 +198,15 @@ Plot.plot({
     })),
     Plot.ruleY([0])
   ]
-})
+}) : null
 ```
 
-## Volume by sport
+<h2 hidden>Volume by sport</h2>
 
-<p class="section-intro">Where the sports money lands, day by day.</p>
+<p class="section-intro" hidden>Where the sports money lands, day by day.</p>
 
 ```js
-const brushCats = view(makeBrush(split, "#3B7DD8"));
+const brushCats = brushProducts;
 ```
 
 ```js
@@ -222,7 +229,7 @@ const catTipData = Array.from(
 ```
 
 ```js
-Plot.plot({
+polymarketProductView === "Sport trend" ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 300,
@@ -243,12 +250,12 @@ Plot.plot({
     })),
     Plot.ruleY([0])
   ]
-})
+}) : null
 ```
 
-## Sport breakdown (all time)
+<h2 hidden>Sport breakdown (all time)</h2>
 
-<p class="section-intro">The all-time pecking order, with every category stacked up.</p>
+<p class="section-intro" hidden>The all-time pecking order, with every category stacked up.</p>
 
 ```js
 const catBar = [...catTotals.entries()]
@@ -257,7 +264,7 @@ const catBar = [...catTotals.entries()]
 ```
 
 ```js
-Plot.plot({
+polymarketProductView === "All-time sport mix" ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: catBar.length * 28 + 40,
@@ -274,10 +281,10 @@ Plot.plot({
     }),
     Plot.ruleX([0])
   ]
-})
+}) : null
 ```
 
-## Individual markets
+## Top markets
 
 <p class="section-intro">The biggest individual Polymarket US markets, ranked by all-time contracts and searchable by name. This is the one venue on the site that publishes a full English question for its markets, so most rows read as sentences rather than tickers.</p>
 
