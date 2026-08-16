@@ -176,9 +176,9 @@ parlay P&amp;L, and the only competitor whose every contract is priced at what w
 paid for it. A combo is quoted by the house on request, so the customer is necessarily the
 buyer &mdash; which is what makes buyer P&amp;L the same thing as taker P&amp;L here, with no
 aggressor flag needed. Outcomes come from Nadex's own settlement file and prices from its
-time-and-sales tape, joined on the contract ID. <strong>Gross of fees</strong>: Crypto.com
-publishes no fee schedule this site has been able to verify, and a guessed fee would be
-worse than an absent one.</p>
+time-and-sales tape, joined on the contract ID. <strong>Net of fees.</strong> CDNA charges $0.02 per contract per side with no
+settlement fee, and the combo customer is the taker, so 2.00&cent; a contract is deducted.
+That fee is larger than the trading loss itself &mdash; 1.15&cent; gross becomes 3.15&cent; net.</p>
 
 ```js
 const pdSorted = parlayDaily
