@@ -18,6 +18,7 @@ const fmtPrice = p => p == null ? "-" : `${Number(p) % 1 === 0 ? Number(p).toFix
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {VENUE_ORDER} from "./components/venue-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const tradeSizeRaw = await DataAttachment("data/trade_size_daily.csv").csv({typed: true});
@@ -42,7 +43,7 @@ display(freshnessPanel({
   items: [
     {label: "Trade-size mix", date: latestDate(tradeSizeRaw), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Kalshi can be within 15 minutes locally; competitors follow public files"},
     {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"},
-    {label: "Supported platforms", value: "Kalshi, Polymarket US, ForecastEx, DKeX, Underdog Exchange", updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex omitted: no trade-level prints", tone: "competitor"}
+    {label: "Supported platforms", value: platformOptions.join(", "), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex and Rothera omitted: the size producer does not cover them", tone: "competitor"}
   ],
   note: "Competitor rows update when their public trade files are downloaded and rebuilt."
 }));
@@ -142,8 +143,16 @@ display(Plot.plot({
 <p class="chart-note">Coverage differs by venue. Kalshi uses the taker's side; ForecastEx uses the yes leg; DKeX, Polymarket US, and Underdog use the named leg; ProphetX uses its published home-side price. Underdog parlays are excluded because a combination price is not a single-market probability.</p>
 
 ```js
-const platformOptions = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange"]
-  .filter(platform => tradeSizeRaw.some(d => d.platform === platform));
+// DERIVED FROM THE DATA, never a hand-kept list. The previous hardcoded five silently
+// dropped ProphetX and Novig for as long as the producer had been emitting them, and a
+// venue absent from a selector reads as a venue with no data. VENUE_ORDER only sorts;
+// anything the producer emits appears whether or not it is a known name.
+const platformOptions = Array.from(new Set(tradeSizeRaw.map(d => d.platform)))
+  .filter(Boolean)
+  .sort((a, b) => {
+    const ia = VENUE_ORDER.indexOf(a), ib = VENUE_ORDER.indexOf(b);
+    return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib) || d3.ascending(a, b);
+  });
 
 ```
 
@@ -421,7 +430,7 @@ const largeThreshold = view(Inputs.radio(["1k+", "10k+", "50k+", "100k+"], {
 
 </div>
 
-<div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${dateWindowLabel}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total Kalshi volume.</div>
+<div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${dateWindowLabel}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total ${selectedPlatform} volume. Use the <strong>Platform</strong> control above to change venue.</div>
 
 <div class="plot-shell">
 
@@ -671,6 +680,8 @@ function rowsForTable(tableName, metricLabel) {
 
 <p class="section-intro">The single biggest prints in Kalshi's history — three different notions of "big," since raw contracts, the larger side's dollar stake, and what the taker specifically put up don't always pick the same winners.</p>
 
+<p class="chart-note"><strong>Kalshi only</strong>, unlike the size mix above, which covers ${platformOptions.length} venues. This table needs the individual print joined to its market, and the producer behind it emits Kalshi rows only. Note also that "Taker stake" could never be ported as-is: no competitor publishes an aggressor flag, so on those venues there is no taker to attribute the stake to.</p>
+
 <div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices (near-certain or near-impossible outcomes), where one side risks close to the full dollar and the other risks almost nothing.</div>
 
 <div class="control-strip">
@@ -715,6 +726,8 @@ Inputs.table(overallRows, {
 ## Largest trades in small markets
 
 <p class="section-intro">Same three rankings, but restricted to trades that were unusually large <em>for the specific market they happened in</em> — a print that ate a huge share of everything that market ever traded, not just a big number in isolation.</p>
+
+<p class="chart-note"><strong>Kalshi only</strong>, for the same reason as the table above, plus one of its own: the share-of-market denominator needs every print in a market totalled, and the venues with a usable market grain do not all publish one.</p>
 
 <div class="control-strip">
 
