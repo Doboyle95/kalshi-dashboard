@@ -199,7 +199,7 @@ ${parlaySentence} ${parlayCaveat}
 
 ## What a contract costs its buyer
 
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. Every bar here is a venue whose <em>aggressor</em> is known, so the figure really is what the taker paid: Kalshi publishes an aggressor flag outright, and a parlay quoted by the house on request has the customer as the buyer by construction. The DKeX and ProphetX bars this caption used to describe have been <strong>removed entirely</strong>, not redrawn &mdash; without an aggressor flag their numbers measured price bias rather than taker P&amp;L. Why each absent venue is absent is set out below.</div>
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>These bars are not all on the same fee basis.</strong> Kalshi's figures are NET of fees; Crypto.com's and Polymarket's are GROSS, because neither venue publishes a fee schedule this site has verified. Net is the more negative of the two, so Kalshi's bar is handicapped against the others and the gap between them is smaller than it looks. Read each bar against its own venue, not as a ranking. Every bar here is a venue whose <em>aggressor</em> is known, so the figure really is what the taker paid: Kalshi publishes an aggressor flag outright, and a parlay quoted by the house on request has the customer as the buyer by construction. The DKeX and ProphetX bars this caption used to describe have been <strong>removed entirely</strong>, not redrawn &mdash; without an aggressor flag their numbers measured price bias rather than taker P&amp;L. Why each absent venue is absent is set out below.</div>
 
 ```js
 Plot.plot({
