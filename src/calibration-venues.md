@@ -42,7 +42,7 @@ const calForecastex = await DataAttachment("data/forecastex_calibration.csv").cs
 // dkex_calibration.csv, which is why it needs no new normalisation path -- only a
 // different REFERENCE PRICE, for the reason set out on its registry entry below.
 const calProphetx   = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
-const calNadex      = await DataAttachment("data/nadex_parlay_calibration.csv").csv({typed: true});
+const calNadex      = await DataAttachment("data/nadex_calibration.csv").csv({typed: true});
 const freshness     = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 
@@ -230,12 +230,25 @@ const VENUES = [
     // aggressor flag, so a single-market curve could not say who paid the spread;
     // a combo is quoted by the house on request, so the customer is the buyer.
     name: "Crypto.com", color: "#9c27b0", accent: "nadex", src: calNadex,
-    file: "nadex_parlay_calibration.csv",
-    leg: "buyer (the customer side of a house-quoted combo)",
-    // Effective PARLAYS, not prints. One combo can print dozens of times and every
-    // print shares a single settlement, so prints are not independent draws.
+    file: "nadex_calibration.csv",
+    // THE WHOLE CONTRACT SUITE, not just parlays. Calibration asks whether a contract
+    // trading at price p resolves that way p% of the time, which needs no aggressor
+    // flag -- so crypto strikes, sports events and combos all qualify here. (P&L is
+    // the opposite case and stays parlays-only: buyer-equals-taker holds only for a
+    // combo quoted by the house on request.)
+    leg: "the long side, whose price the tape publishes and whose outcome the settlement file gives",
+    // Effective CONTRACTS, not prints. One contract can print dozens of times and every
+    // print shares a single settlement, so prints are not independent draws. An earlier
+    // build set this to the raw contract count and produced standard errors around
+    // 1e-5; clustering gives an effective count roughly 60,000x smaller in the busiest
+    // bin, and intervals 244x wider.
     effCol: "n_eff",
-    groups: {headline: "PARLAY", reported: "PARLAY"},
+    groups: {headline: "ALL", reported: "ALL"},
+    // COVERAGE, stated because it is not near 100%. 64.45% of traded contracts join an
+    // outcome. The join key is sound -- 32.62% of the remainder EXPIRE AFTER the
+    // collection window so no settlement file can contain them, and only 2.93% are
+    // in-window with no outcome. Excluded, never imputed.
+    coverageNote: "64.45% of traded contracts join a settled outcome; most of the rest expire after the collection window",
     // The x axis is the CONTRACT-WEIGHTED PRICE ACTUALLY PAID, off Nadex's own
     // time-and-sales tape -- not a bin midpoint. This venue carries no midpoint
     // approximation anywhere, which is why its dots sit at true prices.
@@ -361,7 +374,7 @@ const OMITTED = [
   ["Rothera (Robinhood)", "measured and ruled out on the sample, not on the inputs. Its settlements are clean and a daily-price proxy is accurate to within about half a cent, but only 71 independent events sit behind its trade tape: 70 baseball games and one inflation release. Its World Cup, roughly 92% of all-time volume, settled before the tape begins on 2026-07-27, and everything earlier is permanently unavailable. The comparable DKeX measurement rests on 424–654 independent games per decile; Rothera offers 22–51 effective events per 5-cent bin, an order of magnitude short, with its one large block being a single tournament."],
   ["Underdog Exchange", "the trade tape does carry a price on every print, but the market file's status column has exactly one value, \"Finalized\", and no win/loss field appears anywhere in the feed, so there is no outcome to score those prices against. The collection window is also only 40 days."],
   ["ProphetX parlays — the venue itself is now drawn", "ProphetX's single markets ARE on these charts from 2026-08-14, and the reason this page previously gave for keeping the whole venue off them was refuted rather than revised. That reason was that cheap contracts carry a final settlement_price of 1.00 on the overwhelming majority of their resolutions, so the column could not tell winners from losers. Recounted from the raw tape on 2026-08-14 the pooled figure holds. STATE THE BASIS with any of these numbers, because they differ by basis and that is how the earlier mess arose: the unit here is the CONTRACT ID, each id is priced at its own contract-weighted mean traded price, a final mark is settlement_price on the last bulletin session listing that id, and the window is the 60 sessions 2026-06-16 to 2026-08-14. On that basis, of the 16,375 traded contract ids the bulletin marks whose mean traded price was 5¢ or below, 83.9% carry a final mark of exactly 1.00 — and the conclusion does not follow, because it is a PARLAY artefact. Split that same sample and the single markets mark to 1.00 on 0.5% of 1,171 against 90.3% of 15,204 parlays. All 80,543 parlay contract ids in this venue's bulletin lack a parseable event date, so the maturity rule that makes the single markets scoreable cannot even be applied to them, and 93.43% of them carry a final mark of exactly 1.00 — an impossible outcome rate for multi-leg combinations, which is how you know those marks are not outcomes at all. On single markets the same column separates cleanly: among contracts that reached a 0-or-1 resolution, those bought below 10¢ won 4.2% of the time (2,397 contract ids; 1.2% if the same group is weighted by contracts instead of ids) and those bought at 90¢ or above won 94.8% (249 ids, the thinnest group quoted on this page, so read it as “nearly all” rather than as a decimal; 98.7% contract-weighted). So what remains omitted is the parlay half, and it is a large half: 31,899,248 contracts, 11.77% of everything this venue traded. Parlays are IN the volume panel at the foot of this page, at their combination price, and OUT of every calibration chart above."],
-  ["Crypto.com/Nadex", "what is collected is a daily bulletin: one volume number per market description, with no traded price and no settlement."],
+
   ["CME (FanDuel + DraftKings)", "hand-collected daily bulletins carrying call, put and total volume only, with no trade prices and no per-contract settlements."]
 ];
 ```
