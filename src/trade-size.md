@@ -23,6 +23,7 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const tradeSizeRaw = await DataAttachment("data/trade_size_daily.csv").csv({typed: true});
 const largeTrades = await DataAttachment("data/large_trades.csv").csv({typed: true});
+const competitorLargeTrades = await DataAttachment("data/competitor_large_trades.csv").csv({typed: true});
 const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const priceFiles = await Promise.all([
   DataAttachment("data/volume_at_price_kalshi.csv").csv({typed: true}),
@@ -639,6 +640,37 @@ topSpikes.length ? Inputs.table(topSpikes, {
 const reportTickerToCat = buildReportTickerToCat(categoryLeaderboard);
 const RANK_METRICS = {"Contracts": "contracts", "One-party stake": "one_party_stake", "Taker stake": "taker_stake"};
 
+// Competitor rows live in their own file because they are built by a different
+// producer off six separate raw tapes, not because they are second class -- the
+// two render through one code path below.
+const ltVenues = ["Kalshi", ...VENUE_ORDER.filter(v => competitorLargeTrades.some(d => d.venue === v))];
+
+// TAKER STAKE IS NOT UNIVERSAL. Kalshi publishes an aggressor flag, and Novig is
+// the only competitor that does -- its tape marks every print TAKER or MAKER. On
+// every other venue there is no taker to attribute a stake to, so the option is
+// absent rather than blank.
+function metricsFor(venue) {
+  const hasTaker = venue === "Kalshi"
+    || competitorLargeTrades.some(d => d.venue === venue && d.metric === "taker_stake");
+  return hasTaker ? ["Contracts", "One-party stake", "Taker stake"] : ["Contracts", "One-party stake"];
+}
+
+function competitorRows(tableName, metricLabel, venue) {
+  const metricKey = RANK_METRICS[metricLabel];
+  return competitorLargeTrades
+    .filter(d => d.venue === venue && d.table === tableName && d.metric === metricKey)
+    .sort((a, b) => a.rank - b.rank)
+    .map(d => ({
+      date: d.date,
+      market: d.market_name || d.ticker_name,
+      contracts: d.contracts_traded,
+      price: d.price,
+      pct_of_market: d.pct_of_market,
+      metric_value: metricValue(d, metricKey),
+      censored: d.window_left_censored
+    }));
+}
+
 function tradeCategory(d) {
   return reportTickerToCat.get(d.report_ticker) || d.kalshi_category || "Uncategorized";
 }
@@ -678,16 +710,18 @@ function rowsForTable(tableName, metricLabel) {
 
 ## Largest individual trades
 
-<p class="section-intro">The single biggest prints in Kalshi's history — three different notions of "big," since raw contracts, the larger side's dollar stake, and what the taker specifically put up don't always pick the same winners.</p>
-
-<p class="chart-note"><strong>Kalshi only</strong>, unlike the size mix above, which covers ${platformOptions.length} venues. This table needs the individual print joined to its market, and the producer behind it emits Kalshi rows only. Note also that "Taker stake" could never be ported as-is: no competitor publishes an aggressor flag, so on those venues there is no taker to attribute the stake to.</p>
+<p class="section-intro">The single biggest prints a venue has published — different notions of "big," since raw contracts, the larger side's dollar stake, and what the taker specifically put up don't always pick the same winners.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices (near-certain or near-impossible outcomes), where one side risks close to the full dollar and the other risks almost nothing.</div>
 
 <div class="control-strip">
 
 ```js
-const overallMetricLabel = view(Inputs.radio(["Contracts", "One-party stake", "Taker stake"], {
+const overallVenue = view(Inputs.radio(ltVenues, {label: "Venue", value: "Kalshi"}));
+```
+
+```js
+const overallMetricLabel = view(Inputs.radio(metricsFor(overallVenue), {
   label: "Rank by",
   value: "Contracts"
 }));
@@ -696,12 +730,17 @@ const overallMetricLabel = view(Inputs.radio(["Contracts", "One-party stake", "T
 </div>
 
 ```js
-const overallRows = rowsForTable("overall", overallMetricLabel);
+const overallKalshi = overallVenue === "Kalshi";
+const overallRows = overallKalshi
+  ? rowsForTable("overall", overallMetricLabel)
+  : competitorRows("overall", overallMetricLabel, overallVenue);
 ```
 
 ```js
 Inputs.table(overallRows, {
-  columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"],
+  columns: overallKalshi
+    ? ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"]
+    : ["date", "market", "contracts", "price", "metric_value"],
   header: {
     date: "Date",
     category: "Category",
@@ -723,30 +762,41 @@ Inputs.table(overallRows, {
 })
 ```
 
+<p class="chart-note">${overallKalshi
+  ? html`Kalshi is the only venue here with an aggressor flag on every print and a market-name dictionary, so it carries the extra Category, Outcome and Taker-side columns.`
+  : html`Covers this venue's collected tape, not its whole history. Market labels are whatever the venue itself publishes &mdash; ProphetX and Novig name their fixtures, DKeX, Polymarket and Underdog publish only an opaque contract id, and none of them is renamed here. <strong>Taker stake</strong> is offered on Kalshi and Novig only, the two venues that flag the aggressor.`}</p>
+
 ## Largest trades in small markets
 
-<p class="section-intro">Same three rankings, but restricted to trades that were unusually large <em>for the specific market they happened in</em> — a print that ate a huge share of everything that market ever traded, not just a big number in isolation.</p>
-
-<p class="chart-note"><strong>Kalshi only</strong>, for the same reason as the table above, plus one of its own: the share-of-market denominator needs every print in a market totalled, and the venues with a usable market grain do not all publish one.</p>
+<p class="section-intro">The same rankings, but restricted to trades that were unusually large <em>for the specific market they happened in</em> — a print that ate a huge share of everything that market traded, not just a big number in isolation.</p>
 
 <div class="control-strip">
 
 ```js
-const smallMarketMetricLabel = view(Inputs.radio(["Contracts", "One-party stake", "Taker stake"], {
+const smallMarketVenue = view(Inputs.radio(ltVenues, {label: "Venue", value: "Kalshi"}));
+```
+
+```js
+const smallMarketMetricLabel = view(Inputs.radio(metricsFor(smallMarketVenue), {
   label: "Rank by",
-  value: "Taker stake"
+  value: metricsFor(smallMarketVenue).includes("Taker stake") ? "Taker stake" : "Contracts"
 }));
 ```
 
 </div>
 
 ```js
-const smallMarketRows = rowsForTable("small_market", smallMarketMetricLabel);
+const smallMarketKalshi = smallMarketVenue === "Kalshi";
+const smallMarketRows = smallMarketKalshi
+  ? rowsForTable("small_market", smallMarketMetricLabel)
+  : competitorRows("small_market", smallMarketMetricLabel, smallMarketVenue);
 ```
 
 ```js
 Inputs.table(smallMarketRows, {
-  columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"],
+  columns: smallMarketKalshi
+    ? ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"]
+    : ["date", "market", "contracts", "price", "metric_value", "pct_of_market"],
   header: {
     date: "Date",
     category: "Category",
@@ -772,5 +822,7 @@ Inputs.table(smallMarketRows, {
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>A trade qualifies as "large in a small market" when it was at least 100,000 contracts <strong>and</strong> at least 20% of that market's entire lifetime volume in that one print, excluding parlays. Parlays are left out here for two reasons: a parlay combo is by construction its own tiny market, so almost any parlay trade looks like a huge share of a thin one — and the per-combo volume totals behind that ratio aren't reliable at that granularity. Parlays still show up in the table above, which has no market-share requirement. Because the denominator (the market's lifetime volume) can keep growing for still-active markets, a trade can drop out of this list over time even though the trade itself never changes.</p>
+  <p><strong>On Kalshi</strong>, a trade qualifies when it was at least 100,000 contracts <strong>and</strong> at least 20% of that market's entire lifetime volume in that one print, excluding parlays. Parlays are left out here for two reasons: a parlay combo is by construction its own tiny market, so almost any parlay trade looks like a huge share of a thin one — and the per-combo volume totals behind that ratio aren't reliable at that granularity. Parlays still show up in the table above, which has no market-share requirement. Because the denominator (the market's lifetime volume) can keep growing for still-active markets, a trade can drop out of this list over time even though the trade itself never changes.</p>
+  <p><strong>On the competitor venues the denominator is a window, not a lifetime.</strong> Those tapes only run as far back as collection does — from a few weeks on the newest venues to about two years on ForecastEx — so "% of market" means share of what that market traded <em>while we were watching it</em>. Numerator and denominator are both inside the window, so the figure is still bounded by 100%, but a market that was already busy before collection started will read as more concentrated than it truly was. The 20% share floor is Kalshi's; the contract floor is set per venue, since these books are one to three orders of magnitude smaller and a flat 100,000 would empty the table.</p>
+  <p>A market must also have traded at least 20 separate times to appear at all. Without that rule the table degenerates on venues whose market identifier is close to one-per-trade — Novig's median market carries a single print, and its first build returned trades sitting at exactly 100% of "their market", which is true and tells you nothing. It is the venue-neutral form of Kalshi's parlay exclusion.</p>
 </details>
