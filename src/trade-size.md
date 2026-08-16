@@ -71,77 +71,9 @@ const bucketColors = BUCKETS.map(d => d.color);
 const latestTradeSizeDate = d3.max(tradeSizeRaw, d => d.date);
 ```
 
-## Volume by probability
+## Volume and size mix
 
-<p class="section-intro">The share of each venue's observed volume traded in each five-cent price bin. This is trading behavior, not calibration: it describes where activity sits without claiming whether those prices were right.</p>
-
-```js
-const PRICE_SPECS = [
-  {name: "Kalshi", color: "#00C2A8", rows: priceFiles[0], keep: d => d.leg == null || d.leg === "taker"},
-  {name: "Polymarket US", color: "#3B7DD8", rows: priceFiles[1], keep: d => (d.period == null || d.period === "all") && (d.group == null || d.group === "LEG_PRICE")},
-  {name: "ForecastEx", color: "#E53535", rows: priceFiles[2], keep: d => d.leg == null || d.leg === "yes"},
-  {name: "DKeX", color: "#F97316", rows: priceFiles[3], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "ALL")},
-  {name: "Underdog Exchange", color: "#EAB308", rows: priceFiles[4], keep: d => d.group == null || d.group === "SINGLE"},
-  {name: "ProphetX", color: "#DB2777", rows: priceFiles[5], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "HOME")}
-];
-const priceSeries = PRICE_SPECS.map(spec => {
-  const selected = spec.rows.filter(spec.keep);
-  const bins = Array.from(d3.rollup(
-    selected,
-    rows => ({
-      contracts: d3.sum(rows, d => +(d.contracts ?? d.n_contracts) || 0),
-      dollars: d3.sum(rows, d => +d.dollars || 0)
-    }),
-    d => +d.price_bin
-  ), ([price_bin, values]) => ({price_bin, ...values})).filter(d => Number.isFinite(d.price_bin));
-  const totalContracts = d3.sum(bins, d => d.contracts);
-  const totalDollars = d3.sum(bins, d => d.dollars);
-  return {
-    ...spec,
-    bins: bins.map(d => ({
-      ...d,
-      venue: spec.name,
-      midpoint: d.price_bin + 2.5,
-      contractsShare: totalContracts ? 100 * d.contracts / totalContracts : 0,
-      dollarsShare: totalDollars ? 100 * d.dollars / totalDollars : 0
-    }))
-  };
-}).filter(d => d.bins.length);
-```
-
-<div class="control-strip">
-
-```js
-const probabilityMeasure = view(Inputs.radio(["Contracts", "Dollars"], {label: "Measure", value: "Contracts"}));
-const probabilityVenues = view(Inputs.checkbox(priceSeries.map(d => d.name), {label: "Venues", value: priceSeries.map(d => d.name)}));
-```
-
-</div>
-
-```js
-const probabilityRows = priceSeries
-  .filter(d => probabilityVenues.includes(d.name))
-  .flatMap(d => d.bins.map(row => ({...row, value: probabilityMeasure === "Dollars" ? row.dollarsShare : row.contractsShare})));
-display(Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 380,
-  marginLeft: 62,
-  x: {label: "Contract price (¢)", domain: [0, 100], grid: true},
-  y: {label: `Share of venue ${probabilityMeasure.toLowerCase()} (%)`, grid: true},
-  color: {legend: true, domain: priceSeries.map(d => d.name), range: priceSeries.map(d => d.color)},
-  marks: [
-    Plot.ruleY([0]),
-    Plot.lineY(probabilityRows, {x: "midpoint", y: "value", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(probabilityRows, {
-      x: "midpoint", y: "value", fill: "venue", r: 3, tip: true,
-      title: d => `${d.venue}\n${d.price_bin}–${d.price_bin + 5}¢\n${d.value.toFixed(2)}% of venue ${probabilityMeasure.toLowerCase()}\n${fmtCount(d.contracts)} contracts · ${fmtUSD(d.dollars)}`
-    })
-  ]
-}));
-```
-
-<p class="chart-note">Coverage differs by venue. Kalshi uses the taker's side; ForecastEx uses the yes leg; DKeX, Polymarket US, and Underdog use the named leg; ProphetX uses its published home-side price. Underdog parlays are excluded because a combination price is not a single-market probability.</p>
+<p class="section-intro">How a venue&rsquo;s volume splits across trade sizes, and how much of it moves in large blocks. Pick a venue and a segment here &mdash; both controls govern every chart in this section.</p>
 
 ```js
 // DERIVED FROM THE DATA, never a hand-kept list. The previous hardcoded five silently
@@ -262,7 +194,6 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     });
 
   const brushG = svg.append("g").attr("class", "brush");
-
 
   brushG.call(brush).call(brush.move, [clampedStart, defaultEnd].map(x));
 
@@ -413,10 +344,6 @@ const spikeRows = thresholdRows
   .sort((a, b) => d3.descending(a.lift, b.lift))
   .slice(0, 12);
 ```
-
-## Volume and size mix
-
-<p class="section-intro">Big-trade volume up top; the full size breakdown below.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> move from <em>10k+</em> to <em>100k+</em> — if the spike still holds, it's true whale flow, not just ordinary block trading.</div>
 
@@ -826,3 +753,75 @@ Inputs.table(smallMarketRows, {
   <p><strong>On the competitor venues the denominator is a window, not a lifetime.</strong> Those tapes only run as far back as collection does — from a few weeks on the newest venues to about two years on ForecastEx — so "% of market" means share of what that market traded <em>while we were watching it</em>. Numerator and denominator are both inside the window, so the figure is still bounded by 100%, but a market that was already busy before collection started will read as more concentrated than it truly was. The 20% share floor is Kalshi's; the contract floor is set per venue, since these books are one to three orders of magnitude smaller and a flat 100,000 would empty the table.</p>
   <p>A market must also have traded at least 20 separate times to appear at all. Without that rule the table degenerates on venues whose market identifier is close to one-per-trade — Novig's median market carries a single print, and its first build returned trades sitting at exactly 100% of "their market", which is true and tells you nothing. It is the venue-neutral form of Kalshi's parlay exclusion.</p>
 </details>
+
+## Volume by probability
+
+<p class="section-intro">The share of each venue's observed volume traded in each five-cent price bin. This is trading behavior, not calibration: it describes where activity sits without claiming whether those prices were right.</p>
+
+```js
+const PRICE_SPECS = [
+  {name: "Kalshi", color: "#00C2A8", rows: priceFiles[0], keep: d => d.leg == null || d.leg === "taker"},
+  {name: "Polymarket US", color: "#3B7DD8", rows: priceFiles[1], keep: d => (d.period == null || d.period === "all") && (d.group == null || d.group === "LEG_PRICE")},
+  {name: "ForecastEx", color: "#E53535", rows: priceFiles[2], keep: d => d.leg == null || d.leg === "yes"},
+  {name: "DKeX", color: "#F97316", rows: priceFiles[3], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "ALL")},
+  {name: "Underdog Exchange", color: "#EAB308", rows: priceFiles[4], keep: d => d.group == null || d.group === "SINGLE"},
+  {name: "ProphetX", color: "#DB2777", rows: priceFiles[5], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "HOME")}
+];
+const priceSeries = PRICE_SPECS.map(spec => {
+  const selected = spec.rows.filter(spec.keep);
+  const bins = Array.from(d3.rollup(
+    selected,
+    rows => ({
+      contracts: d3.sum(rows, d => +(d.contracts ?? d.n_contracts) || 0),
+      dollars: d3.sum(rows, d => +d.dollars || 0)
+    }),
+    d => +d.price_bin
+  ), ([price_bin, values]) => ({price_bin, ...values})).filter(d => Number.isFinite(d.price_bin));
+  const totalContracts = d3.sum(bins, d => d.contracts);
+  const totalDollars = d3.sum(bins, d => d.dollars);
+  return {
+    ...spec,
+    bins: bins.map(d => ({
+      ...d,
+      venue: spec.name,
+      midpoint: d.price_bin + 2.5,
+      contractsShare: totalContracts ? 100 * d.contracts / totalContracts : 0,
+      dollarsShare: totalDollars ? 100 * d.dollars / totalDollars : 0
+    }))
+  };
+}).filter(d => d.bins.length);
+```
+
+<div class="control-strip">
+
+```js
+const probabilityMeasure = view(Inputs.radio(["Contracts", "Dollars"], {label: "Measure", value: "Contracts"}));
+const probabilityVenues = view(Inputs.checkbox(priceSeries.map(d => d.name), {label: "Venues", value: priceSeries.map(d => d.name)}));
+```
+
+</div>
+
+```js
+const probabilityRows = priceSeries
+  .filter(d => probabilityVenues.includes(d.name))
+  .flatMap(d => d.bins.map(row => ({...row, value: probabilityMeasure === "Dollars" ? row.dollarsShare : row.contractsShare})));
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 380,
+  marginLeft: 62,
+  x: {label: "Contract price (¢)", domain: [0, 100], grid: true},
+  y: {label: `Share of venue ${probabilityMeasure.toLowerCase()} (%)`, grid: true},
+  color: {legend: true, domain: priceSeries.map(d => d.name), range: priceSeries.map(d => d.color)},
+  marks: [
+    Plot.ruleY([0]),
+    Plot.lineY(probabilityRows, {x: "midpoint", y: "value", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(probabilityRows, {
+      x: "midpoint", y: "value", fill: "venue", r: 3, tip: true,
+      title: d => `${d.venue}\n${d.price_bin}–${d.price_bin + 5}¢\n${d.value.toFixed(2)}% of venue ${probabilityMeasure.toLowerCase()}\n${fmtCount(d.contracts)} contracts · ${fmtUSD(d.dollars)}`
+    })
+  ]
+}));
+```
+
+<p class="chart-note">Coverage differs by venue. Kalshi uses the taker's side; ForecastEx uses the yes leg; DKeX, Polymarket US, and Underdog use the named leg; ProphetX uses its published home-side price. Underdog parlays are excluded because a combination price is not a single-market probability.</p>
