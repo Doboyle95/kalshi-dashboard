@@ -19,7 +19,11 @@ const pm = await DataAttachment("data/calibration_polymarket.csv").csv({typed: t
 const fx = await DataAttachment("data/forecastex_calibration.csv").csv({typed: true});
 const dk = await DataAttachment("data/dkex_calibration.csv").csv({typed: true});
 const px = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
-const nd = await DataAttachment("data/nadex_parlay_calibration.csv").csv({typed: true});
+// THE WHOLE CONTRACT SUITE, not just parlays. Calibration asks whether a contract
+// trading at price p resolves that way p% of the time, which needs no aggressor flag --
+// so crypto strikes, sports events and combos all qualify. (P&L is the opposite case and
+// stays parlays-only: buyer-equals-taker holds only for a house-quoted combo.)
+const nd = await DataAttachment("data/nadex_calibration.csv").csv({typed: true});
 
 const number = value => value == null || value === "" || Number.isNaN(+value) ? null : +value;
 const kClusterMap = new Map(kClusters.map(d => [`${d.group}|${d.price_bin}`, d]));
@@ -39,11 +43,14 @@ const normalized = [
     const implied = contracts > 0 && sumPrice != null ? sumPrice / contracts / 100 : null;
     return {venue: "ProphetX", bin: +d.price_bin, implied, actual, error: implied == null || actual == null ? null : actual - implied, se: number(d.se_clustered), events: number(d.n_events), contracts};
   }),
-  ...nd.filter(d => d.group === "PARLAY" && (d.bin_width == null || +d.bin_width === 5)).map(d => ({venue: "Crypto.com/Nadex · parlays", bin: +d.price_bin, implied: number(d.implied), actual: number(d.actual), error: number(d.calib_error), se: number(d.se_calib_error), events: number(d.n_eff), contracts: number(d.contracts)}))
+  // x is the CONTRACT-WEIGHTED PRICE ACTUALLY PAID off Nadex's own tape, not a bin
+  // midpoint, and n_eff counts effective CONTRACTS rather than prints -- one contract can
+  // print dozens of times and every print shares a single settlement.
+  ...nd.filter(d => d.group === "ALL" && (d.bin_width == null || +d.bin_width === 5)).map(d => ({venue: "Crypto.com/Nadex", bin: +d.price_bin, implied: number(d.implied), actual: number(d.actual), error: number(d.calib_error), se: number(d.se_calib_error), events: number(d.n_eff), contracts: number(d.contracts)}))
 ].filter(d => Number.isFinite(d.bin) && d.implied != null && d.actual != null && d.error != null && d.se != null);
 
 const venues = Array.from(new Set(normalized.map(d => d.venue)));
-const colorOf = venue => venue.startsWith("Crypto.com") ? VENUE_COLORS["Crypto.com/Nadex"] : VENUE_COLORS[venue];
+const colorOf = venue => VENUE_COLORS[venue];
 ```
 
 <div class="control-strip">
@@ -58,7 +65,7 @@ const selectedAccuracyVenues = view(Inputs.checkbox(venues, {label: "Venues", va
 const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.venue));
 ```
 
-<p class="chart-note">Coverage: ${venues.join(" · ")}. Crypto.com/Nadex is parlay-only. Underdog, Rothera, Novig, and CME do not currently publish enough outcome-linked price data for this comparison.</p>
+<p class="chart-note">Coverage: ${venues.join(" · ")}. Crypto.com/Nadex is its whole contract suite — strikes, events and combos — of which 64.45% of traded contracts join a settled outcome; most of the remainder expire after the collection window, so no settlement file can hold them. Excluded, never imputed. Underdog, Rothera, Novig, and CME do not currently publish enough outcome-linked price data for this comparison.</p>
 
 ## Actual vs implied win rate
 
