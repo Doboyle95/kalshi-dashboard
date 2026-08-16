@@ -3,6 +3,20 @@ const GENERATION = /^[0-9a-f]{20}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 15000;
+// Floor throughput assumed for a DATA file, used to scale its timeout by size.
+// 15s flat was fine for the manifest and for small CSVs, but daily_top_categories_fees.csv
+// is 10.4MB -- clearing that in 15s demands a sustained ~5.5 Mbit/s, so every slower
+// visitor got "signal is aborted without reason" and a blank chart. Measured on the
+// Categories route 2026-08-16: 20 console errors, all aborts on the largest files, with
+// every HTTP response a 200. At 250 KB/s the 16MB MAX_FILE_BYTES ceiling caps this at 64s,
+// so a genuinely dead endpoint still fails in bounded time -- and the manifest fetch below
+// deliberately keeps the short timeout so that failure stays fast.
+const MIN_DATA_BYTES_PER_SEC = 250 * 1024;
+
+function dataTimeoutMs(sizeBytes, baseTimeoutMs) {
+  const needed = Math.ceil((sizeBytes / MIN_DATA_BYTES_PER_SEC) * 1000);
+  return Math.max(baseTimeoutMs, needed);
+}
 const manifestPromises = new Map();
 const ISO_DATE = /^([-+]\d{2})?\d{4}(-\d{2}(-\d{2})?)?(T\d{2}:\d{2}(:\d{2}(\.\d{3})?)?(Z|[-+]\d{2}:\d{2})?)?$/;
 
@@ -111,7 +125,7 @@ async function verifiedRemoteText(filename, options = {}) {
     fetchImpl,
     url,
     {cache: "default", credentials: "omit", mode: "cors", redirect: "error", referrerPolicy: "no-referrer"},
-    timeoutMs
+    dataTimeoutMs(record.size_bytes, timeoutMs)
   );
   if (!response.ok) throw new Error(`dashboard data file returned ${response.status}`);
   const bytes = await response.arrayBuffer();
