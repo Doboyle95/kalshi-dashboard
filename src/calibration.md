@@ -56,7 +56,8 @@ const hasSides = sideCurve.length > 0;
 // precision it does not have. The taker view keeps the legacy clusters file and its
 // error bars throughout -- which is what the fallback in clusterRows below enforces.
 // An earlier version asserted that in a comment while the code did the opposite.
-const sideBarsReady = sideClusters.length > 0;
+const sideBarsReady = hasSides
+  && sideClusters.some(d => d.side === side);
 ```
 
 ```js
@@ -92,8 +93,14 @@ const curveRows = hasSides ? sideCurve.filter(d => d.side === side) : calibCurve
 // encoding and its event count -- 42.3M independent events rendered as 0.
 // The taker rows of the by-side curve are asserted identical to calibration_three_way,
 // so the legacy clusters file joins them 1:1 on (group, price_bin).
-const clusterRows = (hasSides && sideClusters.length)
-  ? sideClusters.filter(d => d.side === side)
+// PER-SIDE fallback, not per-file. The by-side clusters producer emits one side per run,
+// so the file can be non-empty and still contain nothing for the selected side -- it
+// currently holds "both" rows only. Testing sideClusters.length would then filter the
+// TAKER view down to zero rows and strip its error bars a second time, which is exactly
+// the bug this fallback was added to fix.
+const sideClusterRows = hasSides ? sideClusters.filter(d => d.side === side) : [];
+const clusterRows = sideClusterRows.length
+  ? sideClusterRows
   : (side === "taker" ? calibClusters : []);
 
 const clusterByBin = new Map(clusterRows.map(d => [`${d.group}|${d.price_bin}`, d]));
