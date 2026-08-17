@@ -14,6 +14,7 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const catDaily  = await DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
 const split     = await DataAttachment("data/polymarket_sports_split_daily.csv").csv({typed: true});
+const mktType   = await DataAttachment("data/polymarket_market_type_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -154,11 +155,11 @@ Plot.plot({
 
 ## Product mix
 
-<p class="section-intro">Switch between the broad sports split, the daily sport mix, and the all-time ranking without repeating the same product story in three separate sections.</p>
+<p class="section-intro">Switch between the broad sports split, the daily sport mix, the all-time ranking, and the venue's own contract types without repeating the same product story in four separate sections.</p>
 
 ```js
 const polymarketProductView = view(Inputs.radio(
-  ["Sports vs non-sports", "Sport trend", "All-time sport mix"],
+  ["Sports vs non-sports", "Sport trend", "All-time sport mix", "Contract types"],
   {label: "View", value: "Sports vs non-sports"}
 ));
 ```
@@ -282,6 +283,108 @@ polymarketProductView === "All-time sport mix" ? Plot.plot({
     Plot.ruleX([0])
   ]
 }) : null
+```
+
+<h2 hidden>Contract types</h2>
+
+<p class="section-intro" hidden>Which kind of bet trades, in the venue's own vocabulary.</p>
+
+```js
+// The venue publishes a granular bet-type field (`sports_market_type`, 185 values in its
+// catalogue) which the producer reduces to its 15 largest labels plus three named residuals.
+//
+// THE GATE. Drawing this from the venue's launch would be false. `taxonomy_coverage` is the
+// share of matched sports contracts carrying a GRANULAR label rather than the venue's legacy
+// generic one, and it is 0% for the first eight months: January 2026 has a 99.86% symbol
+// join and exactly ONE distinct label all month. The venue rolled the vocabulary out in
+// mid-2026 -- coverage first passes 10% on 2026-06-13, 50% on 06-23 and 90% on 06-24.
+// Before that this series measures a metadata rollout, not a product mix, so the chart
+// starts at the first day coverage clears 90% and says so.
+const MIN_TAXONOMY_COVERAGE = 0.9;
+const mtCovered = mktType
+  .filter(d => (+d.taxonomy_coverage || 0) >= MIN_TAXONOMY_COVERAGE)
+  .map(d => d.date)
+  .sort((a, b) => a - b);
+const mtFrom = mtCovered.length ? mtCovered[0] : null;
+```
+
+```js
+const [sM, eM] = brushProducts;
+// Respect the shared brush, but never draw below the coverage gate.
+const mtWin = mtFrom
+  ? mktType.filter(d => d.date >= Math.max(sM, mtFrom) && d.date <= eM && (+d.contracts || 0) > 0)
+  : [];
+
+// The producer already emits three residuals of its own (the 163 labels outside its top 15,
+// plus non-sports and unjoinable symbols). Those are ALWAYS held out of the ranking and folded
+// into this chart's single residual band -- otherwise `other_market_type` ranks third on its own
+// and the legend shows two different "Other"s, which reads as a bug. One residual, named once.
+const MT_RESIDUALS = new Set(["other_market_type", "non_sports", "unmatched_symbol"]);
+
+// Rank inside the visible window, not all-time: the point of the view is what trades now.
+const mtTotals = d3.rollup(mtWin, v => d3.sum(v, d => +d.contracts || 0), d => d.sports_market_type);
+const mtTop = [...mtTotals.entries()]
+  .filter(([label]) => !MT_RESIDUALS.has(label))
+  .sort((a, b) => b[1] - a[1]).slice(0, 11).map(d => d[0]);
+
+// Nothing is renormalised: the bands still sum to the venue's own daily total.
+const humanize = s => {
+  const t = String(s).replace(/_/g, " ");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+const OTHER = "Other contract types";
+const mtTidy = Array.from(
+  d3.rollup(
+    mtWin.map(d => ({
+      date: d.date,
+      label: mtTop.includes(d.sports_market_type) ? humanize(d.sports_market_type) : OTHER,
+      contracts: +d.contracts || 0
+    })),
+    v => d3.sum(v, d => d.contracts),
+    d => d.date.getTime(), d => d.label
+  ),
+  ([t, m]) => [...m.entries()].map(([label, contracts]) => ({date: new Date(t), label, contracts}))
+).flat();
+
+const mtOrder = [...mtTop.map(humanize), OTHER];
+const mtTip = Array.from(
+  d3.rollup(mtTidy, rs => {
+    const o = {date: rs[0].date};
+    for (const r of rs) o[r.label] = r.contracts;
+    return o;
+  }, d => d.date.getTime())
+).map(([, v]) => v).sort((a, b) => a.date - b.date);
+```
+
+```js
+polymarketProductView === "Contract types" ? (mtFrom ? Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 300,
+  marginLeft: 70,
+  x: {type: "utc", label: null},
+  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  color: {legend: true, columns: 3, scheme: "tableau10", domain: mtOrder},
+  marks: [
+    Plot.areaY(mtTidy, {
+      x: "date", y: "contracts", fill: "label",
+      order: mtOrder.slice().reverse(),
+      curve: "monotone-x", fillOpacity: 0.85
+    }),
+    Plot.ruleX(mtTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(mtTip, Plot.pointerX({
+      x: "date",
+      title: d => [fmtDate(d.date), ...mtOrder.map(c => d[c] > 0 ? `${c}: ${fmtCount(d[c])}` : null).filter(Boolean)].join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+}) : html`<p class="chart-note">No day yet carries granular contract types for 90% of its volume.</p>`) : null
+```
+
+```js
+polymarketProductView === "Contract types" && mtFrom
+  ? html`<p class="chart-note">Starts ${fmtDate(mtFrom)}, the first day the venue tagged 90% of its volume with a specific contract type &mdash; earlier days carry one generic label and would chart its metadata rollout, not its book. <strong>Other contract types</strong> is a real residual and includes the venue's own unclassified bucket.</p>`
+  : null
 ```
 
 ## Top markets
