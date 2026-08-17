@@ -111,7 +111,8 @@ export default {
       {name: "Underdog Exchange", path: "/underdog"},
       {name: "Crypto.com/Nadex", path: "/nadex"},
       {name: "ProphetX", path: "/prophetx"},
-      {name: "Novig", path: "/novig"},
+      {name: "Novig · Activity", path: "/novig"},
+      {name: "Novig · Outcomes", path: "/novig-outcomes"},
       {name: "Rothera", path: "/rothera"},
       {name: "CME", path: "/cme"}
     ]},

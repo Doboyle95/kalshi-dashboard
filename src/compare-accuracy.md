@@ -24,6 +24,15 @@ const px = await DataAttachment("data/prophetx_calibration.csv").csv({typed: tru
 // so crypto strikes, sports events and combos all qualify. (P&L is the opposite case and
 // stays parlays-only: buyer-equals-taker holds only for a house-quoted combo.)
 const nd = await DataAttachment("data/nadex_calibration.csv").csv({typed: true});
+// Novig STRAIGHT contracts, added 2026-08-17. Loaded on a SECOND attachment instance with a
+// try/catch so that until novig_calibration.csv reaches the transport allowlist this page
+// renders every other venue instead of erroring outright. Same pattern, same reasoning as
+// novig.md's fee section.
+const NovigCal = createRemoteDataAttachment(d3);
+const nv = await (async () => {
+  try { return await NovigCal("data/novig_calibration.csv").csv({typed: true}); }
+  catch (error) { console.warn(`novig calibration unavailable — ${String(error?.message ?? error).slice(0, 160)}`); return []; }
+})();
 
 const number = value => value == null || value === "" || Number.isNaN(+value) ? null : +value;
 const kClusterMap = new Map(kClusters.map(d => [`${d.group}|${d.price_bin}`, d]));
@@ -46,7 +55,16 @@ const normalized = [
   // x is the CONTRACT-WEIGHTED PRICE ACTUALLY PAID off Nadex's own tape, not a bin
   // midpoint, and n_eff counts effective CONTRACTS rather than prints -- one contract can
   // print dozens of times and every print shares a single settlement.
-  ...nd.filter(d => d.group === "ALL" && (d.bin_width == null || +d.bin_width === 5)).map(d => ({venue: "Crypto.com/Nadex", bin: +d.price_bin, implied: number(d.implied), actual: number(d.actual), error: number(d.calib_error), se: number(d.se_calib_error), events: number(d.n_eff), contracts: number(d.contracts)}))
+  ...nd.filter(d => d.group === "ALL" && (d.bin_width == null || +d.bin_width === 5)).map(d => ({venue: "Crypto.com/Nadex", bin: +d.price_bin, implied: number(d.implied), actual: number(d.actual), error: number(d.calib_error), se: number(d.se_calib_error), events: number(d.n_eff), contracts: number(d.contracts)})),
+  // Novig STRAIGHT contracts only -- parlays never resolve in this feed. Like ProphetX and
+  // Nadex, x is the CONTRACT-WEIGHTED PRICE ACTUALLY PAID (sum_price_contracts / contracts),
+  // not the bin midpoint, so the error is the true miscalibration and not a midpoint artefact.
+  // The cluster is the fixture (eventId); se_clustered is the same sandwich as DKeX/ProphetX.
+  ...nv.filter(d => d.group === "ALL" && (d.bin_width == null || +d.bin_width === 5)).map(d => {
+    const contracts = number(d.n_contracts), sumPrice = number(d.sum_price_contracts), actual = number(d.actual_win_rate_wt);
+    const implied = contracts > 0 && sumPrice != null ? sumPrice / contracts / 100 : null;
+    return {venue: "Novig", bin: +d.price_bin, implied, actual, error: implied == null || actual == null ? null : actual - implied, se: number(d.se_clustered), events: number(d.n_events), contracts};
+  })
 ].filter(d => Number.isFinite(d.bin) && d.implied != null && d.actual != null && d.error != null && d.se != null);
 
 const venues = Array.from(new Set(normalized.map(d => d.venue)));
@@ -65,7 +83,7 @@ const selectedAccuracyVenues = view(Inputs.checkbox(venues, {label: "Venues", va
 const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.venue));
 ```
 
-<p class="chart-note">Coverage: ${venues.join(" · ")}. Crypto.com/Nadex is its whole contract suite — strikes, events and combos — of which 64.45% of traded contracts join a settled outcome; most of the remainder expire after the collection window, so no settlement file can hold them. Excluded, never imputed. Underdog, Rothera, Novig, and CME do not currently publish enough outcome-linked price data for this comparison.</p>
+<p class="chart-note">Coverage: ${venues.join(" · ")}. Crypto.com/Nadex is its whole contract suite — strikes, events and combos — of which 64.45% of traded contracts join a settled outcome; most of the remainder expire after the collection window, so no settlement file can hold them. Excluded, never imputed. Novig is straight contracts only — its parlays never settle in this feed. Underdog, Rothera, and CME do not currently publish enough outcome-linked price data for this comparison.</p>
 
 ## Actual vs implied win rate
 
