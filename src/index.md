@@ -374,7 +374,7 @@ if (productView === "Current mix") {
     width,
     height: 65 + productVenueOrder.length * 38,
     marginLeft: 155,
-    x: {label: "Share of reported contracts", percent: true, domain: [0, 1], grid: true},
+    x: {label: "Share of reported contracts", percent: true, domain: [0, 100], grid: true},
     y: {label: null, domain: productVenueOrder},
     color: {legend: true, domain: PRODUCT_BUCKETS, range: PRODUCT_BUCKETS.map(bucket => PRODUCT_COLORS[bucket])},
     marks: [
@@ -389,7 +389,7 @@ if (productView === "Current mix") {
     height: 380,
     marginLeft: 62,
     x: {type: "utc", label: null},
-    y: {label: "Sports share of reported contracts", percent: true, domain: [0, 1], grid: true},
+    y: {label: "Sports share of reported contracts", percent: true, domain: [0, 100], grid: true},
     color: {legend: true, domain: productVenueOrder, range: productVenueOrder.map(venue => VENUE_COLORS[venue])},
     marks: [
       Plot.lineY(monthlySports.filter(row => row.date >= scaleBrushFrom && row.date <= scaleBrushTo), {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
