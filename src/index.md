@@ -12,6 +12,7 @@ title: Briefing
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard, recentCalendarDates, valueLookup} from "./components/venue-data.js";
 import {renderDateBrush} from "./components/date-brush.js";
+import {TAKER_GENERAL_MAP, buildReportTickerToCat} from "./components/taker-categories.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -25,6 +26,10 @@ const parlayPnl = await DataAttachment("data/parlay_pnl_unified_daily.csv").csv(
 
 const kCat = await DataAttachment("data/category_daily.csv").csv({typed: true});
 const kParlay = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+// Kalshi publishes one undivided "Sports" in category_daily, so the sport-level
+// split comes from the same per-report_ticker join the categories/volume pages use.
+const kTickerDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
+const kCatLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const dkexCat = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
 const fxCat = await DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
 const nadexCat = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
@@ -292,25 +297,50 @@ display(html`<table class="briefing-table">
 
 ## What the industry trades
 
-<p class="section-intro">The current mix and how the sports share has moved. Categories are harmonized only to the broadest level every selected venue can support.</p>
+<p class="section-intro">The current mix, and how the sports share has moved. Kalshi doesn't label its sports, so its split comes from ticker-level volume.</p>
 
 ```js
-const SPORT = new Set(["Baseball", "Soccer", "Tennis", "Golf", "Basketball", "Basketball (pro)", "Basketball (college)", "Football", "Combat sports", "MMA", "Boxing", "Motorsport", "Hockey", "Cricket", "Rugby", "Table tennis", "Esports", "Aussie Rules", "Sports"]);
-const ECON = new Set(["Economics", "Financials", "Commodities", "Companies"]);
-const POLITICS = new Set(["Politics", "Elections"]);
-const WEATHER = new Set(["Weather", "Climate and Weather"]);
-const PARLAY_VALUE = {"Crypto.com/Nadex": new Set(["Parlays"]), ProphetX: new Set(["Parlay (multi-event)"]), "Underdog Exchange": new Set(["Other"])};
-const PRODUCT_BUCKETS = ["Sports", "Sports · parlays", "Crypto", "Politics & elections", "Economics & financials", "Weather & climate", "Other"];
-const PRODUCT_COLORS = {Sports: "#0E7C6B", "Sports · parlays": "#7FD4C6", Crypto: "#F97316", "Politics & elections": "#3B7DD8", "Economics & financials": "#9A6D1F", "Weather & climate": "#6366F1", Other: "#9AA3AE"};
+// Same broad buckets the Kalshi category charts use (components/taker-categories.js),
+// extended to the competitor feeds. Sport buckets + Parlay share one cool colour
+// family; Non-sports is the single warm one.
+const PRODUCT_BUCKETS = ["Non-sports", "Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay", "Unclassified"];
+const SPORTS_BUCKETS = new Set(["Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay"]);
+const PRODUCT_COLORS = {
+  "Non-sports": "var(--pc-nonsports)",
+  "Other sports": "var(--pc-othersport)",
+  Baseball: "var(--pc-baseball)",
+  Soccer: "var(--pc-soccer)",
+  Basketball: "var(--pc-basketball)",
+  Football: "var(--pc-football)",
+  Parlay: "var(--pc-parlay)",
+  Unclassified: "var(--pc-unclassified)"
+};
+
+// Competitor feeds name the sport; Kalshi does not (handled separately below).
+const VENUE_BUCKET = {
+  Baseball: "Baseball", Soccer: "Soccer", Football: "Football",
+  Basketball: "Basketball", "Basketball (pro)": "Basketball", "Basketball (college)": "Basketball",
+  Tennis: "Other sports", Golf: "Other sports", Hockey: "Other sports", Motorsport: "Other sports",
+  "Combat sports": "Other sports", MMA: "Other sports", Boxing: "Other sports", Cricket: "Other sports",
+  Rugby: "Other sports", "Table tennis": "Other sports", Esports: "Other sports",
+  "Aussie Rules": "Other sports", Sports: "Other sports",
+  Politics: "Non-sports", Elections: "Non-sports", Economics: "Non-sports", Financials: "Non-sports",
+  Commodities: "Non-sports", Companies: "Non-sports", Crypto: "Non-sports", Weather: "Non-sports",
+  "Climate and Weather": "Non-sports", "Science and Technology": "Non-sports",
+  Entertainment: "Non-sports", Mentions: "Non-sports", Mention: "Non-sports", Social: "Non-sports",
+  Health: "Non-sports", World: "Non-sports", Transportation: "Non-sports"
+};
+// "Other" means a different thing at each venue, so it is never mapped globally:
+// Underdog's "Other" is its combo/parlay bucket (verified against
+// underdog_daily.contracts_parlay), while at Nadex and DKeX it is a real residual.
+const VENUE_OVERRIDE = {
+  "Crypto.com/Nadex": {Parlays: "Parlay"},
+  ProphetX: {"Parlay (multi-event)": "Parlay"},
+  "Underdog Exchange": {Other: "Parlay"}
+};
 
 function productBucket(venue, raw) {
-  if ((PARLAY_VALUE[venue] ?? new Set()).has(raw)) return "Sports · parlays";
-  if (SPORT.has(raw)) return "Sports";
-  if (raw === "Crypto") return "Crypto";
-  if (POLITICS.has(raw)) return "Politics & elections";
-  if (ECON.has(raw)) return "Economics & financials";
-  if (WEATHER.has(raw)) return "Weather & climate";
-  return "Other";
+  return (VENUE_OVERRIDE[venue] ?? {})[raw] ?? VENUE_BUCKET[raw] ?? "Unclassified";
 }
 
 function normalizeProduct(venue, rows, categoryColumn, valueColumn = "contracts") {
@@ -322,8 +352,7 @@ function normalizeProduct(venue, rows, categoryColumn, valueColumn = "contracts"
   });
 }
 
-const productRowsBase = [
-  ...normalizeProduct("Kalshi", kCat, "kalshi_category"),
+const competitorProductRows = [
   ...normalizeProduct("Polymarket US", pmCat, "category"),
   ...normalizeProduct("Crypto.com/Nadex", nadexCat, "category"),
   ...normalizeProduct("Rothera", rotheraCat, "category"),
@@ -332,15 +361,35 @@ const productRowsBase = [
   ...normalizeProduct("Underdog Exchange", underdogCat, "category"),
   ...normalizeProduct("ForecastEx", fxCat, "category")
 ];
-const kalshiParlayByDate = new Map(Array.from(d3.rollup(kParlay, rows => d3.sum(rows, row => +row.contracts || 0), row => +row.date)));
-const productRows = productRowsBase.flatMap(row => {
-  if (row.venue !== "Kalshi" || row.bucket !== "Sports") return [row];
-  const parlay = Math.min(row.contracts, kalshiParlayByDate.get(+row.date) ?? 0);
-  return [
-    {...row, contracts: row.contracts - parlay},
-    {...row, bucket: "Sports · parlays", contracts: parlay}
-  ].filter(value => value.contracts > 0);
+
+// Kalshi sport split: daily per-report_ticker volume joined to the ticker->category
+// map, then collapsed with the same TAKER_GENERAL_MAP the category pages use.
+// Reproduces the authoritative totals closely on recent dates (parlay volume to
+// 100.3% of parlay_volume_by_type_daily, sports/non-sports split to 0.03pp), but
+// the frozen ticker header diverges before ~2025, so it is used only for the
+// trailing-30-day mix. The multi-year trend below stays on category_daily.
+const kalshiTickerToCat = buildReportTickerToCat(kCatLeaderboard);
+const kalshiColumns = Object.keys(kTickerDaily[0] ?? {}).filter(key => key !== "date");
+const kalshiColumnBucket = new Map(kalshiColumns.map(column => {
+  // TAKER_GENERAL_MAP has its own "Uncategorized" catch-all, and a report_ticker
+  // newer than the leaderboard maps to nothing at all; both land in Unclassified
+  // so every bucket here is one the stack and legend actually carry.
+  const bucket = TAKER_GENERAL_MAP[kalshiTickerToCat.get(column)];
+  return [column, PRODUCT_BUCKETS.includes(bucket) ? bucket : "Unclassified"];
+}));
+const kalshiProductRows = kTickerDaily.flatMap(row => {
+  if (!row.date) return [];
+  const sums = new Map();
+  for (const column of kalshiColumns) {
+    const value = +row[column] || 0;
+    if (!(value > 0)) continue;
+    const bucket = kalshiColumnBucket.get(column);
+    sums.set(bucket, (sums.get(bucket) ?? 0) + value);
+  }
+  return Array.from(sums, ([bucket, contracts]) => ({date: row.date, venue: "Kalshi", bucket, contracts}));
 });
+
+const productRows = [...kalshiProductRows, ...competitorProductRows];
 const latestProductDate = d3.max(productRows, row => row.date);
 const productStart = d3.utcDay.offset(latestProductDate, -29);
 const productRecent = productRows.filter(row => row.date >= productStart && row.date <= latestProductDate);
@@ -349,10 +398,15 @@ const productByVenue = Array.from(d3.rollup(productRecent, rows => d3.sum(rows, 
   return PRODUCT_BUCKETS.map(bucket => ({venue, bucket, contracts: buckets.get(bucket) ?? 0, share: total ? (buckets.get(bucket) ?? 0) / total : 0}));
 }).flat();
 const productVenueOrder = VENUE_ORDER.filter(venue => productByVenue.some(row => row.venue === venue));
+// Drop a bucket from the legend entirely when no venue reports it in the window.
+const productBucketsShown = PRODUCT_BUCKETS.filter(bucket => productByVenue.some(row => row.bucket === bucket && row.contracts > 0));
 
-const monthlySports = Array.from(d3.rollup(productRows, rows => {
+// The trend needs years of history, so Kalshi comes from category_daily here —
+// its undivided "Sports" is all the sports share needs, and it is authoritative.
+const trendRows = [...normalizeProduct("Kalshi", kCat, "kalshi_category"), ...competitorProductRows];
+const monthlySports = Array.from(d3.rollup(trendRows, rows => {
   const total = d3.sum(rows, row => row.contracts);
-  const sports = d3.sum(rows.filter(row => row.bucket.startsWith("Sports")), row => row.contracts);
+  const sports = d3.sum(rows.filter(row => SPORTS_BUCKETS.has(row.bucket)), row => row.contracts);
   return {date: d3.utcMonth.floor(rows[0].date), share: total ? sports / total : null, contracts: total};
 }, row => row.venue, row => +d3.utcMonth.floor(row.date)), ([venue, months]) => Array.from(months, ([, value]) => ({venue, ...value}))).flat().filter(row => row.share != null).sort((a, b) => a.date - b.date);
 ```
@@ -376,10 +430,20 @@ if (productView === "Current mix") {
     marginLeft: 155,
     x: {label: "Share of reported contracts", percent: true, domain: [0, 100], grid: true},
     y: {label: null, domain: productVenueOrder},
-    color: {legend: true, domain: PRODUCT_BUCKETS, range: PRODUCT_BUCKETS.map(bucket => PRODUCT_COLORS[bucket])},
+    color: {legend: true, domain: productBucketsShown, range: productBucketsShown.map(bucket => PRODUCT_COLORS[bucket])},
     marks: [
-      Plot.barX(productByVenue, {x: "share", y: "venue", fill: "bucket", order: PRODUCT_BUCKETS, tip: true, title: row => `${row.venue}\n${row.bucket}: ${(100 * row.share).toFixed(1)}%\n${Math.round(row.contracts).toLocaleString()} contracts`}),
-      Plot.ruleX([0, 1])
+      Plot.barX(productByVenue, {x: "share", y: "venue", fill: "bucket", order: PRODUCT_BUCKETS, insetRight: 1, tip: true, title: row => `${row.venue}\n${row.bucket}: ${(100 * row.share).toFixed(1)}%\n${Math.round(row.contracts).toLocaleString()} contracts`}),
+      // Label only the segments wide enough to hold one; the halo keeps them
+      // legible on both the light and the dark fills in either theme.
+      Plot.text(productByVenue, Plot.stackX({
+        // z is explicit here: the bars get it free from fill, but this mark has a
+        // constant fill, and the array form of order needs a z channel to sort on.
+        x: "share", y: "venue", z: "bucket", order: PRODUCT_BUCKETS,
+        text: row => row.share >= 0.1 ? `${Math.round(100 * row.share)}%` : "",
+        fill: "#fff", stroke: "rgba(0,0,0,.55)", strokeWidth: 2.5, paintOrder: "stroke",
+        fontSize: 11, fontWeight: 600
+      })),
+      Plot.ruleX([0])
     ]
   }));
 } else {

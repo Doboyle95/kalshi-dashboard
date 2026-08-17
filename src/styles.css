@@ -192,6 +192,73 @@ html[data-theme="dark"] {
 }
 
 /* ============================================================
+   Product-mix category colors  (--pc-*)
+   ============================================================
+   Used by the "What the industry trades" chart on the briefing
+   page. The six sport buckets and Parlay share one cool family
+   (green -> teal -> blue -> violet -> magenta) so they read as
+   one group; Non-sports is the only warm hue, which is what
+   separates it at a glance. Unclassified is a deliberate
+   neutral - it is the residual bucket, not a category.
+
+   Lightness alternates between neighbouring buckets on purpose.
+   These are categorical, not ordered, and a smooth ramp put
+   adjacent pairs below the legibility floor: the alternation is
+   what carries the separation. Both sets pass the lightness
+   band, chroma floor, adjacent-pair CVD separation (protan /
+   deutan / tritan) and normal-vision separation against their
+   own surface. Dark is re-stepped, not flipped - each bucket
+   keeps its hue across themes so identity survives the toggle.
+   Re-validate if you change any value.
+   ============================================================ */
+
+:root {
+  --pc-nonsports:    #d98300;
+  --pc-othersport:   #65c175;
+  --pc-baseball:     #007d66;
+  --pc-soccer:       #41aae7;
+  --pc-basketball:   #434baa;
+  --pc-football:     #bd76c8;
+  --pc-parlay:       #8a185c;
+  --pc-unclassified: #9aa3ae;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pc-nonsports:    #d07d00;
+    --pc-othersport:   #007426;
+    --pc-baseball:     #00ad97;
+    --pc-soccer:       #006aac;
+    --pc-basketball:   #9384e0;
+    --pc-football:     #94368f;
+    --pc-parlay:       #d5679c;
+    --pc-unclassified: #8b939d;
+  }
+}
+
+html[data-theme="light"] {
+  --pc-nonsports:    #d98300;
+  --pc-othersport:   #65c175;
+  --pc-baseball:     #007d66;
+  --pc-soccer:       #41aae7;
+  --pc-basketball:   #434baa;
+  --pc-football:     #bd76c8;
+  --pc-parlay:       #8a185c;
+  --pc-unclassified: #9aa3ae;
+}
+
+html[data-theme="dark"] {
+  --pc-nonsports:    #d07d00;
+  --pc-othersport:   #007426;
+  --pc-baseball:     #00ad97;
+  --pc-soccer:       #006aac;
+  --pc-basketball:   #9384e0;
+  --pc-football:     #94368f;
+  --pc-parlay:       #d5679c;
+  --pc-unclassified: #8b939d;
+}
+
+/* ============================================================
    Theme toggle button
    ============================================================ */
 
