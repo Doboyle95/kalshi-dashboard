@@ -16,6 +16,7 @@ const catDaily  = await DataAttachment("data/polymarket_categories_daily.csv").c
 const split     = await DataAttachment("data/polymarket_sports_split_daily.csv").csv({typed: true});
 const mktType   = await DataAttachment("data/polymarket_market_type_daily.csv").csv({typed: true});
 const settlement = await DataAttachment("data/polymarket_settlement_daily.csv").csv({typed: true});
+const parlay    = await DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -479,6 +480,81 @@ Plot.plot({
 ```
 
 <p class="chart-note">Bars are market counts on the left axis; the dark line is that day's void rate on the right. <strong>&ldquo;First side&rdquo; is the market's first-listed outcome, not a bet on it</strong> &mdash; across head-to-head types it wins about half the time, which is the check that the reading is right.</p>
+
+## Parlays
+
+<p class="section-intro">Polymarket US launched parlays &mdash; &ldquo;Combinatoric Athletic Outcome Contracts&rdquo; &mdash; on 2026-08-05. Volume went from under 100 contracts on the first day to 2.9 million within ten days.</p>
+
+```js
+// Same toggle as Kalshi's parlay pages, and the same wording, so the two read alike.
+const parlayMetric = view(Inputs.radio(["volume", "stakes"], {
+  value: "volume", label: "Metric",
+  format: x => x === "volume" ? "Volume (contracts)" : "Taker stakes ($)"
+}));
+```
+
+```js
+// "Taker stakes" is justified on this venue only for parlays. Polymarket publishes no
+// aggressor flag, so a single market's flow cannot be attributed to a taker -- but
+// parlays are priced by request-for-quote, so the customer lifts a quote the venue makes
+// and the buyer IS the taker. The producer asserts that rather than assuming it: Strike
+// Price is YES on all 10,379 parlay rows, and it fails rather than mislabel the series if
+// a NO-side parlay ever appears.
+const parlayRows = parlay
+  .filter(d => d.date && (+d.contracts || 0) > 0)
+  .map(d => ({
+    date: d.date,
+    contracts: +d.contracts || 0,
+    stake: +d.stake_usd || 0,
+    trades: +d.trades || 0,
+    // pct_of_venue is ALREADY a percentage, not a fraction: 2.175675 means 2.18% of the
+    // venue that day (2,945,593 of 135,387,525 contracts). Multiplying by 100 again
+    // renders parlays as 217% of the venue, which is what the first draft of this did.
+    pct: +d.pct_of_venue || 0
+  }))
+  .sort((a, b) => a.date - b.date);
+
+const parlayPeak = d3.greatest(parlayRows, d => d.pct);
+const parlayTotal = d3.sum(parlayRows, d => d.contracts);
+const parlayStakeTotal = d3.sum(parlayRows, d => d.stake);
+const fmtUSD0 = n => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}k` : `$${d3.format(",.0f")(n)}`;
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 280,
+  marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {
+    label: parlayMetric === "volume" ? "Daily volume (contracts)" : "Daily taker stakes ($)",
+    grid: true,
+    tickFormat: d => parlayMetric === "volume" ? fmtAxisNum(d) : fmtUSD0(d)
+  },
+  marks: [
+    // Bars, not an area: twelve days of a launch ramp is a series of discrete days, and a
+    // smoothed curve over that few points invents a shape the data does not have.
+    Plot.rectY(parlayRows, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => parlayMetric === "volume" ? d.contracts : d.stake,
+      fill: "#B07AA1", fillOpacity: 0.85, tip: true,
+      title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts)} contracts\n${fmtUSD0(d.stake)} staked\n${d.trades.toLocaleString()} trades\n${d.pct.toFixed(2)}% of the venue that day`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+<p class="chart-note">${fmtCount(parlayTotal)} contracts and ${fmtUSD0(parlayStakeTotal)} staked since launch, peaking at ${parlayPeak.pct.toFixed(2)}% of the venue's volume on ${fmtDate(parlayPeak.date)}. <strong>Stakes are dollars, volume is contracts</strong> &mdash; a parlay averages about 15&cent;, so the two axes move differently.</p>
+
+<details class="surface-card compact-details">
+  <summary>About parlays here — read before quoting any number</summary>
+  <p><strong>These are dated by when the trade happened, not by which file carried it.</strong> The venue's tape is named for its reporting date and holds the prior session's trades, so grouping by filename would reproduce the daily report's clearing-date series and discard the one thing the tape knows that the report does not. On transaction date, parlay trading is visible from 2026-08-05, a day before the product's first report row.</p>
+  <p><strong>Parlays can be sized but never decomposed.</strong> No public endpoint resolves a combo's legs, and combos appear in none of the 447,767 markets in the venue's own catalogue, so there is no leg count, no correlation classification and no comparison with Kalshi's leg-length distribution. Everything here is the outside of the product.</p>
+  <p><strong>The published series was wrong until 2026-08-17 and this is the corrected one.</strong> The venue publishes parlays under two symbol formats — a bare aggregate row per maturity from 08-06, and one row per individual parlay from 08-12 — and the producer matched only the first. It therefore read zero from 08-15 onward and showed the product collapsing at the moment it took off. Both formats are now matched, and the tape and the daily report reconcile to 0.000%.</p>
+</details>
 
 ## Top markets
 
