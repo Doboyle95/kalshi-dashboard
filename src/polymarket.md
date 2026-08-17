@@ -481,9 +481,9 @@ Plot.plot({
 
 <p class="chart-note">Bars are market counts on the left axis; the dark line is that day's void rate on the right. <strong>&ldquo;First side&rdquo; is the market's first-listed outcome, not a bet on it</strong> &mdash; across head-to-head types it wins about half the time, which is the check that the reading is right.</p>
 
-## Parlays
+## Combos (gated beta)
 
-<p class="section-intro">Polymarket US launched parlays &mdash; &ldquo;Combinatoric Athletic Outcome Contracts&rdquo; &mdash; on 2026-08-05. Volume went from under 100 contracts on the first day to 2.9 million within ten days.</p>
+<p class="section-intro">Multi-leg &ldquo;Combinatoric Athletic Outcome Contracts&rdquo;, first traded 2026-08-05. <strong>This is not a feature in the Polymarket US app</strong> &mdash; combos are an API-only beta open to explicitly enabled participants, so this is a small number of programmatic traders, not a retail launch.</p>
 
 ```js
 // Same toggle as Kalshi's parlay pages, and the same wording, so the two read alike.
@@ -547,10 +547,12 @@ Plot.plot({
 })
 ```
 
-<p class="chart-note">${fmtCount(parlayTotal)} contracts and ${fmtUSD0(parlayStakeTotal)} staked since launch, peaking at ${parlayPeak.pct.toFixed(2)}% of the venue's volume on ${fmtDate(parlayPeak.date)}. <strong>Stakes are dollars, volume is contracts</strong> &mdash; a parlay averages about 15&cent;, so the two axes move differently.</p>
+<p class="chart-note">${fmtCount(parlayTotal)} contracts but only ${fmtUSD0(parlayStakeTotal)} staked since launch, peaking at ${parlayPeak.pct.toFixed(2)}% of the venue's volume on ${fmtDate(parlayPeak.date)}. <strong>Stakes are dollars, volume is contracts</strong> &mdash; a parlay averages about 15&cent;, so the two axes move differently.</p>
 
 <details class="surface-card compact-details">
-  <summary>About parlays here — read before quoting any number</summary>
+  <summary>About combos here — read before quoting any number</summary>
+  <p><strong>Do not read this as a Kalshi-style parlay product.</strong> Polymarket's own documentation calls the Combos API a beta "available only to explicitly enabled Retail API users", and a combo is a user-defined instrument of 2–10 legs created on demand through the API rather than a listed market anyone can browse. That is why these never appear in the app, why the venue's own market catalogue contains none of them, and why the public search cannot find one: each is minted against a hash of its legs and is addressable only once it exists. Kalshi's parlays are a consumer feature; these are a programmatic facility, and putting the two share numbers side by side compares different things.</p>
+  <p><strong>The contract count flatters it and the dollar figure does not.</strong> Combining legs multiplies their probabilities, so most combos price at a fraction of a cent and a small bet books as an enormous number of contracts. On 2026-08-15 the single largest combo trade was <strong>94,340 contracts at $0.004 — a $377 bet</strong>, and the second largest was 56,610 contracts for $57. Trades at 5&cent; or less were 69% of that day's contracts and 5.9% of its stake. Across the whole period the ${fmtCount(parlayTotal)} contracts here are ${fmtUSD0(parlayStakeTotal)} of actual money, under 1% of the venue's executed value even on the busiest day. <strong>Read the stakes toggle for scale; the volume toggle measures cheapness as much as activity.</strong> It is not concentration in a few hands — 2,586 distinct combos traded that day — it is the pricing.</p>
   <p><strong>These are dated by when the trade happened, not by which file carried it.</strong> The venue's tape is named for its reporting date and holds the prior session's trades, so grouping by filename would reproduce the daily report's clearing-date series and discard the one thing the tape knows that the report does not. On transaction date, parlay trading is visible from 2026-08-05, a day before the product's first report row.</p>
   <p><strong>Parlays can be sized but never decomposed.</strong> No public endpoint resolves a combo's legs, and combos appear in none of the 447,767 markets in the venue's own catalogue, so there is no leg count, no correlation classification and no comparison with Kalshi's leg-length distribution. Everything here is the outside of the product.</p>
   <p><strong>The published series was wrong until 2026-08-17 and this is the corrected one.</strong> The venue publishes parlays under two symbol formats — a bare aggregate row per maturity from 08-06, and one row per individual parlay from 08-12 — and the producer matched only the first. It therefore read zero from 08-15 onward and showed the product collapsing at the moment it took off. Both formats are now matched, and the tape and the daily report reconcile to 0.000%.</p>
