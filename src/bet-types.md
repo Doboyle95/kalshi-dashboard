@@ -2,11 +2,11 @@
 title: Bet Types
 ---
 
-# Is Kalshi's sports book shaped like a sportsbook?
+# What bet types actually trade, by venue
 
-<p class="page-lead">A sportsbook runs on four shapes: the moneyline, the spread, the total, and the prop &mdash; plus the parlay stitched out of them. Kalshi's own <a href="./categories">categories page</a> shows that split for Kalshi alone. This page puts the same split next to the three venues that publish enough to answer it, two of which are the sportsbooks themselves: <strong>DKeX is DraftKings</strong> and <strong>Underdog is Underdog Fantasy</strong>. The answer is that Kalshi's book is not shaped like theirs, and the gap is concentrated in exactly the two shapes a sportsbook depends on most.</p>
+<p class="page-lead">The moneyline, spread, total, prop and parlay split of contracts traded at five venues over the same 30 days. This is what customers bet on, not what a venue is: season, listings and liquidity move the mix as much as product design does.</p>
 
-<div class="instruction-line"><strong>The four venues do not share a vocabulary, so the mapping comes first.</strong> Kalshi says <em>Over/Under</em> where DraftKings and Underdog say <em>Total</em>; Underdog mints a fresh <code>Combo-&lt;hash&gt;</code> label for every parlay it books; Novig publishes no bet-type field at all and has to be decoded from its ticker. Every one of those decisions is set out in <a href="#what-each-bucket-is-made-of">what each bucket is made of</a>, with the venue's own label carried through so any of them can be undone.</div>
+<div class="instruction-line"><strong>The five venues do not share a vocabulary, so the mapping comes first.</strong> Kalshi says <em>Over/Under</em> where DraftKings and Underdog say <em>Total</em>; Underdog mints a fresh <code>Combo-&lt;hash&gt;</code> label for every parlay it books; Novig publishes no bet-type field at all and has to be decoded from its ticker. Every one of those decisions is set out in <a href="#what-each-bucket-is-made-of">what each bucket is made of</a>, with the venue's own label carried through so any of them can be undone.</div>
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
@@ -44,10 +44,11 @@ const BC = {
 };
 
 // Venue colours follow the ENTITY, site-wide.
-const VC = {"Kalshi": "#00C2A8", "DKeX": "#F97316", "Underdog": "#EAB308", "Novig": "#6366F1"};
-const VENUE_ORDER = ["Kalshi", "DKeX", "Underdog", "Novig"];
+const VC = {"Kalshi": "#00C2A8", "Polymarket US": "#3B7DD8", "DKeX": "#F97316", "Underdog": "#EAB308", "Novig": "#6366F1"};
+const VENUE_ORDER = ["Kalshi", "Polymarket US", "DKeX", "Underdog", "Novig"];
 const VENUE_LONG = {
   "Kalshi": "Kalshi",
+  "Polymarket US": "Polymarket US",
   "DKeX": "DKeX (DraftKings)",
   "Underdog": "Underdog Exchange",
   "Novig": "Novig"
@@ -62,7 +63,7 @@ const win = raw.filter(r => inWin(r.date) && (+r.contracts || 0) > 0);
 
 // Per venue: total, share by bucket, and the dates it actually covers INSIDE the
 // window. The coverage count is carried through to every caption rather than being
-// assumed, because two of these four venues do not span the window.
+// assumed, because two of these five venues do not span the window.
 const perVenue = VENUE_ORDER.map(venue => {
   const rows = win.filter(r => r.venue === venue);
   const tot = d3.sum(rows, r => +r.contracts || 0);
@@ -230,7 +231,7 @@ Plot.plot({
 
 ## Window coverage
 
-<div class="instruction-line">Two of the four venues do not span the window, and their bars above are therefore a shorter reading with a 30-day label. Nothing is extrapolated to fill the gap.</div>
+<div class="instruction-line">Two of the five venues do not span the window, and their bars above are therefore a shorter reading with a 30-day label. Nothing is extrapolated to fill the gap.</div>
 
 ```js
 Inputs.table(
@@ -277,15 +278,15 @@ Inputs.table(mapping, {
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Three mappings are judgement calls and all three are visible in that table. DKeX's <code>Draw/Win</code> is a three-way soccer match result and is counted as a moneyline, the same as Novig's <code>MONEYLINE_3_WAY_WIN</code>. Underdog's <code>Matchwin</code> is a tennis match winner and is counted the same way. Kalshi's <code>Futures/Award</code> is <em>not</em> a moneyline &mdash; a season champion is an outright, not a game result &mdash; and sits in Other alongside Novig's <code>SUPER_BOWL_WINNER</code> and <code>WORLD_SERIES_WINNER</code>.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The judgement calls are all visible in that table. DKeX's <code>Draw/Win</code>, Novig's <code>MONEYLINE_3_WAY_WIN</code> and Polymarket US's <code>drawable_outcome</code> are three-way soccer match results and are counted as moneylines; Underdog's <code>Matchwin</code> is a tennis match winner and is counted the same way. Kalshi's <code>Futures/Award</code> and Polymarket US's <code>futures</code> are <em>not</em> moneylines &mdash; a season champion is an outright, not a game result &mdash; and sit in Other alongside Novig's <code>SUPER_BOWL_WINNER</code> and <code>WORLD_SERIES_WINNER</code>.</div>
 
 ## What this page cannot show
 
-<div class="instruction-line"><strong>Six of the site's ten venues are absent, and none of them is absent by accident.</strong> A venue appears here only if it publishes a bet type per market <em>and</em> a date to window it by. Listing them is the point: a four-venue chart that quietly implied it was the whole market would be worse than no chart.</div>
+<div class="instruction-line"><strong>Five of the site's ten venues are absent, and none of them is absent by accident.</strong> A venue appears here only if it publishes a bet type per market <em>and</em> a date to window it by. Listing them is the point: a five-venue chart that quietly implied it was the whole market would be worse than no chart.</div>
 
 <div class="surface-card compact-details" style="padding:0.9rem 1.1rem">
-<p style="margin:0 0 .5rem"><strong>ProphetX</strong> &mdash; the near miss, and the best candidate for the next version. Its per-market file stamps <code>market_type</code> as the constant string <code>market</code>, so the field is unusable. The bet type <em>is</em> recoverable by decoding its fixture-key grammar (<code>·S/-1.5</code> is a spread, <code>·T/O/8.5</code> a total, <code>ML3</code> a three-way moneyline), but only from a leaderboard that is all-time and capped at its top 1,000 markets &mdash; it cannot be windowed, and an all-time bar next to four windowed ones is the exact false comparison this page is built to avoid. Its <em>parlay</em> share alone is windowed and daily, on <a href="./parlay-venues">Cross-Venue Parlays</a>.</p>
-<p style="margin:0 0 .5rem"><strong>Polymarket US, ForecastEx, Crypto.com/Nadex, Rothera</strong> &mdash; no bet-type field exists anywhere in these four feeds. They publish a category and a market title; nothing distinguishes a spread from a total from a moneyline without parsing English question text, which would be a guess dressed as data.</p>
+<p style="margin:0 0 .5rem"><strong>ProphetX</strong> &mdash; the near miss, and the best candidate for the next version. Its per-market file stamps <code>market_type</code> as the constant string <code>market</code>, so the field is unusable. The bet type <em>is</em> recoverable by decoding its fixture-key grammar (<code>·S/-1.5</code> is a spread, <code>·T/O/8.5</code> a total, <code>ML3</code> a three-way moneyline), but only from a leaderboard that is all-time and capped at its top 1,000 markets &mdash; it cannot be windowed, and an all-time bar next to five windowed ones is the exact false comparison this page is built to avoid. Its <em>parlay</em> share alone is windowed and daily, on <a href="./parlay-venues">Cross-Venue Parlays</a>.</p>
+<p style="margin:0 0 .5rem"><strong>ForecastEx, Crypto.com/Nadex, Rothera</strong> &mdash; no bet-type field exists anywhere in these three feeds. They publish a category and a market title; nothing distinguishes a spread from a total from a moneyline without parsing English question text, which would be a guess dressed as data.</p>
 <p style="margin:0"><strong>CME (FanDuel/DraftKings)</strong> &mdash; the feed is a daily aggregate of call and put volume and open interest. There is no per-market row of any kind, so no split of any kind is possible.</p>
 </div>
 
@@ -294,6 +295,7 @@ Inputs.table(mapping, {
   <p><strong>One window, everywhere: ${WIN_LO} to ${WIN_HI}</strong>, the same window <a href="./categories-venues">Cross-Venue Categories</a> uses. Nothing on this page is all-time and the difference is large: measured 2026-08-14, Kalshi's all-time mix is 45.25% moneyline and 31.21% parlay, against ${share("Kalshi", "Moneyline").toFixed(2)}% and ${share("Kalshi", "Parlay").toFixed(2)}% inside this window. Its parlay book grew across the period. An all-time Kalshi bar beside a two-month DKeX bar would be wrong about the largest bucket at the largest venue, so no all-time view is offered here at all.</p>
   <p><strong>Two venues do not span the window and are drawn short, not padded.</strong> Underdog's feed starts ${cover("Underdog", "first")} (${cover("Underdog", "days")} of ${winDays} days) and Novig launched in early August (${cover("Novig", "days")} of ${winDays} days). <strong>Novig's bar is a ten-day reading with a thirty-day label</strong> and should be treated as indicative. Both venues are also on a launch ramp, so their mix is weighted towards their most recent sessions.</p>
   <p><strong>These are shares of contracts, not dollars, and not comparable in level across venues.</strong> Each venue's <code>contracts</code> is its own one-side convention, carried through unchanged: Kalshi's contract count, DKeX's and Underdog's daily market-report volume, and Novig's one-side daily volume (its tape prints every trade twice, once as taker and once as maker, and the maker copy is excluded). Only the within-venue shares this page draws are comparable. Contract share also overweights cheap longshot markets, which flatters parlay and prop buckets at every venue that has them.</p>
+  <p><strong>Polymarket US spans all ${winDays} days, but its parlay bar does not.</strong> The venue launched parlays on 2026-08-12, so only the last two days of the window contain any &mdash; its ${share("Polymarket US", "Parlay").toFixed(3)}% is a launch artifact, not a settled level. Its bucket comes from the venue's own <code>market_type</code> field, joined to the daily market report on a symbol key that matches byte for byte, and its window total sits 0.018% above the venue's published headline volume &mdash; the same order as the DKeX and Underdog gaps described next, and for the same reason.</p>
   <p><strong>The DKeX and Underdog numbers come from those venues' daily <em>market</em> reports, not their time-and-sales tapes.</strong> The market report is the only one of the two that carries a market type at all. It disagrees with the tape by a small margin — over the dates in common, +0.018% at DKeX and +0.011% at Underdog — so totals here will not tie exactly to the headline volume on <a href="./dkex">DKeX</a> or <a href="./underdog">Underdog</a>. Every date reconciles to the <code>market_report_volume</code> column on those venues' own daily files exactly, and Kalshi and Novig reconcile exactly to <code>sports_market_type_daily.csv</code> and <code>novig_daily.csv</code> respectively.</p>
   <p><strong>"Other" is a residual, not a rounding.</strong> Nothing is renormalised: every contract of input volume lands in exactly one of the six buckets, and what does not fit the five sportsbook shapes is shown rather than removed. It is ${share("Kalshi", "Other").toFixed(2)}% at Kalshi &mdash; season futures, awards, esports, cricket, motorsport, and the venue's own "Other" &mdash; ${share("Novig", "Other").toFixed(2)}% at Novig, and exactly zero at DKeX and Underdog, whose published taxonomies have six and five labels and map completely. <strong>The two zeros in the Parlay and Prop columns are also real, not missing data:</strong> DKeX's daily market report contains no parlay contract at all, and Underdog's contains no player-prop contract under its own label.</p>
   <p><strong>Underdog's combo bucket is a black box, and it is ${share("Underdog", "Parlay").toFixed(1)}% of that venue.</strong> Underdog mints one ticker per parlay (<code>UDXCOMBO-&lt;hash&gt;</code>) carrying no sport code and no bet-type code, so the legs inside cannot be read. Underdog Fantasy's core product is player pick'em, so a large but unmeasurable share of that bucket is very likely prop-shaped &mdash; which means <strong>Underdog's 0% prop bar understates its real prop exposure</strong> and its combo bar is not like-for-like with Kalshi's parlay bar, whose legs <em>are</em> classified. The collapse rule that produces the bucket is the one <a href="./underdog">Underdog</a> already uses and verifies.</p>
