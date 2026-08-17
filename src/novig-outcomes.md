@@ -35,6 +35,7 @@ const summaryRows = await load("novig_pnl_summary.csv");
 const pnlDaily = await load("novig_pnl_daily.csv");
 const calib = await load("novig_calibration.csv");
 const fixtures = await load("novig_kalshi_same_fixture.csv");
+const games = await load("novig_game_leaderboard.csv");
 ```
 
 ```js
@@ -68,7 +69,7 @@ if (pnlDaily.length) {
   const rows = pnlDaily.slice().sort((a, b) => asDate(a.date) - asDate(b.date)).map(d => {
     cg += +d.gross_pnl || 0;
     cl += +d.net_pnl_lo || 0;
-    return {date: asDate(d.date), grossCum: cg, netLoCum: cl, gross: +d.gross_pnl || 0, contracts: +d.decisive_contracts || 0};
+    return {date: asDate(d.date), grossCum: cg, netLoCum: cl, makerCum: -cg, gross: +d.gross_pnl || 0, contracts: +d.decisive_contracts || 0};
   });
   display(Plot.plot({
     style: {fontFamily: "var(--font-sans)"}, width, height: 340, marginLeft: 72, marginBottom: 36,
@@ -78,17 +79,51 @@ if (pnlDaily.length) {
       Plot.areaY(rows, {x: "date", y1: "netLoCum", y2: "grossCum", fill: NV, fillOpacity: 0.14, curve: "monotone-x"}),
       Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
       Plot.line(rows, {x: "date", y: "grossCum", stroke: NV, strokeWidth: 2, curve: "monotone-x"}),
+      Plot.line(rows, {x: "date", y: "makerCum", stroke: "#1a9641", strokeWidth: 2, curve: "monotone-x"}),
       Plot.line(rows, {x: "date", y: "netLoCum", stroke: NV, strokeWidth: 1, strokeDasharray: "3,2", curve: "monotone-x"}),
       Plot.dot(rows, {x: "date", y: "grossCum", fill: NV, r: 2.5, tip: true,
-        title: d => `${fmtDate(d.date)}\ncumulative gross: ${fmtUSD(d.grossCum)}\ncumulative net (fee ceiling): ${fmtUSD(d.netLoCum)}\nthat day: ${fmtUSD(d.gross)} on ${fmtCount(d.contracts)} contracts`})
+        title: d => `${fmtDate(d.date)}\ntaker gross: ${fmtUSD(d.grossCum)}\nmaker: ${fmtUSD(d.makerCum)}\ntaker net (fee ceiling): ${fmtUSD(d.netLoCum)}\nthat day: ${fmtUSD(d.gross)} on ${fmtCount(d.contracts)} contracts`})
     ]
   }));
 }
 ```
 
 ```js
-if (pnlDaily.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Solid is gross; the dashed floor assumes every straight trade was in-game (the most the fee could be). The truth is between them, and closer to gross the more trading happens pre-game.</div>`);
+if (pnlDaily.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Blue is gross taker P&amp;L; the dashed floor is the most the live-straight fee could take off it. <span style="color:#1a9641;font-weight:600">Green is the maker side</span> — its exact mirror, and makers pay no fee, so Novig's liquidity providers made very nearly what takers lost.</div>`);
 ```
+
+## Biggest games
+
+<div class="instruction-line">The individual games Novig's moneyline takers won and lost the most on. The feed now carries real fixture names, so this is finally per game rather than per contract type. Flip winners and losers; search any team or league.</div>
+
+```js
+const gameDir = view(Inputs.radio(["Takers lost", "Takers won"], {value: "Takers lost", label: "Show"}));
+```
+
+```js
+const gameRows = games
+  .filter(d => d.game && Number.isFinite(+d.taker_pnl))
+  .filter(d => gameDir === "Takers won" ? +d.taker_pnl > 0 : +d.taker_pnl < 0)
+  .sort((a, b) => gameDir === "Takers won" ? +b.taker_pnl - +a.taker_pnl : +a.taker_pnl - +b.taker_pnl);
+```
+
+```js
+const gameSearch = view(Inputs.search(gameRows, {placeholder: "Search team or league…"}));
+```
+
+```js
+display(games.length
+  ? Inputs.table(gameSearch, {
+      columns: ["game", "game_date", "league", "contracts", "taker_pnl", "taker_pnl_per_contract", "winner"],
+      header: {game: "Game", game_date: "Date", league: "League", contracts: "Contracts", taker_pnl: "Taker P&L", taker_pnl_per_contract: "¢/contract", winner: "Won"},
+      format: {contracts: d => fmtCount(+d), taker_pnl: d => fmtUSD(+d), taker_pnl_per_contract: d => fmtCents(+d)},
+      align: {contracts: "right", taker_pnl: "right", taker_pnl_per_contract: "right"},
+      width: {game: 230}, rows: 14
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The game leaderboard series is not being served yet.</div>`);
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Moneyline, straight, taker-side only, over the ~two-week window; P&amp;L is gross. The maker side made the mirror of each figure. This is the Novig counterpart of Kalshi's market leaderboard, which its nameless market ids used to make impossible.</div>
 
 ## Are Novig's prices calibrated?
 
