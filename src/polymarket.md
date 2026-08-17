@@ -15,6 +15,7 @@ display(DataAttachment.marker);
 const catDaily  = await DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
 const split     = await DataAttachment("data/polymarket_sports_split_daily.csv").csv({typed: true});
 const mktType   = await DataAttachment("data/polymarket_market_type_daily.csv").csv({typed: true});
+const settlement = await DataAttachment("data/polymarket_settlement_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -23,7 +24,8 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "polymarket_categories_daily.csv"), meta: "Public Polymarket US files", tone: "competitor"},
-    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "polymarket_sports_split_daily.csv"), meta: "Derived from mapped categories", tone: "competitor"}
+    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "polymarket_sports_split_daily.csv"), meta: "Derived from mapped categories", tone: "competitor"},
+    {label: "Settlements", date: latestDate(settlement), updatedAt: fileUpdatedAt(freshness, "polymarket_settlement_daily.csv"), meta: "Outcome by event date, from the venue's market catalogue", tone: "competitor"}
   ],
   note: "Polymarket US is refreshed when public files are downloaded and rebuilt; it is not tied to the Kalshi near-live API collector."
 }));
@@ -386,6 +388,97 @@ polymarketProductView === "Contract types" && mtFrom
   ? html`<p class="chart-note">Starts ${fmtDate(mtFrom)}, the first day the venue tagged 90% of its volume with a specific contract type &mdash; earlier days carry one generic label and would chart its metadata rollout, not its book. <strong>Other contract types</strong> is a real residual and includes the venue's own unclassified bucket.</p>`
   : null
 ```
+
+## Settlements
+
+<p class="section-intro">How markets resolved, by the day the outcome was decided. A void is the paired $0.50 refund both sides receive when an event is cancelled or postponed &mdash; counted separately, never as a win.</p>
+
+```js
+// Sibling of the DKeX settlement chart and deliberately the same shape.
+//
+// THE DATE IS AN EVENT DATE. The venue's catalogue carries no settlement timestamp
+// (updated_at is the bulk export stamp; 390,591 of 447,767 rows share one day), so the
+// producer keys on the ET calendar date of game_start_time -- the day the outcome was
+// decided. Scored against the daily market report's own settlement date it lands within
+// one day 98.04% of the time. It is NOT a settlement-report date and is not labelled one.
+const settlementByDate = Array.from(
+  d3.rollup(settlement, rows => ({
+    date: rows[0].date,
+    settlements:   d3.sum(rows, d => d.settlements   || 0),
+    settled_yes:   d3.sum(rows, d => d.settled_yes   || 0),
+    settled_no:    d3.sum(rows, d => d.settled_no    || 0),
+    settled_void:  d3.sum(rows, d => d.settled_void  || 0),
+    settled_other: d3.sum(rows, d => d.settled_other || 0)
+  }), d => +d.date),
+  ([, v]) => v
+).sort((a, b) => a.date - b.date);
+
+// "yes" is the FIRST-NAMED side settling at 1.00, which is the reading the published
+// polymarket_market_leaderboard.csv already uses for this venue. It was measured, not
+// assumed: the report's single Settlement Price equals the first side's value on
+// 99.3652% of the 270,328 markets where both sources reached a terminal value.
+const settlementTidy = settlementByDate.flatMap(d => [
+  {date: d.date, outcome: "First side won",  count: d.settled_yes   || 0},
+  {date: d.date, outcome: "First side lost", count: d.settled_no    || 0},
+  {date: d.date, outcome: "Voided ($0.50)",  count: d.settled_void  || 0},
+  {date: d.date, outcome: "Other",           count: d.settled_other || 0}
+]);
+
+// Void rate is derived here rather than read from a column: unlike DKeX, this venue
+// publishes no daily file carrying one, and inventing a second definition elsewhere is
+// how two numbers drift apart.
+const settlementScaleMax = d3.max(settlementByDate, d => d.settlements) || 1;
+const voidRateScaled = settlementByDate
+  .filter(d => (d.settlements || 0) > 0)
+  .map(d => ({date: d.date, void_rate: d.settled_void / d.settlements,
+              scaled: (d.settled_void / d.settlements) * settlementScaleMax}));
+const fmtPct2 = n => n == null || Number.isNaN(+n) ? "" : (100 * +n).toFixed(2) + "%";
+```
+
+```js
+// The page's own brush helper keys on `contracts_total`; map settlement counts into that
+// shape rather than importing a second brush component.
+const brushSettle = view(makeBrush(
+  settlementByDate.map(d => ({date: d.date, contracts_total: d.settlements})), "#3B7DD8"));
+```
+
+```js
+const [sT, eT] = brushSettle;
+const settlementTidyBrushed = settlementTidy.filter(d => d.date >= sT && d.date <= eT);
+const voidRateBrushed = voidRateScaled.filter(d => d.date >= sT && d.date <= eT);
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 280,
+  marginLeft: 70,
+  marginRight: 64,
+  x: {type: "utc", label: null},
+  y: {label: "Markets settled", grid: true, tickFormat: d => fmtAxisNum(d)},
+  color: {legend: true,
+          domain: ["First side won", "First side lost", "Voided ($0.50)", "Other"],
+          range: ["#1a9641", "#d7191c", "#fdae61", "#9ca3af"]},
+  marks: [
+    Plot.rectY(settlementTidyBrushed, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: "count", fill: "outcome", tip: true,
+      title: d => `${fmtDate(d.date)}\n${d.outcome}: ${fmtCount(d.count)}`
+    }),
+    Plot.lineY(voidRateBrushed, {x: "date", y: "scaled", stroke: "#111827", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(voidRateBrushed, {
+      x: "date", y: "scaled", r: 2.5, fill: "#111827", tip: true,
+      title: d => `${fmtDate(d.date)}\nVoid rate: ${fmtPct2(d.void_rate)}`
+    }),
+    Plot.axisY({anchor: "right", label: "Void rate", tickFormat: d => `${Math.round(100 * d / settlementScaleMax)}%`}),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+<p class="chart-note">Bars are market counts on the left axis; the dark line is that day's void rate on the right. <strong>&ldquo;First side&rdquo; is the market's first-listed outcome, not a bet on it</strong> &mdash; across head-to-head types it wins about half the time, which is the check that the reading is right.</p>
 
 ## Top markets
 
