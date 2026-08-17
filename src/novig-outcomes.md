@@ -34,6 +34,7 @@ const load = async name => {
 const summaryRows = await load("novig_pnl_summary.csv");
 const pnlDaily = await load("novig_pnl_daily.csv");
 const calib = await load("novig_calibration.csv");
+const fixtures = await load("novig_kalshi_same_fixture.csv");
 ```
 
 ```js
@@ -120,6 +121,49 @@ if (calib.length) {
 if (calib.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Bars are ±2 fixture-clustered standard errors; a bar spanning the diagonal is not distinguishable from a fair price. The price paid is used, not the bin midpoint, so the tails are not flattered.</div>`);
 ```
 
+## Same game, two venues
+
+<div class="instruction-line">Pre-game moneyline price — the last trade before first pitch — for the same MLB game on Novig and Kalshi. Points on the diagonal mean the two books agreed.</div>
+
+```js
+const fxRows = fixtures.filter(d => d.prob_diff != null && Number.isFinite(+d.prob_diff) && d.kalshi_home_prob != null && d.novig_home_prob != null);
+const fxGaps = fxRows.map(d => Math.abs(+d.prob_diff)).sort((a, b) => a - b);
+const fxMed = fxGaps.length ? fxGaps[Math.floor(fxGaps.length / 2)] : null;
+const fxWithin1 = fxRows.length ? fxRows.filter(d => Math.abs(+d.prob_diff) <= 0.01).length / fxRows.length : null;
+const fxRatios = fxRows.filter(d => +d.novig_contracts > 0 && +d.kalshi_contracts > 0).map(d => +d.kalshi_contracts / +d.novig_contracts).sort((a, b) => a - b);
+const fxVolMult = fxRatios.length ? fxRatios[Math.floor(fxRatios.length / 2)] : null;
+```
+
+```js
+display(fxRows.length
+  ? html`<div class="grid grid-cols-4">
+      <div class="card"><h2>MLB games compared</h2><span class="big">${fxRows.length}</span><span class="muted">both venues priced pre-game</span></div>
+      <div class="card"><h2>Median price gap</h2><span class="big">${(100 * fxMed).toFixed(2)}¢</span><span class="muted">on P(home win)</span></div>
+      <div class="card"><h2>Agree within 1¢</h2><span class="big">${Math.round(100 * fxWithin1)}%</span><span class="muted">of games</span></div>
+      <div class="card"><h2>Kalshi volume</h2><span class="big">${fxVolMult == null ? "—" : "~" + fxVolMult.toFixed(0) + "×"}</span><span class="muted">Novig's, per game (median)</span></div>
+    </div>`
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The same-game comparison series is not being served yet.</div>`);
+```
+
+```js
+if (fxRows.length) display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: Math.max(360, Math.min(520, width * 0.7)),
+  marginLeft: 58, marginBottom: 46, aspectRatio: 1,
+  x: {label: "Kalshi pre-game P(home win)", domain: [0.2, 0.8], tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
+  y: {label: "Novig pre-game P(home win)", domain: [0.2, 0.8], tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
+  r: {range: [2, 10]},
+  marks: [
+    Plot.line([{x: 0.2, y: 0.2}, {x: 0.8, y: 0.8}], {x: "x", y: "y", stroke: "var(--theme-foreground-muted)", strokeDasharray: "4,3", strokeWidth: 1.5}),
+    Plot.dot(fxRows, {x: d => +d.kalshi_home_prob, y: d => +d.novig_home_prob, r: d => +d.novig_contracts + +d.kalshi_contracts, fill: NV, fillOpacity: 0.5, stroke: "var(--theme-background)", strokeWidth: 0.6, tip: true,
+      title: d => `${d.away_team} @ ${d.home_team}\n${d.game_date}\nKalshi ${(100 * +d.kalshi_home_prob).toFixed(1)}% · Novig ${(100 * +d.novig_home_prob).toFixed(1)}%\ngap ${+d.prob_diff >= 0 ? "+" : "−"}${Math.abs(100 * +d.prob_diff).toFixed(1)}¢\nNovig ${fmtCount(+d.novig_contracts)} · Kalshi ${fmtCount(+d.kalshi_contracts)} contracts`})
+  ]
+}));
+```
+
+```js
+if (fxRows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The two books price the same MLB games almost identically — within a cent on ${Math.round(100 * fxWithin1)}% of games — though Kalshi trades roughly ${fxVolMult == null ? "many" : fxVolMult.toFixed(0)}× Novig's contracts per game. Straight moneylines only; price is the last trade before first pitch, as the home team's win probability. Dots are sized by combined volume.</div>`);
+```
+
 <details class="surface-card compact-details">
   <summary>About this page — read before quoting any number</summary>
   <p><strong>Straight contracts only, and this is not a rounding caveat.</strong> Novig's parlays are quoted by request and never become book markets, so not one of them resolves in the feed. They are ${S ? `${(+S.parlay_share_contracts).toFixed(0)}% of taker contracts (and only ${(+S.parlay_share_dollars).toFixed(0)}% of taker dollars — parlay contracts are cheap longshots)` : "about a third of taker contracts, and only a few percent of taker dollars"}, so everything here covers roughly the straight ${S ? (100 - +S.parlay_share_contracts).toFixed(0) : "60"}% of contract volume. It is never a venue-wide figure.</p>
@@ -128,6 +172,7 @@ if (calib.length) display(html`<div class="instruction-line" style="border-left-
   <p><strong>The status column is free text.</strong> It holds WIN, LOSS and TBD <em>and</em> numeric fair-value prices in one column; a naive equality filter would score every fair-value settlement as a loss. Decisive WIN/LOSS contracts drive both charts; the ${S ? fmtCount(+S.fmv_contracts) : "few"} fair-value-settled contracts are P&amp;L-computable (${S ? fmtUSD(+S.fmv_pnl) : "a small amount"}, folded into the daily gross) but have no binary outcome, so they are excluded from calibration.</p>
   <p><strong>Measurability.</strong> Thousands of prints on one game share a single outcome, so the standard error clusters on the fixture, not the print. ${S ? html`The whole-sample loss of <strong>${fmtCents(+S.gross_per_contract)}</strong> per contract stands at t = ${(+S.t_stat).toFixed(2)} against a fixture-clustered SE of ${(100 * +S.se_clustered).toFixed(3)}¢` : "The whole-sample loss is tested against a fixture-clustered standard error"} — ${S && +S.measurable ? "it clears two, so the edge is real, if modest" : "read the card above for whether it clears two"}. Individual price bins are noisier and most do not clear on their own; that is expected across twenty bins and is why the venue-level test is the one that decides.</p>
   <p><strong>A short, forward-only history.</strong> Novig regenerated every identifier at its 2026-08-04 move to a CFTC-regulated exchange, so nothing joins before then and the series is about two weeks long — expected, not a gap. Settlement is read from the current snapshot; a daily re-pull can re-grade a market, so history can shift slightly. The GraphQL source is announced as sunsetting, and the model here is written so the transport can later move to Novig's keyed API without changing what these charts show.</p>
+  <p><strong>The same-game comparison is a constructed join.</strong> Kalshi publishes no fixture id, so games are matched on date and unordered team pair through a hand-checked team crosswalk — MLB only, and it covers the games both venues list. Each side's price is the last straight moneyline trade strictly before the scheduled first pitch: one pre-game snapshot, not a close. Volume is one-sided contracts on each venue's own convention, so the ratio is indicative, not a like-for-like count.</p>
 </details>
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: this series next to every other venue on <a href="./pnl-venues">Cross-Venue P&amp;L</a> and <a href="./compare-accuracy">Accuracy &amp; Outcomes</a>; Novig's volume, fees and parlay length on <a href="./novig">Novig · Activity</a>.</div>
