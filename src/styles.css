@@ -2841,3 +2841,15 @@ svg[class^="plot-"] g[aria-label="tip"] text {
     row-gap: var(--space-2);
   }
 }
+
+/* Framework's print rules hide the sidebar and footer but know nothing about the
+   header slot, so the venue nav card printed on all 18 venue pages -- as a bordered
+   tinted box with a dropdown arrow, on every page of the printout. The theme toggle
+   is position:fixed and printed over the content for the same reason.
+   Neither is meaningful on paper. */
+@media print {
+  #observablehq-header,
+  .theme-toggle {
+    display: none !important;
+  }
+}

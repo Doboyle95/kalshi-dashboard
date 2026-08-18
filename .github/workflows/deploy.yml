@@ -42,7 +42,14 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        # npm ci, not npm install: it installs exactly the lockfile (framework
+        # 1.13.4) and cannot rewrite it. package.json still carries the range
+        # ^1.4.0, so npm install would re-resolve on EVERY deploy and silently
+        # adopt any future 1.x. The venue-nav layout overrides in styles.css
+        # target selectors inside the framework's own style/layout.css
+        # (#observablehq-header and its ~ sibling offsets), so a minor bump can
+        # break the site chrome with no build error and nothing to alert on.
+        run: npm ci
 
       - name: Test external data contracts
         run: npm run test:data-transport

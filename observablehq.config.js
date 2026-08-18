@@ -64,9 +64,11 @@ const VENUES = [
   ]},
   // /polymarket-calibration was built and URL-reachable but absent from every nav.
   // It is a live page, so it becomes Polymarket's Outcomes tab rather than staying
-  // orphaned. The remaining orphans (bet-types, calibration, parlay-venues,
-  // pnl-venues, robinhood) are deliberately NOT wired up: two are "has moved"
-  // tombstones and the rest are a pending keep-or-cut decision.
+  // orphaned. SEVEN orphans remain and are deliberately NOT wired up:
+  // calibration-venues and competitors are "has moved" tombstones; bet-types,
+  // calibration, parlay-venues, pnl-venues and robinhood are a pending
+  // keep-or-cut decision. (An earlier version of this comment listed five and
+  // then said "two are tombstones" -- the two were the ones it had omitted.)
   {name: "Polymarket US", accent: "polymarket", tabs: [
     ["Activity", "/polymarket"],
     ["Outcomes", "/polymarket-calibration"]
@@ -102,6 +104,11 @@ const escapeHtml = (v) =>
 }
 
 function venueNavHeader({path}) {
+  // NOTE /chat: it falls through this lookup and so gets no header, but only by
+  // accident of not being a venue. It is the page with three separate silent-
+  // failure incidents behind it, so if this ever grows a non-venue branch (a
+  // filter bar on compare pages, say), exclude /chat BY NAME rather than
+  // relying on it falling through again.
   const current = VENUES.find((v) => v.tabs.some(([, p]) => p === path));
   if (!current) return null; // every non-venue page gets no header at all
 
