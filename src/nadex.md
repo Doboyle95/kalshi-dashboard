@@ -232,6 +232,105 @@ Plot.plot({
 })
 ```
 
+## Parlay P&L
+
+<p class="section-intro">One of the few venues on this site with real parlay P&amp;L — every contract priced at what was actually paid, net of fees. CDNA's 2&cent;-per-contract fee is larger than the trading loss itself: 1.15&cent; gross becomes 3.15&cent; net.</p>
+
+```js
+const pdSorted = parlayDaily
+  .map(d => ({
+    ...d,
+    // typed:true turns the date column into a Date; everything below wants one.
+    date: d.date instanceof Date ? d.date : new Date(String(d.date)),
+    prov: String(d.is_provisional) === "true"
+  }))
+  .sort((a, b) => a.date - b.date);
+
+// Cumulative is built here rather than in the producer so the two charts can never
+// disagree about which days they include.
+let _c = 0;
+const pdCumul = pdSorted.map(d => {
+  _c += +d.gross_pnl;
+  return {...d, cumul: _c};
+});
+
+const pdTotal = _c;
+const pdContracts = d3.sum(pdSorted, d => +d.contracts_settled);
+const pdParlays = d3.sum(pdSorted, d => +d.parlays_settled);
+const pdProv = pdSorted.filter(d => d.prov).length;
+const fmtM = d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(2) + "M"
+                       : Math.abs(d) >= 1e3 ? (d / 1e3).toFixed(0) + "k"
+                       : d.toFixed(0));
+const nadexPnlDateSel = Mutable([d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)]);
+display(renderDateBrush({
+  data: pdSorted.map(d => ({date: d.date, value: Math.abs(+d.gross_pnl) || 0})),
+  initialRange: [d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)],
+  onSelect: range => { nadexPnlDateSel.value = range; },
+  color: "#9c27b0",
+  width
+}));
+```
+
+```js
+const [nadexPnlFrom, nadexPnlTo] = nadexPnlDateSel;
+const pdSortedBrushed = pdSorted.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
+const pdCumulBrushed = pdCumul.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
+```
+
+<div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(pdTotal)}</strong> gross &mdash; ${(100 * pdTotal / pdContracts).toFixed(3)}&cent; per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
+  x: {type: "utc", label: null},
+  y: {label: "Daily parlay P&L, gross (USD)", grid: true,
+      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  marks: [
+    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.2}),
+    // Colour carries DIRECTION (did the bettor win that day), opacity carries how much
+    // of the day the window can actually account for. Solid throughout: a faded bar is
+    // a weaker reading, never a missing one.
+    Plot.rectY(pdSortedBrushed, {
+      x: "date", interval: "day", y: "gross_pnl",
+      fill: d => +d.gross_pnl > 0 ? "#1a9641" : "#d7191c",
+      fillOpacity: d => d.prov ? 0.4 : 0.92,
+      title: d => `${d.date.toISOString().slice(0, 10)}${d.prov ? " — PROVISIONAL" : ""}
+Gross P&L: ${fmtM(+d.gross_pnl)}
+Staked: ${fmtM(+d.stake_usd)}
+${(+d.contracts_settled).toLocaleString()} contracts on ${(+d.parlays_settled).toLocaleString()} parlays
+${(+d.gross_pnl_cents_per_contract).toFixed(2)}¢ per contract
+Coverage: ${(+d.coverage_pct).toFixed(1)}%`,
+      tip: true
+    })
+  ]
+})
+```
+
+_Green days are days the parlay bettors came out ahead; red days they did not. Because a parlay is settled as one contract, a single large winning combo can turn a day green on its own._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative parlay P&L, gross (USD)", grid: true,
+      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  marks: [
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
+    Plot.areaY(pdCumulBrushed, {x: "date", y: "cumul", fill: "#9c27b0", fillOpacity: 0.12}),
+    Plot.line(pdCumulBrushed, {x: "date", y: "cumul", stroke: "#9c27b0", strokeWidth: 2}),
+    Plot.dot(pdCumulBrushed, {
+      x: "date", y: "cumul", r: 9, fill: "transparent",
+      title: d => `${d.date.toISOString().slice(0, 10)}
+Cumulative: ${fmtM(d.cumul)}
+That day: ${fmtM(+d.gross_pnl)}`,
+      tip: true
+    })
+  ]
+})
+```
+
+<div class="instruction-line">The line goes one way, but not smoothly, and the bumps are the interesting part. <strong>The cumulative total did climb above zero on five separate days, peaking at &plus;&dollar;701k</strong> &mdash; every one of them inside the provisional opening fortnight, and driven by single days like 23 June that returned &plus;&dollar;2.0M against a typical daily swing nearer &plusmn;&dollar;300k. That is one or two large combos landing, and it is exactly the variance a parlay book is built on. Once coverage is complete the line never crosses back above zero. The shape matches Kalshi's parlay book and is the expected one: a parlay's price is the product of its legs plus the house's margin on each, so the edge compounds with every leg added. Crypto.com's buyers lose <strong>${(100 * pdTotal / pdContracts).toFixed(2)}&cent; per contract</strong> against Kalshi parlay takers' 1.82&cent; and Kalshi single-market takers' 1.21&cent; &mdash; but read that gap carefully, because this figure is gross and the Kalshi ones are net of fees.</div>
+
 ## Sports vs. non-sports
 
 <p class="section-intro">Sports against everything else — sports carries all but a handful of days. Almost everything on the other side is the COMBOS parlay line, split out here so the rest is actually visible.</p>
