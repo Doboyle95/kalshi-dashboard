@@ -234,7 +234,7 @@ Plot.plot({
 
 ## Parlay P&L
 
-<p class="section-intro">One of the few venues on this site with real parlay P&amp;L — every contract priced at what was actually paid, net of fees. CDNA's 2&cent;-per-contract fee is larger than the trading loss itself: 1.15&cent; gross becomes 3.15&cent; net.</p>
+<p class="section-intro">Real parlay P&amp;L, net of fees: CDNA's 2&cent; fee exceeds the trading loss, so 1.15&cent; gross becomes 3.15&cent; net.</p>
 
 ```js
 const pdSorted = parlayDaily

@@ -172,7 +172,7 @@ Plot.plot({
 
 ## League mix
 
-<p class="section-intro">Volume by league. MLB is the majority, but NPB (Japan) and KBO (Korea) together are about a third of the venue.</p>
+<p class="section-intro">MLB leads; NPB and KBO together are about a third.</p>
 
 ```js
 const brushLeague = view(makeBrush(split, DKEX));
