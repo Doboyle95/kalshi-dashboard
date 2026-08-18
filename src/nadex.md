@@ -234,8 +234,6 @@ Plot.plot({
 
 ## Parlay P&L
 
-<p class="section-intro">Real parlay P&amp;L, net of fees: CDNA's 2&cent; fee exceeds the trading loss, so 1.15&cent; gross becomes 3.15&cent; net.</p>
-
 ```js
 const pdSorted = parlayDaily
   .map(d => ({
