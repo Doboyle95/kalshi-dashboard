@@ -523,116 +523,6 @@ function clearPinnedCategories() {
 
 ```
 
-## All-time leaderboard
-
-<p class="section-intro">The quickest read on which markets dominate by volume or fees in the window you pick — the starting point before you drill into the map below.</p>
-
-<div class="control-strip">
-
-```js
-// Dollar-value metrics dropped here — for a flow-style metric prefer taker-side
-// volume, which has its own page. Sorting categories by gross dollar value is
-// rarely the right comparison since it conflates contract count with price level.
-const metric = view(hashInput("metric", Inputs.radio(["contracts", "fees"], {
-  label: "Metric",
-  value: hashGet("metric", "contracts"),
-  format: m => m === "contracts" ? "Volume" : "Fees"
-})));
-const showSports = view(hashInput("sports", Inputs.radio(["All", "Sports only", "Non-sports only"], {
-  label: "Filter",
-  value: hashGet("sports", "All")
-})));
-```
-
-</div>
-
-```js
-// Date brush replaces the old From/To text inputs. Default Jan 1 2025 → latest.
-// Mutable + brush in same cell so callback captures the wrapper (see notes
-// in parlay.md / categories.md treemap brush).
-const lbMinDate = d3.min(topDaily, d => d.date);
-const lbMaxDate = d3.max(topDaily, d => d.date);
-const lbDateSel = Mutable([
-  new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
-  lbMaxDate
-]);
-const lbSparkData = topDaily.map(d => ({
-  date: d.date,
-  value: Object.keys(d).filter(k => k !== "date").reduce((a, k) => a + (+d[k] || 0), 0)
-}));
-display(renderDateBrush({
-  data: lbSparkData,
-  dateAccessor: d => d.date,
-  valueAccessor: d => d.value,
-  initialRange: [
-    new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
-    lbMaxDate
-  ],
-  onSelect: r => { lbDateSel.value = r; },
-  color: "var(--accent-kalshi)",
-  width
-}));
-```
-
-```js
-const catCols = Object.keys(topDaily[0]).filter(k => k !== "date");
-
-const [cutoff, cutoffTo] = lbDateSel;
-// "All time" path uses the full leaderboard (every ticker, not just the
-// top 15 in topDaily). Detect that the brush covers the full data span.
-const isAllTime = +cutoff <= +lbMinDate && +cutoffTo >= +lbMaxDate;
-
-// Aggregate contracts from daily data for the selected period (top 15 tickers)
-const dailyAgg = catCols.map(cat => {
-  const total = topDaily
-    .filter(d => d.date >= cutoff && d.date <= cutoffTo)
-    .reduce((s, r) => s + (+r[cat] || 0), 0);
-  const meta = leaderboard.find(l => l.report_ticker === cat) || {};
-  return {
-    report_ticker: cat,
-    contracts: total,
-    fees: (meta.fees || 0) * (total / (meta.contracts || 1)),
-    is_sports: meta.is_sports ?? "FALSE"
-  };
-}).filter(d => d.contracts > 0);
-
-// Full leaderboard for all-time span; aggregated daily for any date filter
-const source = isAllTime ? leaderboard : dailyAgg;
-
-const filtered = source
-  .filter(d => showSports === "All" ? true : showSports === "Sports only" ? d.is_sports === "TRUE" : d.is_sports === "FALSE")
-  .sort((a, b) => b[metric] - a[metric])
-  .slice(0, 25);
-```
-
-```js
-Plot.plot({
-  width,
-  height: filtered.length * 22 + 40,
-  marginLeft: 220,
-  x: {label: metric === "contracts" ? "Volume (contracts)" : "Fees ($)", grid: true,
-      tickFormat: d => (metric === "fees" ? "$" : "") + fmtCount(d)},
-  y: {label: null},
-  marks: [
-    Plot.barX(filtered, {
-      x: metric,
-      y: "report_ticker",
-      fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#00C2A8",
-      sort: {y: "-x"},
-      tip: true,
-      title: d => `${d.report_ticker}\n${metric === "contracts" ? fmtCount(d[metric]) + " contracts" : "$" + fmtCount(d[metric])}\nSports: ${d.is_sports}`
-    }),
-    Plot.ruleX([0])
-  ]
-})
-```
-
-<span style="color:#1a9641">Sports</span> &nbsp; <span style="color:#00C2A8">Non-sports</span>
-
-<div class="chart-note"><strong>Coverage note:</strong> date-filtered views cover the tracked top categories from the daily dataset; the full all-time leaderboard uses the broader summary table.</div>
-
-
-
 ## Volume map
 
 <p class="section-intro">Start here. The treemap is the fastest read on which categories matter most in the window — click any tile to zoom into the biggest markets inside it.</p>
@@ -3094,3 +2984,111 @@ const tbl = Inputs.table(mktDisplay, {
 tbl.classList.add("mkt-table");
 display(tbl);
 ```
+
+## All-time leaderboard
+
+<p class="section-intro">The quickest read on which markets dominate by volume or fees in the window you pick — the starting point before you drill into the map below.</p>
+
+<div class="control-strip">
+
+```js
+// Dollar-value metrics dropped here — for a flow-style metric prefer taker-side
+// volume, which has its own page. Sorting categories by gross dollar value is
+// rarely the right comparison since it conflates contract count with price level.
+const metric = view(hashInput("metric", Inputs.radio(["contracts", "fees"], {
+  label: "Metric",
+  value: hashGet("metric", "contracts"),
+  format: m => m === "contracts" ? "Volume" : "Fees"
+})));
+const showSports = view(hashInput("sports", Inputs.radio(["All", "Sports only", "Non-sports only"], {
+  label: "Filter",
+  value: hashGet("sports", "All")
+})));
+```
+
+</div>
+
+```js
+// Date brush replaces the old From/To text inputs. Default Jan 1 2025 → latest.
+// Mutable + brush in same cell so callback captures the wrapper (see notes
+// in parlay.md / categories.md treemap brush).
+const lbMinDate = d3.min(topDaily, d => d.date);
+const lbMaxDate = d3.max(topDaily, d => d.date);
+const lbDateSel = Mutable([
+  new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
+  lbMaxDate
+]);
+const lbSparkData = topDaily.map(d => ({
+  date: d.date,
+  value: Object.keys(d).filter(k => k !== "date").reduce((a, k) => a + (+d[k] || 0), 0)
+}));
+display(renderDateBrush({
+  data: lbSparkData,
+  dateAccessor: d => d.date,
+  valueAccessor: d => d.value,
+  initialRange: [
+    new Date(Math.max(+new Date("2025-01-01"), +lbMinDate)),
+    lbMaxDate
+  ],
+  onSelect: r => { lbDateSel.value = r; },
+  color: "var(--accent-kalshi)",
+  width
+}));
+```
+
+```js
+const catCols = Object.keys(topDaily[0]).filter(k => k !== "date");
+
+const [cutoff, cutoffTo] = lbDateSel;
+// "All time" path uses the full leaderboard (every ticker, not just the
+// top 15 in topDaily). Detect that the brush covers the full data span.
+const isAllTime = +cutoff <= +lbMinDate && +cutoffTo >= +lbMaxDate;
+
+// Aggregate contracts from daily data for the selected period (top 15 tickers)
+const dailyAgg = catCols.map(cat => {
+  const total = topDaily
+    .filter(d => d.date >= cutoff && d.date <= cutoffTo)
+    .reduce((s, r) => s + (+r[cat] || 0), 0);
+  const meta = leaderboard.find(l => l.report_ticker === cat) || {};
+  return {
+    report_ticker: cat,
+    contracts: total,
+    fees: (meta.fees || 0) * (total / (meta.contracts || 1)),
+    is_sports: meta.is_sports ?? "FALSE"
+  };
+}).filter(d => d.contracts > 0);
+
+// Full leaderboard for all-time span; aggregated daily for any date filter
+const source = isAllTime ? leaderboard : dailyAgg;
+
+const filtered = source
+  .filter(d => showSports === "All" ? true : showSports === "Sports only" ? d.is_sports === "TRUE" : d.is_sports === "FALSE")
+  .sort((a, b) => b[metric] - a[metric])
+  .slice(0, 25);
+```
+
+```js
+Plot.plot({
+  width,
+  height: filtered.length * 22 + 40,
+  marginLeft: 220,
+  x: {label: metric === "contracts" ? "Volume (contracts)" : "Fees ($)", grid: true,
+      tickFormat: d => (metric === "fees" ? "$" : "") + fmtCount(d)},
+  y: {label: null},
+  marks: [
+    Plot.barX(filtered, {
+      x: metric,
+      y: "report_ticker",
+      fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#00C2A8",
+      sort: {y: "-x"},
+      tip: true,
+      title: d => `${d.report_ticker}\n${metric === "contracts" ? fmtCount(d[metric]) + " contracts" : "$" + fmtCount(d[metric])}\nSports: ${d.is_sports}`
+    }),
+    Plot.ruleX([0])
+  ]
+})
+```
+
+<span style="color:#1a9641">Sports</span> &nbsp; <span style="color:#00C2A8">Non-sports</span>
+
+<div class="chart-note"><strong>Coverage note:</strong> date-filtered views cover the tracked top categories from the daily dataset; the full all-time leaderboard uses the broader summary table.</div>

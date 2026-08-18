@@ -26,11 +26,14 @@ const fmtDate = d => d instanceof Date ? d.toLocaleDateString("en-US", {timeZone
 
 const totalContracts = d3.sum(daily, d => d.contracts);
 // What Novig actually takes: the fee, from its published schedule.
-const feeMeanPct = (() => {
-  const r = fees.filter(d => +d.fees > 0 && +d.contracts > 0);
-  if (!r.length) return null;
-  return 100 * d3.sum(r, d => +d.fees) / d3.sum(r, d => +d.contracts);
-})();
+// Open interest replaces a mean-fee KPI that could never carry a number. Novig
+// publishes its straight-book fee as a BOUNDED RANGE rather than a point estimate,
+// so the per-contract mean was empty by construction, not by accident. Open interest
+// is published outright, is a stock rather than a third flow measure, and until now
+// appeared only in a tooltip on the volume chart.
+const novigOi = daily.filter(d => Number.isFinite(+d.open_interest) && +d.open_interest > 0);
+const novigOiLatest = novigOi.length ? +novigOi[novigOi.length - 1].open_interest : null;
+const novigOiPeak = novigOi.length ? d3.max(novigOi, d => +d.open_interest) : null;
 // Parlay share, and the denominator is the subtle part. This file USED to carry the
 // singles as rows with legs=1, so summing every row gave all taker volume. It no longer
 // does -- a one-leg parlay is not a thing and those rows were removed at the producer --
@@ -66,7 +69,7 @@ const dailyBrushed = daily.filter(d => d.date >= novigBrushFrom && d.date <= nov
 
 <div class="grid grid-cols-4">
   <div class="card"><h2>Contracts traded</h2><span class="big">${fmtCount(totalContracts)}</span><span class="muted">${daily.length} days</span></div>
-  <div class="card"><h2>Fee, mean</h2><span class="big">${feeMeanPct == null ? "—" : `${feeMeanPct.toFixed(2)}%`}</span><span class="muted">from the published schedule &mdash; the spread is not measurable here</span></div>
+  <div class="card"><h2>Open interest</h2><span class="big">${novigOiLatest == null ? "—" : fmtCount(novigOiLatest)}</span><span class="muted">latest day &middot; peak ${novigOiPeak == null ? "—" : fmtCount(novigOiPeak)}</span></div>
   <div class="card"><h2>Parlays</h2><span class="big">${parlayAll ? `${(100 * parlayTotal / parlayAll).toFixed(1)}%` : "—"}</span><span class="muted">of volume, up to ${maxLegs} legs</span></div>
   <div class="card"><h2>Markets traded</h2><span class="big">${fmtCount(d3.max(daily, d => d.markets_traded) ?? 0)}</span><span class="muted">busiest day</span></div>
 </div>

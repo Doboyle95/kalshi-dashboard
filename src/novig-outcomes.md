@@ -50,13 +50,9 @@ const asDate = d => d instanceof Date ? d : new Date(`${String(d).slice(0, 10)}T
 ```
 
 ```js
-display(S ? html`<div class="grid grid-cols-4">
-  <div class="card"><h2>Taker P&amp;L, gross</h2><span class="big">${fmtCents(+S.gross_per_contract)}</span><span class="muted">per contract &middot; ${fmtUSD(+S.gross_pnl)} over ${fmtCount(+S.decisive_contracts)} contracts</span></div>
-  <div class="card"><h2>After the live fee</h2><span class="big">${fmtCents(+S.gross_per_contract)} to ${fmtCents(+S.net_pnl_lo / +S.decisive_contracts)}</span><span class="muted">per contract, gross to fee ceiling &mdash; the feed can't split live from free pre-game trades</span></div>
-  <div class="card"><h2>A real edge?</h2><span class="big">${+S.measurable ? "Yes" : "No"}</span><span class="muted">${+S.measurable ? "clears" : "does not clear"} 2 SE &mdash; fixture-clustered t = ${(+S.t_stat).toFixed(2)}</span></div>
-  <div class="card"><h2>Settled coverage</h2><span class="big">${(+S.straight_join_rate).toFixed(1)}%</span><span class="muted">of straight prints join an outcome &middot; ${(+S.parlay_share_contracts).toFixed(0)}% of taker contracts are excluded parlays</span></div>
-</div>`
-: html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>The settled-outcome series are not being served yet, so there are no numbers on this page.</strong> The producer is built and registered; the deployed transport allowlist does not carry these files yet. The framing below is true either way: Novig publishes an aggressor flag and, on straight contracts, a settled WIN/LOSS, which is what makes taker P&amp;L and calibration possible here at all.</div>`);
+// KPI cards removed 2026-08-18 at Daniel's request; the sections below carry the same
+// figures in context. The not-yet-served notice stays: it is an error state, not a metric.
+if (!S) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>The settled-outcome series are not being served yet, so there are no numbers on this page.</strong> The producer is built and registered; the deployed transport allowlist does not carry these files yet. The framing below is true either way: Novig publishes an aggressor flag and, on straight contracts, a settled WIN/LOSS, which is what makes taker P&amp;L and calibration possible here at all.</div>`);
 ```
 
 ## How straight-contract takers did
@@ -170,14 +166,7 @@ const fxVolMult = fxRatios.length ? fxRatios[Math.floor(fxRatios.length / 2)] : 
 ```
 
 ```js
-display(fxRows.length
-  ? html`<div class="grid grid-cols-4">
-      <div class="card"><h2>MLB games compared</h2><span class="big">${fxRows.length}</span><span class="muted">both venues priced pre-game</span></div>
-      <div class="card"><h2>Median price gap</h2><span class="big">${(100 * fxMed).toFixed(2)}¢</span><span class="muted">on P(home win)</span></div>
-      <div class="card"><h2>Agree within 1¢</h2><span class="big">${Math.round(100 * fxWithin1)}%</span><span class="muted">of games</span></div>
-      <div class="card"><h2>Kalshi volume</h2><span class="big">${fxVolMult == null ? "—" : "~" + fxVolMult.toFixed(0) + "×"}</span><span class="muted">Novig's, per game (median)</span></div>
-    </div>`
-  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The same-game comparison series is not being served yet.</div>`);
+if (!fxRows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The same-game comparison series is not being served yet.</div>`);
 ```
 
 ```js

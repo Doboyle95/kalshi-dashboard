@@ -135,8 +135,27 @@ const xvExtent = d3.extent([...xvRows.map(d => d.kalshi), ...xvRows.map(d => d.p
 // (MLB 4.0x, WNBA 4.0x, NHL 5.8x, NBA 13.1x, IPL 18.7x, NFL 162.4x).
 const xvGuides = [{mult: 1, label: "parity"}, {mult: 10, label: "10x"},
                   {mult: 100, label: "100x"}, {mult: 1000, label: "1000x"}];
+
+// LINEAR IS THE DEFAULT because log-log is hard to read at a glance, and in linear
+// space the constant-ratio guides become straight rays from the origin, easier still.
+// The cost is the tail: on FULL linear domains the median fixture sits at 4.6% of the
+// width and 3.6% of the height, a blob in the corner. So linear clips to the 95th
+// percentile of each axis, which hides the 63 largest of 817 fixtures -- hence the Log
+// option one click away, and the count of what is off-panel in the note below.
+const xvQuantile = (acc, q) => d3.quantile(xvRows.map(acc).sort(d3.ascending), q);
+const xvLinMaxX = xvQuantile(d => d.kalshi, 0.95);
+const xvLinMaxY = xvQuantile(d => d.poly, 0.95);
+const xvOffPanel = xvRows.filter(d => d.kalshi > xvLinMaxX || d.poly > xvLinMaxY).length;
 const fmtX = n => n >= 1e9 ? `${(n / 1e9).toFixed(1)}bn` : n >= 1e6 ? `${(n / 1e6).toFixed(0)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n);
 ```
+
+<div class="control-strip">
+
+```js
+const xvScale = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));
+```
+
+</div>
 
 ```js
 Plot.plot({
@@ -145,11 +164,16 @@ Plot.plot({
   height: 480,
   marginLeft: 76,
   grid: true,
+  clip: true,
   // KALSHI ON X. Kalshi spans 2.27 decades (922k to 171.6M) against Polymarket's 6.20
   // (21 to 33.5M); the wide axis has the pixels to spread the narrow range out, and the
   // taller panel gives the six-decade series somewhere to go.
-  x: {type: "log", label: "Kalshi contracts on that fixture →", tickFormat: fmtX},
-  y: {type: "log", label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtX},
+  x: xvScale === "Log"
+    ? {type: "log", label: "Kalshi contracts on that fixture →", tickFormat: fmtX}
+    : {type: "linear", domain: [0, xvLinMaxX], label: "Kalshi contracts on that fixture →", tickFormat: fmtX},
+  y: xvScale === "Log"
+    ? {type: "log", label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtX}
+    : {type: "linear", domain: [0, xvLinMaxY], label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtX},
   color: {legend: true, domain: xvLeagues, scheme: "tableau10"},
   marks: [
     // PARITY ALONE SAYS ALMOST NOTHING HERE: 811 of 817 fixtures sit on one side of it.
@@ -173,7 +197,7 @@ Plot.plot({
 })
 ```
 
-<p class="chart-note">The dashed line is parity and the fainter ones mark 10&times;, 100&times; and 1000&times;, so a dot between two guides traded that many times more on Kalshi. Only ${xvRows.filter(d => d.ratio < 1).length} of ${xvRows.length} fixtures sit <em>above</em> parity, where Polymarket US traded the larger book. Median ratio by league: ${xvLeagues.map(l => `${l} ${xvMedian.get(l).toFixed(1)}×`).join(" · ")}.</p>
+<p class="chart-note">The dashed line is parity and the fainter ones mark 10&times;, 100&times; and 1000&times;, so a dot between two guides traded that many times more on Kalshi. Only ${xvRows.filter(d => d.ratio < 1).length} of ${xvRows.length} fixtures sit <em>above</em> parity, where Polymarket US traded the larger book. ${xvScale === "Linear" ? `<strong>Linear clips to the 95th percentile of each axis</strong>, so ${xvOffPanel} of ${xvRows.length} fixtures — the largest on one venue or the other — sit beyond the panel; switch to Log to see every one. ` : `<strong>Log shows every fixture</strong>, including the Polymarket books that traded only a few dozen contracts. `}Median ratio by league: ${xvLeagues.map(l => `${l} ${xvMedian.get(l).toFixed(1)}×`).join(" · ")}.</p>
 
 <details class="surface-card compact-details">
   <summary>About this comparison — read before quoting any number</summary>

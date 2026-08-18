@@ -105,6 +105,7 @@ export default {
       {name: "Kalshi · Economics", path: "/fees"},
       {name: "Kalshi · Outcomes", path: "/taker-pnl"},
       {name: "Kalshi · Parlays", path: "/parlay-analytics"},
+      {name: "Kalshi · Parlay outcomes", path: "/parlay"},
       {name: "Polymarket US", path: "/polymarket"},
       {name: "ForecastEx", path: "/forecastex"},
       {name: "DKeX", path: "/dkex"},
