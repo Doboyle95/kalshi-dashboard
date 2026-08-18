@@ -124,7 +124,19 @@ function venueNavHeader({path}) {
       current.tabs.map(([label, p]) => {
         const mark = p === path ? ' aria-current="page"' : "";
         return '<a href="' + p + '"' + mark + ">" + escapeHtml(label) + "</a>";
-      }).join("") + "</nav>"
+      }).join("") + "</nav>" +
+      // Below 640px the strip is ONE horizontally scrolling row (it used to wrap to
+      // four, which made a pinned bar 212px tall on a phone). That introduced a real
+      // defect: on /parlay at 375px the active tab is 7th of 7 and sat 419px
+      // off-screen, so the strip looked like nothing was selected. Nudge it into view.
+      //
+      // Inline <script> in build-time HTML, NOT an Observable cell, so it cannot fail
+      // silently the way an unresolved cell input does -- the same reason the theme
+      // toggle and the FOUC guard in head[] are written this way. Sets scrollLeft
+      // directly instead of scrollIntoView(), which can also move the PAGE vertically.
+      // Unquoted [aria-current=page] is valid CSS and avoids nested-quote escaping.
+      // With JS off the strip simply starts at 0, exactly as it does today.
+      "<script>(function(){try{var a=document.querySelector('.venue-tabs a[aria-current=page]');if(!a)return;var s=a.parentElement;if(s.scrollWidth>s.clientWidth)s.scrollLeft=a.offsetLeft-(s.clientWidth-a.offsetWidth)/2;}catch(e){}})();</script>"
     : "";
 
   return '<div class="venue-nav"' + (current.accent ? ' data-accent="' + current.accent + '"' : "") + ">" +
