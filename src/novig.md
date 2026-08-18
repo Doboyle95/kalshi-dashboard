@@ -29,6 +29,16 @@ const category = await (async () => {
     return [];
   }
 })();
+// The named-game board. Built by build_novig_game_leaderboard.py, which resolves Novig's
+// bare market UUIDs to real fixtures through the public GraphQL event descriptions.
+const gameBoard = await (async () => {
+  try {
+    return await DataAttachment("data/novig_game_leaderboard.csv").csv({typed: true});
+  } catch (error) {
+    console.warn(`novig games: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
+    return [];
+  }
+})();
 ```
 
 ```js
@@ -164,6 +174,36 @@ ${d3.format(",.0f")(d.contracts)} contracts · ${(+d.pct_of_day).toFixed(1)}% of
 ```
 
 <div class="instruction-line">Parlays carry no league in Novig's feed, so they stack as their own band rather than inside a sport.</div>
+
+## Biggest games by volume
+
+<div class="instruction-line">Every straight market on the fixture &mdash; moneyline, totals, spreads and props &mdash; because moneyline alone is barely half of Novig's straight book.</div>
+
+```js
+// contracts_all is the whole straight book on the game; contracts is the moneyline
+// subset the P&L columns are computed on. Ranking on the moneyline alone reorders the
+// board -- the busiest fixture in the window is only ~46% moneyline -- so volume ranks
+// on contracts_all and the moneyline is shown beside it rather than instead of it.
+const gameVol = gameBoard
+  .filter(d => d.game && +d.contracts_all > 0)
+  .sort((a, b) => +b.contracts_all - +a.contracts_all);
+```
+
+```js
+const gameVolSearch = view(Inputs.search(gameVol, {placeholder: "Search team or league…"}));
+```
+
+```js
+display(gameVol.length
+  ? Inputs.table(gameVolSearch, {
+      columns: ["game", "game_date", "league", "contracts_all", "contracts"],
+      header: {game: "Game", game_date: "Date", league: "League", contracts_all: "Contracts", contracts: "of which moneyline"},
+      format: {game_date: d => fmtDate(d), contracts_all: d => fmtCount(+d), contracts: d => fmtCount(+d)},
+      align: {contracts_all: "right", contracts: "right"},
+      width: {game: 240}, rows: 14
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The named-game series is not being served yet, so this table is empty; nothing else on the page depends on it.</div>`);
+```
 
 <div id="what-novig-charges"></div>
 

@@ -18,6 +18,17 @@ const daily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true})
 // The reconciliation between the tape and the venue's bulletin is published rather than
 // kept private, because the bulletin is the file a reader would otherwise cite.
 const recon = await DataAttachment("data/prophetx_bulletin_daily.csv").csv({typed: true});
+// Individual fixtures, parsed out of the tape's contract_description. Loaded defensively
+// because it is the newest file of the set and the DEPLOYED allowlist, not the repository
+// one, decides what is actually served.
+const pxGames = await (async () => {
+  try {
+    return await DataAttachment("data/prophetx_game_leaderboard.csv").csv({typed: true});
+  } catch (error) {
+    console.warn(`prophetx games: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
+    return [];
+  }
+})();
 ```
 
 ```js
@@ -121,6 +132,36 @@ Plot.plot({
 const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
 const calib = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
 const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
+```
+
+## Biggest games by volume
+
+<div class="instruction-line">Parlays and tournament outrights are left out because neither belongs to a single game; what remains is 77% of the tape.</div>
+
+```js
+// ProphetX names the fixture in every contract_description as
+// "AWAY @ HOME, LEAGUE, START ET - MARKET: SELECTION", and it parses on the whole tape
+// with no exceptions, so the board is a census rather than a sample. Keyed on the
+// scheduled start as well as the teams, because a series repeats the same pairing.
+const pxGameVol = pxGames
+  .filter(d => d.game && +d.contracts > 0)
+  .sort((a, b) => +b.contracts - +a.contracts);
+```
+
+```js
+const pxGameSearch = view(Inputs.search(pxGameVol, {placeholder: "Search team, league or sport…"}));
+```
+
+```js
+display(pxGameVol.length
+  ? Inputs.table(pxGameSearch, {
+      columns: ["game", "game_date", "league", "sport", "contracts", "trades"],
+      header: {game: "Game", game_date: "Date", league: "League", sport: "Sport", contracts: "Contracts", trades: "Trades"},
+      format: {game_date: d => fmtDate(d), contracts: d => fmtCount(+d), trades: d => d3.format(",")(+d)},
+      align: {contracts: "right", trades: "right"},
+      width: {game: 240}, rows: 14
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The named-game series is not being served yet, so this table is empty; nothing else on the page depends on it.</div>`);
 ```
 
 ## Where the volume sits on the probability axis
