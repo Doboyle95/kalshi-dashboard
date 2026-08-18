@@ -132,16 +132,6 @@ Plot.plot({
 const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
 const calib = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
 const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
-// Contract types. Loaded defensively for the same reason as the game board: the
-// DEPLOYED allowlist, not the repository one, decides what is actually served.
-const pxTypes = await (async () => {
-  try {
-    return await DataAttachment("data/prophetx_market_leaderboard.csv").csv({typed: true});
-  } catch (error) {
-    console.warn(`prophetx types: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
-    return [];
-  }
-})();
 ```
 
 ## Biggest games by volume
@@ -182,6 +172,18 @@ display(pxGameVol.length
 // The board above says which GAMES traded; this one says what KIND of bet did, which is the
 // question Novig's page answers with MLB-MONEY / MLB-TOTAL. ProphetX names the market in
 // every contract_description, so the types are the venue's own words, not a mapping.
+// Loaded here rather than in the shared block above because the chatbot's catalog credits a
+// series to the heading nearest its LOAD; parked upstream it gets filed under the parlay
+// section, as prophetx_volume_at_price already is. Defensive for the same reason as the
+// game board: the DEPLOYED allowlist, not the repository one, decides what is served.
+const pxTypes = await (async () => {
+  try {
+    return await DataAttachment("data/prophetx_market_leaderboard.csv").csv({typed: true});
+  } catch (error) {
+    console.warn(`prophetx types: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
+    return [];
+  }
+})();
 const pxTypeVol = pxTypes
   .filter(d => d.market_name && +d.contracts > 0)
   .sort((a, b) => +b.contracts - +a.contracts);
