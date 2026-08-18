@@ -17,6 +17,18 @@ display(DataAttachment.marker);
 const daily = await DataAttachment("data/novig_daily.csv").csv({typed: true});
 const parlay = await DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
 const board = await DataAttachment("data/novig_market_leaderboard.csv").csv({typed: true});
+// Categories are loaded defensively because this file is the newest of the set and
+// the deployed allowlist -- not the repository one -- decides what is actually
+// served. If it is ever absent the section below says so and the rest of the page
+// is unaffected.
+const category = await (async () => {
+  try {
+    return await DataAttachment("data/novig_category_daily.csv").csv({typed: true});
+  } catch (error) {
+    console.warn(`novig categories: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
+    return [];
+  }
+})();
 ```
 
 ```js
@@ -95,6 +107,63 @@ Plot.plot({
   ]
 })
 ```
+
+## Categories by day
+
+```js
+// Novig's `league` column is a LEAGUE (MLB, ATP, WNBA), not a sport, and it is
+// EMPTY on every parlay print -- 268,852 COMBO taker rows on the 2026-08-04..17
+// tape, all blank, against 1,083,489 straight rows all named, zero exceptions.
+// A parlay therefore carries no sport and CANNOT be filed inside one, so it gets
+// its own band. That is a property of the feed, not a presentational choice.
+//
+// Bottom-to-top, parlay last, matching how categories-venues.md stacks the same
+// idea. Anything the producer emits that is not named here is stacked at the
+// bottom rather than dropped, so a new sport can never vanish from the chart.
+const CAT_ORDER = ["Other sport", "Motorsport", "Hockey", "Soccer", "Golf",
+                   "Combat sports", "Football", "Basketball", "Tennis",
+                   "Baseball", "Parlay"];
+const CAT_COLORS = {
+  "Other sport": "#c8e6c9", "Motorsport": "#e65100", "Hockey": "#006064",
+  "Soccer": "#827717", "Golf": "#33691e", "Combat sports": "#6d4c41",
+  "Football": "#bf360c", "Basketball": "#0d47a1", "Tennis": "#4a148c",
+  "Baseball": "#880e4f", "Parlay": NV
+};
+const catUnknown = Array.from(new Set(category.map(d => d.category)))
+  .filter(c => !CAT_ORDER.includes(c));
+// Seasonal: a sport out of season carries no volume and drops out of the legend
+// on its own rather than showing an empty swatch.
+const catPresent = [...catUnknown, ...CAT_ORDER]
+  .filter(c => category.some(d => d.category === c && d.contracts > 0));
+const categoryBrushed = category.filter(d => d.date >= novigBrushFrom && d.date <= novigBrushTo);
+```
+
+```js
+display(catPresent.length
+  ? Plot.plot({
+      width,
+      height: 340,
+      marginLeft: 64,
+      marginBottom: 40,
+      color: {legend: true, domain: catPresent, range: catPresent.map(c => CAT_COLORS[c] || "#9e9e9e")},
+      x: {label: null, type: "utc", tickFormat: "%b %d"},
+      y: {label: "Contracts", grid: true, tickFormat: fmtCount},
+      marks: [
+        Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
+        Plot.rectY(categoryBrushed, {
+          x: "date", y: "contracts", fill: "category", order: catPresent,
+          interval: "day", insetLeft: 1, insetRight: 1,
+          title: d => `${fmtDate(d.date)}
+${d.category}
+${d3.format(",.0f")(d.contracts)} contracts · ${(+d.pct_of_day).toFixed(1)}% of day`,
+          tip: true
+        })
+      ]
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The category series is not being served yet, so this chart is empty; nothing else on the page depends on it.</div>`);
+```
+
+<div class="instruction-line">Parlays carry no league in Novig's feed, so they stack as their own band rather than inside a sport.</div>
 
 <div id="what-novig-charges"></div>
 
