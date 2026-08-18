@@ -135,16 +135,57 @@ Plot.plot({
 
 ## Cumulative fee revenue
 
-<p class="section-intro">The same series, accumulated across the selected window. Kalshi is roughly an order of magnitude above the field, so untick it to read the competitors against each other.</p>
+<p class="section-intro">The same series, accumulated over the window you pick below. Kalshi is roughly an order of magnitude above the field, so untick it — or switch to a log scale — to read the competitors against each other.</p>
+
+<div class="control-strip">
 
 ```js
-const feeCumulative = selectedFeeVenues.flatMap(venue => {
+// Deliberately independent of the daily chart above. Sharing one control strip meant
+// this caption told the reader to untick Kalshi while the checkbox sat in a different
+// section, off screen -- the same mistake as the Platform control on Trading Behavior.
+const cumScale = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));
+```
+
+```js
+const cumVenues = view(Inputs.checkbox(feeVenues, {label: "Venues", value: feeVenues}));
+```
+
+</div>
+
+```js
+// Its own window too, so the cumulative view can be read over a different span from
+// the daily one without the two fighting over a single brush.
+const cumRows = feeSolid.filter(d => cumVenues.includes(d.venue));
+const cumTotalsByDate = Array.from(
+  d3.rollup(cumRows, rows => d3.sum(rows, feeValue), d => +d.date),
+  ([date, value]) => ({date: new Date(date), value})
+).sort((a, b) => a.date - b.date);
+const cumDomainEnd = d3.max(feeRows, d => d.date);
+const cumDateSel = Mutable([d3.utcDay.offset(cumDomainEnd, -364), cumDomainEnd]);
+display(renderDateBrush({
+  data: cumTotalsByDate.length ? cumTotalsByDate : [{date: cumDomainEnd, value: 0}],
+  initialRange: [d3.utcDay.offset(cumDomainEnd, -364), cumDomainEnd],
+  quickRanges: [{label: "90d", days: 90}, {label: "365d", days: 365}, {label: "All", days: Infinity}],
+  onSelect: range => { cumDateSel.value = range; },
+  color: "#9A6D1F",
+  width
+}));
+```
+
+```js
+const [cumFrom, cumTo] = cumDateSel;
+const cumWindow = cumRows.filter(d => d.date >= cumFrom && d.date <= cumTo);
+const feeCumulative = cumVenues.flatMap(venue => {
   let running = 0;
-  return feeSolid
+  return cumWindow
     .filter(d => d.venue === venue)
     .sort((a, b) => a.date - b.date)
     .map(d => ({venue, date: d.date, cumulative: (running += feeValue(d) ?? 0)}));
-});
+// A LOG AXIS CANNOT PLOT THE FIRST POINT of a cumulative series, which is whatever the
+// venue collected on day one measured from zero -- and drops anything still at zero.
+// Filtering here rather than letting the scale silently discard points keeps the line
+// starting where the data does.
+}).filter(d => cumScale === "Linear" || d.cumulative > 0);
 ```
 
 <div class="plot-shell">
@@ -156,16 +197,18 @@ Plot.plot({
   height: 340,
   marginLeft: 78,
   x: {type: "utc", label: null},
-  y: {label: `Cumulative ${feeMeasureLabel} since ${fmtDate(feeFrom)} (USD)`, grid: true, tickFormat: fmtUsd},
+  y: cumScale === "Log"
+    ? {type: "log", label: `Cumulative ${feeMeasureLabel} (USD, log)`, grid: true, tickFormat: fmtUsd}
+    : {label: `Cumulative ${feeMeasureLabel} since ${fmtDate(cumFrom)} (USD)`, grid: true, tickFormat: fmtUsd},
   color: {legend: true, domain: feeVenues, range: feeVenues.map(v => VENUE_COLORS[v])},
   marks: [
-    Plot.ruleY([0]),
+    ...(cumScale === "Linear" ? [Plot.ruleY([0])] : []),
     // y1/y2 EXPLICITLY, because Plot.areaY with a bare `y` applies the stackY
     // transform by default while Plot.lineY does not. Stacked areas under unstacked
     // lines drew every competitor piled on top of Kalshi, so pale bands floated above
     // the Kalshi line -- read as a mystery second series when they were just
     // Crypto.com/Nadex and Rothera stacked on it.
-    Plot.areaY(feeCumulative, {x: "date", y1: 0, y2: "cumulative", fill: "venue", fillOpacity: 0.1}),
+    ...(cumScale === "Linear" ? [Plot.areaY(feeCumulative, {x: "date", y1: 0, y2: "cumulative", fill: "venue", fillOpacity: 0.1})] : []),
     Plot.lineY(feeCumulative, {x: "date", y: "cumulative", stroke: "venue", strokeWidth: 2}),
     Plot.ruleX(feeCumulative, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(feeCumulative, Plot.pointerX({
@@ -178,7 +221,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">Accumulated from the start of the window set by the date control under <em>Fee revenue by day</em> above, not from each venue's first day, so the lines answer "who collected more over this window". Still-filling days are excluded. Window totals: ${selectedFeeVenues.map(v => `${v} ${fmtUsd(d3.sum(feeSolid.filter(d => d.venue === v), feeValue))}`).join(" · ")}.</div>
+<div class="chart-note">Accumulated from the start of the window set just above, not from each venue’s first day, so the lines answer "who collected more over this window". Still-filling days are excluded. Window totals: ${cumVenues.map(v => `${v} ${fmtUsd(d3.sum(cumWindow.filter(d => d.venue === v), feeValue))}`).join(" · ")}.</div>
 
 ## Published fee schedules
 
