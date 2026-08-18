@@ -5,7 +5,7 @@ title: Novig · Outcomes
 <div class="page-hero">
   <div class="page-eyebrow">Novig</div>
   <h1>Taker outcomes</h1>
-  <p class="page-lead">Settled straight-contract P&amp;L and calibration. Novig is the first competitor with true taker outcomes: it publishes both who crossed the spread and who won.</p>
+  <p class="page-lead">Settled straight-contract P&amp;L and calibration. Parlays are not included — Novig quotes them by request and none of them settle in this feed.</p>
 </div>
 
 <div class="instruction-line"><strong>Straight contracts only.</strong> Novig's parlays are quoted by request and never become book markets, so not one resolves &mdash; they are about a third of taker contracts and are excluded from every number here. This is never a venue-wide figure.</div>
