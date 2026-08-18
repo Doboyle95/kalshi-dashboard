@@ -2635,10 +2635,39 @@ svg[class^="plot-"] g[aria-label="tip"] text {
    separate dark block.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Framework ships #observablehq-header as a position:fixed, display:flex,
+   align-items:center bar whose height is --observablehq-header-height (2.2rem).
+   That is built for a slim title strip. The venue strip is ~50px without a tab row
+   and ~102px with one (more as tabs wrap), so it overflowed that bar SYMMETRICALLY
+   and pushed itself above the top of the viewport. Measured on /volume before this
+   fix: .venue-nav top = -33px, the picker button top = -20px, i.e. partly
+   off-screen. Single-module venues overflowed only ~7px, which is why it read as
+   'most of them are a little too high' rather than obviously broken.
+
+   Put the header back in normal flow and let it size to its content, then undo the
+   two sibling offsets Framework adds to reserve space for the fixed bar, restoring
+   the values a header-less page already uses (main margin-top 1rem, toc top 0). */
 #observablehq-header {
+  position: static;
+  display: block;
+  height: auto;
   margin: 0 0 var(--space-4);
   padding: 0;
   border: 0;
+}
+
+#observablehq-header ~ #observablehq-main {
+  margin-top: 1rem;
+}
+
+#observablehq-header ~ #observablehq-toc {
+  top: 0;
+}
+
+/* No fixed bar covering the top of the viewport any more, so anchor targets only
+   need the standard offset rather than header-height + 2.5rem. */
+:root:has(#observablehq-header) {
+  scroll-padding-top: 2.5rem;
 }
 
 .venue-nav {
