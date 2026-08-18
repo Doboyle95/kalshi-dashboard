@@ -2648,26 +2648,42 @@ svg[class^="plot-"] g[aria-label="tip"] text {
    two sibling offsets Framework adds to reserve space for the fixed bar, restoring
    the values a header-less page already uses (main margin-top 1rem, toc top 0). */
 #observablehq-header {
-  position: static;
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: block;
   height: auto;
-  margin: 0 0 var(--space-4);
-  padding: 0;
+  margin: 0;
+  /* Padding rather than margin: a sticky element's margin box is transparent, so
+     page content would be visible scrolling through the gap beneath the card. */
+  padding: 0 0 var(--space-4);
   border: 0;
+  background: var(--theme-background);
 }
 
 #observablehq-header ~ #observablehq-main {
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 #observablehq-header ~ #observablehq-toc {
   top: 0;
 }
 
-/* No fixed bar covering the top of the viewport any more, so anchor targets only
-   need the standard offset rather than header-height + 2.5rem. */
-:root:has(#observablehq-header) {
-  scroll-padding-top: 2.5rem;
+/* Anchor targets have to clear the pinned bar. 9a2ea615d cut scroll-padding-top
+   to 2.5rem precisely BECAUSE nothing covered the top of the viewport; pinning it
+   again re-opens that, and /volume alone has 12 in-page anchors.
+   --observablehq-header-height cannot be reused here -- it is a fixed 2.2rem
+   consumed by sibling selectors in calc() -- so these are literals sized to the
+   measured bar: ~114px with a tab row, ~66px without, plus clearance.
+   Specificity matters: the framework's own rule is :root:has(#observablehq-header)
+   at (1,1,0), so a bare :root:has(.venue-tabs) at (0,2,0) would LOSE. Naming the
+   id inside :has() takes these to (1,2,0). */
+:root:has(#observablehq-header .venue-tabs) {
+  scroll-padding-top: 130px;
+}
+
+:root:has(#observablehq-header .venue-nav):not(:has(.venue-tabs)) {
+  scroll-padding-top: 82px;
 }
 
 .venue-nav {
@@ -2778,7 +2794,12 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 }
 
 .venue-nav-index {
-  margin-left: auto;
+  /* NOT margin-left:auto. The theme toggle is position:fixed at top:.75rem
+     right:1rem with z-index 10, and measured at 1280px it overlaps the nav's
+     top-right corner (toggle x 1153-1249 vs nav x 320-1217). Pinning the bar
+     would make that collision permanent, so this sits beside the picker and
+     leaves the right-hand end clear. */
+  margin-left: var(--space-2);
   color: var(--text-muted);
   font-size: 0.85rem;
   text-decoration: none;
@@ -2830,15 +2851,22 @@ svg[class^="plot-"] g[aria-label="tip"] text {
     padding: var(--space-3);
   }
 
-  .venue-nav-index {
-    /* Drops below the picker rather than squeezing it on a narrow screen. */
-    margin-left: 0;
-    flex-basis: 100%;
-  }
-
   .venue-nav-bar {
     flex-wrap: wrap;
     row-gap: var(--space-2);
+  }
+
+  /* Measured at 375px, seven tabs wrapped to FOUR rows and the strip alone was
+     122px, making the whole bar 212px -- a quarter of the viewport, which is far
+     too much to pin. One scrolling row keeps it near 100px. */
+  .venue-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .venue-tabs a {
+    flex: 0 0 auto;
   }
 }
 
