@@ -132,6 +132,16 @@ Plot.plot({
 const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
 const calib = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
 const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
+// Contract types. Loaded defensively for the same reason as the game board: the
+// DEPLOYED allowlist, not the repository one, decides what is actually served.
+const pxTypes = await (async () => {
+  try {
+    return await DataAttachment("data/prophetx_market_leaderboard.csv").csv({typed: true});
+  } catch (error) {
+    console.warn(`prophetx types: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
+    return [];
+  }
+})();
 ```
 
 ## Biggest games by volume
@@ -162,6 +172,35 @@ display(pxGameVol.length
       width: {game: 240}, rows: 14
     })
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The named-game series is not being served yet, so this table is empty; nothing else on the page depends on it.</div>`);
+```
+
+## What trades there
+
+<div class="instruction-line">One row per league and contract type; parlays are a single row because they span games.</div>
+
+```js
+// The board above says which GAMES traded; this one says what KIND of bet did, which is the
+// question Novig's page answers with MLB-MONEY / MLB-TOTAL. ProphetX names the market in
+// every contract_description, so the types are the venue's own words, not a mapping.
+const pxTypeVol = pxTypes
+  .filter(d => d.market_name && +d.contracts > 0)
+  .sort((a, b) => +b.contracts - +a.contracts);
+```
+
+```js
+const pxTypeSearch = view(Inputs.search(pxTypeVol, {placeholder: "Search contract type or league\u2026"}));
+```
+
+```js
+display(pxTypeVol.length
+  ? Inputs.table(pxTypeSearch, {
+      columns: ["market_name", "category", "n_outcomes", "contracts", "last_trade_date"],
+      header: {market_name: "Contract type", category: "League", n_outcomes: "Markets", contracts: "Contracts", last_trade_date: "Last trade"},
+      format: {contracts: d => fmtCount(+d), n_outcomes: d => d3.format(",")(+d), last_trade_date: d => fmtDate(d)},
+      align: {contracts: "right", n_outcomes: "right"},
+      width: {market_name: 260}, rows: 14
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The contract-type series is not being served yet, so this table is empty; nothing else on the page depends on it.</div>`);
 ```
 
 ## Where the volume sits on the probability axis
