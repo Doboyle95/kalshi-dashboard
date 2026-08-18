@@ -160,7 +160,12 @@ Plot.plot({
   color: {legend: true, domain: feeVenues, range: feeVenues.map(v => VENUE_COLORS[v])},
   marks: [
     Plot.ruleY([0]),
-    Plot.areaY(feeCumulative, {x: "date", y: "cumulative", fill: "venue", fillOpacity: 0.1}),
+    // y1/y2 EXPLICITLY, because Plot.areaY with a bare `y` applies the stackY
+    // transform by default while Plot.lineY does not. Stacked areas under unstacked
+    // lines drew every competitor piled on top of Kalshi, so pale bands floated above
+    // the Kalshi line -- read as a mystery second series when they were just
+    // Crypto.com/Nadex and Rothera stacked on it.
+    Plot.areaY(feeCumulative, {x: "date", y1: 0, y2: "cumulative", fill: "venue", fillOpacity: 0.1}),
     Plot.lineY(feeCumulative, {x: "date", y: "cumulative", stroke: "venue", strokeWidth: 2}),
     Plot.ruleX(feeCumulative, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(feeCumulative, Plot.pointerX({
@@ -173,7 +178,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">Accumulated from the brush start, not from each venue's first day, so the lines answer "who collected more over this window". Still-filling days are excluded. Window totals: ${selectedFeeVenues.map(v => `${v} ${fmtUsd(d3.sum(feeSolid.filter(d => d.venue === v), feeValue))}`).join(" · ")}.</div>
+<div class="chart-note">Accumulated from the start of the window set by the date control under <em>Fee revenue by day</em> above, not from each venue's first day, so the lines answer "who collected more over this window". Still-filling days are excluded. Window totals: ${selectedFeeVenues.map(v => `${v} ${fmtUsd(d3.sum(feeSolid.filter(d => d.venue === v), feeValue))}`).join(" · ")}.</div>
 
 ## Published fee schedules
 

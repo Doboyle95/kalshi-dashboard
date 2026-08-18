@@ -75,11 +75,16 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 ```js
 // Reusable mini-brush factory. Returns an SVG node whose .value = [startDate, endDate].
 // Each chart calls view(makeDateBrush(...)) independently.
-function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00C2A8") {
+// `rows` defaults to `daily` because three of the four callers brush the daily-volume
+// table. The fourth is open interest, which lives in kalshi_oi_daily.csv -- it passed an
+// accessor for total_oi_contracts while the body read `daily`, a table with no such
+// column, so every y was undefined, yMax fell back to 1 and the sparkline path was all
+// NaN: an empty grey box over an x-domain years wider than open interest has data for.
+function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00C2A8", rows = daily) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
-  const x = d3.scaleUtc().domain(d3.extent(daily, d => d.date)).range([ml, w - mr]);
-  const yMax = d3.max(daily, yAcc) || 1;
+  const x = d3.scaleUtc().domain(d3.extent(rows, d => d.date)).range([ml, w - mr]);
+  const yMax = d3.max(rows, yAcc) || 1;
   const y = d3.scaleLinear().domain([0, yMax]).range([h - mb, mt]);
 
   const svg = d3.create("svg")
@@ -91,7 +96,7 @@ function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00
     .style("margin-bottom", "1.5rem");
 
   svg.append("path")
-    .datum(daily)
+    .datum(rows)
     .attr("fill", color).attr("fill-opacity", 0.2)
     .attr("d", d3.area()
       .x(d => x(d.date)).y0(h - mb).y1(d => y(yAcc(d)))
@@ -103,7 +108,11 @@ function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const defaultEnd = d3.max(daily, d => d.date);
+  const defaultEnd = d3.max(rows, d => d.date);
+  // Clamp the requested start into this table's own range. Callers pass a shared
+  // 2025-01-01 default, which predates the open-interest series (starts 2025-04-01);
+  // brushing to a date the scale cannot place gives an out-of-range selection.
+  const brushStart = defaultStart < x.domain()[0] ? x.domain()[0] : defaultStart;
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", event => {
@@ -122,9 +131,9 @@ function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00
   const brushG = svg.append("g").attr("class", "brush");
 
 
-  brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  brushG.call(brush).call(brush.move, [brushStart, defaultEnd].map(x));
   svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
-  svg.property("value", [defaultStart, defaultEnd]);
+  svg.property("value", [brushStart, defaultEnd]);
   return svg.node();
 }
 ```
@@ -743,7 +752,7 @@ const oiLast = oi.length ? oi[oi.length - 1] : null;
 ```
 
 ```js
-const drOI = oi.length ? view(makeDateBrush(new Date("2025-01-01"), d => d.total_oi_contracts, "#7048e8")) : [null, null];
+const drOI = oi.length ? view(makeDateBrush(new Date("2025-01-01"), d => d.total_oi_contracts, "#7048e8", oi)) : [null, null];
 ```
 
 ```js

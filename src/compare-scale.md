@@ -130,6 +130,11 @@ const xvMedian = new Map(
   Array.from(d3.rollup(xvRows, v => d3.median(v, d => d.ratio), d => d.league))
 );
 const xvExtent = d3.extent([...xvRows.map(d => d.kalshi), ...xvRows.map(d => d.poly)]);
+// Constant-ratio guides. 1x is parity; the others mark where Kalshi traded 10, 100 or
+// 1000 times the same fixture -- the range the league medians actually span
+// (MLB 4.0x, WNBA 4.0x, NHL 5.8x, NBA 13.1x, IPL 18.7x, NFL 162.4x).
+const xvGuides = [{mult: 1, label: "parity"}, {mult: 10, label: "10x"},
+                  {mult: 100, label: "100x"}, {mult: 1000, label: "1000x"}];
 const fmtX = n => n >= 1e9 ? `${(n / 1e9).toFixed(1)}bn` : n >= 1e6 ? `${(n / 1e6).toFixed(0)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n);
 ```
 
@@ -137,18 +142,30 @@ const fmtX = n => n >= 1e9 ? `${(n / 1e9).toFixed(1)}bn` : n >= 1e6 ? `${(n / 1e
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
-  height: 380,
+  height: 480,
   marginLeft: 76,
   grid: true,
-  x: {type: "log", label: "Polymarket US contracts on that fixture →", tickFormat: fmtX},
-  y: {type: "log", label: "↑ Kalshi contracts on that fixture", tickFormat: fmtX},
+  // KALSHI ON X. Kalshi spans 2.27 decades (922k to 171.6M) against Polymarket's 6.20
+  // (21 to 33.5M); the wide axis has the pixels to spread the narrow range out, and the
+  // taller panel gives the six-decade series somewhere to go.
+  x: {type: "log", label: "Kalshi contracts on that fixture →", tickFormat: fmtX},
+  y: {type: "log", label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtX},
   color: {legend: true, domain: xvLeagues, scheme: "tableau10"},
   marks: [
-    // Parity: everything above this line is a fixture Kalshi traded more of.
-    Plot.line([[xvExtent[0], xvExtent[0]], [xvExtent[1], xvExtent[1]]],
-      {stroke: "currentColor", strokeOpacity: 0.35, strokeDasharray: "4,4"}),
+    // PARITY ALONE SAYS ALMOST NOTHING HERE: 811 of 817 fixtures sit on one side of it.
+    // These are constant-ratio guides, parallel to parity on a log-log panel, so where a
+    // dot sits between them reads directly as "how many times more Kalshi traded".
+    // Kalshi is on x now, so more-Kalshi means BELOW the line, not above.
+    ...xvGuides.map(g => Plot.line(
+      [[xvExtent[0], xvExtent[0] / g.mult], [xvExtent[1], xvExtent[1] / g.mult]],
+      {stroke: "currentColor", strokeOpacity: g.mult === 1 ? 0.45 : 0.16,
+       strokeDasharray: g.mult === 1 ? "4,4" : "2,5"})),
+    Plot.text(xvGuides, {
+      x: () => xvExtent[1], y: g => xvExtent[1] / g.mult, text: "label",
+      textAnchor: "end", dy: -6, fill: "currentColor", fillOpacity: 0.5, fontSize: 10
+    }),
     Plot.dot(xvRows, {
-      x: "poly", y: "kalshi", fill: "league", r: 3, fillOpacity: 0.72,
+      x: "kalshi", y: "poly", fill: "league", r: 3, fillOpacity: 0.72,
       tip: true,
       title: d => `${d.league} ${d.fixture}\n${d.date}\nKalshi ${fmtX(d.kalshi)} · Polymarket ${fmtX(d.poly)}\n${d.ratio.toFixed(1)}× Kalshi`
     })
@@ -156,7 +173,7 @@ Plot.plot({
 })
 ```
 
-<p class="chart-note">The dashed line is parity &mdash; ${xvRows.filter(d => d.ratio < 1).length} of ${xvRows.length} fixtures sit below it, where Polymarket US traded the larger book. Median ratio by league: ${xvLeagues.map(l => `${l} ${xvMedian.get(l).toFixed(1)}×`).join(" · ")}.</p>
+<p class="chart-note">The dashed line is parity and the fainter ones mark 10&times;, 100&times; and 1000&times;, so a dot between two guides traded that many times more on Kalshi. Only ${xvRows.filter(d => d.ratio < 1).length} of ${xvRows.length} fixtures sit <em>above</em> parity, where Polymarket US traded the larger book. Median ratio by league: ${xvLeagues.map(l => `${l} ${xvMedian.get(l).toFixed(1)}×`).join(" · ")}.</p>
 
 <details class="surface-card compact-details">
   <summary>About this comparison — read before quoting any number</summary>
