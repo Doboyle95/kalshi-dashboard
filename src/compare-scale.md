@@ -55,7 +55,6 @@ display(html`<table class="briefing-table scoreboard-table">
 
 ```js
 const scaleMetric = view(Inputs.radio(["Volume", "Market share"], {label: "Metric", value: "Volume"}));
-const scaleWindow = view(Inputs.radio(["30 days", "90 days", "All history"], {label: "Period", value: "90 days"}));
 const scaleType = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));
 const scaleExclude = view(Inputs.checkbox(["Exclude Kalshi"], {value: []}));
 ```
@@ -63,29 +62,51 @@ const scaleExclude = view(Inputs.checkbox(["Exclude Kalshi"], {value: []}));
 </div>
 
 ```js
-const end = d3.max(rows, d => d.date);
-const start = scaleWindow === "All history" ? d3.min(rows, d => d.date) : d3.utcDay.offset(end, scaleWindow === "30 days" ? -29 : -89);
+// The brush is the ONLY date filter on this chart, and its domain is now the FULL
+// history. It used to be handed data that a separate "Period" radio had already
+// trimmed, which made the period the brush's entire world: with Period = 30 days you
+// could brush to LESS than 30 days but never more. The period presets moved onto the
+// brush itself, which is what index.md and compare-fees.md already do.
+//
+// This cell deliberately reads NEITHER scaleMetric NOR scaleExclude. A Mutable is
+// rebuilt whenever its defining cell re-runs, so referencing either here would snap the
+// window back to the 90d default every time you switched metric or ticked Exclude
+// Kalshi. It also fixes the sparkline as the all-venue shape in both states -- that
+// strip is for orientation, not measurement, and a stable one is easier to aim with.
+const scaleUniverse = rows.filter(d => !d.sparse && d.contracts > 0);
+const scaleLatest = d3.max(scaleUniverse, d => d.date);
+const scaleDefaultStart = d3.utcDay.offset(scaleLatest, -89);
+const scaleBrushSeries = Array.from(d3.rollup(scaleUniverse, group => d3.sum(group, d => d.contracts), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
+  .sort((a, b) => a.date - b.date);
+const scaleDateSel = Mutable([scaleDefaultStart, scaleLatest]);
+const setScaleDate = range => { scaleDateSel.value = range; };
+display(renderDateBrush({
+  data: scaleBrushSeries,
+  initialRange: [scaleDefaultStart, scaleLatest],
+  quickRanges: [
+    {label: "30d", days: 30, title: "Last 30 days"},
+    {label: "90d", days: 90, title: "Last 90 days"},
+    {label: "365d", days: 365, title: "Last 365 days"},
+    {label: "All", days: Infinity, title: "All available history"}
+  ],
+  onSelect: setScaleDate,
+  color: "#00C2A8",
+  width
+}));
+```
+
+```js
 const scaleExKalshi = scaleExclude.includes("Exclude Kalshi");
-const inWindow = rows.filter(d => !d.sparse && d.contracts > 0 && d.date >= start && d.date <= end && (scaleMetric === "Volume" || !d.partial));
+const eligible = scaleUniverse.filter(d => scaleMetric === "Volume" || !d.partial);
 // Market-share denominators are built BEFORE the exclusion, so "Exclude Kalshi" only
 // HIDES a line: every plotted share stays a share of the whole reported market and
 // reads identically with the box ticked or not. Filtering first would silently restate
 // the metric as share-of-the-rest (Polymarket US 8.3% -> 59.0% on the last 14 days) --
 // same visual separation, different meaning, no label saying so.
-const dayTotals = d3.rollup(inWindow.filter(d => !d.partial), group => d3.sum(group, d => d.contracts), d => +d.date);
-const selected = scaleExKalshi ? inWindow.filter(d => d.venue !== "Kalshi") : inWindow;
+const dayTotals = d3.rollup(eligible.filter(d => !d.partial), group => d3.sum(group, d => d.contracts), d => +d.date);
+const selected = scaleExKalshi ? eligible.filter(d => d.venue !== "Kalshi") : eligible;
 const plotted = selected.map(d => ({...d, value: scaleMetric === "Volume" ? d.contracts : d.contracts / (dayTotals.get(+d.date) || d.contracts)}));
 const venueNames = VENUE_ORDER.filter(venue => plotted.some(d => d.venue === venue));
-const scaleBrushSeries = Array.from(d3.rollup(selected, group => d3.sum(group, d => d.contracts), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
-  .sort((a, b) => a.date - b.date);
-const scaleDateSel = Mutable([start, end]);
-display(renderDateBrush({
-  data: scaleBrushSeries,
-  initialRange: [start, end],
-  onSelect: range => { scaleDateSel.value = range; },
-  color: "#00C2A8",
-  width
-}));
 ```
 
 ```js
@@ -120,8 +141,8 @@ const oiExclude = view(Inputs.checkbox(["Exclude Kalshi"], {value: []}));
 </div>
 
 ```js
-const oiRows = [
-  ...(oiExclude.includes("Exclude Kalshi") ? [] : kalshiOi.map(d => ({date: d.date, venue: "Kalshi", openInterest: +d.total_oi_contracts || 0}))),
+const oiAll = [
+  ...kalshiOi.map(d => ({date: d.date, venue: "Kalshi", openInterest: +d.total_oi_contracts || 0})),
   // KALSHI IS EXCLUDED HERE BECAUSE IT ALREADY ARRIVES ABOVE, from its own
   // kalshi_oi_daily.csv. competitor_daily.csv also carries a Kalshi open_interest
   // column, so without this filter the venue was appended TWICE into one series:
@@ -132,17 +153,31 @@ const oiRows = [
   // artefact of the duplicate, not a fitted series.
   ...competitor.filter(d => +d.open_interest > 0 && d.platform !== "Kalshi").map(d => ({date: d.date, venue: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform === "Nadex" ? "Crypto.com/Nadex" : d.platform, openInterest: +d.open_interest}))
 ].filter(d => d.date && d.openInterest > 0);
-const oiVenues = VENUE_ORDER.filter(venue => oiRows.some(d => d.venue === venue));
-const oiBrushSeries = Array.from(d3.rollup(oiRows, group => d3.sum(group, d => d.openInterest), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
+// Split for the same reason as the chart above: the Mutable must not live in a cell
+// that reads oiExclude, or ticking the box throws away the brushed window.
+const oiFirst = d3.min(oiAll, d => d.date), oiLast = d3.max(oiAll, d => d.date);
+const oiBrushSeries = Array.from(d3.rollup(oiAll, group => d3.sum(group, d => d.openInterest), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
   .sort((a, b) => a.date - b.date);
-const oiDateSel = Mutable([d3.min(oiRows, d => d.date), d3.max(oiRows, d => d.date)]);
+const oiDateSel = Mutable([oiFirst, oiLast]);
+const setOiDate = range => { oiDateSel.value = range; };
 display(renderDateBrush({
   data: oiBrushSeries,
-  initialRange: [d3.min(oiRows, d => d.date), d3.max(oiRows, d => d.date)],
-  onSelect: range => { oiDateSel.value = range; },
+  initialRange: [oiFirst, oiLast],
+  quickRanges: [
+    {label: "30d", days: 30, title: "Last 30 days"},
+    {label: "90d", days: 90, title: "Last 90 days"},
+    {label: "365d", days: 365, title: "Last 365 days"},
+    {label: "All", days: Infinity, title: "All available history"}
+  ],
+  onSelect: setOiDate,
   color: "#3B7DD8",
   width
 }));
+```
+
+```js
+const oiRows = oiExclude.includes("Exclude Kalshi") ? oiAll.filter(d => d.venue !== "Kalshi") : oiAll;
+const oiVenues = VENUE_ORDER.filter(venue => oiRows.some(d => d.venue === venue));
 ```
 
 ```js
