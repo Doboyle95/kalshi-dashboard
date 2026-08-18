@@ -57,6 +57,7 @@ display(html`<table class="briefing-table scoreboard-table">
 const scaleMetric = view(Inputs.radio(["Volume", "Market share"], {label: "Metric", value: "Volume"}));
 const scaleWindow = view(Inputs.radio(["30 days", "90 days", "All history"], {label: "Period", value: "90 days"}));
 const scaleType = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));
+const scaleExclude = view(Inputs.checkbox(["Exclude Kalshi"], {value: []}));
 ```
 
 </div>
@@ -64,8 +65,15 @@ const scaleType = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "
 ```js
 const end = d3.max(rows, d => d.date);
 const start = scaleWindow === "All history" ? d3.min(rows, d => d.date) : d3.utcDay.offset(end, scaleWindow === "30 days" ? -29 : -89);
-const selected = rows.filter(d => !d.sparse && d.contracts > 0 && d.date >= start && d.date <= end && (scaleMetric === "Volume" || !d.partial));
-const dayTotals = d3.rollup(selected.filter(d => !d.partial), group => d3.sum(group, d => d.contracts), d => +d.date);
+const scaleExKalshi = scaleExclude.includes("Exclude Kalshi");
+const inWindow = rows.filter(d => !d.sparse && d.contracts > 0 && d.date >= start && d.date <= end && (scaleMetric === "Volume" || !d.partial));
+// Market-share denominators are built BEFORE the exclusion, so "Exclude Kalshi" only
+// HIDES a line: every plotted share stays a share of the whole reported market and
+// reads identically with the box ticked or not. Filtering first would silently restate
+// the metric as share-of-the-rest (Polymarket US 8.3% -> 59.0% on the last 14 days) --
+// same visual separation, different meaning, no label saying so.
+const dayTotals = d3.rollup(inWindow.filter(d => !d.partial), group => d3.sum(group, d => d.contracts), d => +d.date);
+const selected = scaleExKalshi ? inWindow.filter(d => d.venue !== "Kalshi") : inWindow;
 const plotted = selected.map(d => ({...d, value: scaleMetric === "Volume" ? d.contracts : d.contracts / (dayTotals.get(+d.date) || d.contracts)}));
 const venueNames = VENUE_ORDER.filter(venue => plotted.some(d => d.venue === venue));
 const scaleBrushSeries = Array.from(d3.rollup(selected, group => d3.sum(group, d => d.contracts), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
@@ -103,9 +111,17 @@ Plot.plot({
 
 <p class="section-intro">Open contracts at the reporting snapshot. Only directly published, comparable series are shown.</p>
 
+<div class="control-strip">
+
+```js
+const oiExclude = view(Inputs.checkbox(["Exclude Kalshi"], {value: []}));
+```
+
+</div>
+
 ```js
 const oiRows = [
-  ...kalshiOi.map(d => ({date: d.date, venue: "Kalshi", openInterest: +d.total_oi_contracts || 0})),
+  ...(oiExclude.includes("Exclude Kalshi") ? [] : kalshiOi.map(d => ({date: d.date, venue: "Kalshi", openInterest: +d.total_oi_contracts || 0}))),
   // KALSHI IS EXCLUDED HERE BECAUSE IT ALREADY ARRIVES ABOVE, from its own
   // kalshi_oi_daily.csv. competitor_daily.csv also carries a Kalshi open_interest
   // column, so without this filter the venue was appended TWICE into one series:
