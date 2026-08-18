@@ -31,12 +31,111 @@ const publishedChatEndpoint = (() => {
 const CHAT_API = publishedChatEndpoint.api || process.env.CHAT_API_URL || "";
 const CHAT_TOKEN = publishedChatEndpoint.token || process.env.CHAT_TOKEN || "";
 
+// ── Venue deep dives: one sidebar row per venue, modules in-page ─────────────
+// Framework's `pages` supports exactly ONE level of nesting — normalizeSection()
+// gives every section leaf pages, never sub-sections — so "Venue Deep Dives →
+// Kalshi → Activity" cannot be expressed in the sidebar at all. Before this the
+// section carried 18 flat rows, 7 of them Kalshi's, with nothing to show which
+// rows belonged together.
+//
+// The third level lives in the page header instead. `header` accepts a FUNCTION
+// of {title, data, path} (see markdown.js getHtml) which Framework calls in NODE
+// at BUILD TIME, once per page. That matters twice over:
+//   * it emits plain <a> links, so it is NOT an Observable cell and cannot fail
+//     silently the way a cell with an unresolved input does (cf. the chat.md
+//     localStorage incident) — a bad map here fails the build, loudly;
+//   * it keeps the config read in Node, per the rule this file already documents.
+// A page can override or suppress it with `header:` in its own front matter,
+// which getHtml checks before calling this.
+//
+// hrefs are written ROOT-RELATIVE on purpose: getHtml runs rewriteHtmlPaths() to
+// make them page-relative, then renderHeader runs rewriteHtml() → resolveLink()
+// to apply `base`. Keeping them base-agnostic here is what lets one build serve
+// from both /kalshi-dashboard/ and a domain root.
+const VENUES = [
+  {name: "Kalshi", accent: "kalshi", tabs: [
+    ["Activity", "/volume"],
+    ["Products", "/categories"],
+    ["Trading behavior", "/taker"],
+    ["Economics", "/fees"],
+    ["Outcomes", "/taker-pnl"],
+    ["Parlays", "/parlay-analytics"],
+    ["Parlay outcomes", "/parlay"]
+  ]},
+  // /polymarket-calibration was built and URL-reachable but absent from every nav.
+  // It is a live page, so it becomes Polymarket's Outcomes tab rather than staying
+  // orphaned. The remaining orphans (bet-types, calibration, parlay-venues,
+  // pnl-venues, robinhood) are deliberately NOT wired up: two are "has moved"
+  // tombstones and the rest are a pending keep-or-cut decision.
+  {name: "Polymarket US", accent: "polymarket", tabs: [
+    ["Activity", "/polymarket"],
+    ["Outcomes", "/polymarket-calibration"]
+  ]},
+  {name: "ForecastEx", accent: "forecastex", tabs: [["Activity", "/forecastex"]]},
+  {name: "DKeX", accent: "dkex", tabs: [["Activity", "/dkex"]]},
+  {name: "Underdog Exchange", accent: "underdog", tabs: [["Activity", "/underdog"]]},
+  {name: "Crypto.com/Nadex", accent: "nadex", tabs: [["Activity", "/nadex"]]},
+  {name: "ProphetX", accent: null, tabs: [["Activity", "/prophetx"]]},
+  {name: "Novig", accent: null, tabs: [
+    ["Activity", "/novig"],
+    ["Outcomes", "/novig-outcomes"]
+  ]},
+  {name: "Rothera", accent: "rothera", tabs: [["Activity", "/rothera"]]},
+  {name: "CME", accent: "cme", tabs: [["Activity", "/cme"]]}
+];
+
+const escapeHtml = (v) =>
+  String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Fail the BUILD on a duplicate path: two venues claiming one page would make the
+// active-tab lookup order-dependent and silently mislabel a page.
+{
+  const seen = new Map();
+  for (const v of VENUES) {
+    for (const [label, path] of v.tabs) {
+      if (seen.has(path)) {
+        throw new Error("venue nav: " + path + " claimed by both " + seen.get(path) + " and " + v.name + " (" + label + ")");
+      }
+      seen.set(path, v.name);
+    }
+  }
+}
+
+function venueNavHeader({path}) {
+  const current = VENUES.find((v) => v.tabs.some(([, p]) => p === path));
+  if (!current) return null; // every non-venue page gets no header at all
+
+  const entry = (v) => v.tabs[0][1];
+  const picker = VENUES.map((v) => {
+    const mark = v === current ? ' aria-current="true"' : "";
+    return '<a href="' + entry(v) + '"' + mark + ">" + escapeHtml(v.name) + "</a>";
+  }).join("");
+
+  // A lone tab is noise — the picker already says where you are.
+  const tabs = current.tabs.length > 1
+    ? '<nav class="venue-tabs" aria-label="' + escapeHtml(current.name) + ' sections">' +
+      current.tabs.map(([label, p]) => {
+        const mark = p === path ? ' aria-current="page"' : "";
+        return '<a href="' + p + '"' + mark + ">" + escapeHtml(label) + "</a>";
+      }).join("") + "</nav>"
+    : "";
+
+  return '<div class="venue-nav"' + (current.accent ? ' data-accent="' + current.accent + '"' : "") + ">" +
+    '<div class="venue-nav-bar">' +
+      '<span class="venue-nav-label">Venue</span>' +
+      '<details class="venue-picker"><summary>' + escapeHtml(current.name) + "</summary>" +
+      '<div class="venue-picker-menu">' + picker + "</div></details>" +
+      '<a class="venue-nav-index" href="/venues">All venues</a>' +
+    "</div>" + tabs + "</div>";
+}
+
 export default {
   title: "US Prediction Markets",
   base: "/kalshi-dashboard/",
   root: "src",
   theme: ["air", "near-midnight"],
   style: "styles.css",
+  header: venueNavHeader,
   head: [
     // 2026-08-13: keep the site out of search engines while it's not meant to be
     // freely discoverable -- direct links still work fine, this only affects crawlers.
@@ -97,25 +196,14 @@ export default {
       {name: "Fees & Economics", path: "/compare-fees"},
       {name: "Accuracy & Outcomes", path: "/compare-accuracy"}
     ]},
+    // One row per venue, pointing at that venue's first module. The remaining
+    // modules are reachable from the in-page tab strip `header` renders, because
+    // the sidebar cannot express a third level (see VENUES above).
+    // Pages dropped from this list still BUILD and stay URL-reachable — Framework
+    // builds every src/*.md regardless of `pages` — they only leave the sidebar.
     {name: "Venue Deep Dives", pages: [
       {name: "Venue directory", path: "/venues"},
-      {name: "Kalshi · Activity", path: "/volume"},
-      {name: "Kalshi · Products", path: "/categories"},
-      {name: "Kalshi · Taker behavior", path: "/taker"},
-      {name: "Kalshi · Economics", path: "/fees"},
-      {name: "Kalshi · Outcomes", path: "/taker-pnl"},
-      {name: "Kalshi · Parlays", path: "/parlay-analytics"},
-      {name: "Kalshi · Parlay outcomes", path: "/parlay"},
-      {name: "Polymarket US", path: "/polymarket"},
-      {name: "ForecastEx", path: "/forecastex"},
-      {name: "DKeX", path: "/dkex"},
-      {name: "Underdog Exchange", path: "/underdog"},
-      {name: "Crypto.com/Nadex", path: "/nadex"},
-      {name: "ProphetX", path: "/prophetx"},
-      {name: "Novig · Activity", path: "/novig"},
-      {name: "Novig · Outcomes", path: "/novig-outcomes"},
-      {name: "Rothera", path: "/rothera"},
-      {name: "CME", path: "/cme"}
+      ...VENUES.map((v) => ({name: v.name, path: v.tabs[0][1]}))
     ]},
     {name: "Market Explorer", path: "/market-explorer"},
     {name: "Data & Tools", pages: [
