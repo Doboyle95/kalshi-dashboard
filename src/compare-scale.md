@@ -99,42 +99,6 @@ Plot.plot({
 })
 ```
 
-## Reported open interest
-
-<p class="section-intro">Open contracts at the reporting snapshot. Only directly published, comparable series are shown.</p>
-
-```js
-const oiRows = [
-  ...kalshiOi.map(d => ({date: d.date, venue: "Kalshi", openInterest: +d.total_oi_contracts || 0})),
-  ...competitor.filter(d => +d.open_interest > 0).map(d => ({date: d.date, venue: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform === "Nadex" ? "Crypto.com/Nadex" : d.platform, openInterest: +d.open_interest}))
-].filter(d => d.date && d.openInterest > 0);
-const oiVenues = VENUE_ORDER.filter(venue => oiRows.some(d => d.venue === venue));
-const oiBrushSeries = Array.from(d3.rollup(oiRows, group => d3.sum(group, d => d.openInterest), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
-  .sort((a, b) => a.date - b.date);
-const oiDateSel = Mutable([d3.min(oiRows, d => d.date), d3.max(oiRows, d => d.date)]);
-display(renderDateBrush({
-  data: oiBrushSeries,
-  initialRange: [d3.min(oiRows, d => d.date), d3.max(oiRows, d => d.date)],
-  onSelect: range => { oiDateSel.value = range; },
-  color: "#3B7DD8",
-  width
-}));
-```
-
-```js
-const [oiBrushFrom, oiBrushTo] = oiDateSel;
-const oiRowsBrushed = oiRows.filter(d => d.date >= oiBrushFrom && d.date <= oiBrushTo);
-```
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 330, marginLeft: 72,
-  x: {type: "utc", label: null}, y: {label: "Reported open interest", grid: true, tickFormat: fmtCount},
-  color: {legend: true, domain: oiVenues, range: oiVenues.map(d => VENUE_COLORS[d])},
-  marks: [Plot.ruleY([0]), Plot.lineY(oiRowsBrushed, {x: "date", y: "openInterest", stroke: "venue", strokeWidth: 2, curve: "monotone-x"})]
-})
-```
-
 ## The same game, on two venues
 
 <p class="section-intro">Every fixture both Kalshi and Polymarket US listed, one dot each. Kalshi trades more of the same game in all six sports, but the gap runs from about 4&times; in baseball to 162&times; in the NFL.</p>
@@ -202,6 +166,50 @@ Plot.plot({
   <p><strong>Soccer is absent by construction.</strong> Polymarket lists a soccer fixture as three separate binary markets (home, away, draw) where Kalshi lists one, so the two are not the same object and a join would compare a two-outcome market against one leg of a three-outcome one.</p>
   <p><strong>Contracts are each venue's own unit</strong> and are not adjusted. Polymarket US contract counts are fractional; Kalshi's are whole.</p>
 </details>
+
+## Reported open interest
+
+<p class="section-intro">Open contracts at the reporting snapshot. Only directly published, comparable series are shown.</p>
+
+```js
+const oiRows = [
+  ...kalshiOi.map(d => ({date: d.date, venue: "Kalshi", openInterest: +d.total_oi_contracts || 0})),
+  // KALSHI IS EXCLUDED HERE BECAUSE IT ALREADY ARRIVES ABOVE, from its own
+  // kalshi_oi_daily.csv. competitor_daily.csv also carries a Kalshi open_interest
+  // column, so without this filter the venue was appended TWICE into one series:
+  // 1,005 points across 503 dates, with a single backward jump in data order
+  // (2026-08-16 -> 2025-04-02). Plot draws that as one path, and curve monotone-x
+  // renders the reversal as a long smooth sweep across the panel -- which read as a
+  // trend line for Kalshi that nobody had written and no other venue had. It was an
+  // artefact of the duplicate, not a fitted series.
+  ...competitor.filter(d => +d.open_interest > 0 && d.platform !== "Kalshi").map(d => ({date: d.date, venue: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform === "Nadex" ? "Crypto.com/Nadex" : d.platform, openInterest: +d.open_interest}))
+].filter(d => d.date && d.openInterest > 0);
+const oiVenues = VENUE_ORDER.filter(venue => oiRows.some(d => d.venue === venue));
+const oiBrushSeries = Array.from(d3.rollup(oiRows, group => d3.sum(group, d => d.openInterest), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
+  .sort((a, b) => a.date - b.date);
+const oiDateSel = Mutable([d3.min(oiRows, d => d.date), d3.max(oiRows, d => d.date)]);
+display(renderDateBrush({
+  data: oiBrushSeries,
+  initialRange: [d3.min(oiRows, d => d.date), d3.max(oiRows, d => d.date)],
+  onSelect: range => { oiDateSel.value = range; },
+  color: "#3B7DD8",
+  width
+}));
+```
+
+```js
+const [oiBrushFrom, oiBrushTo] = oiDateSel;
+const oiRowsBrushed = oiRows.filter(d => d.date >= oiBrushFrom && d.date <= oiBrushTo);
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 330, marginLeft: 72,
+  x: {type: "utc", label: null}, y: {label: "Reported open interest", grid: true, tickFormat: fmtCount},
+  color: {legend: true, domain: oiVenues, range: oiVenues.map(d => VENUE_COLORS[d])},
+  marks: [Plot.ruleY([0]), Plot.lineY(oiRowsBrushed, {x: "date", y: "openInterest", stroke: "venue", strokeWidth: 2, curve: "monotone-x"})]
+})
+```
 
 <div class="destination-grid">
   <a class="destination-card" href="./robinhood"><strong>Robinhood distribution spotlight</strong><span>Estimated volume routed through Robinhood and its share of Kalshi.</span></a>

@@ -547,67 +547,6 @@ const sportsMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", lab
 
 </div>
 
-## Open interest
-
-_Total contracts still open across Kalshi at the end of each day — bets placed but not yet settled. Volume is how much changes hands; open interest is how much money is currently riding on the exchange._
-
-```js
-const oiRaw = await DataAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
-const oi = oiRaw
-  .map(d => ({
-    date: d.date,
-    total_oi_contracts: +d.total_oi_contracts,
-    n_markets: +d.n_markets,
-    n_with_oi: +d.n_with_oi
-  }))
-  .filter(d => d.date && d.total_oi_contracts > 0)
-  .sort((a, b) => a.date - b.date);
-// Guard against an empty/missing OI CSV (the OI snapshot producer can stall) — without
-// this, the inline stats + prose below dereference undefined and throw on the page.
-const oiPeak = oi.length ? oi.reduce((a, b) => (b.total_oi_contracts > a.total_oi_contracts ? b : a), oi[0]) : null;
-const oiLast = oi.length ? oi[oi.length - 1] : null;
-```
-
-```js
-const drOI = oi.length ? view(makeDateBrush(new Date("2025-01-01"), d => d.total_oi_contracts, "#7048e8")) : [null, null];
-```
-
-```js
-const oiShown = oi.length ? oi.filter(d => d.date >= drOI[0] && d.date <= drOI[1]) : [];
-```
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 300, marginLeft: 75,
-  x: {type: "utc", label: null},
-  y: {label: "Contracts of open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
-  marks: [
-    Plot.areaY(oiShown, {x: "date", y: "total_oi_contracts", fill: "#7048e8", fillOpacity: 0.18, curve: "monotone-x"}),
-    Plot.lineY(oiShown, {x: "date", y: "total_oi_contracts", stroke: "#7048e8", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0]),
-    Plot.ruleX(oiShown, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(oiShown, Plot.pointerX({x: "date", y: "total_oi_contracts",
-      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.total_oi_contracts)} contracts (${(d.total_oi_contracts||0).toLocaleString()})\n${fmtCount(d.n_with_oi)} markets with open positions`}))
-  ]
-})
-```
-
-```js
-display(oiPeak && oiLast
-  ? html`<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 18px 0;font-size:13px;color:var(--theme-foreground-muted);">
-      <div title="${(oiPeak.total_oi_contracts ?? 0).toLocaleString()} contracts"><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
-      <div title="${(oiLast.total_oi_contracts ?? 0).toLocaleString()} contracts"><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
-      <div title="${(oiLast.n_with_oi ?? 0).toLocaleString()} markets"><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
-    </div>`
-  : html`<p class="chart-note">Open-interest data is not currently available.</p>`);
-```
-
-<details class="surface-card compact-details">
-<summary>What this measures</summary>
-<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot updates on a periodic schedule rather than live, so the chart ends ${oiLast ? fmtDate(oiLast.date) : "—"} and may lag the other charts by a day or two.</p>
-</details>
-
 ## Trading activity today
 
 <p class="section-intro">Contracts by hour (Eastern Time) on the latest day in the feed, split into sports, parlays, and non-sports. The faded bar is still counting.</p>
@@ -780,4 +719,65 @@ display(Plot.plot({
 <details class="surface-card compact-details">
   <summary>What the weekly average means</summary>
   <p>Each bar averages one day-of-week × hour combination across the selected window. In-progress hours are excluded. Parlays remain their own segment, and the connected dots on today's row show the latest day's actual values.</p>
+</details>
+
+## Open interest
+
+_Total contracts still open across Kalshi at the end of each day — bets placed but not yet settled. Volume is how much changes hands; open interest is how much money is currently riding on the exchange._
+
+```js
+const oiRaw = await DataAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
+const oi = oiRaw
+  .map(d => ({
+    date: d.date,
+    total_oi_contracts: +d.total_oi_contracts,
+    n_markets: +d.n_markets,
+    n_with_oi: +d.n_with_oi
+  }))
+  .filter(d => d.date && d.total_oi_contracts > 0)
+  .sort((a, b) => a.date - b.date);
+// Guard against an empty/missing OI CSV (the OI snapshot producer can stall) — without
+// this, the inline stats + prose below dereference undefined and throw on the page.
+const oiPeak = oi.length ? oi.reduce((a, b) => (b.total_oi_contracts > a.total_oi_contracts ? b : a), oi[0]) : null;
+const oiLast = oi.length ? oi[oi.length - 1] : null;
+```
+
+```js
+const drOI = oi.length ? view(makeDateBrush(new Date("2025-01-01"), d => d.total_oi_contracts, "#7048e8")) : [null, null];
+```
+
+```js
+const oiShown = oi.length ? oi.filter(d => d.date >= drOI[0] && d.date <= drOI[1]) : [];
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 300, marginLeft: 75,
+  x: {type: "utc", label: null},
+  y: {label: "Contracts of open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
+  marks: [
+    Plot.areaY(oiShown, {x: "date", y: "total_oi_contracts", fill: "#7048e8", fillOpacity: 0.18, curve: "monotone-x"}),
+    Plot.lineY(oiShown, {x: "date", y: "total_oi_contracts", stroke: "#7048e8", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleY([0]),
+    Plot.ruleX(oiShown, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(oiShown, Plot.pointerX({x: "date", y: "total_oi_contracts",
+      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.total_oi_contracts)} contracts (${(d.total_oi_contracts||0).toLocaleString()})\n${fmtCount(d.n_with_oi)} markets with open positions`}))
+  ]
+})
+```
+
+```js
+display(oiPeak && oiLast
+  ? html`<div style="display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 18px 0;font-size:13px;color:var(--theme-foreground-muted);">
+      <div title="${(oiPeak.total_oi_contracts ?? 0).toLocaleString()} contracts"><strong>Peak:</strong> ${fmtCount(oiPeak.total_oi_contracts)} contracts on ${fmtDate(oiPeak.date)}</div>
+      <div title="${(oiLast.total_oi_contracts ?? 0).toLocaleString()} contracts"><strong>Latest:</strong> ${fmtCount(oiLast.total_oi_contracts)} contracts on ${fmtDate(oiLast.date)}</div>
+      <div title="${(oiLast.n_with_oi ?? 0).toLocaleString()} markets"><strong>Markets with open positions (latest):</strong> ${fmtCount(oiLast.n_with_oi)}</div>
+    </div>`
+  : html`<p class="chart-note">Open-interest data is not currently available.</p>`);
+```
+
+<details class="surface-card compact-details">
+<summary>What this measures</summary>
+<p>Open interest is the number of contracts currently held — bought but not yet sold or settled — added up across every Kalshi market at day's end. Note: this snapshot updates on a periodic schedule rather than live, so the chart ends ${oiLast ? fmtDate(oiLast.date) : "—"} and may lag the other charts by a day or two.</p>
 </details>
