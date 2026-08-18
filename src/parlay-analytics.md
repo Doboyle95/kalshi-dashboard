@@ -216,7 +216,7 @@ const inParlayRange = row => row.date >= parlayBrushFrom && row.date <= parlayBr
 
 ## The rise of multi-leg betting
 
-_Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. These are contract counts, not dollars: a parlay contract typically sells for a few cents, so the money staked is far smaller (the house-edge chart above shows both side by side). The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
+_Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
 
 ```js
 const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View"}));
@@ -389,7 +389,7 @@ classification is what determines the pricing math.
 
 ## How much sports dominates parlays
 
-<p class="section-intro">Almost every parlay contract is a pure-sports parlay. Each month's bar is split by mix — the green is all-sports, and the thin slivers on top are cross-category "mixed" and all-non-sports parlays. The bars are shares of <strong>contracts</strong>, not dollars.</p>
+<p class="section-intro">Almost every parlay contract is a pure-sports parlay. Each month's bar is split by mix — the green is all-sports, and the thin slivers on top are cross-category "mixed" and all-non-sports parlays.</p>
 
 ```js
 // All three sport-mix categories, monthly, for the 100%-stacked dominance view.
@@ -503,7 +503,7 @@ const games = gamesRaw
 
 ## The games that drive parlay money
 
-_Top 20 underlying games by parlay volume touching them, measured in **contracts** (taker-yes side) — this source carries no dollar column, so no stake figure is shown. A parlay's volume is counted for every distinct game it includes, so totals are non-exclusive (a measure of how "parlayed" each game is). Raw game keys shown for non-dated/futures markets._
+_Top 20 underlying games by parlay volume touching them. A parlay's volume is counted for every distinct game it includes, so totals are non-exclusive (a measure of how "parlayed" each game is). Raw game keys shown for non-dated/futures markets._
 
 ```js
 display(
@@ -532,7 +532,7 @@ Plot.plot({
 
 ## The most popular parlays
 
-_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. The colored chip is the **audited leg-level correlation** (same classifier as the charts above) — not Kalshi's product family. **Volume** is total contracts traded on the ticket, both sides — a contract count, not dollars. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
+_The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. The colored chip is the **audited leg-level correlation** (same classifier as the charts above) — not Kalshi's product family. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
 
 ```js
 const popDmin = d3.min(popDailyRaw, d => d.date);
@@ -626,7 +626,7 @@ const bucketDomain = [...new Set(misp.map(d => d.bucket))];
 
 ## The "lottery ticket" parlays
 
-_Trading on parlays with **8 or more legs**, priced under **2¢** to win — true longshots, not just "unlikely." A ticket only counts on the days it actually traded at that price, so the same parlay can appear here on one day and not another as its odds move; this is a snapshot of longshot trading activity, not a fixed list of tickets. **Taker stakes** (the money yes-takers put in) is shown starting **June 7, 2026** — before that date, our own price data was rounded to whole cents, which would badly understate stakes for exactly this cheapest-of-the-cheap slice (Kalshi's market itself has always supported sub-cent pricing — this is our data catching up, not a market change). **Volume** isn't affected and covers the full history back to Jan 2026._
+_Trading on parlays with **8 or more legs**, priced under **2¢** to win — true longshots, not just "unlikely." A ticket only counts on the days it actually traded at that price, so the same parlay can appear here on one day and not another as its odds move; this is a snapshot of longshot trading activity, not a fixed list of tickets. **Taker stakes** (the money yes-takers put in) is shown starting **June 7, 2026**. **Volume** isn't affected and covers the full history back to Jan 2026._
 
 ```js
 const lotteryDaily = lotteryRaw.map(d => ({date: d.date, volume: d.volume, stakes: d.stakes, trades: d.trades, n_tickers: d.n_tickers}));

@@ -5,7 +5,7 @@ title: Briefing
 <div class="page-hero briefing-hero">
   <div class="page-eyebrow">Industry briefing</div>
   <h1>US prediction markets, at a glance</h1>
-  <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports. Kalshi has the deepest tape; every coverage-limited number says so directly.</p>
+  <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
 </div>
 
 ```js
@@ -297,7 +297,7 @@ display(html`<table class="briefing-table">
 
 ## What the industry trades
 
-<p class="section-intro">The current mix, and how the sports share has moved. Kalshi doesn't label its sports, so its split comes from ticker-level volume.</p>
+<p class="section-intro">The current mix, and how the sports share has moved.</p>
 
 ```js
 // Same broad buckets the Kalshi category charts use (components/taker-categories.js),

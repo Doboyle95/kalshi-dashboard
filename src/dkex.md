@@ -170,64 +170,6 @@ Plot.plot({
 })
 ```
 
-## League mix
-
-<p class="section-intro">Almost every symbol DKeX has listed belongs to a sports league; a small club-friendly bucket began appearing on 2026-08-13, so a sports-vs-non-sports split would sit just under 100% and is no longer shown. The cut that carries information is the league: MLB is the majority, but NPB (Japan) and KBO (Korea) together are about a third of the venue.</p>
-
-```js
-const brushLeague = view(makeBrush(split, DKEX));
-```
-
-```js
-const [sL, eL] = brushLeague;
-const splitFLeague = split.filter(d => d.date >= sL && d.date <= eL);
-const LEAGUE_SERIES = [
-  {key: "contracts_mlb", label: "MLB", color: DKEX},
-  {key: "contracts_npb", label: "NPB (Japan)", color: "#00C2A8"},
-  {key: "contracts_kbo", label: "KBO (Korea)", color: "#7C6CF0"},
-  {key: "contracts_other_leagues", label: "Other leagues", color: "#94A3B8"}
-];
-const leagueOrder = LEAGUE_SERIES.map(s => s.label);
-const tidyLeague = splitFLeague.flatMap(d => LEAGUE_SERIES.map(s => ({
-  date: d.date, league: s.label, value: d[s.key] || 0
-})));
-const leagueTotals = LEAGUE_SERIES.map(s => ({label: s.label, value: d3.sum(splitFLeague, d => d[s.key] || 0)}));
-const leagueGrand = d3.sum(leagueTotals, t => t.value);
-```
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 240,
-  marginLeft: 70,
-  x: {type: "utc", label: null},
-  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: leagueOrder, range: LEAGUE_SERIES.map(s => s.color)},
-  marks: [
-    Plot.areaY(tidyLeague, {
-      x: "date", y: "value", fill: "league",
-      order: leagueOrder.slice().reverse(),
-      curve: "monotone-x", fillOpacity: 0.85
-    }),
-    Plot.ruleX(splitFLeague, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(splitFLeague, Plot.pointerX({
-      x: "date",
-      title: d => [fmtDate(d.date)].concat(LEAGUE_SERIES.map(s => `${s.label}: ${fmtCount(d[s.key] || 0)}`)).join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-```js
-display(leagueGrand
-  ? html`<p class="section-intro">Share of the selected window: ${leagueTotals
-      .map(t => `${t.label} ${(100 * t.value / leagueGrand).toFixed(1)}%`)
-      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - today NWSL, NASCAR, INDYCAR and club friendlies.</p>`
-  : html`<p class="section-intro">League columns arrive with the next competitor data refresh (~6h); this chart fills in then.</p>`);
-```
-
 ## Category mix
 
 <p class="section-intro">Volume by parsed category, with market-report open interest available beside it.</p>
@@ -574,9 +516,6 @@ const calibGap = 100 * (calibActual - calibPaid);
 ## Top markets
 
 <p class="section-intro">DKeX's individual markets, ranked by volume and searchable by club, driver or player. These names are <strong>composed</strong>: DKeX publishes an English name for each <em>outcome</em> in its settlement report but never for the market, so each title here is built from that published text plus the market type and the published settlement date.</p>
-
-<p class="chart-note">A blank winner is not missing data. A total or handicap ladder settles several rungs at 1.00 at the same time, a voided game settles both legs at 0.50 as a refund, and an open market has not settled at all — so the column is filled only where exactly one outcome settled at 1.00, which is about 47% of rows. The date in each name is the <em>settlement</em> date from the settlement report, not the maturity stamped in the market report: DKeX gives races a placeholder maturity, and every race in a season can share one.</p>
-<p class="chart-note">Fees are the taker-side number, for comparability with Kalshi. DKeX bills the resting side too, at $0.0025 per contract — as do ForecastEx, Crypto.com/Nadex, Rothera and Underdog Exchange. <strong>Polymarket US is the only venue here that charges one side alone</strong> — it bills the aggressor and pays the resting side a rebate, so it keeps less than the per-side figure shown. Kalshi bills the aggressor on most markets but also charges the resting side on a named subset, about 11% of its fee revenue — left out of Kalshi’s taker-side number here too, so this column is one side at every venue on it. What DKeX itself keeps is about a quarter more than this column shows.</p>
 
 ```js
 // Untyped on purpose — see the note in components/market-leaderboard.js: reading

@@ -5,7 +5,7 @@ title: Taker-Side Volume
 <div class="page-hero">
   <div class="page-eyebrow">Kalshi</div>
   <h1>Taker-Side Volume</h1>
-  <p class="page-lead">The closest thing Kalshi has to sportsbook handle — the dollars staked by the bettor who takes the price on each trade rather than waiting for it. Yes-side takers are buying upside; no-side takers are fading it.</p>
+  <p class="page-lead">The closest thing Kalshi has to sportsbook handle — the dollars staked by the bettor who takes the price on each trade rather than waiting for it.</p>
 </div>
 
 ```js

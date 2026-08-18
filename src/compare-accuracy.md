@@ -83,8 +83,6 @@ const selectedAccuracyVenues = view(Inputs.checkbox(venues, {label: "Venues", va
 const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.venue));
 ```
 
-<p class="chart-note">Coverage: ${venues.join(" · ")}. Crypto.com/Nadex is its whole contract suite — strikes, events and combos — of which 64.45% of traded contracts join a settled outcome; most of the remainder expire after the collection window, so no settlement file can hold them. Excluded, never imputed. Novig is straight contracts only — its parlays never settle in this feed. Underdog, Rothera, and CME do not currently publish enough outcome-linked price data for this comparison.</p>
-
 ## Actual vs implied win rate
 
 ```js

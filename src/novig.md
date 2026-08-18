@@ -108,8 +108,6 @@ Plot.plot({
 | Live (in-game) straight | No fee | 0.03 &times; P &times; (1 &minus; P) per contract |
 | Parlay | N/A on app/web; no fee via API | **0.10 &times; P &times; (1 &minus; P) per contract**, already inside the quoted price |
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>Three things in that table are routinely got wrong.</strong> <em>A parlay costs more than three times a straight</em> &mdash; the coefficient is 0.10, not 0.03. <em>Pre-game straights are free outright</em>, so the 0.03 bites only once a game is under way. And <em>the parlay fee is quoted all-in</em>: Novig's own worked example prices a parlay at 10.9&cent;, being a fair price of 10.0&cent; plus 0.10 &times; 0.10 &times; 0.90 = 0.9&cent; of fee. The maker side is never charged on any trade type, and a maker credit pays back <em>up to</em> half the taker fee on qualifying live straights &mdash; not on parlays, and not to exchange affiliates or holders of a market-maker agreement. There is no settlement fee: a winning contract pays the full $1.00.</div>
-
 ```js
 // ---------------------------------------------------------------------------
 // FEES -- deliberately loaded through a SECOND attachment instance.
@@ -247,8 +245,6 @@ display(Plot.plot({
 }));
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem"><strong>The peak is not a cap.</strong> The taker fee is a parabola in the contract price, so it is largest in the middle of the book and falls to nothing at both ends. The widely quoted figure of $0.0075 per contract is <em>this curve's value at 50&cent;</em> &mdash; its vertex &mdash; and not a ceiling that binds anywhere else; at 10&cent; or 90&cent; the live-straight fee is 0.27&cent;, roughly a third of it. Implementing that number as a cap would overstate the fee across most of the book. The parlay curve has the same shape with a vertex of 2.5&cent;. Pre-game straights sit on zero, which is a real zero and not a missing series. Rounding is to the nearest 1/100,000 of a dollar, midpoint up, and is omitted here.</p>
-
 ```js
 const novigFeeDateSel = Mutable(feeT ? [feeT.from, feeT.to] : [new Date("2000-01-01T00:00:00Z"), new Date("2000-01-02T00:00:00Z")]);
 display(feeT
@@ -331,14 +327,6 @@ Plot.plot({
   ]
 })
 ```
-
-<details class="surface-card compact-details">
-  <summary>About this page — read before quoting any number</summary>
-  <p><strong>There is no spread measurement on this page, and the one that used to be here was vacuous.</strong> It computed taker price plus maker price minus one across paired trade groups and reported 1.0000. That sum is fixed at one by the definition of a matched binary contract, so it would have read 1.0000 for a venue charging ten cents a side. Novig's take is in its fee, which is charged in the quoted price and is recovered by inverting the published schedule in <a href="#what-novig-charges">what Novig charges</a>.</p>
-  <p><strong>Every trade appears twice</strong> in Novig's feed, once as the taker and once as the maker. Volume, trade sizes and leaderboard totals here are <strong>taker-side only</strong>; summing both would double the venue. The one place both sides are used deliberately is the spread above, which is about the two sides by definition. The daily volume is verified against Novig's own <code>dailyVolume</code> figure on every date and the build fails if they ever diverge.</p>
-  <p><strong>Calibration and P&amp;L now have their own page &mdash; for straight contracts.</strong> The CSV feed this page reads still carries no outcome: its <code>close</code> is a last traded price, not a resolution, and on finalised markets it spreads across the whole range. But Novig's public GraphQL snapshot <em>does</em> publish a settled WIN/LOSS per outcome, and joined to this tape's aggressor flag that makes true taker P&amp;L and calibration possible for the first time &mdash; see <a href="./novig-outcomes">Novig &middot; Outcomes</a>. It is straight-only: parlays are quoted by request and never resolve, so Novig stays a half-inverse of the others &mdash; it has always published who was the aggressor, which almost nobody does, and now, on straights, who won.</p>
-  <p><strong>The leaderboard is keyed on contract type, not on individual markets.</strong> Novig's market identifiers are bare UUIDs and the feed carries no per-event name &mdash; no teams, no fixture, no description. The only published label is a series ticker covering many markets at once, so a per-market board would have produced a thousand rows sharing about 126 repeating names. Keyed on the contract type instead, every label is meaningful and the chart answers a real question: what does Novig actually trade?</p>
-</details>
 
 ## What trades there
 

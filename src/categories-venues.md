@@ -6,8 +6,6 @@ title: Products
 
 <p class="page-lead">What each venue sells, from broad category mix to sports contract types and parlay adoption.</p>
 
-<div class="instruction-line"><strong>Parlays count as sport, and are shown as a lighter band inside it.</strong> A two-leg parlay on two baseball games is baseball volume; being a parlay is a property of the <em>bet</em>, not of the subject. Splitting it out as a peer of "Politics" would be a category error, and would also make Kalshi &mdash; which books parlays inside Sports &mdash; look 38 points more sports-heavy than venues that report theirs separately. The band shows the composition without breaking the comparison. Parlay <em>structure</em>, share and leg counts live on <a href="./parlay-venues">Cross-Venue Parlays</a>.</div>
-
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
@@ -208,17 +206,6 @@ categoryScope === "__legacy" ? Plot.plot({
   <a class="destination-card" href="./bet-types"><strong>Sports contract types</strong><span>Moneylines, spreads, totals, props, and how the mix changes.</span></a>
   <a class="destination-card" href="./parlay-venues"><strong>Parlays</strong><span>Venue share, adoption over time, and leg distribution.</span></a>
 </div>
-
-<details class="surface-card compact-details">
-  <summary>About this page — read before quoting any number</summary>
-  <p><strong>One window, everywhere: ${WIN_LO} to ${WIN_HI}.</strong> Nothing here is all-time, and that is not a detail. Over all time ForecastEx reads as a 36% football venue; it has listed no sport since February, and in this window its sport share is exactly zero. Rothera's all-time book is 85% soccer on the back of a finished World Cup, against 42% here. A page mixing all-time and windowed figures would be wrong about most venues.</p>
-  <p><strong>Parlays are sport, shown as a band.</strong> Kalshi books parlays inside Sports; Nadex, ProphetX and Underdog publish them as their own value. Counting them as sport everywhere is what makes the bars comparable — measured on this window, Kalshi's Sports is 79.3%, of which 38.0 points is parlay and 41.3 points is not. Treating parlays as a separate subject would have shown Kalshi as a 79% sports venue against rivals whose parlays had been lifted out, an error of 38 points in the largest bucket at the largest venue.</p>
-  <p><strong>"Other" does not mean the same thing at every venue, and is mapped per venue.</strong> At Underdog it <em>is</em> the combo bucket — verified against its own parlay column to three decimals, 36.575% against 36.575% — so it is drawn as parlay sport. At Nadex and DKeX it is a genuine residual, and Nadex separately publishes an explicit "Parlays" value. A single global rule for "Other" would have moved a third of Underdog's book into the wrong bucket.</p>
-  <p><strong>What the roll-up destroys.</strong> Seven venues name the sport — Baseball, Tennis, Golf, Table tennis, Esports — and Kalshi publishes one undivided "Sports". The taxonomy is therefore pinned to the <em>broadest</em> venue, and every sport-level distinction is collapsed. That is a real loss: Polymarket US is tennis-led while ProphetX and Rothera are baseball-led, and this chart cannot show it. The alternative — splitting Kalshi's Sports by joining to its series list — was rejected because that join covers only ~95% of current volume and would fabricate a dimension Kalshi does not publish. Sport-level detail is on each venue's own page.</p>
-  <p><strong>Contracts, not dollars, and the difference is not neutral.</strong> Contract share overweights cheap longshot books: on this window Kalshi's Crypto is 18.4% of contracts but ~29.6% of yes-side dollars, and ProphetX's Golf is 12% of contracts against roughly 2% of dollars. A dollar version is impossible rather than merely unbuilt — ForecastEx and Nadex publish no price or dollar volume anywhere in their feeds.</p>
-  <p><strong>A "day" is not the same day at every venue.</strong> Nadex's date is its bulletin date, one day after the trading session; Polymarket's labelled day runs 17:00 ET to 17:00 ET and moves with daylight saving; ProphetX's session runs 16:30 to 16:30 ET; the rest are calendar days. Over a 30-day window this shifts boundaries, not totals, but it means the window is not literally identical across venues.</p>
-  <p><strong>Underdog is a launch ramp, not a peer.</strong> It has 22 of the window's 30 days and roughly three quarters of its window volume falls in the final week, across a 10,000-fold ramp. Its mix is an early-August reading with a 30-day label. </p>
-</details>
 
 ## Every venue and bucket
 

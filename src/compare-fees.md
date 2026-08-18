@@ -28,7 +28,7 @@ const fmtUsd = d => d == null ? "—"
 
 ## Fee revenue by day
 
-<p class="section-intro">What each venue actually collected, in dollars, day by day. The schedules further down say what a contract <em>should</em> cost; this says what the book produced.</p>
+<p class="section-intro">What each venue actually collected, in dollars, day by day.</p>
 
 ```js
 // PARTIAL DAYS. Kalshi's newest row is a still-filling day and prints far below a real

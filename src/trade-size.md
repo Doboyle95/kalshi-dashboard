@@ -756,7 +756,7 @@ Inputs.table(smallMarketRows, {
 
 ## Volume by probability
 
-<p class="section-intro">The share of each venue's observed volume traded in each five-cent price bin. This is trading behavior, not calibration: it describes where activity sits without claiming whether those prices were right.</p>
+<p class="section-intro">The share of each venue's observed volume traded in each five-cent price bin.</p>
 
 ```js
 const PRICE_SPECS = [

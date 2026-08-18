@@ -5,7 +5,7 @@ title: CME (FanDuel + DraftKings)
 <div class="page-hero" data-accent="cme">
   <div class="page-eyebrow">CME · FanDuel + DraftKings</div>
   <h1>CME Event Contracts</h1>
-  <p class="page-lead">FanDuel and DraftKings clear their event contracts through CME as swap-based products. CME publishes daily call/put volume in its Daily Bulletins — these have to be collected by hand within a 24-hour window, so the series is sparse and starts in early 2026, but it's the only public window into the two big sportsbooks' prediction-market volume.</p>
+  <p class="page-lead">FanDuel and DraftKings clear their event contracts through CME. CME publishes daily call/put volume in its Daily Bulletins — these have to be collected by hand within a 24-hour window, so the series is sparse and starts in early 2026, but it's the only public window into the two big sportsbooks' prediction-market volume.</p>
 </div>
 
 ```js

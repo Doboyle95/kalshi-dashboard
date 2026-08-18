@@ -301,9 +301,6 @@ Plot.plot({
 
 <p class="section-intro">Rothera's individual markets, ranked by volume. <strong>Rothera publishes no market names</strong> — the feed carries a mnemonic code and nothing else — so this table shows codes and does not dress them up as titles.</p>
 
-<p class="chart-note"><strong>All-time here is one tournament.</strong> Soccer is about 89% of the ranked volume and effectively all of it is the 2026 men's World Cup: every <code>MWC</code>-prefixed code in the table below is a World Cup market, and <strong>all fifteen of the top fifteen</strong> are. Use the <strong>Period</strong> control above the table to see a single month — in August 2026 the board is baseball — and note that Rothera's file only starts on 2026-05-21, so &ldquo;all time&rdquo; means 78 days here against two years on ForecastEx.</p>
-<p class="chart-note"><strong>Most fee cells are empty by design.</strong> Rothera fees can only be computed exactly from its trade-print tape, which ages out upstream after about eleven days, so a fee is shown only for the 128 products whose entire traded history falls inside that window — 3% of volume, and none of the World Cup markets. The alternative was estimating from settlement or closing prices, which was measured against the real tape at anywhere from 80% low to 30% high, so nothing is shown rather than something wrong. An empty fee cell here means unmeasurable, not free.</p>
-
 ```js
 // Untyped on purpose — see the note in components/market-leaderboard.js: reading
 // this file with {typed: true} turns the period column's "2026-05" into a Date

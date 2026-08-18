@@ -177,7 +177,7 @@ Plot.plot({
 
 ## Single-game vs. parlay
 
-<p class="section-intro">Everything Underdog has reported so far is a sports contract, so the useful split is not sports vs. non-sports but single-game markets vs. multi-leg parlays. The “non-sports” bucket in the underlying file is entirely the <code>UDXCOMBO-&lt;hash&gt;</code> parlay tickers — they carry no sport code, so the ticker parser files them outside the sport categories. Verified 2026-08-06: on every date in the file that bucket equals the UDXCOMBO total exactly, and no non-parlay ticker has ever landed in it.</p>
+<p class="section-intro">Everything Underdog has reported so far is a sports contract, so the useful split is not sports vs. non-sports but single-game markets vs. multi-leg parlays.</p>
 
 ```js
 const brushSports = view(makeBrush(split, UNDERDOG));
@@ -231,7 +231,7 @@ Plot.plot({
 
 ## Category mix
 
-<p class="section-intro">Volume by sport, parsed from each contract's ticker. Underdog is not a baseball-only venue: WNBA has been listed since 2026-07-28 and is 10.4% of all contracts traded to date. The parlay bucket is the <code>UDXCOMBO</code> tickers, which carry no sport code.</p>
+<p class="section-intro">Volume by sport, parsed from each contract's ticker.</p>
 
 ```js
 const brushCats = view(makeBrush(split, UNDERDOG));
@@ -302,7 +302,7 @@ Plot.plot({
 
 ## Bet type mix
 
-<p class="section-intro">Underdog Exchange lists moneyline, spread, total and matchwin contracts on the same games — a breakdown other venues on this site don't have. Parsed from the same ticker as category, one level down. Every multi-leg parlay is minted as its own one-off ticker, so all of them are grouped into a single Parlay series rather than charted individually.</p>
+<p class="section-intro">Underdog Exchange lists moneyline, spread, total and matchwin contracts on the same games.</p>
 
 ```js
 // Underdog mints one ticker per parlay (UDXCOMBO-<hash>), and the ticker parser
@@ -381,10 +381,7 @@ Plot.plot({
 
 ## Top markets
 
-<p class="section-intro">Underdog Exchange's individual markets, ranked by volume. Underdog publishes no English name anywhere in its feed, so every label here is <strong>decoded from the ticker</strong> — readable down to the club code and the scheduled start time, and no further.</p>
-
-<p class="chart-note">Club codes are left as Underdog's own two-to-four letter codes rather than expanded to team names, because expanding them would need a hand-built dictionary that the venue never published. Splitting a code pair is not guesswork: the two clubs are read off the venue's own moneyline and spread outcome tokens and required to concatenate back to the ticker, which resolves all but three of 732 markets.</p>
-<p class="chart-note">There is no winner column: Underdog publishes no settlement price, and not one of the single-game rows ranked in this table sits at exactly 0.00 or 1.00 (parlay combo rows do, and they are excluded here). Parlay tickets are excluded from this table entirely — each is a one-off basket keyed by a 19-digit hash with no leg information, so it can be neither ranked nor searched — which is 38.9% of the venue's contracts &mdash; the largest single component of its volume, not a rounding error. Its file also starts only on 2026-07-17, so &ldquo;all time&rdquo; is three weeks.</p>
+<p class="section-intro">Underdog Exchange's individual markets, ranked by volume.</p>
 
 ```js
 // Untyped on purpose — see the note in components/market-leaderboard.js: reading

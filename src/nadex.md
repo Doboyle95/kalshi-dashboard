@@ -172,7 +172,7 @@ Plot.plot({
 
 ## Parlay adoption history
 
-<p class="section-intro">Nadex is the rare venue whose public history starts before its parlay product. Monthly share shows the launch without placing a one-venue case study in the cross-venue comparison.</p>
+<p class="section-intro">Monthly share shows the launch without placing a one-venue case study in the cross-venue comparison.</p>
 
 ```js
 const nadexParlayByDay = Array.from(
@@ -231,112 +231,6 @@ Plot.plot({
   ].filter(Boolean)
 })
 ```
-
-## Parlay P&L
-
-<p class="section-intro">Crypto.com is one of only three venues on this site with a real
-parlay P&amp;L, and the only competitor whose every contract is priced at what was actually
-paid for it. A combo is quoted by the house on request, so the customer is necessarily the
-buyer &mdash; which is what makes buyer P&amp;L the same thing as taker P&amp;L here, with no
-aggressor flag needed. Outcomes come from Nadex's own settlement file and prices from its
-time-and-sales tape, joined on the contract ID. <strong>Net of fees.</strong> CDNA charges $0.02 per contract per side with no
-settlement fee, and the combo customer is the taker, so 2.00&cent; a contract is deducted.
-That fee is larger than the trading loss itself &mdash; 1.15&cent; gross becomes 3.15&cent; net.</p>
-
-```js
-const pdSorted = parlayDaily
-  .map(d => ({
-    ...d,
-    // typed:true turns the date column into a Date; everything below wants one.
-    date: d.date instanceof Date ? d.date : new Date(String(d.date)),
-    prov: String(d.is_provisional) === "true"
-  }))
-  .sort((a, b) => a.date - b.date);
-
-// Cumulative is built here rather than in the producer so the two charts can never
-// disagree about which days they include.
-let _c = 0;
-const pdCumul = pdSorted.map(d => {
-  _c += +d.gross_pnl;
-  return {...d, cumul: _c};
-});
-
-const pdTotal = _c;
-const pdContracts = d3.sum(pdSorted, d => +d.contracts_settled);
-const pdParlays = d3.sum(pdSorted, d => +d.parlays_settled);
-const pdProv = pdSorted.filter(d => d.prov).length;
-const fmtM = d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(2) + "M"
-                       : Math.abs(d) >= 1e3 ? (d / 1e3).toFixed(0) + "k"
-                       : d.toFixed(0));
-const nadexPnlDateSel = Mutable([d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)]);
-display(renderDateBrush({
-  data: pdSorted.map(d => ({date: d.date, value: Math.abs(+d.gross_pnl) || 0})),
-  initialRange: [d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)],
-  onSelect: range => { nadexPnlDateSel.value = range; },
-  color: "#9c27b0",
-  width
-}));
-```
-
-```js
-const [nadexPnlFrom, nadexPnlTo] = nadexPnlDateSel;
-const pdSortedBrushed = pdSorted.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
-const pdCumulBrushed = pdCumul.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
-```
-
-<div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(pdTotal)}</strong> gross &mdash; ${(100 * pdTotal / pdContracts).toFixed(3)}&cent; per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
-  x: {type: "utc", label: null},
-  y: {label: "Daily parlay P&L, gross (USD)", grid: true,
-      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  marks: [
-    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.2}),
-    // Colour carries DIRECTION (did the bettor win that day), opacity carries how much
-    // of the day the window can actually account for. Solid throughout: a faded bar is
-    // a weaker reading, never a missing one.
-    Plot.rectY(pdSortedBrushed, {
-      x: "date", interval: "day", y: "gross_pnl",
-      fill: d => +d.gross_pnl > 0 ? "#1a9641" : "#d7191c",
-      fillOpacity: d => d.prov ? 0.4 : 0.92,
-      title: d => `${d.date.toISOString().slice(0, 10)}${d.prov ? " — PROVISIONAL" : ""}
-Gross P&L: ${fmtM(+d.gross_pnl)}
-Staked: ${fmtM(+d.stake_usd)}
-${(+d.contracts_settled).toLocaleString()} contracts on ${(+d.parlays_settled).toLocaleString()} parlays
-${(+d.gross_pnl_cents_per_contract).toFixed(2)}¢ per contract
-Coverage: ${(+d.coverage_pct).toFixed(1)}%`,
-      tip: true
-    })
-  ]
-})
-```
-
-_Green days are days the parlay bettors came out ahead; red days they did not. Because a parlay is settled as one contract, a single large winning combo can turn a day green on its own._
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
-  x: {type: "utc", label: null},
-  y: {label: "Cumulative parlay P&L, gross (USD)", grid: true,
-      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  marks: [
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.areaY(pdCumulBrushed, {x: "date", y: "cumul", fill: "#9c27b0", fillOpacity: 0.12}),
-    Plot.line(pdCumulBrushed, {x: "date", y: "cumul", stroke: "#9c27b0", strokeWidth: 2}),
-    Plot.dot(pdCumulBrushed, {
-      x: "date", y: "cumul", r: 9, fill: "transparent",
-      title: d => `${d.date.toISOString().slice(0, 10)}
-Cumulative: ${fmtM(d.cumul)}
-That day: ${fmtM(+d.gross_pnl)}`,
-      tip: true
-    })
-  ]
-})
-```
-
-<div class="instruction-line">The line goes one way, but not smoothly, and the bumps are the interesting part. <strong>The cumulative total did climb above zero on five separate days, peaking at &plus;&dollar;701k</strong> &mdash; every one of them inside the provisional opening fortnight, and driven by single days like 23 June that returned &plus;&dollar;2.0M against a typical daily swing nearer &plusmn;&dollar;300k. That is one or two large combos landing, and it is exactly the variance a parlay book is built on. Once coverage is complete the line never crosses back above zero. The shape matches Kalshi's parlay book and is the expected one: a parlay's price is the product of its legs plus the house's margin on each, so the edge compounds with every leg added. Crypto.com's buyers lose <strong>${(100 * pdTotal / pdContracts).toFixed(2)}&cent; per contract</strong> against Kalshi parlay takers' 1.82&cent; and Kalshi single-market takers' 1.21&cent; &mdash; but read that gap carefully, because this figure is gross and the Kalshi ones are net of fees.</div>
 
 ## Sports vs. non-sports
 
@@ -471,7 +365,7 @@ Plot.plot({
 
 ## Top sport events (all time)
 
-_The biggest individual sports events on Nadex by all-time contract volume, from the daily bulletin events feed. The bulletin publishes ticker codes, not event names, so each bar is labelled by league code and settlement date. Non-sport lines (politics, crypto, company and climate events) are left out, and so is COMBOS — that is one aggregated parlay line rather than an event, and it is charted in the sports-vs-non-sports section above._
+_The biggest individual sports events on Nadex by all-time contract volume, from the daily bulletin events feed._
 
 ```js
 // Bulletin lines whose venue name contains "Events Center" survive the scraper's
@@ -578,10 +472,7 @@ Plot.plot({
 
 ## Top markets
 
-<p class="section-intro">Crypto.com/Nadex's individual markets, ranked by volume. <strong>This is the least readable venue on the site and the table does not pretend otherwise</strong> — the daily bulletin publishes a ticker and a volume, and nothing that identifies a fixture.</p>
-
-<p class="chart-note">A name like <em>NFL #00001 (2026-02-08)</em> is the whole of what the venue publishes. The five-digit number is a counter within the day, not a game id, so it is reproduced as-is rather than dressed up; no decoding gets a team name out of it, because no team name is there. Rows whose ticker carries no date at all — season-long tickets, and a handful of opaque codes — decode to even less.</p>
-<p class="chart-note">Two rows deserve their labels read carefully. <code>COMBOS</code> sorts first and is a <em>pool</em> of every parlay the venue books rather than a market, about a third of its ranked volume; it is kept because dropping it would understate the venue. <code>NO DESCRIPTION</code> is five days in June 2026 when the bulletin's product field came through blank — real volume, unknown product. A separate class of parse artifact from the Events Center bulletins is filtered out upstream, as it is on the category charts, because those rows would otherwise sit at the very top of this table.</p>
+<p class="section-intro">Crypto.com/Nadex's individual markets, ranked by volume — the daily bulletin publishes a ticker and a volume, and nothing that identifies a fixture.</p>
 
 ```js
 // Untyped on purpose — see the note in components/market-leaderboard.js: reading

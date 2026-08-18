@@ -5,7 +5,7 @@ title: ProphetX
 <div class="page-hero">
   <div class="page-eyebrow">Competitor</div>
   <h1>ProphetX</h1>
-  <p class="page-lead">A peer-to-peer sports exchange publishing a full time-and-sales tape. This page covers <strong>what trades there</strong> — daily contract volume, how much of it is parlays, and on single markets <strong>whether those prices come true</strong> — volume from the tape rather than from the venue's own daily bulletin, for the reason set out below, and outcomes from that bulletin, because its settlement column is the only place this venue publishes a result. The rule for reading that column &mdash; a mark on a contract still listed is a daily mark, not an outcome &mdash; is set out with the calibration.</p>
+  <p class="page-lead">A peer-to-peer sports exchange publishing a full time-and-sales tape. This page covers <strong>what trades there</strong> — daily contract volume, how much of it is parlays, and on single markets <strong>whether those prices come true</strong>.</p>
 </div>
 
 ```js
@@ -53,8 +53,6 @@ const completeBrushed = complete.filter(d => d.date >= pxBrushFrom && d.date <= 
 const partialBrushed = partial.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo);
 ```
 
-<div class="instruction-line"><strong>Volume here comes from the trade tape, not from ProphetX's daily bulletin.</strong> The bulletin's own <code>daily_volume</code> column agrees with the tape on <strong>${usable} of ${recon.length}</strong> sessions. On the rest it stamps one aggregate figure across thousands of multi-event rows — on 2026-08-11 the single value 198,771.64 appears on 1,204 separate rows, pushing the bulletin to 362.7M contracts against a real 5.3M. Anyone quoting the bulletin's volume for this venue is quoting that artifact.</div>
-
 <div class="grid grid-cols-4">
   <div class="card"><h2>Contracts traded</h2><span class="big">${fmtCount(totalContracts)}</span><span class="muted">${complete.length} complete days</span></div>
   <div class="card"><h2>Trades</h2><span class="big">${fmtCount(totalTrades)}</span><span class="muted">avg ${d3.format(",.0f")(totalContracts / totalTrades)} contracts each</span></div>
@@ -95,8 +93,6 @@ Plot.plot({
 ```
 ## How much of it is parlays
 
-<div class="instruction-line">ProphetX calls them multi-event contracts and lists them from 2 up to <strong>12</strong> legs. Parlay share is one of the few things measurable at every venue that runs them, so this sits alongside <a href="./parlay">Kalshi's parlay pages</a> without needing a settlement feed.</div>
-
 ```js
 Plot.plot({
   width,
@@ -121,21 +117,6 @@ Plot.plot({
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Dashed line is the period average, ${(100 * parlayContracts / totalContracts).toFixed(2)}%.</div>
 
-<div class="instruction-line" style="border-left-color:#DB2777"><strong>What ProphetX charges, and why no fee figure appears anywhere on this site.</strong> Its published schedule is <strong>2% of net gains per market</strong> on straight trades and <strong>0% on parlays</strong> (Trading Fees v1.0, 10 June 2026, covering this entire tape). That is a commission on <em>winnings</em>, not a per-contract charge, so computing it needs each user’s wins netted against their losses inside one market — and this tape is anonymous. The rate is documented; a fee series is not derivable, and applying 2% to volume would overstate it by roughly an order of magnitude, since net gains are a small fraction of turnover. ProphetX is therefore absent from every fee chart on the site, and that absence means <em>not measurable</em>, never <em>free</em>.</div>
-
-<details class="surface-card compact-details">
-  <summary>About this page — read before quoting any number</summary>
-  <p><strong>Why not the bulletin.</strong> ProphetX publishes a daily bulletin with an <code>open_interest</code> and a <code>daily_volume</code> column, and it is the natural place to look. Its volume agrees with the trade tape on <strong>${usable} of ${recon.length}</strong> sessions. On the others it repeats one aggregate value across thousands of multi-event rows, taking multi-event contracts to ~98% of the day against a true 11&ndash;12% in the tape. The full session-by-session comparison is published as <code>prophetx_bulletin_daily.csv</code> rather than hidden, so the discrepancy can be checked rather than taken on trust.</p>
-  <p><strong>The bulletin repeats some contracts across rows</strong>, so deduplicate on <code>event_contract</code> before summing anything. Measured over all 60 sessions on disk (recount 2026-08-14): 35.7% of contract-sessions appear twice, 62.7% appear once, and the rest three to six times &mdash; so <em>every contract is listed twice</em> would be wrong. Deduplicating changes the volume total by <strong>1.013&times;</strong> in aggregate, though the effect is far larger on individual sessions, which is how an earlier single-session reading of 2.2&times; came to be quoted here as a property of the whole feed.</p>
-  <p><strong>What the price means — solved.</strong> ProphetX publishes ONE price per market, and it is the probability of the <strong>second-named side</strong>: the team or player after the “@”, i.e. the home side. One number describes both sides, so the away side is simply one minus it. The confirmation is tennis: across 1,244 tennis matches, where “A @ B” is an arbitrary ordering and there is no home advantage, the mean market price is <strong>0.5026</strong> — dead on a coin flip. Every other sport sits above it, ordered by how much home advantage that sport really has: baseball 0.5248 (MLB home teams win about 54%), basketball 0.5330, MMA 0.5417, soccer 0.5922. That ordering is not something a meaningless number could produce.</p>
-  <p>This resolves what earlier looked impossible. A top-five player against a wildcard printed every trade between 10¢ and 15¢, which read as “both players at 14%” and cannot be true — but as P(home) it is simply the wildcard at 14% and the favourite at 86%, which is exactly right. The per-trade selection label is <em>not</em> the priced side and must not be used as one; the fixture ordering is.</p>
-  <p><strong>Outcomes: single markets yes, parlays no.</strong> This page used to say the bulletin&rsquo;s <code>settlement_price</code> records only that a contract resolved, never which side won, and that calibration and P&amp;L were therefore unavailable. That holds for <strong>parlays</strong> and is wrong for single markets, and the pooled test that produced it was dominated by parlays. Not one of the <strong>80,543</strong> distinct multi-event contracts in the bulletin carries a parseable event date, so the maturity rule that makes single markets safe cannot be applied to a parlay at all, and of the 79,279 that do reach a terminal mark of exactly 0 or 1, <strong>94.92%</strong> mark to <code>1</code> &mdash; an impossible win rate for a product that runs to twelve legs, so those marks are not outcomes. Parlays also crowd the cheap end of the book, which is exactly where the old test was run: recounted from the raw tape on 2026-08-14, of the <strong>16,760</strong> contracts whose contract-weighted mean traded price was 5&cent; or below and whose last bulletin mark is exactly 0 or 1, <strong>15,830 are parlays</strong> &mdash; 94.5% of that pool &mdash; and pooled they mark to 1 <strong>86.76%</strong> of the time, the parlays alone 91.82%. Run the identical test on single markets and the column separates almost perfectly: <strong>930</strong> singles, of which <strong>six</strong> marked to 1, <strong>0.65%</strong>. Those are the same six contracts under every contract-weighted variant tried &mdash; under-5&cent; or 5&cent;-and-under, raw or whole-cent prices, with or without the requirement that the contract has stopped being listed &mdash; and only the denominator moves, 782 to 930, so the rate stays between 0.65% and 0.77%. The basis matters more than the decimal here, which is why it is stated. Single-market calibration is therefore published in the calibration section further down this page. <strong>Parlay outcomes remain underivable</strong>: parlay calibration and parlay P&amp;L cannot be built at all, and the ${calParlayTapeLabel} parlay contracts on the tape sit outside every number in that section. Volume is unaffected throughout &mdash; it is a plain quantity sum that matches the venue's own bulletin to within 2% on the two sessions where the bulletin is sane.</p>
-  <p><strong>Sessions versus dates.</strong> ProphetX's <code>trade_date</code> field is a session label, not the date a trade happened: every row of the file for 13 August reads <code>2026-08-13 16:30:00</code> while its executions are all 12 August. This page keys on the execution timestamp. The cost is that a calendar date spans two session files, so the newest date is always partial — it is drawn hollow and excluded from the totals above.</p>
-  <p><strong>Coverage.</strong> The tape is available from 2026-06-16; earlier dates return 403. There are no gaps in the ${recon.length} sessions since.</p>
-</details>
-
-
-
 ```js
 const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
 const calib = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
@@ -143,8 +124,6 @@ const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: 
 ```
 
 ## Where the volume sits on the probability axis
-
-<div class="instruction-line">Contracts traded by price, on the home side. Every trade also has an away side at one minus this price, so counting both would double the venue &mdash; one side per trade is what the other venue pages here show too.</div>
 
 ```js
 Plot.plot({

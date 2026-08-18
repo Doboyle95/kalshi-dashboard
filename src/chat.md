@@ -9,7 +9,7 @@ title: Ask Data
   <div class="page-meta">Requires <code>OPENAI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code>, plus the local API server.</div>
 </div>
 
-<p class="section-intro">Ask questions in plain English against the underlying trade data. The dataset itself never leaves the server — what goes to the LLM provider is your question, a description of the schema, and a sample of the rows your query returns.</p>
+<p class="section-intro">Ask questions in plain English against the underlying trade data.</p>
 
 <details class="surface-card compact-details">
   <summary>How this works</summary>
