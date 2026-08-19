@@ -4,12 +4,6 @@ title: Cross-Venue Parlays
 
 # Who sells parlays, and how long are they?
 
-<p class="page-lead">Compare parlay adoption, share of venue volume, and leg distribution. Bettor outcomes stay in the venue analyses because coverage is not comparable.</p>
-
-<div class="instruction-line"><strong>The headline contrast:</strong> parlays are a similar share of volume at several venues, but they are not the same product. Kalshi's are <em>long</em> &mdash; the largest single band is eight legs or more. ProphetX's are <em>short</em> &mdash; two-leg tickets dominate. A venue can look identical on share and be selling something quite different.</div>
-
-<div class="instruction-line" style="border-left-color:#9c27b0"><strong>New here:</strong> Crypto.com/Nadex, the only venue on this page whose file starts <em>before</em> its own parlay product did. Every other venue either always had parlays or arrived with them already running, so none of them can say whether a one-third share is a mature level or an early one. Nadex can: thirteen months at exactly zero, then a launch, then eight months that take it from 3.8% to 37.1% of the book. Its leg counts are <strong>not</strong> available and it is absent from the leg chart for that reason, which is stated there rather than left to be noticed.</div>
-
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {renderDateBrush} from "./components/date-brush.js";
@@ -149,7 +143,7 @@ Inputs.table(headline, {
 
 ## How much of each venue is parlays
 
-<div class="instruction-line">Volume-weighted over each venue's own coverage, which differs a lot &mdash; Crypto.com/Nadex has twenty months, Kalshi close to a year, ProphetX two months, Novig and Polymarket days. <strong>Each bar carries its own window in grey beside the number</strong>, because these are not a like-for-like time comparison and the windows are the reason. Where a venue has more than ${RECENT_DAYS} days, a black tick marks the same venue's <strong>last ${RECENT_DAYS} days</strong>: for a venue that spans a product launch the two are very different numbers, and the gap between bar and tick is the point rather than an error. Share is not size: Crypto.com/Nadex's ${fmtCount(hv("Crypto.com/Nadex").parlay)} parlay contracts are the largest parlay book on this page outside Kalshi, ${(hv("Crypto.com/Nadex").parlay / d3.max(headline.filter(d => !["Kalshi", "Crypto.com/Nadex"].includes(d.venue)), d => d.parlay)).toFixed(0)}&times; the next venue's, and it still sits mid-table here because share and size are different questions.</div>
+<div class="instruction-line">Volume-weighted over each venue’s own window, shown beside the bar; the tick is its last ${RECENT_DAYS} days.</div>
 
 ```js
 Plot.plot({
@@ -190,7 +184,7 @@ Plot.plot({
 
 ## Parlay share over time
 
-<div class="instruction-line"><strong>Kalshi's bar is measured against a different base.</strong> Every other venue here is a sportsbook, so its denominator is sport by construction. Kalshi's is its whole book &mdash; politics, economics and crypto included &mdash; which understates its parlay share against the venues beside it. Read Kalshi's bar as a share of ALL Kalshi volume, not of its sports volume. Only venues with at least two weeks of history are drawn; a three-day line reads as a trend when it is nothing of the kind. Crypto.com/Nadex enters at the far left and runs flat along zero for thirteen months before anything else on this page starts: that flat line is real trading with no parlay product, not missing data. The dashed rule is the first day its bulletin reports any parlay volume.</div>
+<div class="instruction-line">Kalshi’s share is of its whole book, not just sport &mdash; every other venue here is a sportsbook.</div>
 
 ```js
 const longEnough = new Set(headline.filter(d => d.days >= 14).map(d => d.venue));
@@ -259,8 +253,6 @@ Plot.plot({
 
 ## How many legs
 
-<div class="instruction-line">Share of each venue's <em>parlay</em> volume by leg count, so venues of very different size sit on one axis. Kalshi publishes leg counts in buckets, so ProphetX and Novig are mapped into the same buckets rather than the other way around &mdash; anything else would compare a bucket to a number.</div>
-
 ```js
 // Kalshi's own bucket vocabulary. Everyone else is mapped INTO it.
 const BUCKETS = ["2", "3", "4", "5-7", "8+"];
@@ -328,9 +320,7 @@ Plot.plot({
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>Three venues are on the share charts above and cannot be on this one. That is an absence, not a zero.</strong> <strong>Crypto.com/Nadex</strong> reports parlays as a single undifferentiated <code>COMBOS</code> bulletin line &mdash; ${fmtCount(ndAllParlay)} contracts with no leg breakdown anywhere in the file, so it joins the share charts and stops here. <strong>Underdog</strong> publishes a daily parlay contract total and no legs. <strong>Polymarket US</strong> publishes daily parlay contracts, trades and stake, and no legs. None of the three can be given a bar here without inventing a number its venue never published.</div>
-
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi additionally carries <strong>${fmtCount(kUnknown)} contracts</strong> (${(100 * kUnknown / (kUnknown + kKnown)).toFixed(1)}% of its parlay volume) whose legs are not yet classified. That band is the honest left-join miss for tickers the classifier has not reached, not a leg count, so it is excluded from the percentages above rather than folded into a bar.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Crypto.com/Nadex, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero.</div>
 
 <div hidden aria-hidden="true">
 

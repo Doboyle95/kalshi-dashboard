@@ -72,11 +72,11 @@ const VENUES = [
   ]},
   // /polymarket-calibration was built and URL-reachable but absent from every nav.
   // It is a live page, so it becomes Polymarket's Outcomes tab rather than staying
-  // orphaned. SEVEN orphans remain and are deliberately NOT wired up:
-  // calibration-venues and competitors are "has moved" tombstones; bet-types,
-  // calibration, parlay-venues, pnl-venues and robinhood are a pending
-  // keep-or-cut decision. (An earlier version of this comment listed five and
-  // then said "two are tombstones" -- the two were the ones it had omitted.)
+  // orphaned. Every page now has a home in SITE_MAP below; SIX sit in its "Unfiled"
+  // group pending a keep-or-cut decision -- calibration-venues and competitors are
+  // "has moved" tombstones, and bet-types, calibration, pnl-venues and robinhood are
+  // undecided. (An earlier version of this comment listed five and then said "two are
+  // tombstones" -- the two were the ones it had omitted.)
   {name: "Polymarket US", accent: "polymarket", tabs: [
     ["Activity", "/polymarket"],
     ["Outcomes", "/polymarket-calibration"]
@@ -125,6 +125,9 @@ const SITE_MAP = [
   {label: "Compare venues", links: [
     ["Scale & liquidity", "/compare-scale"],
     ["Products", "/categories-venues"],
+    // Sits next to Products because it answers the same question -- what is being traded
+    // -- rather than at the end as an appendix. Promoted out of Unfiled 2026-08-19.
+    ["Parlays", "/parlay-venues"],
     ["Trading behavior", "/trade-size"],
     ["Fees & economics", "/compare-fees"],
     ["Accuracy & outcomes", "/compare-accuracy"]
@@ -134,17 +137,17 @@ const SITE_MAP = [
     ["Market Explorer", "/market-explorer"],
     ["Methodology & coverage", "/methodology"]
   ]},
-  // These seven were the orphans: built and URL-reachable, absent from every nav.
-  // Listing them is deliberate and is not an endorsement of keeping them —
-  // /competitors and /calibration-venues are "has moved" tombstones and the other
-  // five are a pending keep-or-cut. They are here so the decision is visible
-  // rather than lost, and so the completeness check below can be exhaustive.
+  // What is left of the orphans: built and URL-reachable, absent from every nav before
+  // the rail. Listing them is deliberate and is not an endorsement of keeping them —
+  // /competitors and /calibration-venues are "has moved" tombstones and the other four
+  // are a pending keep-or-cut. They are here so the decision is visible rather than
+  // lost, and so the completeness check below can be exhaustive.
+  // /parlay-venues left this group on 2026-08-19 and is now a Compare venues page.
   {label: "Unfiled", note: "keep or cut", links: [
     ["Bet types", "/bet-types"],
     ["Calibration", "/calibration"],
     ["Calibration by venue", "/calibration-venues"],
     ["Competitors", "/competitors"],
-    ["Parlays by venue", "/parlay-venues"],
     ["P&L by venue", "/pnl-venues"],
     ["Robinhood", "/robinhood"]
   ]}

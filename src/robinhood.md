@@ -71,11 +71,18 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", year: "nume
 // Weeks need the day — "Week of Apr 2026" is ambiguous across 4-5 weeks.
 const fmtWeek = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 
-// Parse month strings ("2025-04") into Date objects
-const monthlyParsed = monthly.map(d => ({
-  ...d,
-  month_date: new Date(d.month + "-01")
-}));
+// `month` is "2025-04" in the file, but the transport's autoType has ALREADY turned it
+// into a Date -- remote-data.js's ISO_DATE matches a bare year-month. So `d.month + "-01"`
+// did not append a day to a string; it stringified a Date to its LOCAL form and appended
+// "-01", which V8 then read as a UTC offset. Measured: "2025-04" came back as
+// 2025-03-31T21:00Z for an Eastern viewer, so every bar was labelled one month early.
+// That is the real cause of the off-by-one the tickFormat comment below was chasing.
+// Rebuild the UTC month start from the parts, and still accept a plain string in case
+// the transport's typing ever changes.
+const monthStart = (v) => v instanceof Date
+  ? new Date(Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), 1))
+  : new Date(String(v) + "-01T00:00:00Z");
+const monthlyParsed = monthly.map(d => ({...d, month_date: monthStart(d.month)}));
 
 // Summary stats
 const peakMonthly = monthlyParsed.reduce((best, d) => d.rh_est_billions > best.rh_est_billions ? d : best, monthlyParsed[0]);
@@ -135,10 +142,15 @@ robinhoodMetric === "Estimated volume" ? Plot.plot({
   marginLeft: 55, marginBottom: 50,
   height: 320,
   x: {
+    // A band scale over one row per month. `interval` belongs HERE, on the scale, not
+    // on the barY mark: as a mark option Plot applies it to the mark's VALUE dimension,
+    // which for barY is y. That is what broke this chart -- every y was expanded into a
+    // month-long span in milliseconds, so all 13 bars became identical and full-height
+    // and the y axis read "2678400000.0B" (31 days in ms) instead of billions.
+    interval: d3.utcMonth,
     label: null,
-    // utcFormat, not timeFormat: the ticks are UTC month boundaries, and formatting
-    // them in local time shifts every label one month early for US viewers
-    // ("Mar '25" under the April bar) while the tooltips (UTC) say the right month.
+    // utcFormat, not timeFormat: the ticks are UTC month boundaries. (The "Mar '25 under
+    // the April bar" this was written for was actually the date-parsing bug fixed above.)
     tickFormat: d => d3.utcFormat("%b '%y")(d),
     tickRotate: -35
   },
@@ -153,13 +165,16 @@ robinhoodMetric === "Estimated volume" ? Plot.plot({
       y: "rh_est_billions",
       fill: "var(--accent-robinhood)",
       fillOpacity: 0.85,
-      interval: d3.utcMonth,
-      tip: {
-        format: {
-          x: d => fmtDate(d),
-          y: d => fmtB(d) + " contracts"
-        }
-      }
+      // Named channels rather than formatting x/y directly: Plot labels a tip row with
+      // the channel's own name, and with `label: null` on the x scale that fell back to
+      // the raw field, so the tip read "month_date" and "rh_share_pct". Suppressing x/y
+      // and declaring three named channels gives three clean rows instead.
+      channels: {
+        Month: (d) => fmtDate(d.month_date),
+        Estimated: (d) => fmtB(d.rh_est_billions) + " contracts",
+        "Share of Kalshi": (d) => fmtPct(d.rh_share_pct)
+      },
+      tip: {format: {x: false, y: false, fill: false}}
     }),
     Plot.ruleY([0])
   ]
