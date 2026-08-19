@@ -15,7 +15,17 @@ display(DataAttachment.marker);
 const daily    = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
 const catDaily = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
 const split    = await DataAttachment("data/underdog_sports_split_daily.csv").csv({typed: true});
-const market   = await DataAttachment("data/underdog_market_daily.csv").csv({typed: true});
+// Bet-type mix reads the pre-aggregated multi-venue file, NOT the per-market report.
+// underdog_market_daily.csv is one row per market per day -- 154,476 rows / 15.4 MB as of
+// 2026-08-18, growing ~1.5 MB a day -- and the only thing this page ever did with it was
+// roll it up to (date, bet type). bet_type_daily.csv IS that rollup, built from the same
+// source by python/build_bet_type_daily.py and already fetched by /bet-types.
+// Verified 2026-08-18 against the full file: identical to the cent on every all-time
+// series total (148,911,478.89 contracts), on all 111 (date, type) cells, and on the
+// latest date. The per-market file is no longer published; per-market detail lives in
+// underdog_market_leaderboard.csv, which the Top markets table below reads.
+const betType = (await DataAttachment("data/bet_type_daily.csv").csv({typed: true}))
+  .filter(d => d.venue === "Underdog");
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -24,13 +34,13 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "underdog_daily.csv"), meta: "Public Underdog Exchange trade + market reports", tone: "competitor"},
-    {label: "Market report", date: latestDate(market), updatedAt: fileUpdatedAt(freshness, "underdog_market_daily.csv"), meta: "Trade volume, prices, and open interest", tone: "competitor"}
+    {label: "Market report", date: latestDate(betType), updatedAt: fileUpdatedAt(freshness, "underdog_market_leaderboard.csv"), meta: "Per-market volume, aggregated to bet type and to the leaderboard", tone: "competitor"}
   ],
   note: "Underdog Exchange reports are published on Underdog Fantasy's CFTC public-reporting site and lag the trading day by roughly 12-24 hours. Fees are not published in these files, and long stretches with no new date shown here mean the exchange genuinely reported zero trades that day — this is a very new, low-volume exchange, not a data gap."
 }));
 display(askPageLink({
   question: "Summarize recent Underdog Exchange volume, category mix, bet-type mix, and open interest.",
-  context: "Underdog Exchange page using underdog_daily.csv, underdog_categories_daily.csv, underdog_sports_split_daily.csv, and underdog_market_daily.csv."
+  context: "Underdog Exchange page using underdog_daily.csv, underdog_categories_daily.csv, underdog_sports_split_daily.csv, bet_type_daily.csv, and underdog_market_leaderboard.csv."
 }));
 ```
 
@@ -305,28 +315,23 @@ Plot.plot({
 <p class="section-intro">Underdog Exchange lists moneyline, spread, total and matchwin contracts on the same games.</p>
 
 ```js
-// Underdog mints one ticker per parlay (UDXCOMBO-<hash>), and the ticker parser
-// turns each of those hashes into its own market_type. Charted raw that is 3,006
-// distinct values -- 2,999 of them occurring exactly once -- which rendered a
-// 3,006-entry legend above a ~102,000px tall bar chart to represent 3.9% of
-// volume. They are all the same thing, so they collapse into one Parlay series.
-// Matching on the UDXCOMBO symbol as well as the Combo- market_type means a
-// genuinely new bet type stays visible as itself instead of hiding in here.
-// Verified 2026-08-06: this moves 0.00 contracts between series, the Parlay
-// total equals the UDXCOMBO total exactly, and no non-combo row is relabelled.
-const betTypeLabel = d =>
-  (/^Combo-/.test(d.market_type) || /^UDXCOMBO/i.test(d.symbol || "")) ? "Parlay" : d.market_type;
+// Underdog mints one ticker per parlay (UDXCOMBO-<hash>), and the ticker parser turns each
+// of those hashes into its own market_type. Charted raw that was 3,006 distinct values --
+// 2,999 of them occurring exactly once -- a 3,006-entry legend above a ~102,000px bar chart
+// standing for 3.9% of volume. build_bet_type_daily.py already collapses them, on the same
+// symbol-or-market_type rule, into the single source_type "Combo (UDXCOMBO)", so the series
+// here is simply the raw bet type with that one bucket read out under its display name.
+// source_type, not bet_type: bet_type buckets Matchwin INTO Moneyline, and this page has
+// always shown Matchwin as its own series.
+const betTypeLabel = d => d.bet_type === "Parlay" ? "Parlay" : d.source_type;
 
-const betTypeTotals = d3.rollup(market, v => d3.sum(v, d => d.trade_volume), d => betTypeLabel(d));
+const betTypeTotals = d3.rollup(betType, v => d3.sum(v, d => d.contracts), betTypeLabel);
 const topBetTypes = [...betTypeTotals.entries()].sort((a, b) => b[1] - a[1]).map(d => d[0]);
 
-const betTypeTidy = market.filter(d => d.trade_volume > 0)
-  .map(d => ({...d, bet_type: betTypeLabel(d)}));
-
-// betTypeTidy is one row PER MARKET per day, so the old dot mark drew a cloud of thousands of
-// points with no readable daily total. Stacked bars need it rolled up to (date, bet_type).
+// Already one row per (date, source_type); rolled up anyway so that a future producer
+// change mapping two source_types onto one label stacks instead of overplotting.
 const betTypeDaily = Array.from(
-  d3.rollup(betTypeTidy, v => d3.sum(v, d => d.trade_volume), d => +d.date, d => d.bet_type),
+  d3.rollup(betType.filter(d => d.contracts > 0), v => d3.sum(v, d => d.contracts), d => +d.date, betTypeLabel),
   ([ms, m]) => Array.from(m, ([bet_type, contracts]) => ({date: new Date(ms), bet_type, contracts}))
 ).flat();
 ```
