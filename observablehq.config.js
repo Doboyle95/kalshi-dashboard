@@ -1,4 +1,4 @@
-import {readFileSync} from "node:fs";
+import {readFileSync, readdirSync} from "node:fs";
 
 // 2026-08-07 SELF-HEAL: prefer src/chat-endpoint.json, which the VM rewrites and pushes
 // whenever the Cloudflare Quick Tunnel is assigned a new hostname (KalshiData
@@ -111,15 +111,79 @@ const escapeHtml = (v) =>
   }
 }
 
-function venueNavHeader({path}) {
-  // NOTE /chat: it falls through this lookup and so gets no header, but only by
-  // accident of not being a venue. It is the page with three separate silent-
-  // failure incidents behind it, so if this ever grows a non-venue branch (a
-  // filter bar on compare pages, say), exclude /chat BY NAME rather than
-  // relying on it falling through again.
-  const current = VENUES.find((v) => v.tabs.some(([, p]) => p === path));
-  if (!current) return null; // every non-venue page gets no header at all
+// ── The site map ────────────────────────────────────────────────────────────
+// Framework's own sidebar is OFF (`sidebar: false` below) because it allows
+// exactly one level of nesting, which left 15 of the 35 built pages with no menu
+// entry AND no pager link — Products, Economics, Trading behavior, Outcomes and
+// Parlays among them. This map is the replacement, rendered as a left rail by
+// `railHeader`, and it carries all three levels.
+//
+// Venue modules are NOT repeated here; they are read from VENUES above, so a
+// venue's tabs are declared once and the rail and the in-page strip cannot drift.
+const SITE_MAP = [
+  {label: "Overview", links: [["Briefing", "/"], ["Ask Data", "/chat"]]},
+  {label: "Compare venues", links: [
+    ["Scale & liquidity", "/compare-scale"],
+    ["Products", "/categories-venues"],
+    ["Trading behavior", "/trade-size"],
+    ["Fees & economics", "/compare-fees"],
+    ["Accuracy & outcomes", "/compare-accuracy"]
+  ]},
+  {label: "Venues", links: [["All venues", "/venues"]], venues: true},
+  {label: "Tools", links: [
+    ["Market Explorer", "/market-explorer"],
+    ["Methodology & coverage", "/methodology"]
+  ]},
+  // These seven were the orphans: built and URL-reachable, absent from every nav.
+  // Listing them is deliberate and is not an endorsement of keeping them —
+  // /competitors and /calibration-venues are "has moved" tombstones and the other
+  // five are a pending keep-or-cut. They are here so the decision is visible
+  // rather than lost, and so the completeness check below can be exhaustive.
+  {label: "Unfiled", note: "keep or cut", links: [
+    ["Bet types", "/bet-types"],
+    ["Calibration", "/calibration"],
+    ["Calibration by venue", "/calibration-venues"],
+    ["Competitors", "/competitors"],
+    ["Parlays by venue", "/parlay-venues"],
+    ["P&L by venue", "/pnl-venues"],
+    ["Robinhood", "/robinhood"]
+  ]}
+];
 
+// Fail the BUILD if the map and the built pages disagree in either direction.
+// With the sidebar off, the rail is the ONLY site-wide navigation, so a page
+// missing from it is unreachable except by URL — which is exactly the condition
+// this whole change exists to remove. A dangling entry is a 404 in the menu.
+// Both were silent before; neither can be now.
+{
+  const built = new Set(
+    readdirSync(new URL("./src", import.meta.url))
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => (f === "index.md" ? "/" : "/" + f.slice(0, -".md".length)))
+  );
+  const mapped = new Set();
+  const claim = (p) => {
+    if (mapped.has(p)) throw new Error("site map: " + p + " appears in the menu twice");
+    mapped.add(p);
+  };
+  for (const g of SITE_MAP) {
+    for (const [, p] of g.links) claim(p);
+    if (g.venues) for (const v of VENUES) for (const [, p] of v.tabs) claim(p);
+  }
+  const missing = [...built].filter((p) => !mapped.has(p)).sort();
+  const dangling = [...mapped].filter((p) => !built.has(p)).sort();
+  if (missing.length) {
+    throw new Error("site map: " + missing.length + " built page(s) have no menu entry: " + missing.join(", "));
+  }
+  if (dangling.length) {
+    throw new Error("site map: " + dangling.length + " menu entr(ies) point at no page: " + dangling.join(", "));
+  }
+}
+
+// The in-page venue strip. Below 1008px the rail collapses to a drawer and this
+// is what stays visible for switching modules without opening it; above 1008px
+// the rail already shows the same links expanded, so CSS hides this.
+function venueStrip(path, current) {
   const entry = (v) => v.tabs[0][1];
   const picker = VENUES.map((v) => {
     const mark = v === current ? ' aria-current="true"' : "";
@@ -156,13 +220,68 @@ function venueNavHeader({path}) {
     "</div>" + tabs + "</div>";
 }
 
+// The rail. Emitted for EVERY page, without exception: with `sidebar: false`
+// there is no other site-wide navigation, so a path that fell through this the
+// way /chat used to fall through the old venue lookup would have no menu at all.
+// Runs in NODE at build time, like the strip it replaces, so it is plain HTML and
+// not an Observable cell — a bad entry fails the build rather than rendering an
+// empty placeholder. Venue expansion is a native <details>, so it needs no
+// JavaScript and is keyboard-accessible for free.
+function railHeader({path}) {
+  // Framework names the home page "/index" (readPages: join("/", dirname, name)),
+  // so a "/" entry never matches it and the Briefing row silently failed to mark
+  // itself current. Normalise before comparing.
+  const here = path === "/index" ? "/" : path;
+  const current = VENUES.find((v) => v.tabs.some(([, p]) => p === here));
+  const link = (label, p) =>
+    '<a href="' + p + '"' + (p === here ? ' aria-current="page"' : "") + ">" + escapeHtml(label) + "</a>";
+
+  const groups = SITE_MAP.map((g) => {
+    let body = g.links.map(([label, p]) => link(label, p)).join("");
+    if (g.venues) {
+      body += VENUES.map((v) => {
+        // Only the current venue is open. Ten venues expanded at once is a wall
+        // of 19 links; one is the shape the sidebar could never express.
+        const count = v.tabs.length > 1
+          ? '<span class="rail-count">' + v.tabs.length + "</span>"
+          : "";
+        return '<details class="rail-venue"' + (v === current ? " open" : "") +
+          (v.accent ? ' data-accent="' + v.accent + '"' : "") + ">" +
+          '<summary><span class="rail-dot"></span>' + escapeHtml(v.name) + count + "</summary>" +
+          '<div class="rail-sub">' + v.tabs.map(([label, p]) => link(label, p)).join("") + "</div>" +
+        "</details>";
+      }).join("");
+    }
+    return '<div class="rail-group"><h2 class="rail-h">' + escapeHtml(g.label) +
+      (g.note ? '<span class="rail-note">' + escapeHtml(g.note) + "</span>" : "") +
+      "</h2>" + body + "</div>";
+  }).join("");
+
+  // Checkbox toggle rather than a script: the same zero-JS pattern Framework uses
+  // for its own sidebar, and it works with JavaScript disabled. CSS hides both the
+  // input and the label above 1008px, where the rail is always open.
+  return '<input id="rail-toggle" type="checkbox">' +
+    '<label id="rail-toggle-label" for="rail-toggle"><span class="rail-bars"></span>Menu</label>' +
+    '<nav class="site-rail" aria-label="Site sections">' +
+      '<a class="rail-brand" href="/">US Prediction Markets</a>' +
+      groups +
+    "</nav>" +
+    (current ? venueStrip(here, current) : "");
+}
+
 export default {
   title: "US Prediction Markets",
   base: "/kalshi-dashboard/",
   root: "src",
   theme: ["air", "near-midnight"],
   style: "styles.css",
-  header: venueNavHeader,
+  // OFF deliberately: normalizePages() gives a section leaf pages and never
+  // sub-sections, so the sidebar could hold "Venues -> Kalshi" but never
+  // "Venues -> Kalshi -> Economics". railHeader carries all three levels instead.
+  // Turning this off removes the toggle, the backdrop and the nav element
+  // entirely (render.js), which is why railHeader must emit for every path.
+  sidebar: false,
+  header: railHeader,
   head: [
     // 2026-08-13: keep the site out of search engines while it's not meant to be
     // freely discoverable -- direct links still work fine, this only affects crawlers.
@@ -218,29 +337,25 @@ export default {
       apply(cur,false);
     });</script>`
   ].join("\n"),
-  pages: [
-    {name: "Briefing", path: "/"},
-    {name: "Ask Data", path: "/chat"},
-    {name: "Compare", open: true, pages: [
-      {name: "Scale & Liquidity", path: "/compare-scale"},
-      {name: "Products", path: "/categories-venues"},
-      {name: "Trading Behavior", path: "/trade-size"},
-      {name: "Fees & Economics", path: "/compare-fees"},
-      {name: "Accuracy & Outcomes", path: "/compare-accuracy"}
-    ]},
-    // One row per venue, pointing at that venue's first module. The remaining
-    // modules are reachable from the in-page tab strip `header` renders, because
-    // the sidebar cannot express a third level (see VENUES above).
-    // Pages dropped from this list still BUILD and stay URL-reachable — Framework
-    // builds every src/*.md regardless of `pages` — they only leave the sidebar.
-    {name: "Venue Deep Dives", pages: [
-      {name: "Venue directory", path: "/venues"},
-      ...VENUES.map((v) => ({name: v.name, path: v.tabs[0][1]}))
-    ]},
-    {name: "Market Explorer", path: "/market-explorer"},
-    {name: "Data & Tools", pages: [
-      {name: "Methodology & coverage", path: "/methodology"}
-    ]}
-  ],
+  // With the sidebar off, `pages` has exactly one consumer left: the footer pager
+  // (render.js -> findLink). Deriving it from SITE_MAP means prev/next walks the
+  // same order the rail shows, and every page gets one — before this it was built
+  // from a shorter, hand-maintained list and 15 of 35 pages were dead ends.
+  // Venue modules are flattened into the Venues section because normalizePages()
+  // does not recurse; the names are pager labels only, never rendered as a tree.
+  pages: SITE_MAP.map((g) => ({
+    name: g.label,
+    pages: [
+      ...g.links.map(([name, path]) => ({name, path})),
+      ...(g.venues
+        ? VENUES.flatMap((v) =>
+            v.tabs.map(([label, path]) => ({
+              name: v.tabs.length > 1 ? v.name + " · " + label : v.name,
+              path
+            }))
+          )
+        : [])
+    ]
+  })),
   footer: "Data: Kalshi trade records and public competitor sources via Daniel O'Boyle. Freshness varies by page; see each page's data status panel.",
 };
