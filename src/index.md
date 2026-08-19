@@ -65,7 +65,17 @@ const alignedByVenue = d3.rollup(aligned7, rows => d3.sum(rows, row => row.contr
 const alignedTotal = d3.sum(alignedByVenue.values());
 const alignedKalshi = alignedByVenue.get("Kalshi") ?? 0;
 const largestCompetitor = [...alignedByVenue.entries()].filter(([venue]) => venue !== "Kalshi").sort((a, b) => b[1] - a[1])[0];
-const fastestGrowth = scoreboard.filter(row => row.change != null && row.recentDays >= 14).sort((a, b) => b.change - a.change)[0];
+// Week over week, on its own scoreboard: the `scoreboard` const above stays on the
+// 30-day window because the Venue scoreboard table below is labelled "Last 30 reported
+// days" / "vs prior 30". Changing the shared one would silently move that table too.
+// This also puts the KPI on the same basis as the three cards beside it, which are all
+// 7-day. Both sides of the comparison must be full weeks -- keeping the old
+// `recentDays >= 14` guard against a 7-day window disqualifies EVERY venue and renders
+// the card as "—", since recentDays now tops out at 7.
+const growthBoard = buildVenueScoreboard(platformRows, {windowDays: 7});
+const fastestGrowth = growthBoard
+  .filter(row => row.change != null && row.recentDays >= 7 && row.previousDays >= 7)
+  .sort((a, b) => b.change - a.change)[0];
 ```
 
 <h2 class="briefing-scale-title">Volume across exchanges</h2>
@@ -159,7 +169,7 @@ display(renderDateBrush({
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Fastest recent growth</div>
     <div class="kpi-value">${fastestGrowth?.venue ?? "—"}</div>
-    <div class="kpi-meta">${fmtPct(fastestGrowth?.change)} vs prior reported 30 days</div>
+    <div class="kpi-meta">${fmtPct(fastestGrowth?.change)} vs prior reported 7 days</div>
   </div>
 </div>
 
