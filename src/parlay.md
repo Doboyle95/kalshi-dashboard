@@ -67,7 +67,7 @@ const cashoutRateKpi = totalCashoutValueKpi / (totalHandle + totalCashoutValueKp
     <div class="kpi-value">${fmtUSD(totalHandle)}</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Cash-out rate</div>
+    <div class="kpi-label">Cash-out rate (est.)</div>
     <div class="kpi-value">${cashoutRateKpi.toFixed(0)}%</div>
     <div class="kpi-meta">of taker money</div>
   </div>
@@ -78,6 +78,7 @@ const cashoutRateKpi = totalCashoutValueKpi / (totalHandle + totalCashoutValueKp
   <summary>About this page</summary>
   <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors actually won and lost, settled parlays only, computed trade by trade.</p>
   <p>The headline is <em>realized</em> P&L — net of fees and after cash-outs (parlay positions sold back before settlement). The second chart shows the counterfactual where everyone held to the end; the gap between them is what cashing out did to bettors. "Staked" counts only the money bettors put in to <em>open</em> parlays — cashing out isn't counted as a new stake.</p>
+  <p>Cash-outs are <strong>inferred, not labelled</strong>. Nothing in the data says "this trade was a cash-out", so we use the shape of the market: parlays are priced on request, so the buyer takes the yes side and a no-side taker is almost always someone selling a position back. Every no-side taker is counted that way. The exceptions are a small minority, but they are not zero, so the cash-out rate, the cash-out edge and the split between realized and held-to-settlement are all estimates.</p>
 </details>
 
 ```js
@@ -163,7 +164,9 @@ Plot.plot({
 
 ## Cash-outs
 
-<p class="section-intro">About <strong>${cashoutRateKpi.toFixed(0)}%</strong> of all the money takers put through parlays is someone <em>cashing out</em> — selling a live parlay back before it settles, rather than opening a new bet. This tracks whether those cash-outs paid off.</p>
+<p class="section-intro">An estimated <strong>${cashoutRateKpi.toFixed(0)}%</strong> of the money takers put through parlays is someone <em>cashing out</em> — selling a live parlay back before it settles, rather than opening a new bet. This tracks whether those cash-outs paid off.</p>
+
+<div class="instruction-line"><strong>How we identify a cash-out.</strong> Parlays are priced on request, so the buyer is almost always on the yes side. We therefore count every no-side taker as someone selling a parlay back. That holds for most of them, but not all — a few will be ordinary trades — so treat the rate and the edge as estimates rather than counts.</div>
 
 _Cumulative cash-out edge: how much bettors gained or lost by cashing out versus holding to the end. Below zero means they left money on the table — selling winners back too cheaply outweighs the busts they dodged._
 

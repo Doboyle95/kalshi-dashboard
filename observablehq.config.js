@@ -130,11 +130,13 @@ const SITE_MAP = [
     ["Parlays", "/parlay-venues"],
     ["Trading behavior", "/trade-size"],
     ["Fees & economics", "/compare-fees"],
-    ["Accuracy & outcomes", "/compare-accuracy"]
+    ["Accuracy & outcomes", "/compare-accuracy"],
+    ["Market Explorer", "/market-explorer"]
   ]},
   {label: "Venues", links: [["All venues", "/venues"]], venues: true},
-  {label: "Tools", links: [
-    ["Market Explorer", "/market-explorer"],
+  // Renamed from "Tools" when Market Explorer left it: a group called Tools holding only
+  // a methodology page was describing the wrong thing.
+  {label: "About", links: [
     ["Methodology & coverage", "/methodology"]
   ]},
   // What is left of the orphans: built and URL-reachable, absent from every nav before
