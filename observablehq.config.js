@@ -28,7 +28,15 @@ const publishedChatEndpoint = (() => {
     return {api: "", token: ""};
   }
 })();
-const CHAT_API = publishedChatEndpoint.api || process.env.CHAT_API_URL || "";
+// KALSHI_SITE_ORIGIN is set ONLY by the VM-side build (deploy/dashboard-site), which
+// serves the site same-origin with the data and chat endpoints. Unset in Actions, so
+// the GitHub Pages build is bit-for-bit unchanged.
+//
+// ⚠ Do NOT reorder the rest: the published file must keep winning over CHAT_API_URL.
+// ⚠ This single value moves the DATA endpoint and the CHAT endpoint together --
+// components/remote-data.js browserEndpoint() reads the same window.__CHAT_API__ that
+// chat.md uses. You cannot have same-origin data with cross-origin chat.
+const CHAT_API = process.env.KALSHI_SITE_ORIGIN || publishedChatEndpoint.api || process.env.CHAT_API_URL || "";
 const CHAT_TOKEN = publishedChatEndpoint.token || process.env.CHAT_TOKEN || "";
 
 // ── Venue deep dives: one sidebar row per venue, modules in-page ─────────────
@@ -159,6 +167,11 @@ export default {
     // 2026-08-13: keep the site out of search engines while it's not meant to be
     // freely discoverable -- direct links still work fine, this only affects crawlers.
     '<meta name="robots" content="noindex, nofollow">',
+    // Build stamp: the commit this page was built from. A wedged deploy is then
+    // detectable from anywhere by comparing this against `git ls-remote origin main`
+    // -- no GitHub token needed, and it works on both hosts. Falls back to "unstamped"
+    // for a local build so `npm run build` on a laptop still works unchanged.
+    '<meta name="x-site-build" content="' + (process.env.KALSHI_BUILD_STAMP || "unstamped") + '">',
     '<link rel="preconnect" href="https://rsms.me/">',
     // 2026-08-01: build-time injection of the chat API endpoint.
     // This config file runs in NODE at build time, so process.env is available HERE.
