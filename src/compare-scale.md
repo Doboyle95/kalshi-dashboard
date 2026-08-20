@@ -194,7 +194,6 @@ Plot.plot({
 })
 ```
 
-<div class="destination-grid">
-  <a class="destination-card" href="./robinhood"><strong>Robinhood distribution spotlight</strong><span>Estimated volume routed through Robinhood and its share of Kalshi.</span></a>
-  <a class="destination-card" href="./competitors#turnover-diagnostic"><strong>Liquidity diagnostics</strong><span>Reported volume ÷ prior-day open interest; secondary because it is sensitive to settlement timing and book coverage.</span></a>
+<div class="module-links">
+  <a href="./robinhood">Robinhood distribution estimate →</a>
 </div>

@@ -19,7 +19,7 @@ const split    = await DataAttachment("data/underdog_sports_split_daily.csv").cs
 // underdog_market_daily.csv is one row per market per day -- 154,476 rows / 15.4 MB as of
 // 2026-08-18, growing ~1.5 MB a day -- and the only thing this page ever did with it was
 // roll it up to (date, bet type). bet_type_daily.csv IS that rollup, built from the same
-// source by python/build_bet_type_daily.py and already fetched by /bet-types.
+// source by python/build_bet_type_daily.py.
 // Verified 2026-08-18 against the full file: identical to the cent on every all-time
 // series total (148,911,478.89 contracts), on all 111 (date, type) cells, and on the
 // latest date. The per-market file is no longer published; per-market detail lives in

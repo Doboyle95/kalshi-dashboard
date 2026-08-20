@@ -12,7 +12,6 @@ display(DataAttachment.marker);
 
 const kParlay = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
 const kOverall = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-const kEdge = await DataAttachment("data/parlay_house_edge_by_legs.csv").csv({typed: true});
 const px = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
 const pxLegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
 const nvParlay = await DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
@@ -95,7 +94,6 @@ const ndShare = Array.from(ndByDay, ([date, o]) => o.tot > 0
      parlay: o.parlay, tot: o.tot} : null)
   .filter(Boolean).sort((a, b) => a.date - b.date);
 const ndLaunch = (ndShare.find(d => d.parlay > 0) ?? {}).date ?? null;
-const ndAllParlay = d3.sum(ndShare, d => d.parlay);
 
 const series = [...kShare, ...pxShare, ...nvShare, ...pmShare, ...udShare, ...ndShare];
 
@@ -119,7 +117,6 @@ const headline = Array.from(d3.group(series, d => d.venue), ([venue, v]) => {
           share30: rTot > 0 ? 100 * rParlay / rTot : null, from30: cut, days30: w.length};
 }).filter(d => d.tot > 0).sort((a, b) => b.share - a.share);
 const fmtWin = (a, b) => `${d3.utcFormat("%b %Y")(a)}–${d3.utcFormat("%b %Y")(b)}`;
-const hv = n => headline.find(d => d.venue === n) ?? {share: 0, share30: 0, parlay: 0, days: 0};
 ```
 
 ## Coverage and current share
@@ -205,21 +202,6 @@ display(renderDateBrush({
 ```js
 const [parlayBrushFrom, parlayBrushTo] = parlayDateSel;
 const overTimeBrushed = overTime.filter(d => d.date >= parlayBrushFrom && d.date <= parlayBrushTo);
-
-// Nadex monthly, for the launch chart below. Volume-weighted inside the month, same as
-// everywhere else on this page -- a mean of daily shares would let a quiet day count as much
-// as a busy one. The final month is partial and says so on hover.
-const ndMonthly = Array.from(
-  d3.rollup(ndShare, v => ({parlay: d3.sum(v, d => d.parlay), tot: d3.sum(v, d => d.tot), days: v.length}),
-            d => d3.utcFormat("%Y-%m")(d.date)),
-  ([key, o]) => ({key, month: new Date(`${key}-01T00:00:00Z`),
-                  share: o.tot > 0 ? 100 * o.parlay / o.tot : 0, ...o})
-).sort((a, b) => a.month - b.month);
-if (ndMonthly.length) ndMonthly[ndMonthly.length - 1].partial = true;
-const ndZeros = ndMonthly.filter(d => d.parlay === 0);
-const ndZeroMid = ndZeros.length ? ndZeros[Math.floor(ndZeros.length / 2)] : null;
-const ndLast = ndMonthly[ndMonthly.length - 1] ?? {days: 0, share: 0};
-const ndFirstDate = ndShare.length ? iso(ndShare[0].date) : "—";
 ```
 
 ```js
@@ -321,125 +303,3 @@ Plot.plot({
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Crypto.com/Nadex, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero.</div>
-
-<div hidden aria-hidden="true">
-
-## What parlays cost — still Kalshi only
-
-<div class="instruction-line">The chart every venue should have and only one can. Cost per parlay needs a settled outcome <strong>for the parlay itself</strong>, and of the venues here only Kalshi publishes one: Underdog, Novig and Crypto.com/Nadex all run parlays and none of them publish who won. <strong>ProphetX is the near miss.</strong> Its <em>single-market</em> outcomes turned out to be recoverable, and a calibration is now published from them &mdash; but not one of its 80,543 distinct parlay contracts carries a parseable event date, so the maturity test that recovers a single market's outcome cannot be applied to a parlay at all. Polymarket does settle, but its parlay product is days old.</div>
-
-```js
-const KINDS = ["multi-game(independent)", "same-game(correlated)"];
-const LEGS_DOMAIN = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
-const legLab = v => String(v) === "A_10+" ? "10+" : String(+String(v).replace(/\D/g, "") || "");
-// The two kinds used to be drawn as one stacked bar per leg count, which added two rates
-// together: -3.10 and -6.81 per $100 became a -9.91 bar that is not a price of anything.
-// Grouped, in the same fx idiom as the leg-count chart above, so each price reads on its own.
-const edge = kEdge.filter(d => d.pnl_per_100 != null && d.n_parlays > 0 && d.taker_stake > 0)
-  .map(d => ({...d, lab: legLab(d.legs)}))
-  .filter(d => LEGS_DOMAIN.includes(d.lab));
-const edgeTotC = d3.sum(edge, d => d.total_vol);      // contracts
-const edgeTotD = d3.sum(edge, d => d.taker_stake);    // dollars staked by the taker
-const shareC = rows => 100 * d3.sum(rows, d => d.total_vol) / edgeTotC;
-const shareD = rows => 100 * d3.sum(rows, d => d.taker_stake) / edgeTotD;
-const tenPlus = edge.filter(d => d.lab === "10+");
-const twoLeg = edge.filter(d => d.lab === "2");
-```
-
-<div class="instruction-line"><strong>Contracts and dollars are different questions, and this file answers both.</strong> The ten-or-more-leg buckets are the largest in the table by contracts &mdash; ${fmtCount(d3.sum(tenPlus, d => d.total_vol))} of ${fmtCount(edgeTotC)}, ${shareC(tenPlus).toFixed(2)}% of Kalshi's settled parlay book &mdash; and they carry the two worst prices in it. Read on contracts alone, that says roughly a third of the parlay book is sold at the worst price on the board and invites the reader to treat it as a third of the harm. The same file says those buckets hold $${d3.format(",.1f")(d3.sum(tenPlus, d => d.taker_stake) / 1e6)}M of $${d3.format(",.1f")(edgeTotD / 1e6)}M staked, or ${shareD(tenPlus).toFixed(2)}% of the money, because a ten-leg ticket is a stack of cents. Hover any bar for the stake behind it: contracts and dollars disagree sharply at the long end.</div>
-
-```js
-// Bars are the price: P&L per $100 staked is a rate, and a rate has no unit to switch. Dot
-// area is how much of the settled parlay book sits in that bucket, measured in CONTRACTS.
-// The dollar reading is disclosed in each bar's tooltip rather than by a control that
-// redraws the chart -- the two measures disagree hard at the long end, and a reader should
-// be able to see both without the picture moving underneath them. No dual axis; size is
-// not a second y.
-const costSize = d => 100 * d.total_vol / edgeTotC;
-// Radius ceiling spans BOTH measures' maxima, so the dot scale does not depend on which
-// measure is drawn and the dollar percentages quoted in the tooltip can be read against the
-// same scale. Derived rather than hard-coded so it cannot be outgrown by the file.
-const costRMax = d3.max(edge, d => Math.max(100 * d.total_vol / edgeTotC,
-                                            100 * d.taker_stake / edgeTotD));
-```
-
-```js
-false ? Plot.plot({
-  width,
-  height: 380,
-  marginLeft: 62,
-  marginBottom: 46,
-  marginTop: 30,
-  fx: {domain: LEGS_DOMAIN, label: "Legs"},
-  x: {domain: KINDS, axis: null, padding: 0.18},
-  y: {label: "P&L per $100 staked", grid: true, tickFormat: d => `$${d.toFixed(0)}`},
-  r: {domain: [0, costRMax], range: [0, 13]},
-  color: {legend: true, domain: KINDS, range: ["var(--accent-kalshi)", "var(--accent-dkex)"]},
-  marks: [
-    Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.barY(edge, {
-      fx: "lab", x: "kind", y: "pnl_per_100", fill: "kind", ry1: 4,
-      insetLeft: 1, insetRight: 1,
-      title: d => `${d.lab} legs, ${d.kind}\n$${d.pnl_per_100.toFixed(2)} per $100 staked\nwin rate ${d.win_rate_pct}%\n${d3.format(",")(d.n_parlays)} parlays\n${fmtCount(d.total_vol)} contracts = ${(100 * d.total_vol / edgeTotC).toFixed(2)}% of the settled parlay book\n$${d3.format(",.0f")(d.taker_stake)} staked = ${(100 * d.taker_stake / edgeTotD).toFixed(2)}% of the money`,
-      tip: true
-    }),
-    Plot.dot(edge, {
-      fx: "lab", x: "kind", y: "pnl_per_100", r: costSize, fill: "kind",
-      stroke: "var(--theme-background)", strokeWidth: 1
-    })
-  ]
-}) : null
-```
-
-```js
-false ? display(html`<div class="chart-note"><strong>Dot area is how big the bucket is, measured in
-contracts traded.</strong> On that measure the two ten-plus buckets are
-<strong>${shareC(tenPlus).toFixed(2)}%</strong> of the settled parlay book and the two two-leg
-buckets are <strong>${shareC(twoLeg).toFixed(2)}%</strong>. In dollars staked they change places:
-ten-plus is ${shareD(tenPlus).toFixed(2)}% of the money and two-leg is
-${shareD(twoLeg).toFixed(2)}%. That second reading is on every bar's tooltip &mdash; the stake
-behind the bar and its share of the money &mdash; rather than behind a control, because how big
-a bucket looks should not depend on which measure a reader last picked. Part of the gap is
-arithmetic &mdash; a cheap contract is a small stake &mdash; and part is not: the bar heights say
-the cheap end is also the worst-priced end, the worst bucket losing
-$${Math.abs(d3.min(edge, d => d.pnl_per_100)).toFixed(2)} per $100 staked against
-$${Math.abs(100 * d3.sum(edge, d => d.taker_pnl) / edgeTotD).toFixed(2)} across the whole book. Neither
-reading is the true one, and quoting either without the other is the thing to avoid.</div>`) : null
-```
-
-<details class="surface-card compact-details">
-  <summary>About this page — read before quoting any number</summary>
-  <p><strong>Coverage differs enormously and the bars do not correct for it.</strong> Crypto.com/Nadex has twenty months of history here, Kalshi close to a year, ProphetX about two months, Novig and Polymarket a matter of days. Each headline bar is volume-weighted over that venue's own window and now states that window beside it. A venue whose product launched last week is still not being compared like-for-like with one that has run all year.</p>
-  <p><strong>That used to end &ldquo;only time will fix this&rdquo;. It is now partly fixed, by one venue.</strong> Every venue on this page either always had parlays or arrived with them already running &mdash; except Crypto.com/Nadex, whose bulletin starts thirteen months before it sold a single parlay. Its share was <em>exactly</em> 0.00% for those thirteen months on real and growing volume, then ${ndMonthly.filter(d => d.parlay > 0).map(d => d.share.toFixed(1) + "%").join(", ")} month by month since, the last of those a part-month. So the page can now say something it could not before: a parlay book at a third of venue volume is not necessarily at rest, because the one book here that can be watched from launch was still climbing eight months in. That is one venue's launch curve, not a law, and it is the only one anybody has.</p>
-  <p><strong>Nadex is 18% here and 36% on the categories page, and neither is wrong.</strong> This page's headline bar is volume-weighted over a venue's whole file; <a href="./categories-venues">the category-mix page</a> uses a rolling 30-day window. For a venue that spans its own product launch those are very different questions: ${hv("Crypto.com/Nadex").share.toFixed(2)}% over ${hv("Crypto.com/Nadex").days} days, ${hv("Crypto.com/Nadex").share30.toFixed(2)}% over the last ${RECENT_DAYS}. The black tick on the headline chart is that 30-day figure, drawn for every venue with more than ${RECENT_DAYS} days precisely so the two pages can be reconciled by eye instead of looking broken.</p>
-  <p><strong>Crypto.com/Nadex has no leg counts at all.</strong> Its daily bulletin reports parlays as one undifferentiated <code>COMBOS</code> category line. There is no leg dimension in the file, so the venue appears on both share charts and is deliberately absent from the leg chart. Absent is not zero, and it is named on the chart rather than left to be inferred from a missing bar. Its parlay volume is also not directly comparable in construction to the others here: it is a daily bulletin category total, not a sum over trade-level prints.</p>
-  <p><strong>Share is volume-weighted, not an average of daily percentages.</strong> Averaging daily shares lets a venue's quietest day count as much as its busiest, which flatters days with almost no volume. Every headline figure is total parlay contracts over total contracts across the window.</p>
-  <p><strong>Leg counts are mapped into Kalshi's buckets, not the reverse.</strong> Kalshi publishes 2 / 3 / 4 / 5&ndash;7 / 8+; ProphetX and Novig publish exact integers. Mapping the exact numbers into the buckets loses detail but keeps the comparison honest; doing it the other way round would invent precision Kalshi never published. ProphetX's own exact distribution, out to twelve legs, is on <a href="./prophetx">its venue page</a>.</p>
-  <p><strong>Kalshi's unclassified band is excluded, not hidden.</strong> About 1.3% of Kalshi parlay volume sits in an "unclassified (pending legs)" bucket &mdash; the left-join miss for tickers the leg classifier has not yet reached. It is a processing state, not a leg count. Including it as a bar would imply a leg count nobody measured; excluding it silently would misstate the denominator. It is excluded from the percentages and reported underneath them.</p>
-  <p><strong>Underdog's window is shorter than its data.</strong> Its parlay column begins on 2026-07-30 &mdash; before that, nine consecutive days record exactly zero parlay contracts and every day after records real ones. That shape is a tracking cutover, not nine parlay-free days, so those days are excluded rather than averaged in as zeros, which would have understated the venue by roughly three points.</p>
-  <p><strong>Why the cost chart has one venue.</strong> Parlay P&amp;L needs a settled outcome per contract. Underdog runs parlays as the large majority of its volume and publishes no outcome; Novig publishes the aggressor on every trade and no outcome; ProphetX publishes recoverable outcomes on its <em>single</em> markets, and a calibration built from them is now published, but its parlays are a different matter &mdash; not one of the 80,543 distinct parlay contracts listed in its bulletin carries a parseable event date, so the maturity test that makes a single market's outcome readable cannot be applied to a parlay at all, and 94.92% of those that do reach a terminal mark of 0 or 1 mark to 1, which cannot be a multi-leg win rate; Crypto.com/Nadex publishes a daily category bulletin with no outcome and no legs. Polymarket US does settle and its parlay P&amp;L is on the <a href="./pnl-venues">cross-venue P&amp;L page</a>, but the product launched on 2026-08-06 and a handful of days cannot carry a per-leg breakdown. This is a data-availability limit, not an editorial choice.</p>
-  <p><strong>The cost chart's dots are contracts; the dollars are in the tooltip.</strong> Bar height is P&amp;L per $100 staked, which is a rate: it has no unit to switch. Dot area is how much of the settled parlay book sits in that bucket, measured in contracts traded, on a radius scale with headroom for either measure. The dollar reading &mdash; the stake behind each bar and its share of all stake &mdash; is disclosed on hover instead of through a control that redraws the chart, so the picture is the same for every reader. Both are needed: quoting the contracts figure alone lets a third of the contracts stand for a third of the money, which it is not; quoting the dollars figure alone implies the deep buckets barely matter, which is not true either &mdash; they are ${(100 * d3.sum(tenPlus, d => d.taker_pnl) / d3.sum(edge, d => d.taker_pnl)).toFixed(1)}% of everything the taker side lost. Note also that the two kinds are drawn side by side rather than stacked &mdash; the previous stack added two per-$100 rates together, which is not a price of anything.</p>
-  <p><strong>The cost chart is settled parlays only.</strong> Its ${fmtCount(edgeTotC)} contracts are the settled subset of Kalshi's parlay volume, so it is smaller than the ${fmtCount(hv("Kalshi").parlay)} contracts behind Kalshi's bar above. The two are not meant to reconcile.</p>
-</details>
-
-## Every venue, side by side
-
-```js
-false ? Inputs.table(headline, {
-  columns: ["venue", "share", "share30", "parlay", "tot", "days", "from", "to"],
-  header: {venue: "Venue", share: "Parlay share (whole window)", share30: `Last ${RECENT_DAYS} days`,
-           parlay: "Parlay contracts", tot: "All contracts", days: "Days", from: "From", to: "To"},
-  format: {
-    share: d => fmtPct(d),
-    share30: d => d == null ? "—" : fmtPct(d),
-    parlay: d => fmtCount(d),
-    tot: d => fmtCount(d),
-    from: d => iso(d),
-    to: d => iso(d)
-  },
-  align: {share: "right", share30: "right", parlay: "right", tot: "right", days: "right"},
-  rows: 8
-}) : null
-```
-
-</div>

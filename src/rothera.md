@@ -250,7 +250,7 @@ Plot.plot({
 
 ## Why there is no calibration curve on this page
 
-<p class="section-intro">Kalshi's <a href="./calibration">calibration page</a> asks the sharpest question available: do prices actually predict outcomes? Rothera carries <code>settlement_price</code> and <code>contracts_delivered</code>, so it looks like it should support the same chart. It does not. The measurement is published here so the gap is a documented result rather than a silent omission.</p>
+<p class="section-intro"><a href="./compare-accuracy">Accuracy &amp; Outcomes</a> asks the sharpest question available: do prices actually predict outcomes? Rothera carries <code>settlement_price</code> and <code>contracts_delivered</code>, so it looks like it should support the same chart. It does not. The measurement is published here so the gap is a documented result rather than a silent omission.</p>
 
 <details class="surface-card compact-details">
   <summary>What was measured, and what it ruled out</summary>

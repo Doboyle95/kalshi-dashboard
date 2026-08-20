@@ -1,0 +1,58 @@
+name: Generate daily AI briefing
+
+on:
+  schedule:
+    # Early afternoon Eastern: late enough for the prior day's venue files to land.
+    - cron: "30 18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: daily-ai-briefing
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  # To dispatch the Pages deploy below; the push alone cannot trigger it.
+  actions: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate briefing from Ask Data
+        run: node scripts/generate-daily-briefing.mjs
+        env:
+          CHAT_API_URL: ${{ secrets.CHAT_API_URL }}
+          CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
+
+      - name: Publish only a changed briefing
+        id: publish
+        run: |
+          if git diff --quiet -- src/daily-briefing.json; then
+            echo "Briefing is unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "predict-charts-bot"
+          git config user.email "predict-charts-bot@users.noreply.github.com"
+          git add src/daily-briefing.json
+          git commit -m "data: refresh daily AI briefing"
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # The push above used GITHUB_TOKEN, so it did not trigger deploy.yml on its own.
+      # workflow_dispatch is exempt from that suppression, so ask for the deploy explicitly.
+      - name: Deploy the refreshed briefing to Pages
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main

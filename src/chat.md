@@ -3,10 +3,10 @@ title: Ask Data
 ---
 
 <div class="page-hero">
-  <div class="page-eyebrow">Local LLM</div>
-  <h1>Ask the Kalshi Data</h1>
-  <p class="page-lead">Ask natural-language questions against the local DuckDB layer. The dashboard sends the question to a local FastAPI server, which generates SQL with your configured LLM provider and runs it against your Parquet and CSV files.</p>
-  <div class="page-meta">Requires <code>OPENAI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code>, plus the local API server.</div>
+  <div class="page-eyebrow">AI data explorer</div>
+  <h1>Ask Predict Charts</h1>
+  <p class="page-lead">Ask natural-language questions against the datasets behind Predict Charts. Coverage is deepest for Kalshi; cross-venue questions work where comparable data is available.</p>
+  <div class="page-meta">Answers include the generated query and source rows so you can check what the model actually used.</div>
 </div>
 
 <p class="section-intro">Ask questions in plain English against the underlying trade data.</p>
@@ -45,10 +45,10 @@ title: Ask Data
   const PREFILL_KEY = "kalshi_chat_prefill";
   const HISTORY_MAX = 10;
   const EXAMPLES = [
+    "What changed across US prediction markets on each venue's latest complete reported day?",
     "Find days where volume rose but fee rate fell, and explain the likely mix shift",
     "Compare taker P&L in sports vs non-sports since February 2026",
-    "Which markets drove the biggest parlay loss days in April 2026?",
-    "Show categories where large-trade share spiked before total volume did"
+    "Which markets drove the biggest parlay loss days in April 2026?"
   ];
 
   function sanitizeMarkdown(markdown, inline = false) {
@@ -103,7 +103,7 @@ title: Ask Data
   const panel = html`<div class="chat-panel"></div>`;
   const statusSection = html`<div class="chat-status-strip">
     <span class="chat-status-dot is-loading"></span>
-    <span>Checking local API...</span>
+    <span>Checking the data service...</span>
   </div>`;
   const historySection = html`<div class="chat-history-section"></div>`;
   const examples = html`<details class="chat-examples">
@@ -166,7 +166,7 @@ title: Ask Data
   }
 
   function statusText(data) {
-    if (!data?.ok) return "Local API unavailable";
+    if (!data?.ok) return "Data service unavailable";
     const provider = data.provider ? data.provider[0].toUpperCase() + data.provider.slice(1) : "LLM";
     const raw = data.raw_trades_through ? `Raw trades through ${data.raw_trades_through}` : "Raw trades loaded";
     const aggregate = data.aggregate_through && data.aggregate_through !== data.raw_trades_through
@@ -187,7 +187,7 @@ title: Ask Data
     } catch {
       statusSection.replaceChildren(
         html`<span class="chat-status-dot is-error"></span>`,
-        html`<span>Local API offline. Start it first: ${apiCommand}</span>`
+        html`<span>${IS_LOCAL_API ? `Local data service offline. Start it first: ${apiCommand}` : "Data service unavailable. Try again shortly."}</span>`
       );
     }
   }
@@ -502,8 +502,8 @@ title: Ask Data
       }
     } catch (error) {
       const msg = String(error?.message ?? "").startsWith("API returned HTTP")
-        ? `${error.message}. Check the local API logs.`
-        : `Local API unreachable. Start it first: ${apiCommand}`;
+        ? `${error.message}. Try again shortly.`
+        : (IS_LOCAL_API ? `Local data service unreachable. Start it first: ${apiCommand}` : "Data service unreachable. Try again shortly.");
       appendTurnError(pendingTurn, msg);
       formWrapper.removeAttribute("open");
       replyLabel.textContent = "Reply";

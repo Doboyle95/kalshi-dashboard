@@ -296,7 +296,7 @@ const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
 
 <div class="chart-note"><strong>Maker fees are ${(100 * makerAllTime / (splitTotal || 1)).toFixed(2)}% of all-time fee revenue</strong> (${fmtUSD(makerAllTime)} of ${fmtUSD(splitTotal)}), and ${makerShare2026.toFixed(2)}% in 2026, spread across roughly 95 report tickers. The two bands add to the daily total on the chart above them, so this decomposes the headline rather than restating it.</div>
 
-<div class="chart-note"><strong>This page reports total fee revenue — everything Kalshi collects, from both sides.</strong> The Kalshi column on the <a href="./competitors">venue comparison</a> answers a different question: what <em>one trader</em> pays to execute. That number is the taker band alone, ${fmtUSD(takerAllTime)} against ${fmtUSD(splitTotal)} here, because a like-for-like comparison against venues that bill both sides has to count one side at each of them. The gap between the two pages is this maker band, and both figures are correct.</div>
+<div class="chart-note"><strong>This page reports total fee revenue — everything Kalshi collects, from both sides.</strong> The Kalshi series on <a href="./compare-fees">Fees &amp; Economics</a> answers a different question: what <em>one trader</em> pays to execute. That number is the taker band alone, ${fmtUSD(takerAllTime)} against ${fmtUSD(splitTotal)} here, because a like-for-like comparison against venues that bill both sides has to count one side at each of them. The gap between the two pages is this maker band, and both figures are correct.</div>
 
 ## Cumulative fee revenue
 

@@ -50,9 +50,9 @@ title: Data & Methodology
 The detailed source-label mappings stay next to the canonical comparison that uses them:
 
 - [Cross-venue product categories](./categories-venues)
-- [Sports contract-type mapping](./bet-types#what-each-bucket-is-made-of)
+- [Cross-venue product taxonomy](./categories-venues)
 - [Parlay coverage and definitions](./parlay-venues)
-- [Calibration coverage](./calibration-venues)
+- [Calibration coverage](./compare-accuracy)
 - [Market-name and unit coverage](./market-explorer#market-finder)
 
 Each chart keeps only one useful sentence in the reading path. Sampling, joins, mappings, and uncertainty details belong in a collapsed chart note or on this reference page—not in a wall of defensive prose before the result.

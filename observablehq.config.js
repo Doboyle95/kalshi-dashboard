@@ -38,6 +38,10 @@ const publishedChatEndpoint = (() => {
 // chat.md uses. You cannot have same-origin data with cross-origin chat.
 const CHAT_API = process.env.KALSHI_SITE_ORIGIN || publishedChatEndpoint.api || process.env.CHAT_API_URL || "";
 const CHAT_TOKEN = publishedChatEndpoint.token || process.env.CHAT_TOKEN || "";
+const CHART_ACTIONS = readFileSync(
+  new URL("./src/components/chart-actions.js", import.meta.url),
+  "utf-8"
+).replace(/<\/script/gi, "<\\/script");
 
 // ── Venue deep dives: one sidebar row per venue, modules in-page ─────────────
 // Framework's `pages` supports exactly ONE level of nesting — normalizeSection()
@@ -70,13 +74,8 @@ const VENUES = [
     ["Parlays", "/parlay-analytics"],
     ["Parlay outcomes", "/parlay"]
   ]},
-  // /polymarket-calibration was built and URL-reachable but absent from every nav.
-  // It is a live page, so it becomes Polymarket's Outcomes tab rather than staying
-  // orphaned. Every page now has a home in SITE_MAP below; SIX sit in its "Unfiled"
-  // group pending a keep-or-cut decision -- calibration-venues and competitors are
-  // "has moved" tombstones, and bet-types, calibration, pnl-venues and robinhood are
-  // undecided. (An earlier version of this comment listed five and then said "two are
-  // tombstones" -- the two were the ones it had omitted.)
+  // /polymarket-calibration is Polymarket's Outcomes module rather than an
+  // orphaned page. Every built page has an intentional home in SITE_MAP below.
   {name: "Polymarket US", accent: "polymarket", tabs: [
     ["Activity", "/polymarket"],
     ["Outcomes", "/polymarket-calibration"]
@@ -112,51 +111,38 @@ const escapeHtml = (v) =>
 }
 
 // ── The site map ────────────────────────────────────────────────────────────
-// Framework's own sidebar is OFF (`sidebar: false` below) because it allows
-// exactly one level of nesting, which left 15 of the 35 built pages with no menu
-// entry AND no pager link — Products, Economics, Trading behavior, Outcomes and
-// Parlays among them. This map is the replacement, rendered as a left rail by
-// `railHeader`, and it carries all three levels.
+// Framework's own sidebar is OFF (`sidebar: false` below). This map drives the
+// masthead, contextual module bars, mobile menu and footer pager from one source.
 //
 // Venue modules are NOT repeated here; they are read from VENUES above, so a
-// venue's tabs are declared once and the rail and the in-page strip cannot drift.
+// venue's tabs are declared once and the desktop/mobile/context menus cannot drift.
 const SITE_MAP = [
   {label: "Overview", links: [["Briefing", "/"], ["Ask Data", "/chat"]]},
   {label: "Compare venues", links: [
+    ["Overview", "/compare"],
     ["Scale & liquidity", "/compare-scale"],
     ["Products", "/categories-venues"],
     // Sits next to Products because it answers the same question -- what is being traded
-    // -- rather than at the end as an appendix. Promoted out of Unfiled 2026-08-19.
+    // -- rather than at the end as an appendix.
     ["Parlays", "/parlay-venues"],
     ["Trading behavior", "/trade-size"],
     ["Fees & economics", "/compare-fees"],
-    ["Accuracy & outcomes", "/compare-accuracy"],
-    ["Market Explorer", "/market-explorer"]
+    ["Accuracy & outcomes", "/compare-accuracy"]
   ]},
+  {label: "Explore", links: [["Markets & trades", "/market-explorer"]]},
   {label: "Venues", links: [["All venues", "/venues"]], venues: true},
+  {label: "Research", links: [
+    ["Robinhood distribution estimate", "/robinhood"]
+  ]},
   // Renamed from "Tools" when Market Explorer left it: a group called Tools holding only
   // a methodology page was describing the wrong thing.
   {label: "About", links: [
     ["Methodology & coverage", "/methodology"]
-  ]},
-  // What is left of the orphans: built and URL-reachable, absent from every nav before
-  // the rail. Listing them is deliberate and is not an endorsement of keeping them —
-  // /competitors and /calibration-venues are "has moved" tombstones and the other four
-  // are a pending keep-or-cut. They are here so the decision is visible rather than
-  // lost, and so the completeness check below can be exhaustive.
-  // /parlay-venues left this group on 2026-08-19 and is now a Compare venues page.
-  {label: "Unfiled", note: "keep or cut", links: [
-    ["Bet types", "/bet-types"],
-    ["Calibration", "/calibration"],
-    ["Calibration by venue", "/calibration-venues"],
-    ["Competitors", "/competitors"],
-    ["P&L by venue", "/pnl-venues"],
-    ["Robinhood", "/robinhood"]
   ]}
 ];
 
 // Fail the BUILD if the map and the built pages disagree in either direction.
-// With the sidebar off, the rail is the ONLY site-wide navigation, so a page
+// With the sidebar off, this map is the ONLY source of site-wide navigation, so a page
 // missing from it is unreachable except by URL — which is exactly the condition
 // this whole change exists to remove. A dangling entry is a 404 in the menu.
 // Both were silent before; neither can be now.
@@ -185,9 +171,9 @@ const SITE_MAP = [
   }
 }
 
-// The in-page venue strip. Below 1008px the rail collapses to a drawer and this
-// is what stays visible for switching modules without opening it; above 1008px
-// the rail already shows the same links expanded, so CSS hides this.
+// Venue pages receive a contextual second row beneath the global masthead. The
+// venue picker changes entity; the tabs change module without exposing the full
+// site tree on every page.
 function venueStrip(path, current) {
   const entry = (v) => v.tabs[0][1];
   const picker = VENUES.map((v) => {
@@ -216,77 +202,98 @@ function venueStrip(path, current) {
       "<script>(function(){try{var a=document.querySelector('.venue-tabs a[aria-current=page]');if(!a)return;var s=a.parentElement;if(s.scrollWidth>s.clientWidth)s.scrollLeft=a.offsetLeft-(s.clientWidth-a.offsetWidth)/2;}catch(e){}})();</script>"
     : "";
 
-  return '<div class="venue-nav"' + (current.accent ? ' data-accent="' + current.accent + '"' : "") + ">" +
-    '<div class="venue-nav-bar">' +
-      '<span class="venue-nav-label">Venue</span>' +
-      '<details class="venue-picker"><summary>' + escapeHtml(current.name) + "</summary>" +
-      '<div class="venue-picker-menu">' + picker + "</div></details>" +
-      '<a class="venue-nav-index" href="/venues">All venues</a>' +
-    "</div>" + tabs + "</div>";
+  return '<div class="context-shell"><div class="venue-nav"' +
+    (current.accent ? ' data-accent="' + current.accent + '"' : "") + ">" +
+      '<div class="venue-nav-bar">' +
+        '<span class="venue-nav-label">Venue</span>' +
+        '<details class="venue-picker"><summary>' + escapeHtml(current.name) + "</summary>" +
+        '<div class="venue-picker-menu">' + picker + "</div></details>" +
+        '<a class="venue-nav-index" href="/venues">All venues</a>' +
+      "</div>" + tabs + "</div></div>";
 }
 
-// The rail. Emitted for EVERY page, without exception: with `sidebar: false`
-// there is no other site-wide navigation, so a path that fell through this the
-// way /chat used to fall through the old venue lookup would have no menu at all.
-// Runs in NODE at build time, like the strip it replaces, so it is plain HTML and
-// not an Observable cell — a bad entry fails the build rather than rendering an
-// empty placeholder. Venue expansion is a native <details>, so it needs no
-// JavaScript and is keyboard-accessible for free.
-function railHeader({path}) {
+function compareStrip(path) {
+  const links = SITE_MAP.find((g) => g.label === "Compare venues").links;
+  return '<div class="context-shell"><nav class="compare-nav" aria-label="Compare modules">' +
+    '<span class="compare-nav-label">Compare</span>' +
+    links.map(([label, p]) =>
+      '<a href="' + p + '"' + (p === path ? ' aria-current="page"' : "") + '>' + escapeHtml(label) + '</a>'
+    ).join("") +
+  '</nav></div>';
+}
+
+// The global masthead. It is emitted as build-time HTML on every page, so the
+// complete first navigation frame works before any Observable cells or data load.
+// Compare and venue pages receive a contextual second row beneath it.
+function siteHeader({path}) {
   // Framework names the home page "/index" (readPages: join("/", dirname, name)),
-  // so a "/" entry never matches it and the Briefing row silently failed to mark
-  // itself current. Normalise before comparing.
+  // so normalise it before computing active navigation state.
   const here = path === "/index" ? "/" : path;
   const current = VENUES.find((v) => v.tabs.some(([, p]) => p === here));
-  const link = (label, p) =>
-    '<a href="' + p + '"' + (p === here ? ' aria-current="page"' : "") + ">" + escapeHtml(label) + "</a>";
+  const compareLinks = SITE_MAP.find((g) => g.label === "Compare venues").links;
+  const comparePaths = new Set(compareLinks.map(([, p]) => p));
+  const isCompare = comparePaths.has(here);
+  const isVenue = here === "/venues" || Boolean(current);
+  const isMore = here === "/robinhood" || here === "/methodology";
+  const link = (label, p, active, className = "") =>
+    '<a href="' + p + '"' + (className ? ' class="' + className + '"' : "") +
+    (active ? ' aria-current="page"' : "") + '>' + escapeHtml(label) + '</a>';
 
-  const groups = SITE_MAP.map((g) => {
-    let body = g.links.map(([label, p]) => link(label, p)).join("");
-    if (g.venues) {
-      body += VENUES.map((v) => {
-        // Only the current venue is open. Ten venues expanded at once is a wall
-        // of 19 links; one is the shape the sidebar could never express.
-        const count = v.tabs.length > 1
-          ? '<span class="rail-count">' + v.tabs.length + "</span>"
-          : "";
-        return '<details class="rail-venue"' + (v === current ? " open" : "") +
-          (v.accent ? ' data-accent="' + v.accent + '"' : "") + ">" +
-          '<summary><span class="rail-dot"></span>' + escapeHtml(v.name) + count + "</summary>" +
-          '<div class="rail-sub">' + v.tabs.map(([label, p]) => link(label, p)).join("") + "</div>" +
-        "</details>";
-      }).join("");
-    }
-    return '<div class="rail-group"><h2 class="rail-h">' + escapeHtml(g.label) +
-      (g.note ? '<span class="rail-note">' + escapeHtml(g.note) + "</span>" : "") +
-      "</h2>" + body + "</div>";
-  }).join("");
+  const primary = [
+    link("Briefing", "/", here === "/"),
+    link("Compare", "/compare", isCompare),
+    link("Markets & trades", "/market-explorer", here === "/market-explorer"),
+    link("Venues", "/venues", isVenue)
+  ].join("");
 
-  // Checkbox toggle rather than a script: the same zero-JS pattern Framework uses
-  // for its own sidebar, and it works with JavaScript disabled. CSS hides both the
-  // input and the label above 1008px, where the rail is always open.
-  return '<input id="rail-toggle" type="checkbox">' +
-    '<label id="rail-toggle-label" for="rail-toggle"><span class="rail-bars"></span>Menu</label>' +
-    '<nav class="site-rail" aria-label="Site sections">' +
-      '<a class="rail-brand" href="/">US Prediction Markets</a>' +
-      groups +
-    "</nav>" +
-    (current ? venueStrip(here, current) : "");
+  const compareMobile = compareLinks.map(([label, p]) => link(label, p, p === here)).join("");
+  const masthead = '<header class="masthead"><div class="masthead-inner">' +
+    '<a class="masthead-brand" href="/">' +
+      '<span class="masthead-brand-name">Predict Charts</span>' +
+      '<span class="masthead-brand-subtitle">US Prediction Markets</span>' +
+    '</a>' +
+    '<nav class="masthead-primary" aria-label="Primary navigation">' + primary + '</nav>' +
+    '<div class="masthead-actions">' +
+      link("Ask Data", "/chat", here === "/chat", "masthead-ask") +
+      '<details class="masthead-more' + (isMore ? ' is-active' : '') + '">' +
+        '<summary>More</summary><div class="masthead-menu">' +
+          link("Robinhood research", "/robinhood", here === "/robinhood") +
+          link("Methodology & coverage", "/methodology", here === "/methodology") +
+          '<div class="masthead-theme"><span>Theme</span><div class="theme-toggle" role="group" aria-label="Theme"></div></div>' +
+        '</div>' +
+      '</details>' +
+    '</div>' +
+    '<details class="masthead-mobile">' +
+      '<summary><span class="masthead-menu-icon" aria-hidden="true"></span><span>Menu</span></summary>' +
+      '<div class="masthead-mobile-panel">' +
+        link("Briefing", "/", here === "/") +
+        link("Markets & trades", "/market-explorer", here === "/market-explorer") +
+        link("Venues", "/venues", isVenue) +
+        link("Ask Data", "/chat", here === "/chat", "masthead-mobile-ask") +
+        '<div class="masthead-mobile-group"><span>Compare venues</span>' + compareMobile + '</div>' +
+        '<div class="masthead-mobile-group"><span>Research & methodology</span>' +
+          link("Robinhood distribution estimate", "/robinhood", here === "/robinhood") +
+          link("Methodology & coverage", "/methodology", here === "/methodology") +
+        '</div>' +
+        '<div class="masthead-mobile-theme"><span>Theme</span><div class="theme-toggle" role="group" aria-label="Theme"></div></div>' +
+      '</div>' +
+    '</details>' +
+  '</div></header>';
+
+  const context = current ? venueStrip(here, current) : isCompare ? compareStrip(here) : "";
+  return masthead + context;
 }
 
 export default {
-  title: "US Prediction Markets",
+  title: "Predict Charts",
   base: "/kalshi-dashboard/",
   root: "src",
   theme: ["air", "near-midnight"],
   style: "styles.css",
-  // OFF deliberately: normalizePages() gives a section leaf pages and never
-  // sub-sections, so the sidebar could hold "Venues -> Kalshi" but never
-  // "Venues -> Kalshi -> Economics". railHeader carries all three levels instead.
-  // Turning this off removes the toggle, the backdrop and the nav element
-  // entirely (render.js), which is why railHeader must emit for every path.
+  // OFF deliberately: the branded masthead and contextual module rows replace
+  // Framework's documentation-style sidebar.
   sidebar: false,
-  header: railHeader,
+  header: siteHeader,
   head: [
     // 2026-08-13: keep the site out of search engines while it's not meant to be
     // freely discoverable -- direct links still work fine, this only affects crawlers.
@@ -310,41 +317,48 @@ export default {
     '<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
     // Apply saved theme before first paint to avoid FOUC
     `<script>(function(){try{var t=localStorage.getItem("kalshi-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`,
-    // Inject the light/dark/system toggle after load
+    // Wire the light/dark/system selectors rendered in both desktop and mobile
+    // masthead menus. Keeping them in sync avoids one control displaying stale
+    // state after the other changes the preference.
     `<script>document.addEventListener("DOMContentLoaded",function(){
       var KEY="kalshi-theme";
       var cur=localStorage.getItem(KEY)||"system";
-      var wrap=document.createElement("div");
-      wrap.className="theme-toggle";
-      wrap.setAttribute("role","group");
-      wrap.setAttribute("aria-label","Theme");
+      var wraps=Array.prototype.slice.call(document.querySelectorAll(".theme-toggle"));
+      if(!wraps.length)return;
       var opts=[["light","☀","Light"],["dark","☾","Dark"],["system","⚙","System"]];
-      opts.forEach(function(o){
-        var b=document.createElement("button");
-        b.type="button";
-        b.textContent=o[1];
-        b.title=o[2];
-        b.setAttribute("aria-label",o[2]);
-        b.dataset.theme=o[0];
-        b.addEventListener("click",function(){apply(o[0],true);});
-        wrap.appendChild(b);
+      wraps.forEach(function(wrap){
+        opts.forEach(function(o){
+          var b=document.createElement("button");
+          b.type="button";
+          b.textContent=o[1];
+          b.title=o[2];
+          b.setAttribute("aria-label",o[2]);
+          b.dataset.theme=o[0];
+          b.addEventListener("click",function(){apply(o[0],true);});
+          wrap.appendChild(b);
+        });
       });
-      document.body.appendChild(wrap);
       function apply(v,persist){
         cur=v;
         if(persist){try{localStorage.setItem(KEY,v);}catch(e){}}
         if(v==="system")document.documentElement.removeAttribute("data-theme");
         else document.documentElement.setAttribute("data-theme",v);
-        Array.prototype.forEach.call(wrap.children,function(b){
-          b.setAttribute("aria-pressed",b.dataset.theme===v?"true":"false");
+        wraps.forEach(function(wrap){
+          Array.prototype.forEach.call(wrap.children,function(b){
+            b.setAttribute("aria-pressed",b.dataset.theme===v?"true":"false");
+          });
         });
       }
       apply(cur,false);
-    });</script>`
+    });</script>`,
+    // Chart focus/download/link/Ask controls are progressive enhancement. The
+    // script observes Observable cells as they render, so a slow data source does
+    // not leave later charts without controls.
+    `<script>${CHART_ACTIONS}</script>`
   ].join("\n"),
   // With the sidebar off, `pages` has exactly one consumer left: the footer pager
   // (render.js -> findLink). Deriving it from SITE_MAP means prev/next walks the
-  // same order the rail shows, and every page gets one — before this it was built
+  // same order the masthead menus show, and every page gets one — before this it was built
   // from a shorter, hand-maintained list and 15 of 35 pages were dead ends.
   // Venue modules are flattened into the Venues section because normalizePages()
   // does not recurse; the names are pager labels only, never rendered as a tree.

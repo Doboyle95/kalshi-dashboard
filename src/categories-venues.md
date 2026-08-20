@@ -170,41 +170,8 @@ Plot.plot({
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi is the only sports-led venue with a materially non-sport book: <strong>${nonSport("Kalshi").toFixed(1)}%</strong> of its contracts are not sport, against <strong>${nonSport("ForecastEx").toFixed(1)}%</strong> at ForecastEx &mdash; which trades no sport at all &mdash; and under 2% at five of the eight.</div>
 
-<div hidden aria-hidden="true">
-
-## The same thing, without the sport
-
-<div class="instruction-line">Sport dominates almost everywhere, which flattens everything else. Dropping it shows what each venue trades <em>besides</em> games &mdash; and how few of them trade anything else at all.</div>
-
-```js
-const nonSportRows = stacked.filter(d => !d.bucket.startsWith("Sports") && d.pct > 0);
-```
-
-```js
-categoryScope === "__legacy" ? Plot.plot({
-  width,
-  height: 70 + order.length * 46,
-  marginLeft: 116,
-  marginRight: 20,
-  x: {label: "Share of venue contracts (%)", grid: true},
-  y: {label: null, domain: order},
-  color: {legend: true, domain: BUCKETS.filter(b => !b.startsWith("Sports")), range: BUCKETS.filter(b => !b.startsWith("Sports")).map(b => BC[b])},
-  marks: [
-    Plot.barX(nonSportRows, {
-      y: "venue", x: "pct", fill: "bucket", order: BUCKETS, insetTop: 3, insetBottom: 3, inset: 0.5,
-      title: d => `${d.venue}\n${d.bucket}\n${d.pct.toFixed(3)}% of its contracts\n${fmtCount(d.contracts)} contracts`,
-      tip: true
-    }),
-    Plot.ruleX([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5})
-  ]
-}) : null
-```
-
-</div>
-
-<div class="destination-grid">
-  <a class="destination-card" href="./bet-types"><strong>Sports contract types</strong><span>Moneylines, spreads, totals, props, and how the mix changes.</span></a>
-  <a class="destination-card" href="./parlay-venues"><strong>Parlays</strong><span>Venue share, adoption over time, and leg distribution.</span></a>
+<div class="module-links">
+  <a href="./parlay-venues">Compare parlay adoption →</a>
 </div>
 
 ## Every venue and bucket

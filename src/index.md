@@ -2,10 +2,34 @@
 title: Briefing
 ---
 
+```js
+import {safeMarkdown} from "./components/safe-markdown.js";
+const {marked: dailyMarked} = await import("npm:marked");
+dailyMarked.setOptions({mangle: false, headerIds: false});
+const dailyBriefing = await FileAttachment("daily-briefing.json").json();
+const dailyBriefingReady = dailyBriefing?.status === "ready";
+const dailyBriefingBody = html`<div class="daily-intel-body"></div>`;
+dailyBriefingBody.innerHTML = safeMarkdown(dailyMarked, dailyBriefing?.insights || "The daily briefing is not available yet.");
+const fmtBriefingStamp = value => value
+  ? new Date(value).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"})
+  : "pending";
+```
+
 <div class="page-hero briefing-hero">
-  <div class="page-eyebrow">Industry briefing</div>
-  <h1>US prediction markets, at a glance</h1>
-  <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
+  <div class="briefing-hero-copy">
+    <div class="page-eyebrow">Industry briefing</div>
+    <h1>US prediction markets, at a glance</h1>
+    <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
+  </div>
+  <aside class="daily-intel">
+    <div class="daily-intel-topline"><span>Daily intelligence</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingStamp(dailyBriefing.data_through)}` : "First run pending"}</span></div>
+    <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
+    ${dailyBriefingBody}
+    <div class="daily-intel-actions">
+      <a href="./chat" data-ask-prefill data-question="Go deeper on today's prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
+      <span>${dailyBriefingReady ? `Generated ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Generated once daily after source files settle"}</span>
+    </div>
+  </aside>
 </div>
 
 ```js
@@ -482,14 +506,13 @@ if (productView === "Current mix") {
 
 <div class="module-links">
   <a href="./categories-venues">Compare product mix in detail →</a>
-  <a href="./bet-types">Compare sports contract types →</a>
   <a href="./parlay-venues">Compare parlay adoption →</a>
 </div>
 
 ## Go deeper
 
 <div class="destination-grid">
-  <a class="destination-card" href="./compare-scale"><strong>Compare venues</strong><span>Scale, liquidity, fees, products, trading behavior, and accuracy.</span></a>
+  <a class="destination-card" href="./compare"><strong>Compare venues</strong><span>Start with the strongest common measure, with coverage limits visible.</span></a>
   <a class="destination-card" href="./volume"><strong>Kalshi deep dive</strong><span>Activity, products, economics, outcomes, and parlays from the richest tape.</span></a>
   <a class="destination-card" href="./market-explorer"><strong>Explore markets</strong><span>Venue leaders, top markets, and one searchable finder.</span></a>
   <a class="destination-card" href="./methodology"><strong>Data &amp; methodology</strong><span>Coverage, definitions, mappings, and the limits of every comparison.</span></a>

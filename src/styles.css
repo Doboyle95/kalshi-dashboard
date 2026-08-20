@@ -263,18 +263,14 @@ html[data-theme="dark"] {
    ============================================================ */
 
 .theme-toggle {
-  position: fixed;
-  top: 0.75rem;
-  right: 1rem;
-  z-index: 10;
   display: inline-flex;
   align-items: center;
   gap: 2px;
   padding: 3px;
-  background: var(--card-bg);
+  width: fit-content;
+  background: var(--theme-background);
   border: 1px solid var(--card-border);
   border-radius: 999px;
-  box-shadow: var(--shadow-sm);
   font-family: var(--font-sans);
 }
 
@@ -2614,47 +2610,29 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Venue deep-dive header navigation
+   Global masthead and contextual navigation
    ───────────────────────────────────────────────────────────────────────────
-   Emitted by observablehq.config.js `header` (a function, run in Node at BUILD
-   time) on venue pages only; Framework wraps it in #observablehq-header inside
-   #observablehq-center, directly above <main>.
-
-   It replaces the third navigation level the sidebar cannot express: Framework's
-   `pages` allows exactly one level of nesting, so "Venue Deep Dives -> Kalshi ->
-   Activity" has to live in the page. The sidebar now carries one row per venue
-   (11) instead of one row per venue-page (18).
-
-   Deliberately zero JavaScript. The picker is a native <details>, so it is
-   keyboard-accessible for free and there is no cell that can fail silently. The
-   one accepted cost: an open picker does not close on an outside click, only on
-   re-clicking the summary or navigating away.
-
-   Colour comes from the same per-venue --accent-* tokens the page heroes use, so
-   the strip re-tints per venue and inherits light/dark from --theme-* with no
-   separate dark block.
+   Framework's documentation sidebar is deliberately disabled. The masthead
+   presents the site's four editorial journeys, while Compare and venue pages
+   receive a compact second row for switching modules. Both rows are emitted at
+   build time, so navigation is usable before chart code or data load.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Framework ships #observablehq-header as a position:fixed, display:flex,
-   align-items:center bar whose height is --observablehq-header-height (2.2rem).
-   That is built for a slim title strip. The venue strip is ~50px without a tab row
-   and ~102px with one (more as tabs wrap), so it overflowed that bar SYMMETRICALLY
-   and pushed itself above the top of the viewport. Measured on /volume before this
-   fix: .venue-nav top = -33px, the picker button top = -20px, i.e. partly
-   off-screen. Single-module venues overflowed only ~7px, which is why it read as
-   'most of them are a little too high' rather than obviously broken.
-
-   Put the header back in normal flow and let it size to its content, then undo the
-   two sibling offsets Framework adds to reserve space for the fixed bar, restoring
-   the values a header-less page already uses (main margin-top 1rem, toc top 0). */
 #observablehq-header {
-  position: static;
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: block;
+  box-sizing: border-box;
+  width: calc(100% + 4rem);
   height: auto;
-  margin: 0;
-  padding: 0 0 var(--space-4);
+  margin: 0 -2rem var(--space-5);
+  padding: 0;
   border: 0;
-  background: var(--theme-background);
+  border-bottom: 1px solid var(--card-border);
+  background: color-mix(in srgb, var(--theme-background) 92%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--theme-background) 70%, transparent), var(--shadow-sm);
+  backdrop-filter: blur(14px) saturate(140%);
 }
 
 #observablehq-header ~ #observablehq-main {
@@ -2662,317 +2640,428 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 }
 
 #observablehq-header ~ #observablehq-toc {
-  top: 0;
+  top: 5rem;
 }
 
-/* Nothing covers the top of the viewport at any width now: above 1008px the menu
-   is a left rail, below it the bar is in normal flow and scrolls away. So the two
-   literal offsets that used to clear a pinned bar (130px with a tab row, 82px
-   without) are gone -- leaving them would put that much dead space above every
-   anchor target for no reason, because :has() matches on DOM presence and the
-   strip is still in the DOM, merely display:none.
-   Specificity: the framework's own rule is :root:has(#observablehq-header) at
-   (1,1,0). This matches it exactly and wins on order, since styles.css is
-   imported after observablehq:default.css. */
+#observablehq-center {
+  margin-top: 0;
+  padding-left: 0;
+  padding-top: 0;
+}
+
 :root:has(#observablehq-header) {
-  scroll-padding-top: 2.5rem;
+  scroll-padding-top: 7rem;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Site rail  (the menu)
-   ───────────────────────────────────────────────────────────────────────────
-   Framework's own sidebar is off (`sidebar: false`), so this is the ONLY
-   site-wide navigation. Emitted for every page by observablehq.config.js
-   `railHeader`, in Node at build time, into #observablehq-header.
-
-   Above 1008px it is a fixed left column; below, it collapses behind a "Menu"
-   checkbox and the in-page venue strip carries module switching. 1008px is
-   Framework's own sidebar breakpoint (640px content + 6rem + 272px), reused so
-   there is no width at which neither nav is usable.
-
-   Zero JavaScript: venue expansion is <details>, the drawer is a checkbox. Both
-   work with JS disabled, and neither is an Observable cell that could fail
-   silently.
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-:root {
-  --rail-w: 256px;
+.masthead {
+  background: color-mix(in srgb, var(--theme-background) 96%, transparent);
 }
 
-/* Visually hidden but still focusable -- display:none would take the checkbox out
-   of the tab order, and since a <label> is not focusable either that would leave
-   the drawer unopenable by keyboard. Framework styles its own sidebar toggle the
-   same way rather than hiding it. */
-#rail-toggle {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip-path: inset(50%);
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-#rail-toggle-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-sm);
-  background: var(--card-bg);
-  color: var(--text-muted);
-  font-size: var(--text-label);
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-}
-
-#rail-toggle-label:hover {
-  color: var(--theme-foreground);
-}
-
-.rail-bars {
+.masthead-inner {
   position: relative;
-  width: 13px;
-  height: 9px;
-  border-top: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-}
-
-.rail-bars::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 3px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  box-sizing: border-box;
   width: 100%;
-  border-top: 2px solid currentColor;
+  max-width: var(--observablehq-max-width);
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 0.55rem 2rem;
 }
 
-.site-rail {
-  display: none;
-  font-size: var(--text-body);
-  line-height: 1.4;
-}
-
-#rail-toggle:checked ~ .site-rail {
-  display: block;
-}
-
-.rail-brand {
-  display: block;
-  margin-bottom: var(--space-4);
+.masthead-brand,
+.masthead-brand:link,
+.masthead-brand:visited {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.05rem;
+  padding-left: 0.75rem;
   color: var(--theme-foreground);
-  font-size: var(--text-label);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  line-height: 1.05;
   text-decoration: none;
 }
 
-.rail-group {
-  margin-bottom: var(--space-4);
+.masthead-brand::before {
+  content: "";
+  position: absolute;
+  inset: 0.05rem auto 0.05rem 0;
+  width: 4px;
+  border-radius: 99px;
+  background: linear-gradient(
+    180deg,
+    var(--accent-kalshi) 0 25%,
+    var(--accent-polymarket) 25% 50%,
+    var(--accent-forecastex) 50% 75%,
+    var(--accent-robinhood) 75% 100%
+  );
 }
 
-.rail-h {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-1);
-  padding: 0 var(--space-2);
+.masthead-brand:hover {
+  color: var(--theme-foreground);
+  text-decoration: none;
+}
+
+.masthead-brand-name {
+  font-size: 1.08rem;
+  font-weight: 760;
+  letter-spacing: -0.035em;
+}
+
+.masthead-brand-subtitle {
   color: var(--text-faint);
-  font-size: var(--text-caption);
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: 0.61rem;
+  font-weight: 680;
+  letter-spacing: 0.105em;
   text-transform: uppercase;
 }
 
-.rail-note {
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  color: var(--text-faint);
-}
-
-.site-rail a {
+.masthead-primary {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0.28rem var(--space-2);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 0.88rem;
-  text-decoration: none;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
-.site-rail a:hover {
+.masthead-primary a,
+.masthead-more > summary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 620;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.masthead-primary a:hover,
+.masthead-more > summary:hover {
   background: var(--surface-muted);
   color: var(--theme-foreground);
   text-decoration: none;
 }
 
-.site-rail a[aria-current="page"] {
-  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
-  color: var(--accent-primary);
-  font-weight: 680;
+.masthead-primary a[aria-current="page"] {
+  background: color-mix(in srgb, var(--theme-foreground) 6%, transparent);
+  color: var(--theme-foreground);
 }
 
-.site-rail a:focus-visible,
-.rail-venue > summary:focus-visible,
-#rail-toggle:focus-visible + #rail-toggle-label {
-  outline: 2px solid var(--accent-primary);
+.masthead-primary a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.18rem;
+  left: 0.7rem;
+  height: 2px;
+  border-radius: 99px;
+  background: var(--accent-primary);
+}
+
+.masthead-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.masthead-ask,
+.masthead-ask:link,
+.masthead-ask:visited {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 65%, var(--card-border));
+  border-radius: var(--radius-sm);
+  background: var(--accent-primary);
+  color: #081b18;
+  font-size: 0.82rem;
+  font-weight: 760;
+  text-decoration: none;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
+}
+
+.masthead-ask:hover {
+  background: color-mix(in srgb, var(--accent-primary) 86%, white);
+  color: #081b18;
+  text-decoration: none;
+}
+
+.masthead-ask[aria-current="page"] {
+  outline: 2px solid color-mix(in srgb, var(--accent-primary) 38%, transparent);
   outline-offset: 2px;
 }
 
-/* ── venues: the third level, one open at a time ── */
-
-.rail-venue {
-  --rail-accent: var(--text-faint);
+.masthead-more,
+.masthead-mobile {
+  position: relative;
 }
 
-.rail-venue[data-accent="kalshi"]     { --rail-accent: var(--accent-kalshi); }
-.rail-venue[data-accent="polymarket"] { --rail-accent: var(--accent-polymarket); }
-.rail-venue[data-accent="forecastex"] { --rail-accent: var(--accent-forecastex); }
-.rail-venue[data-accent="dkex"]       { --rail-accent: var(--accent-dkex); }
-.rail-venue[data-accent="underdog"]   { --rail-accent: var(--accent-underdog); }
-.rail-venue[data-accent="nadex"]      { --rail-accent: var(--accent-nadex); }
-.rail-venue[data-accent="rothera"]    { --rail-accent: var(--accent-rothera); }
-.rail-venue[data-accent="cme"]        { --rail-accent: var(--accent-cme); }
-
-.rail-venue > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0.28rem var(--space-2);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 0.88rem;
+.masthead-more > summary,
+.masthead-mobile > summary,
+.venue-picker > summary {
   cursor: pointer;
   list-style: none;
+  user-select: none;
 }
 
-.rail-venue > summary::-webkit-details-marker { display: none; }
-.rail-venue > summary::marker { content: ""; }
+.masthead-more > summary::-webkit-details-marker,
+.masthead-mobile > summary::-webkit-details-marker,
+.venue-picker > summary::-webkit-details-marker {
+  display: none;
+}
 
-/* Two margin-left:auto in one flex row split the free space between them, which
-   would strand the count in the middle. The count takes the auto when it exists;
-   the caret takes it only when it does not. */
-.rail-venue > summary::after {
+.masthead-more > summary::marker,
+.masthead-mobile > summary::marker,
+.venue-picker > summary::marker {
   content: "";
-  margin-left: var(--space-2);
-  border-left: 4px solid currentColor;
-  border-top: 3.5px solid transparent;
-  border-bottom: 3.5px solid transparent;
-  opacity: 0.5;
 }
 
-.rail-venue[open] > summary::after {
-  transform: rotate(90deg);
+.masthead-more > summary::after {
+  content: "▾";
+  margin-left: 0.35rem;
+  color: var(--text-faint);
+  font-size: 0.78em;
 }
 
-.rail-venue > summary:hover {
+.masthead-more[open] > summary,
+.masthead-more.is-active > summary {
   background: var(--surface-muted);
   color: var(--theme-foreground);
 }
 
-.rail-venue[open] > summary {
+.masthead-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 15.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--theme-background);
+  box-shadow: var(--shadow-md);
+}
+
+.masthead-menu > a {
+  padding: 0.58rem 0.65rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 580;
+  text-decoration: none;
+}
+
+.masthead-menu > a:hover,
+.masthead-menu > a[aria-current="page"] {
+  background: var(--surface-muted);
   color: var(--theme-foreground);
-  font-weight: 620;
+  text-decoration: none;
 }
 
-.rail-dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--text-faint) 45%, transparent);
+.masthead-menu > a[aria-current="page"] {
+  font-weight: 680;
 }
 
-.rail-venue[open] > summary .rail-dot {
-  background: var(--rail-accent);
+.masthead-theme,
+.masthead-mobile-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: 0.25rem;
+  padding: 0.55rem 0.65rem 0.25rem;
+  border-top: 1px solid var(--divider);
 }
 
-.rail-count {
-  margin-left: auto;
+.masthead-theme > span,
+.masthead-mobile-theme > span {
   color: var(--text-faint);
   font-size: var(--text-caption);
-  font-variant-numeric: tabular-nums;
+  font-weight: 720;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
 }
 
-.rail-venue > summary:not(:has(.rail-count))::after {
+.masthead-mobile {
+  display: none;
   margin-left: auto;
 }
 
-.rail-sub {
-  margin: 2px 0 var(--space-2) calc(var(--space-2) + 3px);
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--divider);
+.masthead-mobile > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 38px;
+  padding: 0 0.72rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
 }
 
-.rail-sub a {
-  font-size: 0.85rem;
+.masthead-mobile[open] > summary {
+  background: var(--surface-muted);
+  color: var(--theme-foreground);
 }
 
-/* ── wide: the rail becomes a fixed left column ──
-   Mirrors what Framework does for its own sidebar: the element runs to the
-   viewport edge while its CONTENT lines up with the centred body, so it does not
-   detach from the page on a wide screen. #observablehq-header sits inside
-   #observablehq-center, but position:fixed resolves against the viewport, so the
-   padding added to #observablehq-center below does not shift it. */
-@media (min-width: 1008px) {
-  #observablehq-header {
-    --rail-edge: calc(max(0rem, (100vw - var(--observablehq-max-width)) / 2));
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    z-index: 3;
-    box-sizing: border-box;
-    width: calc(var(--rail-w) + var(--rail-edge));
-    padding: var(--space-5) var(--space-3) var(--space-6);
-    padding-left: calc(var(--rail-edge) + var(--space-3));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    background: var(--surface-muted);
-    border-right: 1px solid var(--card-border);
-  }
+.masthead-menu-icon {
+  position: relative;
+  width: 15px;
+  height: 10px;
+  border-top: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+}
 
-  #observablehq-center {
-    padding-left: var(--rail-w);
-  }
+.masthead-menu-icon::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 100%;
+  border-top: 1.5px solid currentColor;
+}
 
-  /* Both gone above the breakpoint: a focusable control that toggles nothing is
-     a keyboard trap. */
-  #rail-toggle,
-  #rail-toggle-label {
-    display: none;
-  }
+.masthead-mobile-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 2rem));
+  max-height: calc(100vh - 5.5rem);
+  padding: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--theme-background);
+  box-shadow: var(--shadow-md);
+}
 
-  /* Always open above the breakpoint, checked or not. */
-  .site-rail,
-  #rail-toggle:checked ~ .site-rail {
-    display: block;
-  }
+.masthead-mobile-panel > a,
+.masthead-mobile-group > a {
+  display: block;
+  padding: 0.58rem 0.65rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 580;
+  text-decoration: none;
+}
 
-  /* NOTE: hiding .venue-nav above this breakpoint is NOT done here. `.venue-nav`
-     sets display:flex some 40 lines below, at the same specificity (0,1,0), so a
-     rule placed here loses on order and the strip renders inside the rail --
-     measured at 1280px before this note existed: a 216x217 block at the rail's
-     foot. The override lives at the END of this file instead. */
+.masthead-mobile-panel a:hover,
+.masthead-mobile-panel a[aria-current="page"] {
+  background: var(--surface-muted);
+  color: var(--theme-foreground);
+  text-decoration: none;
+}
+
+.masthead-mobile-panel a[aria-current="page"] {
+  font-weight: 700;
+}
+
+.masthead-mobile-ask {
+  margin: 0.2rem 0;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 32%, var(--card-border));
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  color: var(--theme-foreground) !important;
+}
+
+.masthead-mobile-group {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--divider);
+}
+
+.masthead-mobile-group > span {
+  padding: 0.25rem 0.65rem;
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-weight: 720;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+/* Context rows share the masthead's full-width surface but keep content aligned
+   with the page. A horizontal overflow affordance is much cheaper than wrapping
+   six comparison modules into a second navigation block. */
+.context-shell {
+  border-top: 1px solid var(--divider);
+  background: color-mix(in srgb, var(--theme-background-alt) 45%, var(--theme-background));
+}
+
+.compare-nav,
+.venue-nav {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--observablehq-max-width);
+  min-height: 44px;
+  margin: 0 auto;
+  padding: 0.4rem 2rem;
+}
+
+.compare-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.compare-nav-label,
+.venue-nav-label {
+  flex: 0 0 auto;
+  margin-right: var(--space-2);
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.compare-nav a,
+.venue-tabs a {
+  flex: 0 0 auto;
+  padding: 0.32rem 0.62rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 580;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.compare-nav a:hover,
+.venue-tabs a:hover {
+  background: color-mix(in srgb, var(--theme-foreground) 6%, transparent);
+  color: var(--theme-foreground);
+  text-decoration: none;
+}
+
+.compare-nav a[aria-current="page"] {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: color-mix(in srgb, var(--accent-primary) 80%, var(--theme-foreground));
+  font-weight: 700;
 }
 
 .venue-nav {
   --nav-accent: var(--accent-kalshi);
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .venue-nav[data-accent="kalshi"]     { --nav-accent: var(--accent-kalshi); }
@@ -2984,20 +3073,11 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 .venue-nav[data-accent="rothera"]    { --nav-accent: var(--accent-rothera); }
 .venue-nav[data-accent="cme"]        { --nav-accent: var(--accent-cme); }
 
-/* ── row 1: which venue ── */
-
 .venue-nav-bar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--space-2);
-}
-
-.venue-nav-label {
-  color: var(--text-muted);
-  font-size: var(--text-label);
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .venue-picker {
@@ -3008,45 +3088,35 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.65rem;
+  min-height: 30px;
+  padding: 0 0.6rem;
   border: 1px solid var(--card-border);
   border-radius: var(--radius-sm);
   background: var(--theme-background);
   color: var(--theme-foreground);
-  font-size: 0.95rem;
-  font-weight: 620;
-  cursor: pointer;
-  list-style: none;
+  font-size: 0.84rem;
+  font-weight: 660;
 }
-
-/* Hide the native disclosure triangle in both engines, then supply our own. */
-.venue-picker > summary::-webkit-details-marker { display: none; }
-.venue-picker > summary::marker { content: ""; }
 
 .venue-picker > summary::after {
   content: "▾";
-  color: var(--text-muted);
-  font-size: 0.85em;
+  color: var(--text-faint);
+  font-size: 0.78em;
 }
 
 .venue-picker[open] > summary {
   border-color: var(--nav-accent);
 }
 
-.venue-picker[open] > summary::after {
-  content: "▴";
-  color: var(--nav-accent);
-}
-
 .venue-picker-menu {
   position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.35rem);
+  z-index: 60;
+  top: calc(100% + 0.4rem);
   left: 0;
   display: flex;
   flex-direction: column;
   min-width: 13rem;
-  padding: 0.3rem;
+  padding: 0.35rem;
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
   background: var(--theme-background);
@@ -3054,119 +3124,508 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 }
 
 .venue-picker-menu a {
-  padding: 0.35rem 0.5rem;
+  padding: 0.42rem 0.55rem;
   border-radius: var(--radius-sm);
-  color: var(--theme-foreground);
-  font-size: 0.92rem;
+  color: var(--text-muted);
+  font-size: 0.84rem;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .venue-picker-menu a:hover {
   background: var(--surface-muted);
+  color: var(--theme-foreground);
 }
 
 .venue-picker-menu a[aria-current="true"] {
   color: var(--nav-accent);
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .venue-nav-index {
-  /* NOT margin-left:auto. The theme toggle is position:fixed at top:.75rem
-     right:1rem with z-index 10, and measured at 1280px it overlaps the nav's
-     top-right corner (toggle x 1153-1249 vs nav x 320-1217). Pinning the bar
-     would make that collision permanent, so this sits beside the picker and
-     leaves the right-hand end clear. */
-  margin-left: var(--space-2);
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-weight: 620;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .venue-nav-index:hover {
   color: var(--nav-accent);
-}
-
-/* ── row 2: which module (only rendered when the venue has more than one) ── */
-
-.venue-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem;
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--card-border);
-}
-
-.venue-tabs a {
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  font-weight: 560;
   text-decoration: none;
 }
 
-.venue-tabs a:hover {
-  color: var(--theme-foreground);
-  background: color-mix(in srgb, var(--nav-accent) 10%, transparent);
+.venue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  padding-left: var(--space-4);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-left: 1px solid var(--divider);
+  scrollbar-width: thin;
 }
 
 .venue-tabs a[aria-current="page"] {
+  background: color-mix(in srgb, var(--nav-accent) 13%, transparent);
   color: var(--nav-accent);
-  background: color-mix(in srgb, var(--nav-accent) 14%, transparent);
-  font-weight: 680;
+  font-weight: 700;
 }
 
+.masthead a:focus-visible,
+.masthead summary:focus-visible,
+.compare-nav a:focus-visible,
 .venue-nav a:focus-visible,
 .venue-picker > summary:focus-visible {
-  outline: 2px solid var(--nav-accent);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
-@media (max-width: 640px) {
-  .venue-nav {
-    padding: var(--space-3);
+@media (max-width: 900px) {
+  .masthead-inner {
+    min-height: 58px;
+    padding-right: 1rem;
+    padding-left: 1rem;
   }
 
-  .venue-nav-bar {
-    flex-wrap: wrap;
-    row-gap: var(--space-2);
+  .masthead-primary,
+  .masthead-actions {
+    display: none;
   }
 
-  /* Measured at 375px, seven tabs wrapped to FOUR rows and the strip alone was
-     122px, making the whole bar 212px -- a quarter of the viewport, which is far
-     too much to pin. One scrolling row keeps it near 100px. */
-  .venue-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-  }
-
-  .venue-tabs a {
+  #observablehq-header .masthead-mobile {
+    display: block;
     flex: 0 0 auto;
+  }
+
+  #observablehq-header .masthead-mobile > summary {
+    display: inline-flex;
+  }
+
+  .compare-nav,
+  .venue-nav {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  #observablehq-header ~ #observablehq-toc {
+    top: 4.5rem;
   }
 }
 
-/* Above 1008px the rail already lists the current venue's modules, expanded, so
-   the in-page strip is redundant. It has to be switched off HERE, after every
-   .venue-nav rule above: the rule that sets display:flex has the same specificity
-   (0,1,0), so the same declaration inside the rail's own media block earlier in
-   this file loses on source order and the strip renders inside the rail. */
-@media (min-width: 1008px) {
+@media (max-width: 700px) {
+  :root:has(#observablehq-header) {
+    scroll-padding-top: 9rem;
+  }
+
   .venue-nav {
+    display: grid;
+    gap: 0.35rem;
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .venue-tabs {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .venue-nav-label {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 460px) {
+  .masthead-inner {
+    gap: var(--space-3);
+  }
+
+  .masthead-brand-subtitle {
+    display: none;
+  }
+
+  .masthead-brand-name {
+    font-size: 1rem;
+  }
+
+  .masthead-mobile > summary > span:last-child {
+    display: none;
+  }
+
+  .masthead-mobile > summary {
+    padding: 0 0.68rem;
+  }
+
+  .venue-nav-index {
     display: none;
   }
 }
 
-/* Framework's print rules hide the sidebar and footer but know nothing about the
-   header slot, so the venue nav card printed on all 18 venue pages -- as a bordered
-   tinted box with a dropdown arrow, on every page of the printout. The theme toggle
-   is position:fixed and printed over the content for the same reason.
-   Neither is meaningful on paper. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Editorial journey modules: daily intelligence, honest comparison coverage,
+   venue overview templates, and reusable chart actions.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.briefing-hero {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.18fr);
+  align-items: stretch;
+  gap: var(--space-5);
+}
+
+.briefing-hero-copy {
+  align-self: center;
+}
+
+.daily-intel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--card-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--theme-background) 86%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.daily-intel-topline,
+.daily-intel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.daily-intel-topline {
+  color: var(--text-faint);
+  font-size: 0.65rem;
+  font-weight: 720;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.daily-intel-topline span:first-child {
+  color: var(--accent-primary);
+}
+
+.daily-intel h2 {
+  margin: 0.38rem 0 0.4rem;
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+}
+
+.daily-intel-body {
+  position: relative;
+  max-height: 8.4rem;
+  overflow: hidden;
+  color: var(--theme-foreground-alt);
+  font-size: 0.76rem;
+  line-height: 1.38;
+  mask-image: linear-gradient(to bottom, black 84%, transparent 100%);
+}
+
+.daily-intel-body p,
+.daily-intel-body ul,
+.daily-intel-body ol {
+  margin: 0 0 0.45rem;
+}
+
+.daily-intel-body ul,
+.daily-intel-body ol {
+  display: grid;
+  gap: 0.28rem;
+  padding-left: 1.15rem;
+}
+
+.daily-intel-body li {
+  line-height: inherit;
+}
+
+.daily-intel-actions {
+  margin-top: auto;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--divider);
+  color: var(--text-faint);
+  font-size: 0.66rem;
+}
+
+.daily-intel-actions a {
+  color: var(--theme-foreground);
+  font-weight: 700;
+  text-decoration-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.daily-intel.is-pending .daily-intel-body {
+  mask-image: none;
+}
+
+.compare-lens-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0 0 var(--space-6);
+}
+
+.compare-lens-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: 150px;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.compare-lens-card:hover {
+  border-color: color-mix(in srgb, var(--accent-primary) 52%, var(--card-border));
+  color: inherit;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.compare-lens-card strong {
+  margin-top: auto;
+  font-size: 1rem;
+}
+
+.compare-lens-card > span:last-child {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.compare-coverage-table .briefing-table {
+  min-width: 720px;
+}
+
+.venue-overview-grid {
+  display: grid;
+  grid-template-columns: 0.65fr 1.15fr 1.35fr 1.35fr;
+  margin: -0.85rem 0 var(--space-5);
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.venue-overview-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-width: 0;
+  padding: 0.72rem 0.82rem;
+  border-left: 1px solid var(--divider);
+}
+
+.venue-overview-grid > div:first-child {
+  border-left: 3px solid var(--overview-accent, var(--accent-primary));
+}
+
+.venue-overview-grid span {
+  color: var(--text-faint);
+  font-size: 0.63rem;
+  font-weight: 720;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.venue-overview-grid strong {
+  color: var(--theme-foreground-alt);
+  font-size: 0.75rem;
+  font-weight: 620;
+  line-height: 1.36;
+}
+
+.page-hero-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.page-hero-ask,
+.page-hero-ask:link,
+.page-hero-ask:visited {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--hero-accent, var(--accent-primary)) 38%, var(--card-border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--hero-accent, var(--accent-primary)) 9%, transparent);
+  color: var(--theme-foreground);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.page-hero-ask:hover {
+  background: color-mix(in srgb, var(--hero-accent, var(--accent-primary)) 15%, transparent);
+  text-decoration: none;
+}
+
+.chart-action-host {
+  position: relative;
+}
+
+.chart-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.22rem;
+  min-height: 28px;
+  margin: 0 0 0.2rem;
+  opacity: 0.64;
+  transition: opacity 140ms ease;
+}
+
+.chart-action-host:hover > .chart-tools,
+.chart-tools:focus-within,
+.chart-action-host.is-focused > .chart-tools {
+  opacity: 1;
+}
+
+.chart-tools button {
+  appearance: none;
+  min-height: 26px;
+  padding: 0 0.48rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-muted) 78%, var(--theme-background));
+  color: var(--text-muted);
+  font: 650 0.65rem var(--font-sans);
+  cursor: pointer;
+}
+
+.chart-tools button:hover,
+.chart-tools button:focus-visible {
+  border-color: color-mix(in srgb, var(--accent-primary) 44%, var(--card-border));
+  color: var(--theme-foreground);
+}
+
+.chart-tools button:last-child {
+  border-color: color-mix(in srgb, var(--accent-primary) 36%, var(--card-border));
+  background: color-mix(in srgb, var(--accent-primary) 9%, transparent);
+  color: var(--theme-foreground);
+}
+
+html.chart-focus-open {
+  overflow: hidden;
+}
+
+.chart-focus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: start center;
+  box-sizing: border-box;
+  padding: clamp(0.75rem, 2.5vw, 2rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: color-mix(in srgb, var(--theme-background) 93%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.chart-action-host.is-focused {
+  box-sizing: border-box;
+  width: min(1500px, 100%);
+  min-height: calc(100vh - clamp(1.5rem, 5vw, 4rem));
+  margin: 0;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  background: var(--theme-background);
+  box-shadow: var(--shadow-md);
+}
+
+.chart-action-host.is-focused > svg,
+.chart-action-host.is-focused figure svg,
+figure.chart-action-host.is-focused svg {
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 7rem);
+}
+
+@media (max-width: 1000px) {
+  .briefing-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-intel-body {
+    max-height: 7rem;
+  }
+
+  .compare-lens-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .venue-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .venue-overview-grid > div:nth-child(odd) {
+    border-left: 3px solid var(--divider);
+  }
+
+  .venue-overview-grid > div:first-child {
+    border-left-color: var(--overview-accent, var(--accent-primary));
+  }
+}
+
+@media (max-width: 640px) {
+  .briefing-hero {
+    gap: var(--space-4);
+  }
+
+  .daily-intel-topline,
+  .daily-intel-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .compare-lens-grid,
+  .venue-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-lens-card {
+    min-height: 128px;
+  }
+
+  .venue-overview-grid > div,
+  .venue-overview-grid > div:nth-child(odd) {
+    border-left: 3px solid var(--divider);
+    border-top: 1px solid var(--divider);
+  }
+
+  .venue-overview-grid > div:first-child {
+    border-top: 0;
+    border-left-color: var(--overview-accent, var(--accent-primary));
+  }
+
+  .chart-tools {
+    justify-content: flex-start;
+    overflow-x: auto;
+    opacity: 1;
+  }
+}
+
 @media print {
   #observablehq-header,
-  .theme-toggle {
+  .theme-toggle,
+  .chart-tools,
+  .page-hero-actions {
     display: none !important;
   }
 }
