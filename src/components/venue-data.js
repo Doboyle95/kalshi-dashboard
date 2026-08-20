@@ -1,13 +1,35 @@
+// One source of truth for venue colour: the CSS tokens in styles.css.
+//
+// These were literal hexes copied from the tokens, which silently drifted apart the
+// moment either side moved. Editorial Desk (648b33f) restyled --accent-kalshi to
+// #087c70, so the homepage drew Kalshi as #00C2A8 in the exchange-volume chart and
+// #087c70 in the brush directly beneath it. In dark mode SEVEN venues drifted, because
+// every token has a designed dark variant and a frozen hex cannot follow the theme.
+//
+// var() is safe in every consumer here, all of which were checked: Plot resolves it in
+// mark presentation attributes AND in legend swatches (verified against plot@0.6.17 --
+// swatch rects computed rgb(80,199,183) from var(--accent-kalshi)), the .venue-dot uses
+// are inline CSS, and venue-data.js's own use is a truthiness test. There is no colour
+// MATH anywhere in src/*.md or src/components/*.js -- no d3.color, interpolate or
+// chroma -- which is the thing that would break on a var() string.
+//
+// Three venues stay literal on purpose:
+//   ProphetX, Novig  -- no --accent-* token exists; inventing one would mean choosing
+//                       new dark-mode colours, which is a design call, not a unification.
+//   CME              -- --accent-cme is #9A6D1F, a genuinely different colour from the
+//                       #64748B used here, and it has no dark variant. Pointing at the
+//                       token would change how CME looks rather than unify anything.
+// All three are theme-blind today and stay exactly as they render now.
 export const VENUE_COLORS = Object.freeze({
-  Kalshi: "#00C2A8",
-  "Polymarket US": "#3B7DD8",
-  ForecastEx: "#E53535",
-  DKeX: "#F97316",
-  "Underdog Exchange": "#EAB308",
+  Kalshi: "var(--accent-kalshi)",
+  "Polymarket US": "var(--accent-polymarket)",
+  ForecastEx: "var(--accent-forecastex)",
+  DKeX: "var(--accent-dkex)",
+  "Underdog Exchange": "var(--accent-underdog)",
   ProphetX: "#DB2777",
   Novig: "#6366F1",
-  Rothera: "#00C805",
-  "Crypto.com/Nadex": "#9C27B0",
+  Rothera: "var(--accent-rothera)",
+  "Crypto.com/Nadex": "var(--accent-nadex)",
   CME: "#64748B"
 });
 
