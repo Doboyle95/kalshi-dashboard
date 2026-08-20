@@ -239,14 +239,41 @@ function siteHeader({path}) {
     '<a href="' + p + '"' + (className ? ' class="' + className + '"' : "") +
     (active ? ' aria-current="page"' : "") + '>' + escapeHtml(label) + '</a>';
 
+  // Venues is a DROPDOWN, not a link. /venues is a directory page that loads no data at
+  // all -- pointing the primary nav at it made every reader pay a page load before they
+  // could reach any evidence, and Framework has no client-side router, so that reload is
+  // the full cost of a navigation. The menu goes straight to a venue's first module.
+  // "All venues" keeps the directory reachable for anyone who wants the overview, and
+  // keeps the page's SITE_MAP entry honest rather than orphaned.
+  //
+  // It reuses .masthead-more wholesale so it inherits that dropdown's summary, caret,
+  // marker-suppression, open and active styling -- including the Editorial Desk overrides
+  // -- without touching nine selector lists. .masthead-venues only re-anchors the panel.
+  // <details> means this still needs no JavaScript.
+  const venueEntry = (v) =>
+    '<a href="' + v.tabs[0][1] + '"' + (v === current ? ' aria-current="true"' : "") + ">" +
+    escapeHtml(v.name) + "</a>";
+
+  const venuesMenu =
+    '<details class="masthead-more masthead-venues' + (isVenue ? " is-active" : "") + '">' +
+      "<summary>Venues</summary>" +
+      '<div class="masthead-menu masthead-venue-menu">' +
+        VENUES.map(venueEntry).join("") +
+        link("All venues", "/venues", here === "/venues", "masthead-venue-all") +
+      "</div>" +
+    "</details>";
+
   const primary = [
     link("Briefing", "/", here === "/"),
     link("Compare", "/compare", isCompare),
     link("Markets & trades", "/market-explorer", here === "/market-explorer"),
-    link("Venues", "/venues", isVenue)
+    venuesMenu
   ].join("");
 
   const compareMobile = compareLinks.map(([label, p]) => link(label, p, p === here)).join("");
+  const venuesMobile =
+    VENUES.map((v) => link(v.name, v.tabs[0][1], v === current)).join("") +
+    link("All venues", "/venues", here === "/venues");
   const masthead = '<header class="masthead"><div class="masthead-inner">' +
     '<a class="masthead-brand" href="/">' +
       '<span class="masthead-brand-name">Predict Charts</span>' +
@@ -268,9 +295,11 @@ function siteHeader({path}) {
       '<div class="masthead-mobile-panel">' +
         link("Briefing", "/", here === "/") +
         link("Markets & trades", "/market-explorer", here === "/market-explorer") +
-        link("Venues", "/venues", isVenue) +
         link("Ask Data", "/chat", here === "/chat", "masthead-mobile-ask") +
         '<div class="masthead-mobile-group"><span>Compare venues</span>' + compareMobile + '</div>' +
+        // Same reasoning as the desktop dropdown: list the venues rather than sending the
+        // reader to the empty directory page. The drawer already groups Compare this way.
+        '<div class="masthead-mobile-group"><span>Venues</span>' + venuesMobile + '</div>' +
         '<div class="masthead-mobile-group"><span>Research & methodology</span>' +
           link("Robinhood distribution estimate", "/robinhood", here === "/robinhood") +
           link("Methodology & coverage", "/methodology", here === "/methodology") +

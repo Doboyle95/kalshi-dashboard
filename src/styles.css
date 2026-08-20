@@ -2877,6 +2877,37 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   font-weight: 680;
 }
 
+/* The Venues dropdown sits in the primary nav rather than at the right edge, so its
+   panel anchors LEFT -- .masthead-menu's `right: 0` would push a 26rem panel off the
+   left of the viewport on a narrow desktop window. Ten venues in one column is a 400px
+   drop; two columns keeps it inside a short laptop viewport under the ~115px bar. */
+.masthead-venue-menu {
+  right: auto;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(8.5rem, 1fr));
+  gap: 0.1rem 0.35rem;
+  width: max-content;
+  max-width: min(26rem, calc(100vw - 2rem));
+}
+
+/* The current venue, marked with aria-current="true" rather than "page" because the
+   reader may be on a module of that venue rather than its entry page. */
+.masthead-venue-menu > a[aria-current="true"] {
+  background: var(--surface-muted);
+  color: var(--theme-foreground);
+  font-weight: 680;
+}
+
+.masthead-venue-all {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--divider);
+  color: var(--text-faint);
+  font-size: 0.79rem;
+}
+
 .masthead-theme,
 .masthead-mobile-theme {
   display: flex;
