@@ -87,7 +87,13 @@ export function buildPlatformSeries({kalshi = [], competitor = [], prophetx = []
     rows.push({
       date,
       venue: "CME",
-      contracts: numberOrNull(row.contracts ?? row.volume ?? row.contracts_total),
+      // cme_daily_distributed.csv calls this column cme_total_vol. None of the three
+      // generic names tried below has ever existed in that file, so every CME row got a
+      // null here and was dropped by the contracts filter at the end of this function --
+      // silently, because buildVenueScoreboard simply returns nothing for a venue with no
+      // rows. cme_total_vol is a contract count (the producer bills it at CME's flat
+      // $0.01 per contract per side), and equals cme_call_vol + cme_put_vol by construction.
+      contracts: numberOrNull(row.cme_total_vol ?? row.contracts ?? row.volume ?? row.contracts_total),
       fees: numberOrNull(row.fees),
       revenue: numberOrNull(row.revenue),
       partial: false,

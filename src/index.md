@@ -72,7 +72,11 @@ const largestCompetitor = [...alignedByVenue.entries()].filter(([venue]) => venu
 // 7-day. Both sides of the comparison must be full weeks -- keeping the old
 // `recentDays >= 14` guard against a 7-day window disqualifies EVERY venue and renders
 // the card as "—", since recentDays now tops out at 7.
-const growthBoard = buildVenueScoreboard(platformRows, {windowDays: 7});
+// Sparse venues are excluded the same way the aligned cards above exclude them: CME
+// reports by hand-collected bulletin, so its seven most recent REPORTED days currently
+// span twelve calendar days against a prior window of eight. That is not a week over a
+// week, and the row-based slice cannot make it one.
+const growthBoard = buildVenueScoreboard(platformRows.filter(row => !row.sparse), {windowDays: 7});
 const fastestGrowth = growthBoard
   .filter(row => row.change != null && row.recentDays >= 7 && row.previousDays >= 7)
   .sort((a, b) => b.change - a.change)[0];
