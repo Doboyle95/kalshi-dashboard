@@ -158,7 +158,7 @@ const CME_RATE_PER_SIDE  = 0.01;
 
 const platforms = [
   {
-    name: "Kalshi", color: "#00C2A8",
+    name: "Kalshi", color: "var(--accent-kalshi)",
     // Kalshi MUST come from daily_overall.csv (loaded above), never from the Kalshi
     // rows in competitor_daily.csv: near_live_update.R recomputes daily_overall every
     // ~7 min but only *copies* competitor_daily, so the latter's current-day row lags
@@ -178,19 +178,19 @@ const platforms = [
     }))
   },
   {
-    name: "Polymarket US", color: "#3B7DD8",
+    name: "Polymarket US", color: "var(--accent-polymarket)",
     data: fromCompetitor("Polymarket_US")
   },
   {
-    name: "ForecastEx", color: "#E53535",
+    name: "ForecastEx", color: "var(--accent-forecastex)",
     data: fromCompetitor("ForecastEx")
   },
   {
-    name: "DKeX", color: "#F97316",
+    name: "DKeX", color: "var(--accent-dkex)",
     data: fromCompetitor("DKeX", dkexTradedValue)
   },
   {
-    name: "Underdog Exchange", color: "#EAB308",
+    name: "Underdog Exchange", color: "var(--accent-underdog)",
     data: fromCompetitor("Underdog Exchange", underdogTradedValue)
   },
   {
@@ -234,11 +234,11 @@ const platforms = [
     data: fromCompetitor("Novig")
   },
   {
-    name: "Crypto.com/Nadex", color: "#9c27b0",
+    name: "Crypto.com/Nadex", color: "var(--accent-nadex)",
     data: fromCompetitor("Crypto.com/Nadex")
   },
   {
-    name: "CME (FanDuel + DraftKings)", color: "#9A6D1F",
+    name: "CME (FanDuel + DraftKings)", color: "var(--accent-cme)",
     data: cme.filter(d => d.cme_total_vol > 0).map(d => {
       const vol = +d.cme_total_vol;
       const inRegime = d.date >= CME_FLAT_FROM;
@@ -253,7 +253,7 @@ const platforms = [
   },
   {
     // Robinhood brand green (Rothera = Robinhood's exchange); orange is DKeX's now.
-    name: "Rothera", color: "#00C805",
+    name: "Rothera", color: "var(--accent-rothera)",
     data: fromCompetitor("Rothera")
   }
 ];
@@ -376,7 +376,7 @@ function makeDateBrush(defaultStart) {
 
   svg.append("path")
     .datum(kalshi)
-    .attr("fill", "#00C2A8").attr("fill-opacity", 0.2)
+    .attr("fill", "var(--accent-kalshi)").attr("fill-opacity", 0.2)
     .attr("d", d3.area()
       .x(d => x(d.date)).y0(h - mb).y1(d => y(d.contracts_total))
       .curve(d3.curveBasis));
@@ -407,7 +407,7 @@ function makeDateBrush(defaultStart) {
 
 
   brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
-  svg.selectAll(".handle").style("fill", "#00C2A8").style("fill-opacity", 0.8);
+  svg.selectAll(".handle").style("fill", "var(--accent-kalshi)").style("fill-opacity", 0.8);
   svg.property("value", [defaultStart, defaultEnd]);
   return svg.node();
 }

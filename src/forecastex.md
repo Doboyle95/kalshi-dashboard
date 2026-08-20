@@ -129,7 +129,7 @@ function makeBrush(data, color, defaultStart) {
 <p class="section-intro">ForecastEx full exchange volume. Defaults to 2025+ since 2024's election days otherwise compress the view.</p>
 
 ```js
-const brushVolume = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
+const brushVolume = view(makeBrush(split, "var(--accent-forecastex)", new Date("2025-01-01")));
 ```
 
 ```js
@@ -150,7 +150,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#E53535", fillOpacity: 0.85,
+      fill: "var(--accent-forecastex)", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)}`
     }),
@@ -166,7 +166,7 @@ Plot.plot({
 <p class="section-intro">How much of ForecastEx is sports versus everything else — once a thin slice, now mostly gone.</p>
 
 ```js
-const brushSports = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
+const brushSports = view(makeBrush(split, "var(--accent-forecastex)", new Date("2025-01-01")));
 ```
 
 ```js
@@ -186,7 +186,7 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#E53535", "#00C2A8"]},
+  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["var(--accent-forecastex)", "var(--accent-kalshi)"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
@@ -208,7 +208,7 @@ Plot.plot({
 <p class="section-intro">The themes carrying ForecastEx's volume, and the shift from politics toward weather.</p>
 
 ```js
-const brushCats = view(makeBrush(split, "#E53535", new Date("2025-01-01")));
+const brushCats = view(makeBrush(split, "var(--accent-forecastex)", new Date("2025-01-01")));
 ```
 
 ```js
@@ -275,7 +275,7 @@ Plot.plot({
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#E53535", fillOpacity: 0.7,
+      fill: "var(--accent-forecastex)", fillOpacity: 0.7,
       tip: true,
       title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),

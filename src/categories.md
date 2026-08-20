@@ -83,7 +83,7 @@ const TM_CATEGORY_COLORS = {
   "Racing": "#A1887F",
   "Esports": "#BCAAA4",
   "Other Sports": "#8D6E63",
-  "Crypto": "#0D47A1",
+  "Crypto": "var(--cat-basketball)",
   "Politics": "#1A237E",
   "Finance": "#1E88E5",
   "Weather": "#4FC3F7",
@@ -1381,7 +1381,7 @@ const tmActiveMarketRowsByTicker = d3.group(
     "Esports":            "#BCAAA4",  // muted tan
     "Cricket":            "#FA8072",  // salmon
     "Other Sports":       "#8D6E63",  // warm tan
-    "Crypto":             "#0D47A1",  // dark navy
+    "Crypto":             "var(--cat-basketball)",  // dark navy
     "Politics":           "#1A237E",  // very dark indigo
     "Finance":            "#1E88E5",  // bright medium blue
     "Weather":            "#4FC3F7",  // light sky blue
@@ -1825,9 +1825,9 @@ const wideColors = {
   "Combat sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
   "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
   // Football family - warm orange pair
-  "College football": "#ffcc80", "NFL": "#bf360c",
+  "College football": "#ffcc80", "NFL": "var(--cat-football)",
   // Basketball family - blue pair
-  "College basketball": "#90caf9", "NBA": "#0d47a1",
+  "College basketball": "#90caf9", "NBA": "var(--cat-basketball)",
   // Parlay family - top, prominent (leg-based: correlated / independent / pending)
   "Parlay (correlated)": "#7b1fa2", "Parlay (independent)": "#b07aa1", "Parlay (pending)": "#e8d0e0"
 };
@@ -1888,7 +1888,7 @@ const generalMap = {
 const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay"];
 const generalColors = {
   "Non-sports": "#78909c", "Other sports": "#a5d6a7", "Baseball": "#880e4f",
-  "Soccer": "#827717", "Basketball": "#1565c0", "Football": "#bf360c", "Parlay": "#7b1fa2"
+  "Soccer": "#827717", "Basketball": "#1565c0", "Football": "var(--cat-football)", "Parlay": "#7b1fa2"
 };
 
 const hasCategoryFocus = !!(tmActiveCategory || tmHoveredCategory || tmPinnedCategories.length);
@@ -3079,7 +3079,7 @@ Plot.plot({
     Plot.barX(filtered, {
       x: metric,
       y: "report_ticker",
-      fill: d => d.is_sports === "TRUE" ? "#1a9641" : "#00C2A8",
+      fill: d => d.is_sports === "TRUE" ? "#1a9641" : "var(--accent-kalshi)",
       sort: {y: "-x"},
       tip: true,
       title: d => `${d.report_ticker}\n${metric === "contracts" ? fmtCount(d[metric]) + " contracts" : "$" + fmtCount(d[metric])}\nSports: ${d.is_sports}`
@@ -3089,6 +3089,6 @@ Plot.plot({
 })
 ```
 
-<span style="color:#1a9641">Sports</span> &nbsp; <span style="color:#00C2A8">Non-sports</span>
+<span style="color:#1a9641">Sports</span> &nbsp; <span style="color:var(--accent-kalshi)">Non-sports</span>
 
 <div class="chart-note"><strong>Coverage note:</strong> date-filtered views cover the tracked top categories from the daily dataset; the full all-time leaderboard uses the broader summary table.</div>

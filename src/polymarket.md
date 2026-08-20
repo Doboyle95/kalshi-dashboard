@@ -124,7 +124,7 @@ const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; retu
 <p class="section-intro">Polymarket US volume since it began reporting in late 2025.</p>
 
 ```js
-const brushVolume = view(makeBrush(split, "#3B7DD8"));
+const brushVolume = view(makeBrush(split, "var(--accent-polymarket)"));
 ```
 
 ```js
@@ -145,7 +145,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#3B7DD8", fillOpacity: 0.85,
+      fill: "var(--accent-polymarket)", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)}`
     }),
@@ -168,7 +168,7 @@ const polymarketProductView = view(Inputs.radio(
 ```
 
 ```js
-const brushProducts = view(makeBrush(split, "#3B7DD8"));
+const brushProducts = view(makeBrush(split, "var(--accent-polymarket)"));
 ```
 
 ```js
@@ -188,7 +188,7 @@ polymarketProductView === "Sports vs non-sports" ? Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
+  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "var(--accent-kalshi)"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
@@ -279,7 +279,7 @@ polymarketProductView === "All-time sport mix" ? Plot.plot({
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#3B7DD8", fillOpacity: 0.7,
+      fill: "var(--accent-polymarket)", fillOpacity: 0.7,
       tip: true,
       title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),
@@ -427,7 +427,7 @@ const ynTidy = ynByDate.flatMap(d => [
 
 ```js
 const brushSettle = view(makeBrush(
-  ynByDate.map(d => ({date: d.date, contracts_total: d.settlements})), "#3B7DD8"));
+  ynByDate.map(d => ({date: d.date, contracts_total: d.settlements})), "var(--accent-polymarket)"));
 ```
 
 ```js

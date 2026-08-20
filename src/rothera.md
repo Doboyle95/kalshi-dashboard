@@ -120,7 +120,7 @@ function makeBrush(data, color) {
 <p class="section-intro">Daily event-contract volume on Rothera since the clearing files began.</p>
 
 ```js
-const brushVolume = view(makeBrush(split, "#00C805"));
+const brushVolume = view(makeBrush(split, "var(--accent-rothera)"));
 ```
 
 ```js
@@ -141,7 +141,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#00C805", fillOpacity: 0.85,
+      fill: "var(--accent-rothera)", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)}`
     }),
@@ -157,7 +157,7 @@ Plot.plot({
 <p class="section-intro">Sports against everything else — and on Rothera, sports carries the day overwhelmingly.</p>
 
 ```js
-const brushSports = view(makeBrush(split, "#00C805"));
+const brushSports = view(makeBrush(split, "var(--accent-rothera)"));
 ```
 
 ```js
@@ -177,7 +177,7 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "#00C2A8"]},
+  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "var(--accent-kalshi)"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
@@ -201,7 +201,7 @@ Plot.plot({
 <p class="section-intro">Where the action concentrates, category by category, over time.</p>
 
 ```js
-const brushCats = view(makeBrush(split, "#00C805"));
+const brushCats = view(makeBrush(split, "var(--accent-rothera)"));
 ```
 
 ```js
@@ -288,7 +288,7 @@ Plot.plot({
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#00C805", fillOpacity: 0.7,
+      fill: "var(--accent-rothera)", fillOpacity: 0.7,
       tip: true,
       title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),

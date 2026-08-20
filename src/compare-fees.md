@@ -91,7 +91,7 @@ display(renderDateBrush({
     {label: "All", days: Infinity, title: "All available history"}
   ],
   onSelect: range => { feeDateSel.value = range; },
-  color: "#9A6D1F",
+  color: "var(--accent-cme)",
   width
 }));
 ```
@@ -167,7 +167,7 @@ display(renderDateBrush({
   initialRange: [d3.utcDay.offset(cumDomainEnd, -364), cumDomainEnd],
   quickRanges: [{label: "90d", days: 90}, {label: "365d", days: 365}, {label: "All", days: Infinity}],
   onSelect: range => { cumDateSel.value = range; },
-  color: "#9A6D1F",
+  color: "var(--accent-cme)",
   width
 }));
 ```
@@ -289,7 +289,7 @@ display(renderDateBrush({
   data: realizedBrushSeries,
   initialRange: [realizedStart, realizedEnd],
   onSelect: range => { realizedDateSel.value = range; },
-  color: "#9A6D1F",
+  color: "var(--accent-cme)",
   width
 }));
 ```

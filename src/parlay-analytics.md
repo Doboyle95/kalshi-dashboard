@@ -400,7 +400,7 @@ const mixAll = mixRaw
               sportmix: String(d.sportmix), total_vol: +d.total_vol, taker_stake: +d.taker_stake}))
   .filter(d => d.date).sort((a, b) => a.date - b.date);
 const SHARE_DOMAIN = ["all-sports", "mixed", "all-nonsports"];
-const SHARE_COLORS = ["#1a9641", "#7048e8", "#00C2A8"];
+const SHARE_COLORS = ["#1a9641", "#7048e8", "var(--accent-kalshi)"];
 const shareLabel = k => k === "all-sports" ? "All-sports" : k === "mixed" ? "Mixed" : "All non-sports";
 const sportsShareAll = (() => {
   const tot = d3.sum(mixAll, d => d.total_vol);
@@ -461,7 +461,7 @@ const mixTipData = (() => {
   return [...m.values()].sort((a, b) => +a.date - +b.date);
 })();
 const MIX_DOMAIN = ["mixed", "all-nonsports"];
-const MIX_COLORS = ["#7048e8", "#00C2A8"];
+const MIX_COLORS = ["#7048e8", "var(--accent-kalshi)"];
 const mixLabel = k => k === "mixed" ? "Mixed (sports + non-sports legs)" : "All non-sports legs";
 ```
 
@@ -565,8 +565,8 @@ const popTop = Array.from(popAgg, ([pid, a]) => {
 
 ```js
 const popFmtPrice = c => c == null ? "—" : c >= 1 ? c.toFixed(1) + "¢" : c >= 0.1 ? c.toFixed(2) + "¢" : c.toFixed(3) + "¢";
-const popResult = r => r === "hit" ? html`<span style="color:#1a9641;font-weight:600;">✓ hit</span>`
-  : r === "miss" ? html`<span style="color:#d7191c;">✗ miss</span>`
+const popResult = r => r === "hit" ? html`<span style="color:var(--accent-positive);font-weight:600;">✓ hit</span>`
+  : r === "miss" ? html`<span style="color:var(--accent-negative);">✗ miss</span>`
   : html`<span style="color:var(--theme-foreground-muted, #999);">pending</span>`;
 const popLabel = d => {
   let s = d.label;

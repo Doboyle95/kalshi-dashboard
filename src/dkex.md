@@ -38,7 +38,7 @@ display(askPageLink({
 ```
 
 ```js
-const DKEX = "#F97316";
+const DKEX = "var(--accent-dkex)";
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(Math.round(a))); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
@@ -181,7 +181,7 @@ const [sL, eL] = brushLeague;
 const splitFLeague = split.filter(d => d.date >= sL && d.date <= eL);
 const LEAGUE_SERIES = [
   {key: "contracts_mlb", label: "MLB", color: DKEX},
-  {key: "contracts_npb", label: "NPB (Japan)", color: "#00C2A8"},
+  {key: "contracts_npb", label: "NPB (Japan)", color: "var(--accent-kalshi)"},
   {key: "contracts_kbo", label: "KBO (Korea)", color: "#7C6CF0"},
   {key: "contracts_other_leagues", label: "Other leagues", color: "#94A3B8"}
 ];

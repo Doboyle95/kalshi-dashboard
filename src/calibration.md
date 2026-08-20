@@ -277,7 +277,7 @@ Plot.plot({
         x: d => +d.implied_prob,
         y1: d => Math.max(0, +d.actual_win_rate_wt - 2 * d.se),
         y2: d => Math.min(1, +d.actual_win_rate_wt + 2 * d.se),
-        stroke: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
+        stroke: d => +d.calib_error > 0 ? "var(--accent-positive)" : "var(--accent-negative)",
         strokeOpacity: 0.9, strokeWidth: 2.2
       })
     ] : []),
@@ -292,7 +292,7 @@ Plot.plot({
       x: d => +d.implied_prob,
       y: d => +d.actual_win_rate_wt,
       r: dotR,
-      fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
+      fill: d => +d.calib_error > 0 ? "var(--accent-positive)" : "var(--accent-negative)",
       fillOpacity: 0.9,
       stroke: "var(--theme-background)", strokeWidth: 1
     }),
@@ -323,7 +323,7 @@ Plot.plot({
 })
 ```
 
-<span style="color:#1a9641">● Above diagonal</span> (actual > implied — contracts underpriced) &nbsp; <span style="color:#d7191c">● Below diagonal</span> (actual < implied — contracts overpriced) &nbsp; Circle area ∝ independent events in the bin, so a small dot is a bin measured on little evidence — pinned down less precisely, not disqualified
+<span style="color:var(--accent-positive)">● Above diagonal</span> (actual > implied — contracts underpriced) &nbsp; <span style="color:var(--accent-negative)">● Below diagonal</span> (actual < implied — contracts overpriced) &nbsp; Circle area ∝ independent events in the bin, so a small dot is a bin measured on little evidence — pinned down less precisely, not disqualified
 
 <div class="instruction-line"><strong>Useful trick:</strong> switch the market group above to <em>Parlay only</em> — long-shot parlay legs are where the mispricing runs widest, since cheap contracts rarely win as often as their price implies.</div>
 
@@ -349,7 +349,7 @@ Plot.plot({
     Plot.rectY(data, {
       x1: d => +d.price_bin, x2: d => +d.price_bin + 5,
       y: d => +d.calib_error,
-      fill: d => +d.calib_error > 0 ? "#1a9641" : "#d7191c",
+      fill: d => +d.calib_error > 0 ? "var(--accent-positive)" : "var(--accent-negative)",
       fillOpacity: 0.92,
       stroke: "var(--theme-background)", strokeWidth: 1
     }),
@@ -406,12 +406,12 @@ const extremeQualifier = hasClustered
   </div>
   <div style="background:var(--theme-background-alt);border:1px solid var(--card-border, var(--theme-foreground-faint));border-radius:8px;padding:0.8rem 1.2rem">
     <div style="font-size:0.78em;color:var(--theme-foreground-muted);text-transform:uppercase">Most underpriced measurable bin</div>
-    <div style="font-size:1.5em;font-weight:700;color:#1a9641">${maxPos && +maxPos.calib_error > 0 ? `${maxPos.price_bin}¢ (+${(+maxPos.calib_error*100).toFixed(2)}¢)` : "none"}</div>
+    <div style="font-size:1.5em;font-weight:700;color:var(--accent-positive)">${maxPos && +maxPos.calib_error > 0 ? `${maxPos.price_bin}¢ (+${(+maxPos.calib_error*100).toFixed(2)}¢)` : "none"}</div>
     <div style="font-size:0.75em;color:var(--theme-foreground-muted)">${extremeQualifier}</div>
   </div>
   <div style="background:var(--theme-background-alt);border:1px solid var(--card-border, var(--theme-foreground-faint));border-radius:8px;padding:0.8rem 1.2rem">
     <div style="font-size:0.78em;color:var(--theme-foreground-muted);text-transform:uppercase">Most overpriced measurable bin</div>
-    <div style="font-size:1.5em;font-weight:700;color:#d7191c">${maxNeg && +maxNeg.calib_error < 0 ? `${maxNeg.price_bin}¢ (${(+maxNeg.calib_error*100).toFixed(2)}¢)` : "none"}</div>
+    <div style="font-size:1.5em;font-weight:700;color:var(--accent-negative)">${maxNeg && +maxNeg.calib_error < 0 ? `${maxNeg.price_bin}¢ (${(+maxNeg.calib_error*100).toFixed(2)}¢)` : "none"}</div>
     <div style="font-size:0.75em;color:var(--theme-foreground-muted)">${extremeQualifier}</div>
   </div>
 </div>

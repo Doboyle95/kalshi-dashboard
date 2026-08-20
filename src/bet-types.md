@@ -44,7 +44,7 @@ const BC = {
 };
 
 // Venue colours follow the ENTITY, site-wide.
-const VC = {"Kalshi": "#00C2A8", "Polymarket US": "#3B7DD8", "DKeX": "#F97316", "Underdog": "#EAB308", "Novig": "#6366F1"};
+const VC = {"Kalshi": "var(--accent-kalshi)", "Polymarket US": "var(--accent-polymarket)", "DKeX": "var(--accent-dkex)", "Underdog": "var(--accent-underdog)", "Novig": "#6366F1"};
 const VENUE_ORDER = ["Kalshi", "Polymarket US", "DKeX", "Underdog", "Novig"];
 const VENUE_LONG = {
   "Kalshi": "Kalshi",
@@ -196,7 +196,7 @@ display(renderDateBrush({
   data: betTypeBrushSeries,
   initialRange: [d3.min(betTypeBrushSeries, d => d.date), d3.max(betTypeBrushSeries, d => d.date)],
   onSelect: range => { betTypeDateSel.value = range; },
-  color: "#00C2A8",
+  color: "var(--accent-kalshi)",
   width
 }));
 ```

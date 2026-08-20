@@ -132,7 +132,7 @@ const rawSegmentKey = view(Inputs.select(segmentOptions, {
 </div>
 
 ```js
-function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color = "#00C2A8") {
+function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color = "var(--accent-kalshi)") {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const totals = Array.from(
@@ -760,11 +760,11 @@ Inputs.table(smallMarketRows, {
 
 ```js
 const PRICE_SPECS = [
-  {name: "Kalshi", color: "#00C2A8", rows: priceFiles[0], keep: d => d.leg == null || d.leg === "taker"},
-  {name: "Polymarket US", color: "#3B7DD8", rows: priceFiles[1], keep: d => (d.period == null || d.period === "all") && (d.group == null || d.group === "LEG_PRICE")},
-  {name: "ForecastEx", color: "#E53535", rows: priceFiles[2], keep: d => d.leg == null || d.leg === "yes"},
-  {name: "DKeX", color: "#F97316", rows: priceFiles[3], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "ALL")},
-  {name: "Underdog Exchange", color: "#EAB308", rows: priceFiles[4], keep: d => d.group == null || d.group === "SINGLE"},
+  {name: "Kalshi", color: "var(--accent-kalshi)", rows: priceFiles[0], keep: d => d.leg == null || d.leg === "taker"},
+  {name: "Polymarket US", color: "var(--accent-polymarket)", rows: priceFiles[1], keep: d => (d.period == null || d.period === "all") && (d.group == null || d.group === "LEG_PRICE")},
+  {name: "ForecastEx", color: "var(--accent-forecastex)", rows: priceFiles[2], keep: d => d.leg == null || d.leg === "yes"},
+  {name: "DKeX", color: "var(--accent-dkex)", rows: priceFiles[3], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "ALL")},
+  {name: "Underdog Exchange", color: "var(--accent-underdog)", rows: priceFiles[4], keep: d => d.group == null || d.group === "SINGLE"},
   {name: "ProphetX", color: "#DB2777", rows: priceFiles[5], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "HOME")}
 ];
 const priceSeries = PRICE_SPECS.map(spec => {

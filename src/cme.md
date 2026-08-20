@@ -34,7 +34,7 @@ display(askPageLink({
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
 const fmtDate = d => (d instanceof Date ? d : new Date(d))?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
-const CME_COLORS = {Calls: "#9A6D1F", Puts: "#D9B36A"};
+const CME_COLORS = {Calls: "var(--accent-cme)", Puts: "#D9B36A"};
 ```
 
 ```js

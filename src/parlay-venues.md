@@ -24,8 +24,8 @@ const nadexCats = await DataAttachment("data/nadex_categories_daily.csv").csv({t
 ```js
 // Venue colour is the site-wide mapping and follows the entity, never the rank.
 const C = {
-  "Kalshi": "#00C2A8", "ProphetX": "#DB2777", "Novig": "#6366F1",
-  "Polymarket US": "#3B7DD8", "Underdog": "#EAB308", "Crypto.com/Nadex": "#9c27b0"
+  "Kalshi": "var(--accent-kalshi)", "ProphetX": "#DB2777", "Novig": "#6366F1",
+  "Polymarket US": "var(--accent-polymarket)", "Underdog": "var(--accent-underdog)", "Crypto.com/Nadex": "var(--accent-nadex)"
 };
 const fmtPct = d => `${d.toFixed(1)}%`;
 const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d / 1e6).toFixed(1)}M` : d >= 1e3 ? `${(d / 1e3).toFixed(0)}k` : d3.format(",.0f")(d);
@@ -197,7 +197,7 @@ display(renderDateBrush({
   data: parlayBrushSeries,
   initialRange: [d3.min(overTime, d => d.date), d3.max(overTime, d => d.date)],
   onSelect: range => { parlayDateSel.value = range; },
-  color: "#9c27b0",
+  color: "var(--accent-nadex)",
   width
 }));
 ```
@@ -374,7 +374,7 @@ false ? Plot.plot({
   x: {domain: KINDS, axis: null, padding: 0.18},
   y: {label: "P&L per $100 staked", grid: true, tickFormat: d => `$${d.toFixed(0)}`},
   r: {domain: [0, costRMax], range: [0, 13]},
-  color: {legend: true, domain: KINDS, range: ["#00C2A8", "#F97316"]},
+  color: {legend: true, domain: KINDS, range: ["var(--accent-kalshi)", "var(--accent-dkex)"]},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
     Plot.barY(edge, {

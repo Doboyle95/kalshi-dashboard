@@ -27,10 +27,10 @@ const parlayDaily = await DataAttachment("data/polymarket_parlay_daily.csv").csv
 // Colour follows the venue, everywhere on this site and never the rank, so a filter that
 // drops a venue cannot repaint the survivors.
 const VENUE_COLOR = {
-  "Kalshi": "#00C2A8",
-  "Polymarket US": "#3B7DD8",
-  "ForecastEx": "#E53535",
-  "DKeX": "#F97316",
+  "Kalshi": "var(--accent-kalshi)",
+  "Polymarket US": "var(--accent-polymarket)",
+  "ForecastEx": "var(--accent-forecastex)",
+  "DKeX": "var(--accent-dkex)",
   "ProphetX": "#DB2777",
   // Novig, added 2026-08-17 -- the site-wide Novig accent (--accent-novig), matching
   // venue-data.js. Its single-market bar is a TRUE taker series (aggressor flag + settled
@@ -38,9 +38,9 @@ const VENUE_COLOR = {
   "Novig": "#6366F1",
   // Without this entry the bar still occupied a row and printed its label, but the
   // colour scale had no value for it so Plot rendered it with NO FILL -- a venue that
-  // looked present and measured nothing. #9c27b0 is the accent this site already uses
+  // looked present and measured nothing. var(--accent-nadex) is the accent this site already uses
   // for Crypto.com/Nadex (--accent-nadex in styles.css).
-  "Crypto.com": "#9c27b0"
+  "Crypto.com": "var(--accent-nadex)"
 };
 
 // How each row was priced. This is the single most important thing to disclose, because
@@ -157,7 +157,7 @@ const parlayCaveat = parlaySmall.length === 0 ? "" :
 const detail0 = parlayDetail[0] ?? {};
 ```
 
-<div class="instruction-line" style="border-left-color:#3B7DD8">
+<div class="instruction-line" style="border-left-color:var(--accent-polymarket)">
 ${parlaySentence} ${parlayCaveat}
 </div>
 

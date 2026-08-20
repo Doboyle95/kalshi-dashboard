@@ -90,7 +90,7 @@ display(renderDateBrush({
     {label: "All", days: Infinity, title: "All available history"}
   ],
   onSelect: setScaleDate,
-  color: "#00C2A8",
+  color: "var(--accent-kalshi)",
   width
 }));
 ```
@@ -170,7 +170,7 @@ display(renderDateBrush({
     {label: "All", days: Infinity, title: "All available history"}
   ],
   onSelect: setOiDate,
-  color: "#3B7DD8",
+  color: "var(--accent-polymarket)",
   width
 }));
 ```

@@ -122,7 +122,7 @@ display(renderDateBrush({
   data: taker, dateAccessor: d => d.date, valueAccessor: d => d.notional_total,
   initialRange: [new Date("2025-01-01"), takerMaxDate],
   onSelect: r => { dr.value = r; },
-  color: "#00C2A8", width
+  color: "var(--accent-kalshi)", width
 }));
 ```
 
@@ -147,7 +147,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.notional_total || 0,
-      fill: "#00C2A8",
+      fill: "var(--accent-kalshi)",
       fillOpacity: 0.6
     }),
     Plot.lineY(ma7fd, {
@@ -172,7 +172,7 @@ Plot.plot({
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily taker-side volume</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--accent-kalshi)"></span>Daily taker-side volume</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
@@ -186,7 +186,7 @@ display(renderDateBrush({
   data: taker, dateAccessor: d => d.date, valueAccessor: d => d.notional_total,
   initialRange: [new Date("2025-01-01"), takerMaxDate],
   onSelect: r => { drYesNo.value = r; },
-  color: "#00C2A8", width
+  color: "var(--accent-kalshi)", width
 }));
 ```
 
@@ -213,7 +213,7 @@ Plot.plot({
   marginLeft: 80,
   x: {type: "utc", label: null},
   y: {label: "Taker-side volume ($)", grid: true},
-  color: {domain: ["Yes", "No"], range: ["#00C2A8", "#e15759"], legend: false},
+  color: {domain: ["Yes", "No"], range: ["var(--accent-kalshi)", "#e15759"], legend: false},
   marks: [
     Plot.rectY(fdStack, {
       x1: d => d.date,
@@ -240,7 +240,7 @@ Plot.plot({
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Yes-side takers</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--accent-kalshi)"></span>Yes-side takers</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#e15759"></span>No-side takers</span>
 </div>
 
@@ -376,7 +376,7 @@ Plot.plot({
   marginLeft: 130,
   x: {label: "Taker-side volume ($)", grid: true, tickFormat: d => fmtUSD(d)},
   y: {label: null, domain: skewByCategory.map(d => d.category)},
-  color: {legend: true, domain: ["Yes", "No"], range: ["#00C2A8", "#e15759"]},
+  color: {legend: true, domain: ["Yes", "No"], range: ["var(--accent-kalshi)", "#e15759"]},
   marks: [
     Plot.barX(skewBars, {
       x1: "y1",

@@ -69,11 +69,11 @@ const BUCKETS = ["Sports", "Sports · parlays", "Crypto", "Politics & elections"
 const BC = {
   "Sports": "#0E7C6B",
   "Sports · parlays": "#7FD4C6",
-  "Crypto": "#F97316",
-  "Politics & elections": "#3B7DD8",
-  "Economics & financials": "#9A6D1F",
+  "Crypto": "var(--accent-dkex)",
+  "Politics & elections": "var(--accent-polymarket)",
+  "Economics & financials": "var(--accent-cme)",
   "Weather & climate": "#6366F1",
-  "Other": "#9AA3AE"
+  "Other": "var(--pc-unclassified)"
 };
 
 function roll(venue, rows, catCol, volCol) {

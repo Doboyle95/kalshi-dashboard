@@ -136,7 +136,7 @@ const CAT_ORDER = ["Other sport", "Motorsport", "Hockey", "Soccer", "Golf",
 const CAT_COLORS = {
   "Other sport": "#c8e6c9", "Motorsport": "#e65100", "Hockey": "#006064",
   "Soccer": "#827717", "Golf": "#33691e", "Combat sports": "#6d4c41",
-  "Football": "#bf360c", "Basketball": "#0d47a1", "Tennis": "#4a148c",
+  "Football": "var(--cat-football)", "Basketball": "var(--cat-basketball)", "Tennis": "#4a148c",
   "Baseball": "#880e4f", "Parlay": NV
 };
 const catUnknown = Array.from(new Set(category.map(d => d.category)))

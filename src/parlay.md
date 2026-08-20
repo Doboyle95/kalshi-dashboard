@@ -176,8 +176,8 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Cumulative cash-out edge (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
   marks: [
-    Plot.areaY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", fill: "#d7191c", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", stroke: "#d7191c", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", fill: "var(--accent-negative)", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", stroke: "var(--accent-negative)", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.tip(cumCo.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
   ]
@@ -235,7 +235,7 @@ Plot.plot({
     Plot.rectY(dailyDetail.filter(d => d.stakes >= 25000 && inParlayPnlRange(d)), {
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5),
       y: d => Math.max(-110, Math.min(150, d.ret)),
-      fill: d => d.ret >= 0 ? "#1a9641" : "#d7191c", fillOpacity: 0.75,
+      fill: d => d.ret >= 0 ? "var(--accent-positive)" : "var(--accent-negative)", fillOpacity: 0.75,
       tip: true,
       title: d => `${fmtDate(d.date)}\nReturn: ${d.ret.toFixed(1)}%\nStakes: ${fmtUSD(d.stakes)}`
     }),

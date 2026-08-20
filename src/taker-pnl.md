@@ -71,7 +71,7 @@ const PNL_PROVISIONAL_PCT_FLOOR = 40;
 const isProvPnl = d => d?.pct_settled != null && d.pct_settled < PNL_PROVISIONAL_PCT_FLOOR;
 const provPnlDays = daily.filter(isProvPnl).sort((a, b) => a.date - b.date);
 display(provPnlDays.length
-  ? html`<div class="chart-note" style="border-left:3px solid #d7191c; padding-left:.75rem;">
+  ? html`<div class="chart-note" style="border-left:3px solid var(--accent-negative); padding-left:.75rem;">
       ○ The most recent ${provPnlDays.length === 1 ? "day is" : provPnlDays.length + " days are"}
       <strong>provisional</strong> —
       ${provPnlDays.map(d => `${fmtDate(d.date)} at ${d.pct_settled.toFixed(1)}% settled`).join(", ")}.
@@ -93,10 +93,10 @@ const fmtROI = n => `${(n ?? 0).toFixed(2)}%`;
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 const latestPnlDate = d3.max(daily, d => d.date);
 const earliestPnlDate = d3.min(daily, d => d.date);
-const positive = "#1a9641";
-const negative = "#d7191c";
+const positive = "var(--accent-positive)";
+const negative = "var(--accent-negative)";
 const grossColor = "#f4a736";
-const netColor = "#d7191c";
+const netColor = "var(--accent-negative)";
 const makerGrossColor = "#2f7dd1";
 const makerNetColor = "#0b4f8a";
 const takerPnlSeries = ["Before fees", "After fees"];
@@ -104,7 +104,7 @@ const takerPnlColors = {"Before fees": "#5FD0C2", "After fees": "#0A7B6C"};  // 
 const makerPnlSeries = ["Before maker fees", "After maker fees"];
 const makerPnlColors = {"Before maker fees": makerGrossColor, "After maker fees": makerNetColor};
 const sportsSegmentSeries = ["Sports", "Non-sports"];
-const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "#00C2A8"};
+const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "var(--accent-kalshi)"};
 ```
 
 <details class="surface-card compact-details">

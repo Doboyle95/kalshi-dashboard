@@ -138,7 +138,7 @@ function makeBrush(data, color) {
 <p class="section-intro">Daily event-contract volume since Nadex event contracts started appearing in the exchange's daily bulletins.</p>
 
 ```js
-const brushVolume = view(makeBrush(split, "#9c27b0"));
+const brushVolume = view(makeBrush(split, "var(--accent-nadex)"));
 ```
 
 ```js
@@ -159,7 +159,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: "#9c27b0", fillOpacity: 0.85,
+      fill: "var(--accent-nadex)", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total||0)}`
     }),
@@ -201,7 +201,7 @@ display(renderDateBrush({
   data: parlayAdoptionMonthly.map(d => ({date: d.month, value: d.share})),
   initialRange: [d3.min(parlayAdoptionMonthly, d => d.month), d3.max(parlayAdoptionMonthly, d => d.month)],
   onSelect: range => { nadexParlayDateSel.value = range; },
-  color: "#9c27b0",
+  color: "var(--accent-nadex)",
   width
 }));
 ```
@@ -222,9 +222,9 @@ Plot.plot({
   marks: [
     Plot.ruleY([0]),
     firstParlayMonth ? Plot.ruleX([firstParlayMonth], {strokeDasharray: "4,3", stroke: "var(--theme-foreground-muted)"}) : null,
-    Plot.lineY(parlayAdoptionMonthlyBrushed, {x: "month", y: "share", stroke: "#9c27b0", strokeWidth: 2.2, curve: "monotone-x"}),
+    Plot.lineY(parlayAdoptionMonthlyBrushed, {x: "month", y: "share", stroke: "var(--accent-nadex)", strokeWidth: 2.2, curve: "monotone-x"}),
     Plot.dot(parlayAdoptionMonthlyBrushed, {
-      x: "month", y: "share", fill: "#9c27b0", r: 3,
+      x: "month", y: "share", fill: "var(--accent-nadex)", r: 3,
       tip: true,
       title: d => `${d.key}\n${d.share.toFixed(2)}% parlays\n${fmtCount(d.parlays)} of ${fmtCount(d.total)} contracts\n${d.days} reporting days`
     })
@@ -264,7 +264,7 @@ display(renderDateBrush({
   data: pdSorted.map(d => ({date: d.date, value: Math.abs(+d.gross_pnl) || 0})),
   initialRange: [d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)],
   onSelect: range => { nadexPnlDateSel.value = range; },
-  color: "#9c27b0",
+  color: "var(--accent-nadex)",
   width
 }));
 ```
@@ -290,7 +290,7 @@ Plot.plot({
     // a weaker reading, never a missing one.
     Plot.rectY(pdSortedBrushed, {
       x: "date", interval: "day", y: "gross_pnl",
-      fill: d => +d.gross_pnl > 0 ? "#1a9641" : "#d7191c",
+      fill: d => +d.gross_pnl > 0 ? "var(--accent-positive)" : "var(--accent-negative)",
       fillOpacity: d => d.prov ? 0.4 : 0.92,
       title: d => `${d.date.toISOString().slice(0, 10)}${d.prov ? " — PROVISIONAL" : ""}
 Gross P&L: ${fmtM(+d.gross_pnl)}
@@ -314,8 +314,8 @@ Plot.plot({
       tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.areaY(pdCumulBrushed, {x: "date", y: "cumul", fill: "#9c27b0", fillOpacity: 0.12}),
-    Plot.line(pdCumulBrushed, {x: "date", y: "cumul", stroke: "#9c27b0", strokeWidth: 2}),
+    Plot.areaY(pdCumulBrushed, {x: "date", y: "cumul", fill: "var(--accent-nadex)", fillOpacity: 0.12}),
+    Plot.line(pdCumulBrushed, {x: "date", y: "cumul", stroke: "var(--accent-nadex)", strokeWidth: 2}),
     Plot.dot(pdCumulBrushed, {
       x: "date", y: "cumul", r: 9, fill: "transparent",
       title: d => `${d.date.toISOString().slice(0, 10)}
@@ -334,7 +334,7 @@ That day: ${fmtM(+d.gross_pnl)}`,
 <p class="section-intro">Sports against everything else — sports carries all but a handful of days. Almost everything on the other side is the COMBOS parlay line, split out here so the rest is actually visible.</p>
 
 ```js
-const brushSports = view(makeBrush(split, "#9c27b0"));
+const brushSports = view(makeBrush(split, "var(--accent-nadex)"));
 ```
 
 ```js
@@ -360,7 +360,7 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Parlays (COMBOS)", "Other non-sports"], range: ["#1a9641", "#9c27b0", "#00C2A8"]},
+  color: {legend: true, domain: ["Sports", "Parlays (COMBOS)", "Other non-sports"], range: ["#1a9641", "var(--accent-nadex)", "var(--accent-kalshi)"]},
   marks: [
     Plot.areaY(tidySplit, {
       x: "date", y: "value", fill: "category",
@@ -382,7 +382,7 @@ Plot.plot({
 <p class="section-intro">Where the action concentrates, category by category, over time.</p>
 
 ```js
-const brushCats = view(makeBrush(split, "#9c27b0"));
+const brushCats = view(makeBrush(split, "var(--accent-nadex)"));
 ```
 
 ```js
@@ -451,7 +451,7 @@ Plot.plot({
     Plot.barX(catBar, {
       x: "contracts", y: "category",
       sort: {y: "x", reverse: true},
-      fill: "#9c27b0", fillOpacity: 0.7,
+      fill: "var(--accent-nadex)", fillOpacity: 0.7,
       tip: true,
       title: d => `${d.category}: ${fmtCount(d.contracts)}`
     }),
@@ -493,7 +493,7 @@ const SPORT_PREFIX_LABELS = {
 const SPORT_COLORS = {
   "NFL":"#A30000","NBA":"#1F4E96","NHL":"#3b6ea5","MLB":"#2E7D32","WNBA":"#42A5F5",
   "College football":"#FF7043","College basketball":"#5E35B1","Women's basketball":"#7CB342",
-  "Golf":"#FFB300","UFC":"#9C27B0","PGA":"#FFB300","LPGA":"#FFB300",
+  "Golf":"#FFB300","UFC":"var(--accent-nadex)","PGA":"#FFB300","LPGA":"#FFB300",
   "Soccer (FIFA)":"#00897B","Tennis":"#C2185B","MLS":"#26A69A","Boxing":"#6D4C41"
 };
 // Widened 2026-08-06. The previous list (NFL|NBA|NHL|MLB|WNBA|CFB|CBB|WBB|GOLF|

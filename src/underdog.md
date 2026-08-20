@@ -45,7 +45,7 @@ display(askPageLink({
 ```
 
 ```js
-const UNDERDOG = "#EAB308";
+const UNDERDOG = "var(--accent-underdog)";
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : (Number.isInteger(a) ? String(a) : a.toFixed(1))); };
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(Math.round(a))); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
@@ -214,7 +214,7 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Single-game", "Parlays (combos)"], range: [UNDERDOG, "#00C2A8"]},
+  color: {legend: true, domain: ["Single-game", "Parlays (combos)"], range: [UNDERDOG, "var(--accent-kalshi)"]},
   marks: [
     // Stacked bars: two components of one daily total read as parts of a whole,
     // which dots cannot show. Same 4px data-end and 2px surface gap as chart 1;

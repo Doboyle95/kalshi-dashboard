@@ -147,7 +147,7 @@ display(renderDateBrush({
     {label: "All", days: Infinity, title: "All available history"}
   ],
   onSelect: setScaleDate,
-  color: "#00C2A8",
+  color: "var(--accent-kalshi)",
   width
 }));
 ```
@@ -224,19 +224,19 @@ function sparkline(rows, value, color) {
     <div class="pulse-topline"><span>Latest reported fee revenue</span><span class="coverage-badge">${latestFeeByVenue.length} venues</span></div>
     <strong>${fmtUSD(latestFeeTotal)}</strong>
     <small>sum of each measured venue's latest available report</small>
-    ${sparkline(feeByDate.slice(-45), row => row.value, "#9A6D1F")}
+    ${sparkline(feeByDate.slice(-45), row => row.value, "var(--accent-cme)")}
   </a>
   <a class="pulse-card" href="./taker#daily-taker-side-volume">
     <div class="pulse-topline"><span>Taker-side volume</span><span class="coverage-badge is-limited">Kalshi only</span></div>
     <strong>${fmtUSD(latestTakerSideVolume?.notional_total ?? 0)}</strong>
     <small>${fmtDay(latestTakerSideVolume?.date)} · aggressor dollars</small>
-    ${sparkline(takerSideVolumeSorted.slice(-45), row => row.notional_total, "#00C2A8")}
+    ${sparkline(takerSideVolumeSorted.slice(-45), row => row.notional_total, "var(--accent-kalshi)")}
   </a>
   <a class="pulse-card" href="./taker-pnl#cumulative-taker-p-and-l">
     <div class="pulse-topline"><span>Taker P&amp;L</span><span class="coverage-badge is-limited">Kalshi only</span></div>
     <strong class="${takerPnl30Value < 0 ? "is-negative" : "is-positive"}">${fmtUSD(takerPnl30Value)}</strong>
     <small>last ${takerPnl30.length} sufficiently settled report days</small>
-    ${sparkline(takerPnl30, row => row.pnl_net, "#d7191c")}
+    ${sparkline(takerPnl30, row => row.pnl_net, "var(--accent-negative)")}
   </a>
   <a class="pulse-card" href="./parlay#what-parlay-bettors-actually-lost-after-cash-outs">
     <div class="pulse-topline"><span>Realized parlay P&amp;L</span><span class="coverage-badge is-limited">Kalshi only</span></div>

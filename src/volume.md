@@ -80,7 +80,7 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 // accessor for total_oi_contracts while the body read `daily`, a table with no such
 // column, so every y was undefined, yMax fell back to 1 and the sparkline path was all
 // NaN: an empty grey box over an x-domain years wider than open interest has data for.
-function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "#00C2A8", rows = daily) {
+function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "var(--accent-kalshi)", rows = daily) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(rows, d => d.date)).range([ml, w - mr]);
@@ -271,7 +271,7 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.contracts_total || 0,
-      fill: d => isPartial(d) ? "#7ed8cf" : "#00C2A8",
+      fill: d => isPartial(d) ? "#7ed8cf" : "var(--accent-kalshi)",
       fillOpacity: d => isPartial(d) ? 0.55 : 0.95
     }),
     Plot.lineY(fd1.filter(d => d.ma7_contracts != null && !isPartial(d)), {
@@ -328,7 +328,7 @@ const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label:
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#00C2A8"></span>Daily bars</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--accent-kalshi)"></span>Daily bars</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#ff8c00"></span>Today (partial)</span>
   <span class="legend-chip is-active annotation-key">Event overlay</span>

@@ -82,7 +82,7 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
 </details>
 
 ```js
-function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "#756bb1") {
+function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "var(--accent-secondary)") {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(daily, d => d.date)).range([ml, w - mr]);
@@ -166,11 +166,11 @@ Plot.plot({
       x1: d => d.date,
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.fees_total || 0,
-      fill: "#756bb1", fillOpacity: 0.8
+      fill: "var(--accent-secondary)", fillOpacity: 0.8
     }),
     Plot.lineY(fd1.filter(d => d.ma7_fees != null), {
       x: "date", y: "ma7_fees",
-      stroke: "#3f007d", strokeWidth: 2, curve: "monotone-x"
+      stroke: "var(--accent-tertiary)", strokeWidth: 2, curve: "monotone-x"
     }),
     Plot.ruleX(fd1, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(fd1, Plot.pointerX({
@@ -189,8 +189,8 @@ Plot.plot({
 </div>
 
 <div class="inline-legend">
-  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#756bb1"></span>Daily fees</span>
-  <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #3f007d"></span>7-day average</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--accent-secondary)"></span>Daily fees</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--accent-tertiary)"></span>7-day average</span>
 </div>
 
 ## Taker vs maker fees
@@ -247,7 +247,7 @@ Plot.plot({
   y: feeSplitShare
     ? {label: "Share of daily fees", grid: true, domain: [0, 1], tickFormat: d => (d * 100).toFixed(0) + "%"}
     : {label: "Fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
-  color: {legend: true, domain: ["Taker", "Maker"], range: ["#756bb1", "#e6550d"]},
+  color: {legend: true, domain: ["Taker", "Maker"], range: ["var(--accent-secondary)", "#e6550d"]},
   marks: [
     Plot.rect(feeSplitStacked, {
       x1: d => d.date,
@@ -346,7 +346,7 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["#00C2A8", "#1a9641"]},
+  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["var(--accent-kalshi)", "#1a9641"]},
   marks: [
     Plot.areaY(cumFeesSplit, {
       x: "date", y: "cumul", fill: "category",
@@ -372,7 +372,7 @@ Plot.plot({
 <div class="instruction-line"><strong>Useful trick:</strong> after a volume spike, use this to tell whether revenue rose from more contracts or from each contract monetizing better.</div>
 
 ```js
-const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#756bb1"));
+const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "var(--accent-secondary)"));
 ```
 
 ```js
@@ -395,8 +395,8 @@ const feeRate = (
 
 const feeRateColor =
   feeRateView === "Sports" ? "#1a9641"
-  : feeRateView === "Non-sports" ? "#00C2A8"
-  : "#756bb1";
+  : feeRateView === "Non-sports" ? "var(--accent-kalshi)"
+  : "var(--accent-secondary)";
 ```
 
 <div class="plot-shell">
