@@ -3,6 +3,15 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # A push made with the default GITHUB_TOKEN does NOT start a new workflow run --
+  # GitHub suppresses it to prevent recursion, and workflow_dispatch/repository_dispatch
+  # are the documented exceptions. The daily briefing job commits src/daily-briefing.json
+  # with that token, so without this trigger the briefing reaches main and is never
+  # deployed to Pages; it would sit there until the next human push happened to carry it.
+  # (predict-charts.com is unaffected either way -- the VM rebuilds from origin/main on
+  # its own ~5-minute timer, independent of Actions.)
+  # Also gives a manual re-run button, which is the recovery path for a wedged deploy.
+  workflow_dispatch:
 
 # Allow one concurrent deployment.
 #
