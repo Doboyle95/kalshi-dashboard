@@ -3518,6 +3518,19 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   color: var(--theme-foreground);
 }
 
+/* Reserve the scrollbar gutter permanently.
+   Focus mode below sets `overflow: hidden` on <html>, which removes the classic
+   scrollbar and hands its width back to the page. Measured on the deployed site:
+   #observablehq-main goes 311.2px -> 326.4px, a 15.2px jump. That width is not
+   cosmetic here -- Framework's `width` is backed by a ResizeObserver on <main>, so
+   every width-dependent cell on the page re-runs the moment a chart is focused, and
+   because Observable replaces the node it owns, the focused chart can be swapped out
+   from under the overlay while focusState still points at the old node.
+   With `stable` the same measurement gives a delta of 0. */
+:root {
+  scrollbar-gutter: stable;
+}
+
 html.chart-focus-open {
   overflow: hidden;
 }
