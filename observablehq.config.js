@@ -303,7 +303,8 @@ export default {
     // -- no GitHub token needed, and it works on both hosts. Falls back to "unstamped"
     // for a local build so `npm run build` on a laptop still works unchanged.
     '<meta name="x-site-build" content="' + (process.env.KALSHI_BUILD_STAMP || "unstamped") + '">',
-    '<link rel="preconnect" href="https://rsms.me/">',
+    '<link rel="preconnect" href="https://fonts.googleapis.com">',
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
     // 2026-08-01: build-time injection of the chat API endpoint.
     // This config file runs in NODE at build time, so process.env is available HERE.
     // It is NOT available in a page's browser js block -- referencing it there is what
@@ -314,7 +315,7 @@ export default {
     // local development is unchanged. CHAT_API_URL/CHAT_TOKEN are already passed to the
     // build by .github/workflows/deploy.yml.
     `<script>window.__CHAT_API__=${JSON.stringify(CHAT_API)};window.__CHAT_TOKEN__=${JSON.stringify(CHAT_TOKEN)};</script>`,
-    '<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Inter+Tight:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;display=swap">',
     // Apply saved theme before first paint to avoid FOUC
     `<script>(function(){try{var t=localStorage.getItem("kalshi-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`,
     // Wire the light/dark/system selectors rendered in both desktop and mobile

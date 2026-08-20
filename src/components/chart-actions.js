@@ -175,7 +175,7 @@
       if (value) clone.style.setProperty(name, value);
     }
     const css = document.createElementNS("http://www.w3.org/2000/svg", "style");
-    css.textContent = "text{font-family:Inter,Arial,sans-serif} .domain{stroke:currentColor}";
+    css.textContent = "text{font-family:'Inter Tight',Arial,sans-serif} .domain{stroke:currentColor}";
     clone.prepend(css);
     const source = new XMLSerializer().serializeToString(clone);
     const url = URL.createObjectURL(new Blob([source], {type: "image/svg+xml;charset=utf-8"}));

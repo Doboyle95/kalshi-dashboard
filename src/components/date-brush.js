@@ -37,33 +37,33 @@ function ensureBrushStyles() {
   const css = `
 .kd-daterange { margin-bottom: 1.25rem; }
 .kd-dr-bar { display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
-.kd-seg { display:inline-flex; gap:2px; padding:2px; border-radius:999px;
-  background:var(--theme-background-alt); border:1px solid var(--card-border, var(--theme-foreground-faint)); }
+.kd-seg { display:inline-flex; gap:2px; padding:0; border-radius:0;
+  background:transparent; border:0; border-bottom:1px solid var(--card-border, var(--theme-foreground-faint)); }
 .kd-seg button { appearance:none; border:0; background:transparent; cursor:pointer;
-  display:inline-flex; align-items:center; gap:5px; padding:3px 11px; border-radius:999px;
-  font:550 11.5px/1.5 var(--sans-serif, system-ui); letter-spacing:.2px;
+  display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:0;
+  font:500 11.5px/1.5 var(--font-mono, ui-monospace); letter-spacing:.2px;
   color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
-.kd-seg button svg { opacity:.9; }
-.kd-seg button:hover { color:var(--theme-foreground); background:rgba(127,127,127,.12); }
-.kd-seg button.active { color:#23170a; background:#f4a736; box-shadow:0 1px 2px rgba(0,0,0,.2); }
-.kd-seg button.active:hover { background:#f3b357; }
-.kd-quick { display:inline-flex; gap:1px; padding:2px; border-radius:999px;
-  background:var(--theme-background-alt); border:1px solid var(--card-border, var(--theme-foreground-faint)); }
+.kd-seg button svg { opacity:.75; }
+.kd-seg button:hover { color:var(--theme-foreground); background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
+.kd-seg button.active { color:var(--theme-foreground); background:transparent; box-shadow:inset 0 -2px 0 var(--editorial-accent,var(--accent-primary)); }
+.kd-seg button.active:hover { background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
+.kd-quick { display:inline-flex; gap:1px; padding:0; border-radius:0;
+  background:transparent; border:0; border-bottom:1px solid var(--card-border, var(--theme-foreground-faint)); }
 .kd-quick button { appearance:none; border:0; background:transparent; cursor:pointer;
-  padding:3px 8px; border-radius:999px; font:550 11.5px/1.5 var(--sans-serif, system-ui);
+  padding:3px 8px; border-radius:0; font:500 11.5px/1.5 var(--font-mono, ui-monospace);
   letter-spacing:.1px; color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
-.kd-quick button:hover { color:var(--theme-foreground); background:rgba(127,127,127,.12); }
-.kd-quick button.active { color:#23170a; background:#f4a736; box-shadow:0 1px 2px rgba(0,0,0,.2); }
-.kd-quick button.active:hover { background:#f3b357; }
+.kd-quick button:hover { color:var(--theme-foreground); background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
+.kd-quick button.active { color:var(--theme-foreground); background:transparent; box-shadow:inset 0 -2px 0 var(--editorial-accent,var(--accent-primary)); }
+.kd-quick button.active:hover { background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
 .kd-dr-inputs { display:none; align-items:center; gap:7px;
-  font:12px/1.4 var(--sans-serif, system-ui); color:var(--theme-foreground-muted); }
+  font:12px/1.4 var(--font-mono, ui-monospace); color:var(--theme-foreground-muted); }
 .kd-dr-lbl { letter-spacing:.3px; text-transform:uppercase; font-size:10.5px; opacity:.75; }
 .kd-dr-dash { opacity:.6; }
 .kd-dr-inputs input[type=date] { font:inherit; padding:3px 7px; color:var(--theme-foreground);
-  background:var(--theme-background); border:1px solid var(--card-border, var(--theme-foreground-faint));
-  border-radius:6px; transition:border-color .15s, box-shadow .15s; }
+  background:var(--editorial-paper,var(--theme-background)); border:1px solid var(--card-border, var(--theme-foreground-faint));
+  border-radius:1px; transition:border-color .15s, box-shadow .15s; }
 .kd-dr-inputs input[type=date]:hover { border-color:var(--theme-foreground-muted); }
-.kd-dr-inputs input[type=date]:focus { outline:none; border-color:#f4a736; box-shadow:0 0 0 3px rgba(244,167,54,.22); }
+.kd-dr-inputs input[type=date]:focus { outline:none; border-color:var(--editorial-accent,var(--accent-primary)); box-shadow:0 0 0 2px color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 20%,transparent); }
 `;
   const s = document.createElement("style");
   s.id = "kd-daterange-styles"; s.textContent = css;
@@ -79,7 +79,7 @@ export function renderDateBrush({
   onSelect,                   // (range: [Date, Date]) => void
   width,
   height = 60,
-  color = "#f4a736",
+  color = "var(--accent-primary)",
   fillOpacity = 0.3,
   marginTop = 4,
   marginBottom = 22,
@@ -97,9 +97,9 @@ export function renderDateBrush({
     .attr("class", "kd-brush")
     .attr("width", w).attr("height", height)
     .style("display", "block")
-    .style("background", "var(--theme-background-alt)")
+    .style("background", "var(--editorial-paper, var(--theme-background-alt))")
     .style("border", "1px solid var(--card-border)")
-    .style("border-radius", "4px");
+    .style("border-radius", "0");
 
   // Sparkline
   svg.append("path").datum(data)
