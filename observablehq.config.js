@@ -42,6 +42,10 @@ const CHART_ACTIONS = readFileSync(
   new URL("./src/components/chart-actions.js", import.meta.url),
   "utf-8"
 ).replace(/<\/script/gi, "<\\/script");
+const DATA_INSPECTOR = readFileSync(
+  new URL("./src/components/data-inspector.js", import.meta.url),
+  "utf-8"
+).replace(/<\/script/gi, "<\\/script");
 
 // ── Venue deep dives: one sidebar row per venue, modules in-page ─────────────
 // Framework's `pages` supports exactly ONE level of nesting — normalizeSection()
@@ -384,7 +388,11 @@ export default {
     // Chart focus/download/link/Ask controls are progressive enhancement. The
     // script observes Observable cells as they render, so a slow data source does
     // not leave later charts without controls.
-    `<script>${CHART_ACTIONS}</script>`
+    `<script>${CHART_ACTIONS}</script>`,
+    // Reusable, data-aware detail drawer. Pages opt in explicitly and provide the
+    // selected datum plus the next honest level of detail; the global shell owns
+    // navigation history, deep links, Ask Data context and responsive behavior.
+    `<script>${DATA_INSPECTOR}</script>`
   ].join("\n"),
   // With the sidebar off, `pages` has exactly one consumer left: the footer pager
   // (render.js -> findLink). Deriving it from SITE_MAP means prev/next walks the

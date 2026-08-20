@@ -138,7 +138,7 @@ const scaleRowsBrushed = scaleRows.filter(row => row.date >= scaleBrushFrom && r
 <div class="plot-shell briefing-lead-chart">
 
 ```js
-Plot.plot({
+const scalePlot = Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
   height: 360,
@@ -153,10 +153,13 @@ Plot.plot({
     Plot.tip(scaleRowsBrushed, Plot.pointerX({x: "date", y: "contracts", title: row => `${fmtDayLong(row.date)}\n${row.venue}: ${Math.round(row.contracts).toLocaleString()} contracts${row.partial ? "\nPartial day" : ""}`})),
     ...(scaleType === "Linear" ? [Plot.ruleY([0])] : [])
   ]
-})
+});
+display(scalePlot);
 ```
 
 </div>
+
+<div class="chart-inspect-hint">Click a date in the chart to open its industry snapshot. Exact recent dates are also available in the tape below.</div>
 
 ```js
 display(renderDateBrush({
@@ -318,14 +321,14 @@ const tapeVenues = VENUE_ORDER.filter(venue => scoreboard.some(row => row.venue 
 display(html`<table class="briefing-table">
   <thead><tr>
     <th>Venue</th>
-    ${tapeDates.map(date => html`<th>${fmtDayLong(date)}</th>`)}
+    ${tapeDates.map(date => html`<th><button type="button" class="inspector-inline-button" onclick=${event => openIndustryDay(date, event.currentTarget)} aria-label=${`Inspect all venues on ${fmtDayLong(date)}`}>${fmtDayLong(date)}</button></th>`)}
   </tr></thead>
   <tbody>${tapeVenues.map(venue => html`<tr>
     <td><span class="venue-dot" style="background:${VENUE_COLORS[venue]}"></span><strong>${venue}</strong></td>
     ${tapeDates.map(date => {
       const value = tapeLookup.get(venue)?.get(+date);
       const row = rowLookup.get(`${venue}|${+date}`);
-      return html`<td class="${value == null ? "is-missing" : row?.partial ? "is-partial" : ""}" title="${value == null ? "No published figure" : Math.round(value).toLocaleString() + " contracts" + (row?.partial ? " · partial" : "")}">${value == null ? "—" : `${row?.partial ? "~" : ""}${fmtCount(value)}`}</td>`;
+      return html`<td class="${value == null ? "is-missing" : row?.partial ? "is-partial" : ""}" title="${value == null ? "No published figure" : Math.round(value).toLocaleString() + " contracts" + (row?.partial ? " · partial" : "")}">${value == null ? "—" : html`<button type="button" class="inspector-data-cell" onclick=${event => openVenueDay(date, venue, event.currentTarget)} aria-label=${`Inspect ${venue} on ${fmtDayLong(date)}`}>${row?.partial ? "~" : ""}${fmtCount(value)}</button>`}</td>`;
     })}
   </tr>`)}</tbody>
 </table>`);
@@ -447,6 +450,194 @@ const monthlySports = Array.from(d3.rollup(trendRows, rows => {
   const sports = d3.sum(rows.filter(row => SPORTS_BUCKETS.has(row.bucket)), row => row.contracts);
   return {date: d3.utcMonth.floor(rows[0].date), share: total ? sports / total : null, contracts: total};
 }, row => row.venue, row => +d3.utcMonth.floor(row.date)), ([venue, months]) => Array.from(months, ([, value]) => ({venue, ...value}))).flat().filter(row => row.share != null).sort((a, b) => a.date - b.date);
+```
+
+```js
+const INSPECTOR = window.PredictChartsInspector;
+const VENUE_ROUTES = new Map([
+  ["Kalshi", "./volume"], ["Polymarket US", "./polymarket"], ["ForecastEx", "./forecastex"],
+  ["DKeX", "./dkex"], ["Underdog Exchange", "./underdog"], ["Crypto.com/Nadex", "./nadex"],
+  ["ProphetX", "./prophetx"], ["Novig", "./novig"], ["Rothera", "./rothera"], ["CME", "./cme"]
+]);
+const isoDay = date => new Date(date).toISOString().slice(0, 10);
+const stateDay = value => new Date(`${value}T00:00:00Z`);
+const sameDay = (left, right) => +d3.utcDay.floor(left) === +d3.utcDay.floor(right);
+
+function productMixFor(venue, selectedDate) {
+  const available = productRows.filter(row => row.venue === venue && row.date <= selectedDate);
+  const mixDate = d3.max(available, row => row.date);
+  if (!mixDate || d3.utcDay.count(mixDate, selectedDate) > 14) return {date: null, rows: []};
+  const rows = available.filter(row => sameDay(row.date, mixDate));
+  return {date: mixDate, rows: Array.from(d3.rollup(rows, values => d3.sum(values, row => row.contracts), row => row.bucket), ([bucket, contracts]) => ({bucket, contracts})).sort((a, b) => b.contracts - a.contracts)};
+}
+
+function categoryDayDetail(selectedDate, venue, category) {
+  const mix = productMixFor(venue, selectedDate);
+  const selected = mix.rows.find(row => row.bucket === category);
+  const mixTotal = d3.sum(mix.rows, row => row.contracts);
+  const recentStart = d3.utcDay.offset(selectedDate, -29);
+  const recent = productRows.filter(row => row.venue === venue && row.bucket === category && row.date >= recentStart && row.date <= selectedDate);
+  const previousStart = d3.utcDay.offset(recentStart, -30);
+  const previous = productRows.filter(row => row.venue === venue && row.bucket === category && row.date >= previousStart && row.date < recentStart);
+  const recentTotal = d3.sum(recent, row => row.contracts);
+  const previousTotal = d3.sum(previous, row => row.contracts);
+  const change = previousTotal ? recentTotal / previousTotal - 1 : null;
+  return {
+    crumb: category,
+    eyebrow: `${venue} · ${fmtDayLong(selectedDate)}`,
+    title: category,
+    subtitle: mix.date ? `Product mix reported for ${fmtDayLong(mix.date)}` : "No nearby category file is available",
+    value: selected ? `${fmtCount(selected.contracts)} contracts` : "No published figure",
+    delta: change == null ? "Thirty-day comparison unavailable" : `${fmtPct(change)} versus the previous 30 calendar days`,
+    deltaTone: change == null ? null : change >= 0 ? "positive" : "negative",
+    facts: [
+      {label: "Venue share", value: selected && mixTotal ? fmtShare(selected.contracts / mixTotal) : "—"},
+      {label: "30-day volume", value: fmtCount(recentTotal)},
+      {label: "Reported days", value: String(new Set(recent.map(row => +row.date)).size)},
+      {label: "Data level", value: "Category aggregate"}
+    ],
+    sections: [{title: "Continue exploring", items: [
+      {label: `Open ${venue}`, description: "Venue overview and available modules", value: "→", href: VENUE_ROUTES.get(venue) || "./venues"},
+      {label: "Compare product mix", description: "Every venue and supported bucket", value: "→", href: "./categories-venues"}
+    ]}],
+    coverage: "This selection stops at category level because the current daily category files do not identify the individual markets inside each bucket.",
+    state: {kind: "venue-category-day", source: "briefing", date: isoDay(selectedDate), venue, category},
+    ask: {
+      question: `Explain ${venue}'s ${category} activity around ${isoDay(selectedDate)}. Compare it with its recent trend and be explicit about the category-level data limit.`,
+      context: `Predict Charts homepage Data Inspector: ${venue} → ${category} on ${isoDay(selectedDate)}.`
+    }
+  };
+}
+
+function venueDayDetail(selectedDate, venue) {
+  const row = scaleRows.find(value => value.venue === venue && sameDay(value.date, selectedDate));
+  if (!row) return null;
+  const dayRows = scaleRows.filter(value => sameDay(value.date, selectedDate));
+  const dayTotal = d3.sum(dayRows, value => value.contracts);
+  const history = scaleRows.filter(value => value.venue === venue && value.date <= selectedDate).sort((a, b) => a.date - b.date);
+  const previous = history.filter(value => value.date < selectedDate && !value.partial).at(-1);
+  const recent = history.filter(value => !value.partial).slice(-7);
+  const average7 = d3.mean(recent, value => value.contracts);
+  const change = previous?.contracts ? row.contracts / previous.contracts - 1 : null;
+  const mix = productMixFor(venue, selectedDate);
+  const mixTotal = d3.sum(mix.rows, value => value.contracts);
+  const sportVolume = d3.sum(mix.rows.filter(value => SPORTS_BUCKETS.has(value.bucket)), value => value.contracts);
+  return {
+    crumb: venue,
+    eyebrow: `Venue day · ${fmtDayLong(selectedDate)}`,
+    title: venue,
+    subtitle: row.partial ? "Latest report is still filling" : "Reported daily venue activity",
+    value: `${fmtCount(row.contracts)} contracts`,
+    delta: change == null ? "Previous comparable report unavailable" : `${fmtPct(change)} versus the previous complete report`,
+    deltaTone: change == null ? null : change >= 0 ? "positive" : "negative",
+    facts: [
+      {label: "Shown share", value: dayTotal ? fmtShare(row.contracts / dayTotal) : "—"},
+      {label: "7-report average", value: average7 == null ? "—" : fmtCount(average7)},
+      {label: "Sports share", value: mixTotal ? fmtShare(sportVolume / mixTotal) : "—"},
+      {label: "Coverage", value: row.partial ? "Partial day" : row.sparse ? "Sparse bulletin" : "Daily total"}
+    ],
+    sections: [
+      {title: mix.date ? `Product mix · ${fmtDayLong(mix.date)}` : "Product mix", items: mix.rows.map(item => ({
+        label: item.bucket,
+        description: `${fmtShare(mixTotal ? item.contracts / mixTotal : null)} of available venue mix`,
+        value: fmtCount(item.contracts),
+        meta: "contracts",
+        detail: () => categoryDayDetail(selectedDate, venue, item.bucket)
+      }))},
+      {title: "Continue exploring", items: [{label: `Open ${venue}`, description: "Venue overview and available modules", value: "→", href: VENUE_ROUTES.get(venue) || "./venues"}]}
+    ],
+    coverage: mix.date && !sameDay(mix.date, selectedDate)
+      ? `The volume total is for ${fmtDayLong(selectedDate)}; the latest nearby product mix is ${fmtDayLong(mix.date)}.`
+      : "Product detail appears only when the venue publishes a compatible category file. Trade-level fields are not inferred.",
+    state: {kind: "venue-day", source: "briefing", date: isoDay(selectedDate), venue},
+    ask: {
+      question: `What was most important about ${venue}'s activity on ${isoDay(selectedDate)}? Compare it with the venue's recent history and explain the coverage limits.`,
+      context: `Predict Charts homepage Data Inspector: ${venue} on ${isoDay(selectedDate)}.`
+    }
+  };
+}
+
+function industryDayDetail(selectedDate) {
+  const rows = scaleRows.filter(row => sameDay(row.date, selectedDate)).sort((a, b) => b.contracts - a.contracts);
+  if (!rows.length) return null;
+  const total = d3.sum(rows, row => row.contracts);
+  const priorDate = d3.max(scaleRows.filter(row => row.date < selectedDate), row => row.date);
+  const prior = priorDate ? scaleRows.filter(row => sameDay(row.date, priorDate)) : [];
+  const priorByVenue = new Map(prior.map(row => [row.venue, row.contracts]));
+  const comparable = rows.filter(row => priorByVenue.has(row.venue));
+  const comparableNow = d3.sum(comparable, row => row.contracts);
+  const comparablePrior = d3.sum(comparable, row => priorByVenue.get(row.venue));
+  const change = comparablePrior ? comparableNow / comparablePrior - 1 : null;
+  const dayProducts = productRows.filter(row => sameDay(row.date, selectedDate));
+  const productTotal = d3.sum(dayProducts, row => row.contracts);
+  const sports = d3.sum(dayProducts.filter(row => SPORTS_BUCKETS.has(row.bucket)), row => row.contracts);
+  return {
+    crumb: fmtDay(selectedDate),
+    eyebrow: "Industry day",
+    title: fmtDayLong(selectedDate),
+    subtitle: "Reported US prediction-market activity",
+    value: `${fmtCount(total)} contracts`,
+    delta: change == null ? "Prior comparable date unavailable" : `${fmtPct(change)} versus ${fmtDay(priorDate)} across ${comparable.length} common venues`,
+    deltaTone: change == null ? null : change >= 0 ? "positive" : "negative",
+    facts: [
+      {label: "Reporting venues", value: String(rows.length)},
+      {label: "Largest venue", value: rows[0]?.venue || "—"},
+      {label: "Sports share", value: productTotal ? fmtShare(sports / productTotal) : "—"},
+      {label: "Partial reports", value: String(rows.filter(row => row.partial).length)}
+    ],
+    sections: [{title: "Volume by exchange", items: rows.map(row => ({
+      label: row.venue,
+      description: `${fmtShare(total ? row.contracts / total : null)} of volume shown${row.partial ? " · partial" : ""}`,
+      value: fmtCount(row.contracts),
+      meta: "contracts",
+      detail: () => venueDayDetail(selectedDate, row.venue)
+    }))}],
+    coverage: "This total covers the non-sparse venue series plotted in the chart. Each exchange keeps its own reported contract unit, and missing reports are not treated as zero.",
+    state: {kind: "industry-day", source: "briefing", date: isoDay(selectedDate)},
+    ask: {
+      question: `What happened across US prediction markets on ${isoDay(selectedDate)}? Identify the important venue and product changes without overstating incomplete coverage.`,
+      context: `Predict Charts homepage Data Inspector: industry day ${isoDay(selectedDate)}.`
+    }
+  };
+}
+
+function openIndustryDay(date, source) {
+  INSPECTOR.open(industryDayDetail(date), {replace: true, source});
+}
+
+function openVenueDay(date, venue, source) {
+  const day = industryDayDetail(date);
+  const venueDetail = venueDayDetail(date, venue);
+  if (!day || !venueDetail) return;
+  INSPECTOR.open(day, {replace: true, source});
+  INSPECTOR.open(venueDetail, {source});
+}
+
+const scaleInspectorBinding = INSPECTOR.bindTimeSeries(scalePlot, {
+  data: scaleRowsBrushed,
+  dateAccessor: row => row.date,
+  marginLeft: 72,
+  marginRight: 20,
+  getDetail: industryDayDetail
+});
+
+INSPECTOR.restore("briefing", state => {
+  if (state.source !== "briefing" || !state.date) return null;
+  const date = stateDay(state.date);
+  if (state.kind === "venue-category-day" && state.venue && state.category) return [industryDayDetail(date), venueDayDetail(date, state.venue), categoryDayDetail(date, state.venue, state.category)];
+  if (state.kind === "venue-day" && state.venue) return [industryDayDetail(date), venueDayDetail(date, state.venue)];
+  if (state.kind === "industry-day") return industryDayDetail(date);
+  return null;
+});
+
+const inspectorCurrentDate = INSPECTOR.current()?.state?.source === "briefing" && INSPECTOR.current()?.state?.date
+  ? stateDay(INSPECTOR.current().state.date)
+  : null;
+if (inspectorCurrentDate && inspectorCurrentDate >= scaleBrushFrom && inspectorCurrentDate <= scaleBrushTo) {
+  scaleInspectorBinding.select(inspectorCurrentDate);
+}
+
+invalidation.then(() => scaleInspectorBinding.destroy());
 ```
 
 <div class="control-strip">

@@ -3675,6 +3675,376 @@ figure.chart-action-host.is-focused svg {
   }
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Data Inspector: chart → day → venue → category → market/trade
+
+   ⚠ The drawer OVERLAYS the page on purpose. `html.data-inspector-open` is set by
+   the component but is deliberately left unstyled, and must stay that way.
+   Measured at 1440px: the panel covers 168px of the content column, so the obvious
+   improvement is to shrink #observablehq-main while it is open. Do not. Framework
+   backs its `width` with a ResizeObserver on #observablehq-main, so changing that
+   element's width re-runs every width-dependent cell on the page — the chart the
+   reader just clicked would redraw underneath them, on every open and close. Same
+   mechanism as the focus-mode scrollbar bug fixed in a37b7c9.
+   A transform cannot substitute: it would slide the content off-screen instead.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.data-inspector-panel {
+  position: fixed;
+  z-index: 240;
+  top: 5.25rem;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  width: min(390px, calc(100vw - 2rem));
+  overflow: hidden;
+  border: 1px solid var(--editorial-rule-strong);
+  border-top: 4px solid var(--editorial-accent);
+  border-radius: 1px;
+  background: var(--editorial-paper);
+  color: var(--editorial-ink);
+  box-shadow: 0 20px 60px color-mix(in srgb, #000 22%, transparent);
+}
+
+.data-inspector-header {
+  flex: 0 0 auto;
+  border-bottom: 3px solid var(--editorial-rule-strong);
+  background: var(--editorial-paper);
+}
+
+.data-inspector-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.72rem 0.9rem 0.55rem;
+}
+
+.data-inspector-topline strong,
+.data-inspector-eyebrow,
+.data-inspector-section h4,
+.data-inspector-fact dt,
+.data-inspector-actions button,
+.data-inspector-breadcrumbs {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.065em;
+}
+
+.data-inspector-topline strong {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.data-inspector-close,
+.data-inspector-back,
+.data-inspector-crumb {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.data-inspector-close {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.data-inspector-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 2rem;
+  padding: 0 0.9rem 0.65rem;
+  color: var(--editorial-muted);
+  font-size: 0.62rem;
+}
+
+.data-inspector-back,
+.data-inspector-crumb {
+  padding: 0;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.data-inspector-crumb[aria-current="page"] {
+  color: var(--editorial-ink);
+  font-weight: 600;
+}
+
+.data-inspector-back:hover,
+.data-inspector-back:focus-visible,
+.data-inspector-crumb:hover,
+.data-inspector-crumb:focus-visible {
+  color: var(--editorial-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.data-inspector-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1rem 1.25rem;
+}
+
+.data-inspector-eyebrow {
+  margin-bottom: 0.25rem;
+  color: var(--editorial-accent);
+  font-size: 0.64rem;
+}
+
+.data-inspector-body > h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+}
+
+.data-inspector-subtitle,
+.data-inspector-delta {
+  margin: 0.35rem 0 0;
+  color: var(--editorial-muted);
+  font-size: 0.78rem;
+}
+
+.data-inspector-value {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-inspector-delta.is-positive,
+.data-inspector-fact dd.is-positive {
+  color: var(--accent-positive);
+}
+
+.data-inspector-delta.is-negative,
+.data-inspector-fact dd.is-negative {
+  color: var(--accent-negative);
+}
+
+.data-inspector-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1rem 0 0;
+  border-top: 1px solid var(--editorial-rule-strong);
+}
+
+.data-inspector-fact {
+  min-width: 0;
+  padding: 0.65rem 0.55rem 0.65rem 0;
+  border-bottom: 1px solid var(--editorial-rule);
+}
+
+.data-inspector-fact:nth-child(odd) {
+  border-right: 1px solid var(--editorial-rule);
+}
+
+.data-inspector-fact:nth-child(even) {
+  padding-left: 0.55rem;
+}
+
+.data-inspector-fact dt {
+  color: var(--editorial-muted);
+  font-size: 0.57rem;
+}
+
+.data-inspector-fact dd {
+  margin: 0.28rem 0 0;
+  overflow-wrap: anywhere;
+  font: 600 0.78rem var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-inspector-section {
+  margin-top: 1.05rem;
+}
+
+.data-inspector-section h4 {
+  margin: 0 0 0.25rem;
+  color: var(--editorial-muted);
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.data-inspector-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.62rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--editorial-rule);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+button.data-inspector-row,
+a.data-inspector-row {
+  cursor: pointer;
+}
+
+button.data-inspector-row:hover strong,
+button.data-inspector-row:focus-visible strong,
+a.data-inspector-row:hover strong,
+a.data-inspector-row:focus-visible strong {
+  color: var(--editorial-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.data-inspector-row-copy,
+.data-inspector-row-value,
+.data-inspector-row-copy strong,
+.data-inspector-row-copy small,
+.data-inspector-row-value small {
+  display: block;
+  min-width: 0;
+}
+
+.data-inspector-row-copy strong {
+  overflow-wrap: anywhere;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.data-inspector-row-copy small,
+.data-inspector-row-value small {
+  margin-top: 0.15rem;
+  color: var(--editorial-muted);
+  font-size: 0.68rem;
+}
+
+.data-inspector-row-value {
+  font: 500 0.72rem var(--font-mono);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-inspector-coverage {
+  margin: 1rem 0 0;
+  padding: 0.55rem 0 0.55rem 0.65rem;
+  border-left: 3px solid var(--editorial-accent);
+  color: var(--editorial-muted);
+  font-size: 0.7rem;
+}
+
+.data-inspector-actions {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem 1rem 0.9rem;
+  border-top: 1px solid var(--editorial-rule-strong);
+  background: var(--editorial-paper);
+}
+
+.data-inspector-actions button {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--editorial-rule-strong);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.63rem;
+  cursor: pointer;
+}
+
+.data-inspector-actions .data-inspector-ask {
+  background: var(--editorial-ink);
+  color: var(--editorial-paper);
+}
+
+.data-inspector-actions button:hover,
+.data-inspector-actions button:focus-visible {
+  border-color: var(--editorial-accent);
+}
+
+.data-inspector-status {
+  min-height: 0.85rem;
+  color: var(--editorial-muted);
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+.data-inspector-clickable-chart {
+  cursor: crosshair;
+}
+
+.data-inspector-selection-rule {
+  stroke: var(--editorial-accent);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.chart-inspect-hint {
+  margin: 0.25rem 0 0.65rem;
+  color: var(--editorial-muted);
+  font: 500 0.67rem var(--font-mono);
+}
+
+.inspector-inline-button,
+.inspector-data-cell {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--editorial-accent) 45%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.inspector-inline-button:hover,
+.inspector-inline-button:focus-visible,
+.inspector-data-cell:hover,
+.inspector-data-cell:focus-visible {
+  color: var(--editorial-accent);
+  border-bottom-color: currentColor;
+}
+
+html.chart-focus-open .data-inspector-panel {
+  z-index: 260;
+}
+
+@media (max-width: 760px) {
+  .data-inspector-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: min(78vh, 680px);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+  }
+
+  .data-inspector-body > h3 {
+    font-size: 1.55rem;
+  }
+}
+
+@media print {
+  .data-inspector-panel,
+  .chart-inspect-hint {
+    display: none !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Editorial Desk visual language
 

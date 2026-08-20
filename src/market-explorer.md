@@ -44,6 +44,61 @@ const platformRows = buildPlatformSeries({kalshi: kalshiDaily, competitor: compe
 const venueBoard = buildVenueScoreboard(platformRows);
 const fmtDate = value => value?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "—";
 const fmtPct = value => value == null ? "—" : `${value >= 0 ? "+" : ""}${(100 * value).toFixed(1)}%`;
+const marketInspector = window.PredictChartsInspector;
+const allMarketRows = normalizedVenues.flatMap(({rows}) => rows);
+const MARKET_VENUE_ROUTES = {
+  kalshi: "./volume", polymarket: "./polymarket", forecastex: "./forecastex",
+  nadex: "./nadex", rothera: "./rothera", dkex: "./dkex", underdog: "./underdog"
+};
+
+function marketDetail(row) {
+  if (!row) return null;
+  const spec = LB_VENUES[row.venue];
+  const facts = [
+    {label: "Venue", value: row.venueLabel},
+    {label: "Published volume", value: `${fmtLbCount(row.contracts)} ${row.unit === "pairs" ? "pairs" : "contracts"}`},
+    {label: "Last trade", value: fmtDate(row.lastTrade)},
+    {label: "Category", value: row.category || "Not published"},
+    {label: "Outcomes", value: row.outcomes == null ? "Not published" : Math.round(row.outcomes).toLocaleString()},
+    {label: "Name source", value: row.label || "Code only"}
+  ];
+  const evidence = [
+    row.winner ? {label: "Winner", description: "Published or decoded settled outcome", value: row.winner} : null,
+    row.top ? {label: spec?.topHeader || "Busiest outcome", description: "Highest-volume contract or outcome", value: row.top} : null,
+    row.fees != null ? {label: "Fees", description: "One-side fees in the published market file", value: `$${fmtLbCount(row.fees)}`} : null
+  ].filter(Boolean);
+  return {
+    crumb: row.name || row.marketKey,
+    eyebrow: `${row.venueLabel} market`,
+    title: row.name || row.marketKey,
+    subtitle: row.name ? row.marketKey : "The venue publishes no readable market name",
+    value: `${fmtLbCount(row.contracts)} ${row.unit === "pairs" ? "matched pairs" : "contracts"}`,
+    delta: row.period && row.period !== "all" ? `Published period: ${row.period}` : "All available published history for this venue file",
+    facts,
+    sections: [
+      {title: "Available market evidence", items: evidence},
+      {title: "Continue exploring", items: [
+        {label: `Open ${row.venueLabel}`, description: "Venue overview and available modules", value: "→", href: MARKET_VENUE_ROUTES[row.venue] || "./venues"},
+        {label: "Compare product mix", description: "Venue-by-venue category evidence", value: "→", href: "./categories-venues"}
+      ]}
+    ],
+    coverage: `This is a within-${row.venueLabel} market record, not a cross-venue rank. ${row.unit === "pairs" ? "ForecastEx reports matched pairs; that unit is not converted to contracts." : "The collection window and name quality remain the venue file's own."}`,
+    state: {kind: "market", source: "market-explorer", venue: row.venue, market: row.marketKey},
+    ask: {
+      question: `Explain the ${row.name || row.marketKey} market on ${row.venueLabel}. Put its volume and outcome evidence in context without treating unlike venue windows or units as comparable.`,
+      context: `Predict Charts Market Explorer selection: ${row.venueLabel} · ${row.marketKey}.`
+    }
+  };
+}
+
+function openMarketDetail(row, source) {
+  marketInspector.open(marketDetail(row), {replace: true, source});
+}
+
+marketInspector.restore("market-explorer", state => {
+  if (state.source !== "market-explorer" || state.kind !== "market") return null;
+  return marketDetail(allMarketRows.find(row => row.venue === state.venue && row.marketKey === state.market));
+});
 ```
 
 ## Venue leaderboard
@@ -77,7 +132,7 @@ display(html`<div class="top-market-grid">${normalizedVenues.map(({spec, rows}) 
   const top = rows.filter(row => row.period === "all").sort((a, b) => b.contracts - a.contracts).slice(0, 5);
   return html`<section class="top-market-card">
     <h3><span class="venue-dot" style="background:${spec.accent}"></span>${spec.label}</h3>
-    <ol>${top.map(row => html`<li><span title="${row.marketKey}">${row.name || row.marketKey}</span><strong>${fmtLbCount(row.contracts)}${spec.unit === "pairs" ? " pairs" : ""}</strong></li>`)}</ol>
+    <ol>${top.map(row => html`<li><button type="button" class="inspector-inline-button" title="${row.marketKey}" onclick=${event => openMarketDetail(row, event.currentTarget)}>${row.name || row.marketKey}</button><strong>${fmtLbCount(row.contracts)}${spec.unit === "pairs" ? " pairs" : ""}</strong></li>`)}</ol>
   </section>`;
 })}</div>`);
 ```
@@ -90,7 +145,8 @@ display(html`<div class="top-market-grid">${normalizedVenues.map(({spec, rows}) 
 display(marketLeaderboard({
   hashPrefix: "finder",
   rowsPerPage: 25,
-  venues: normalizedVenues
+  venues: normalizedVenues,
+  onMarketSelect: openMarketDetail
 }));
 ```
 

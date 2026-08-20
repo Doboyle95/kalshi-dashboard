@@ -453,6 +453,15 @@ function lbStyles() {
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; line-height: 1.2; max-height: 2.4em;
   }
+  .lb-market-button {
+    appearance: none; display: block; width: 100%; padding: 0;
+    border: 0; border-bottom: 1px solid color-mix(in srgb, var(--editorial-accent, currentColor) 42%, transparent);
+    background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  .lb-market-button:hover, .lb-market-button:focus-visible {
+    color: var(--editorial-accent, var(--accent-kalshi, currentColor));
+    border-bottom-color: currentColor;
+  }
   .lb-code {
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 0.82em;
@@ -503,7 +512,8 @@ export function marketLeaderboard({
   venues = [],
   hashPrefix = "lb",
   rowsPerPage = 50,
-  emptyNote = null
+  emptyNote = null,
+  onMarketSelect = null
 } = {}) {
   const root = document.createElement("div");
   root.className = "lb-wrap";
@@ -718,7 +728,14 @@ export function marketLeaderboard({
         ? html`<div class="lb-name" title=${title}>${d.name}</div>`
         : html`<code class="lb-code" title=${title}>${d.marketKey}</code>`;
       cell.classList.add("lb-market-cell");
-      return cell;
+      if (typeof onMarketSelect !== "function") return cell;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lb-market-button";
+      button.setAttribute("aria-label", `Inspect ${d.name || d.marketKey} on ${d.venueLabel}`);
+      button.append(cell);
+      button.addEventListener("click", event => onMarketSelect(d, event.currentTarget));
+      return button;
     };
 
     // Name provenance belongs in the Market cell's tooltip, not in a cryptic

@@ -588,10 +588,18 @@ function competitorRows(tableName, metricLabel, venue) {
     .filter(d => d.venue === venue && d.table === tableName && d.metric === metricKey)
     .sort((a, b) => a.rank - b.rank)
     .map(d => ({
+      venue,
+      table: tableName,
+      metric: metricKey,
+      rank: d.rank,
       date: d.date,
       market: d.market_name || d.ticker_name,
+      market_key: d.market_id || d.ticker || d.ticker_name || d.market_name,
       contracts: d.contracts_traded,
       price: d.price,
+      one_party_stake: d.one_party_stake,
+      taker_stake: d.taker_stake,
+      taker_side: d.taker_side,
       pct_of_market: d.pct_of_market,
       metric_value: metricValue(d, metricKey),
       censored: d.window_left_censored
@@ -622,17 +630,88 @@ function rowsForTable(tableName, metricLabel) {
     .filter(d => d.table === tableName && d.metric === metricKey)
     .sort((a, b) => a.rank - b.rank)
     .map(d => ({
+      venue: "Kalshi",
+      table: tableName,
+      metric: metricKey,
+      rank: d.rank,
       date: d.date,
       category: tradeCategory(d),
       market: tradeMarket(d),
+      market_key: d.market_key,
       outcome: tradeOutcome(d),
       contracts: d.contracts_traded,
       price: d.price,
+      one_party_stake: d.one_party_stake,
+      taker_stake: d.taker_stake,
       taker_side: d.taker_side || "-",
       metric_value: metricValue(d, metricKey),
       pct_of_market: d.pct_of_market
     }));
 }
+```
+
+```js
+const tradeInspector = window.PredictChartsInspector;
+const METRIC_LABELS = {contracts: "Contracts", one_party_stake: "One-party stake", taker_stake: "Taker stake"};
+const tradeDay = date => date ? new Date(date).toISOString().slice(0, 10) : "unknown-date";
+const tradeIdentity = row => [row.table, row.metric, tradeDay(row.date), row.market_key || row.market, row.contracts, row.price].join("~");
+const allInspectorTrades = ltVenues.flatMap(venue => metricsFor(venue).flatMap(metric => [
+  ...(venue === "Kalshi" ? rowsForTable("overall", metric) : competitorRows("overall", metric, venue)),
+  ...(venue === "Kalshi" ? rowsForTable("small_market", metric) : competitorRows("small_market", metric, venue))
+]));
+
+function tradeDetail(row) {
+  if (!row) return null;
+  const metricLabel = METRIC_LABELS[row.metric] || "Selected measure";
+  const ranking = row.table === "small_market" ? "large relative to its market" : "largest individual prints";
+  const context = [
+    row.category ? {label: "Category", description: "Kalshi classification", value: row.category} : null,
+    row.outcome ? {label: "Outcome", description: "Published or decoded contract outcome", value: row.outcome} : null,
+    row.market_key ? {label: "Market code", description: "Raw venue identifier", value: row.market_key} : null
+  ].filter(Boolean);
+  const facts = [
+    {label: "Venue", value: row.venue},
+    {label: "Date", value: fmtDate(row.date)},
+    {label: "Contracts", value: fmtCount(row.contracts)},
+    {label: "Price", value: fmtPrice(row.price)},
+    {label: "Taker side", value: row.taker_side || "Not published"},
+    {label: "% of market", value: row.pct_of_market == null ? "Not in this ranking" : fmtPct(row.pct_of_market)}
+  ];
+  if (row.one_party_stake != null) facts.push({label: "One-party stake", value: fmtUSD(row.one_party_stake)});
+  if (row.taker_stake != null) facts.push({label: "Taker stake", value: fmtUSD(row.taker_stake)});
+  return {
+    crumb: `${fmtCount(row.contracts)} trade`,
+    eyebrow: `Individual trade · ${row.venue}`,
+    title: `${fmtCount(row.contracts)} contracts at ${fmtPrice(row.price)}`,
+    subtitle: row.market || row.market_key || "Unnamed venue market",
+    value: row.metric === "contracts" ? `${fmtCount(row.metric_value)} contracts` : fmtUSD(row.metric_value),
+    delta: `#${row.rank ?? "—"} by ${metricLabel.toLowerCase()} among ${ranking}`,
+    facts,
+    sections: [
+      {title: "Market context", items: context},
+      {title: "Continue exploring", items: [{label: "Open Market Explorer", description: "Find this or related markets across supported venues", value: "→", href: "./market-explorer"}]}
+    ],
+    coverage: row.censored
+      ? "The venue collection window is left-censored: this trade is real, but the file does not cover the venue's full prior history."
+      : row.venue === "Kalshi"
+        ? "Kalshi publishes an aggressor flag and readable market mapping here; those fields are not backfilled onto venues that do not publish them."
+        : "This record contains only fields the venue's collected trade tape publishes. A blank taker side is not inferred.",
+    state: {kind: "trade", source: "trade-size", venue: row.venue, trade: tradeIdentity(row)},
+    ask: {
+      question: `Explain why this ${fmtCount(row.contracts)}-contract trade on ${row.venue} is notable. Use its price, market share and collection-window limits, and do not infer an aggressor when the venue does not publish one.`,
+      context: `Predict Charts Trading Behavior selection: ${row.venue} · ${row.market || row.market_key} · ${tradeDay(row.date)} · ${fmtPrice(row.price)}.`
+    }
+  };
+}
+
+function openTradeDetail(row, source) {
+  tradeInspector.open(tradeDetail(row), {replace: true, source});
+}
+
+tradeInspector.restore("trade-size", state => {
+  if (state.source !== "trade-size" || state.kind !== "trade" || !state.trade) return null;
+  return tradeDetail(allInspectorTrades.find(row => row.venue === state.venue && tradeIdentity(row) === state.trade));
+});
 ```
 
 ## Largest individual trades
@@ -680,6 +759,7 @@ Inputs.table(overallRows, {
   },
   format: {
     date: fmtDate,
+    market: (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTradeDetail(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`,
     contracts: fmtCount,
     price: fmtPrice,
     metric_value: overallMetricLabel === "Contracts" ? fmtCount : fmtUSD
@@ -737,6 +817,7 @@ Inputs.table(smallMarketRows, {
   },
   format: {
     date: fmtDate,
+    market: (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTradeDetail(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`,
     contracts: fmtCount,
     price: fmtPrice,
     metric_value: smallMarketMetricLabel === "Contracts" ? fmtCount : fmtUSD,
