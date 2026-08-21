@@ -17,12 +17,12 @@ const fmtBriefingStamp = value => value
 
 <div class="page-hero briefing-hero">
   <div class="briefing-hero-copy">
-    <div class="page-eyebrow">Industry briefing</div>
-    <h1>US prediction markets, at a glance</h1>
+    <div class="page-eyebrow">Daily briefing</div>
+    <h1>US prediction markets today</h1>
     <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
   </div>
   <aside class="daily-intel">
-    <div class="daily-intel-topline"><span>Daily intelligence</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingStamp(dailyBriefing.data_through)}` : "First run pending"}</span></div>
+    <div class="daily-intel-topline"><span>Today's briefing</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingStamp(dailyBriefing.data_through)}` : "First run pending"}</span></div>
     <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
     ${dailyBriefingBody}
     <div class="daily-intel-actions">
@@ -204,9 +204,9 @@ display(renderDateBrush({
   </div>
 </div>
 
-## Economics and outcomes pulse
+## Economics and outcomes
 
-<p class="section-intro">The important numbers should not require a venue-page expedition. Coverage badges are part of the measurement: a Kalshi-only result is useful evidence, not an industry total.</p>
+<p class="section-intro">Latest reported measures. Coverage varies by venue and is shown on each item.</p>
 
 ```js
 const feeRows = platformRows.filter(row => row.revenue != null && !row.partial);
@@ -703,8 +703,8 @@ if (productView === "Current mix") {
 ## Go deeper
 
 <div class="destination-grid">
-  <a class="destination-card" href="./compare"><strong>Compare venues</strong><span>Start with the strongest common measure, with coverage limits visible.</span></a>
   <a class="destination-card" href="./volume"><strong>Kalshi deep dive</strong><span>Activity, products, economics, outcomes, and parlays from the richest tape.</span></a>
+  <a class="destination-card" href="./compare"><strong>Compare venues</strong><span>Start with the strongest common measure, with coverage limits visible.</span></a>
   <a class="destination-card" href="./market-explorer"><strong>Explore markets</strong><span>Venue leaders, top markets, and one searchable finder.</span></a>
   <a class="destination-card" href="./methodology"><strong>Data &amp; methodology</strong><span>Coverage, definitions, mappings, and the limits of every comparison.</span></a>
 </div>

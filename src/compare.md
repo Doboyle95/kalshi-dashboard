@@ -4,8 +4,8 @@ title: Compare Venues
 
 <div class="page-hero compare-hero">
   <div class="page-eyebrow">Compare</div>
-  <h1>Compare what the data supports</h1>
-  <p class="page-lead">Start with a question, then use the widest honest comparison available. Missing venue coverage stays visible instead of being filled with proxies.</p>
+  <h1>Compare venues</h1>
+  <p class="page-lead">Scale, products, trading behavior, costs and accuracy, using the broadest comparable evidence available for each question.</p>
 </div>
 
 <div class="compare-lens-grid">
@@ -41,9 +41,9 @@ title: Compare Venues
   </a>
 </div>
 
-## Coverage at a glance
+## Coverage
 
-<p class="section-intro">“Available” means the metric can answer the stated question—not that every source has identical granularity.</p>
+<p class="section-intro">The common measure can be narrower than the deepest data available for any one venue.</p>
 
 <div class="surface-card table-scroll compare-coverage-table">
   <table class="briefing-table">

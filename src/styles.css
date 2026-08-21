@@ -4896,3 +4896,324 @@ svg[class^="plot-"] g[aria-label="tip"] > path {
     break-inside: avoid;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Authored restraint
+
+   The editorial layer works best when it is not applied as a full template to
+   every surface. Keep the homepage's publication voice, but let internal data
+   pages, controls and charts read more like a deliberately edited reference.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The wordmark is the identity. The old four-square device read as a generated
+   placeholder and competed with venue colors, which already carry meaning. */
+.masthead-brand,
+.masthead-brand:link,
+.masthead-brand:visited {
+  padding-left: 0;
+}
+
+.masthead-brand::before {
+  display: none;
+}
+
+.masthead-brand-subtitle {
+  font-family: var(--font-sans);
+  font-weight: 450;
+  letter-spacing: 0.012em;
+  text-transform: none;
+}
+
+/* Only Briefing gets a true hero. Interior pages use a compact title block and
+   rely on the persistent context navigation instead of repeating its label. */
+.page-hero:not(.briefing-hero) {
+  margin-bottom: 1.05rem;
+  padding: 0.72rem 0 0.95rem;
+}
+
+.page-hero:not(.briefing-hero) .page-eyebrow {
+  display: none;
+}
+
+.page-hero:not(.briefing-hero) h1 {
+  max-width: 28ch;
+  margin-bottom: 0.38rem;
+  font-family: var(--font-sans);
+  font-size: clamp(1.85rem, 3.1vw, 2.55rem);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+}
+
+.page-hero:not(.briefing-hero) .page-lead {
+  max-width: 76ch;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.page-hero:not(.briefing-hero) .page-meta {
+  margin-top: 0.55rem;
+  font-size: 0.7rem;
+}
+
+/* Monospace is now evidence typography, not the default voice of the chrome. */
+.briefing-kicker,
+.kpi-label,
+.pulse-topline,
+.coverage-badge,
+.compare-nav-label,
+.venue-nav-label,
+.venue-overview-grid span {
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.kpi-label,
+.pulse-topline,
+.venue-overview-grid span {
+  font-weight: 550;
+}
+
+/* A rule introduces a chapter; it does not need to announce a new card system. */
+#observablehq-main > h2:not(.briefing-scale-title) {
+  margin-top: 2.35rem;
+  padding-top: 0.62rem;
+  border-top-width: 1px;
+  font-size: clamp(1.22rem, 2vw, 1.48rem);
+}
+
+.section-intro {
+  max-width: 76ch;
+  color: var(--theme-foreground-muted);
+  font-size: 0.91rem;
+  line-height: 1.58;
+}
+
+/* Charts belong to the document itself. Focus mode still creates a dedicated
+   surface when a reader asks for it. */
+.plot-shell {
+  padding: 0.1rem 0 0.35rem;
+  border: 0;
+  background: transparent;
+}
+
+.control-strip {
+  margin-bottom: 0.55rem;
+  padding: 0.34rem 0;
+  border-top: 1px solid var(--editorial-rule);
+  border-bottom: 1px solid var(--editorial-rule);
+}
+
+/* Method notes become footnotes rather than a recurring family of cards. */
+.compact-details {
+  padding: 0.5rem 0;
+  border: 0;
+  border-top: 1px solid var(--editorial-rule);
+  border-radius: 0;
+  background: transparent;
+}
+
+.compact-details:hover,
+.compact-details[open] {
+  border-top-color: var(--editorial-rule-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+.compact-details > summary {
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+.compact-details summary::marker {
+  color: var(--theme-foreground-faint);
+}
+
+/* Coverage remains explicit, but no longer presents every caveat as a pill. */
+.coverage-badge,
+.coverage-badge.is-limited {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-foreground-faint);
+  font-size: 0.68rem;
+  font-weight: 550;
+}
+
+.coverage-badge.is-limited {
+  color: color-mix(in srgb, var(--accent-warning) 82%, var(--theme-foreground));
+}
+
+/* Utilities remain keyboard- and touch-accessible, but stop forming a permanent
+   second header over every visualization. */
+.chart-tools {
+  min-height: 20px;
+  margin-bottom: 0.08rem;
+  opacity: 0.18;
+}
+
+.chart-action-host:hover > .chart-tools,
+.chart-action-host:focus-within > .chart-tools,
+.chart-tools:focus-within,
+.chart-action-host.is-focused > .chart-tools {
+  opacity: 1;
+}
+
+.chart-tools button,
+.chart-tools button:last-child {
+  min-height: 20px;
+  padding: 0 0.28rem;
+  border-bottom-color: transparent;
+  color: var(--theme-foreground-faint);
+  font-family: var(--font-sans);
+  font-size: 0.61rem;
+  font-weight: 550;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.chart-tools button:last-child {
+  border-bottom-color: transparent;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .chart-tools {
+    opacity: 0.72;
+  }
+}
+
+@media (max-width: 700px) {
+  .page-hero:not(.briefing-hero) {
+    padding-top: 0.55rem;
+  }
+
+  .page-hero:not(.briefing-hero) h1 {
+    font-size: clamp(1.72rem, 8vw, 2.25rem);
+  }
+}
+
+/* The Compare hub is an editorial index, not a grid of interchangeable cards. */
+.compare-lens-grid {
+  display: block;
+  counter-reset: compare-lens;
+  margin-bottom: 2rem;
+  border-top: 1px solid var(--editorial-rule-strong);
+}
+
+.compare-lens-card {
+  counter-increment: compare-lens;
+  display: grid;
+  grid-template-columns: 2.3rem minmax(12rem, 0.85fr) minmax(18rem, 1.45fr) max-content;
+  align-items: baseline;
+  gap: 0.4rem 1.1rem;
+  min-height: 0;
+  padding: 0.85rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--editorial-rule);
+}
+
+.compare-lens-card::before {
+  content: counter(compare-lens, decimal-leading-zero);
+  grid-column: 1;
+  color: var(--theme-foreground-faint);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.compare-lens-card strong {
+  grid-column: 2;
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.compare-lens-card > span:last-child {
+  grid-column: 3;
+  color: var(--theme-foreground-muted);
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+
+.compare-lens-card .coverage-badge {
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.compare-lens-card:hover {
+  border-bottom-color: var(--editorial-accent);
+}
+
+/* Homepage summary measures form one financial tape rather than four mini apps. */
+.pulse-grid {
+  gap: 0;
+  border-top: 1px solid var(--editorial-rule);
+  border-bottom: 1px solid var(--editorial-rule);
+}
+
+.pulse-card {
+  min-height: 132px;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-left: 1px solid var(--editorial-rule);
+}
+
+.pulse-card:nth-child(odd) {
+  border-left: 0;
+}
+
+.pulse-card:nth-child(n + 3) {
+  border-top: 1px solid var(--editorial-rule);
+}
+
+.pulse-card:hover {
+  border-color: var(--editorial-rule);
+  background: color-mix(in srgb, var(--editorial-paper) 60%, transparent);
+}
+
+.page-hero:not(.briefing-hero) .page-hero-actions {
+  margin-top: 0.6rem;
+}
+
+.page-hero:not(.briefing-hero) .page-hero-ask {
+  font-size: 0.72rem;
+  font-weight: 550;
+}
+
+@media (max-width: 760px) {
+  .compare-lens-card {
+    grid-template-columns: 1.8rem minmax(0, 1fr) max-content;
+    gap: 0.35rem 0.75rem;
+  }
+
+  .compare-lens-card strong {
+    grid-column: 2;
+  }
+
+  .compare-lens-card > span:last-child {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  .compare-lens-card .coverage-badge {
+    grid-column: 3;
+  }
+}
+
+@media (max-width: 600px) {
+  .pulse-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pulse-card,
+  .pulse-card:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .pulse-card:nth-child(n + 2) {
+    border-top: 1px solid var(--editorial-rule);
+  }
+}

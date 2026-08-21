@@ -269,9 +269,9 @@ function siteHeader({path}) {
 
   const primary = [
     link("Briefing", "/", here === "/"),
+    venuesMenu,
     link("Compare", "/compare", isCompare),
-    link("Markets & trades", "/market-explorer", here === "/market-explorer"),
-    venuesMenu
+    link("Markets & trades", "/market-explorer", here === "/market-explorer")
   ].join("");
 
   const compareMobile = compareLinks.map(([label, p]) => link(label, p, p === here)).join("");
