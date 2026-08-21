@@ -43,13 +43,21 @@ const totalHoldNet   = d3.sum(uni, d => d.hold_to_settlement_net);
 const totalFees      = d3.sum(uni, d => d.fees_total);
 const totalHandle    = d3.sum(uni, d => d.handle_yes);
 const overallPct     = totalNet / totalHandle * 100;
+// What inferred cashing-out bettors actually received: YES value sold back (c * p).
+// Do not use cashout_notional here: that is the complementary NO buyer's cost
+// (c * (1-p)), which approaches $1 as the seller's proceeds approach $0.
+const totalCashoutProceedsKpi = d3.sum(cashoutDaily, d => d.proceeds);
+const cashReturnedPctKpi = totalCashoutProceedsKpi / totalHandle * 100;
+
+// Retain the old statistic under its accurate market-flow meaning. It measures
+// no-side taker money associated with inferred cash-outs, not cash returned.
 const totalCashoutValueKpi = d3.sum(cashoutDaily, d => d.cashout_notional);
 // No-side money the cash-out engine classified as ordinary trades rather than sell-backs.
 // It stays in the DENOMINATOR — it is still taker money, just not cash-out money — so the
 // rate can't rise merely because the numerator was filtered. Absent on data published before
 // the classifier shipped, in which case this is 0 and the rate is the old one.
 const totalNoncashoutKpi = d3.sum(cashoutDaily, d => d.noncashout_taker_value || 0);
-const cashoutRateKpi = totalCashoutValueKpi / (totalHandle + totalCashoutValueKpi + totalNoncashoutKpi) * 100;
+const cashoutFlowShareKpi = totalCashoutValueKpi / (totalHandle + totalCashoutValueKpi + totalNoncashoutKpi) * 100;
 ```
 
 <div class="kpi-grid">
@@ -72,9 +80,9 @@ const cashoutRateKpi = totalCashoutValueKpi / (totalHandle + totalCashoutValueKp
     <div class="kpi-value">${fmtUSD(totalHandle)}</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label">Cash-out rate (est.)</div>
-    <div class="kpi-value">${cashoutRateKpi.toFixed(0)}%</div>
-    <div class="kpi-meta">of taker money</div>
+    <div class="kpi-label">Cash returned via cash-outs (est.)</div>
+    <div class="kpi-value">${cashReturnedPctKpi.toFixed(1)}%</div>
+    <div class="kpi-meta">of opening stakes</div>
   </div>
 </div>
 
@@ -169,7 +177,7 @@ Plot.plot({
 
 ## Cash-outs
 
-<p class="section-intro">An estimated <strong>${cashoutRateKpi.toFixed(0)}%</strong> of the money takers put through parlays is someone <em>cashing out</em> — selling a live parlay back before it settles, rather than opening a new bet. This tracks whether those cash-outs paid off.</p>
+<p class="section-intro">Inferred cash-outs returned <strong>${cashReturnedPctKpi.toFixed(1)}¢ per dollar staked</strong> to parlay bettors. The trades account for ${cashoutFlowShareKpi.toFixed(1)}% of taker-side trading flow, but that flow share uses the complementary no buyer's cost — not the cash the exiting bettor received. This chart tracks whether cashing out beat holding to settlement.</p>
 
 <div class="instruction-line"><strong>How we identify a cash-out.</strong> Parlays are priced on request, so the buyer is almost always on the yes side; we count no-side takers as selling back. We exclude sales larger than everything ever bought on that parlay, and sales that would have to pool thousands of separate buys — neither can be one person cashing out. Treat what remains as an estimate.</div>
 
