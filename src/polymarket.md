@@ -461,9 +461,9 @@ Plot.plot({
 <p class="chart-note">Yes/no markets only. Moneylines, spreads and totals are excluded because their sides are two teams, two halves of a line, or Over/Under &mdash; all three settle "first side" 48&ndash;50% of the time, which is arithmetic, not a result. ${(100*ynVoidRate).toFixed(1)}% of these propositions were voided and refunded, against 2.1% at DKeX.</p>
 
 
-## Combos (gated beta)
+## Parlays
 
-<p class="section-intro">Multi-leg &ldquo;Combinatoric Athletic Outcome Contracts&rdquo;, first traded 2026-08-05. <strong>This is not a feature in the Polymarket US app</strong> &mdash; combos are an API-only beta open to explicitly enabled participants, so this is a small number of programmatic traders, not a retail launch.</p>
+<p class="section-intro">Multi-leg parlays &mdash; Polymarket&rsquo;s &ldquo;Combinatoric Athletic Outcome Contracts&rdquo;, or combos &mdash; first traded 2026-08-05 and opened to all users on 2026-08-20. The earlier activity reflects the limited-access rollout; data from August 20 onward reflects the public launch.</p>
 
 ```js
 // Same toggle as Kalshi's parlay pages, and the same wording, so the two read alike.
@@ -533,7 +533,7 @@ Plot.plot({
 })
 ```
 
-<p class="chart-note">Since ${fmtDate(parlayRows[0].date)}: <strong>${fmtUSD0(parlayTotal)} of contracts traded</strong>, of which combo buyers staked <strong>${fmtUSD0(parlayStakeTotal)}</strong>, across ${parlayTotalTrades.toLocaleString()} trades &mdash; peaking at ${parlayPeak.pct.toFixed(2)}% of the venue's contracts on ${fmtDate(parlayPeak.date)}. These are $1 contracts, so both toggles are dollars: face value is what settles, stake is what the buyer paid for it at an average of ${(100 * parlayAvgPrice).toFixed(1)}&cent;.</p>
+<p class="chart-note">Since ${fmtDate(parlayRows[0].date)}: <strong>${fmtUSD0(parlayTotal)} of contracts traded</strong>, of which parlay buyers staked <strong>${fmtUSD0(parlayStakeTotal)}</strong>, across ${parlayTotalTrades.toLocaleString()} trades &mdash; peaking at ${parlayPeak.pct.toFixed(2)}% of the venue's contracts on ${fmtDate(parlayPeak.date)}. These are $1 contracts, so both toggles are dollars: face value is what settles, stake is what the buyer paid for it at an average of ${(100 * parlayAvgPrice).toFixed(1)}&cent;.</p>
 
 ## Top markets
 
