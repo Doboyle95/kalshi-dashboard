@@ -51,6 +51,14 @@ const feeRows = daily
   })
   .filter(d => d.date instanceof Date && ((d.cost ?? 0) > 0 || (d.revenue ?? 0) > 0));
 const feeVenues = VENUE_ORDER.filter(venue => feeRows.some(d => d.venue === venue));
+// ROTHERA HAS NO FEE ESTIMATE before late July. Those rows are dropped as zero-fee
+// here and again in the cumulative below, so most of the venue leaves no visible
+// gap and its line reads as a lifetime total. Measured, not hardcoded, because the
+// covered share grows every day the estimate keeps running.
+const rotheraRows = daily.filter(d => normalizeVenueName(d.platform) === "Rothera" && +d.contracts > 0);
+const rotheraFeeStart = d3.min(rotheraRows.filter(d => +d.fees > 0), d => d.date);
+const rotheraUncovered = d3.sum(rotheraRows.filter(d => d.date < rotheraFeeStart), d => +d.contracts)
+  / d3.sum(rotheraRows, d => +d.contracts) || 0;
 ```
 
 <div class="control-strip">
@@ -131,7 +139,7 @@ Plot.plot({
 
 </div>
 
-<p class="chart-note">Every venue here is read from one file on one lineage, so the bars are comparable across the row. Kalshi's own <a href="./fees">fee revenue page</a> counts both charged sides and will therefore print a larger all-time number than "fee cost" does here — that gap is the maker side, and it is real rather than a discrepancy. <strong>Two venues are absent rather than zero.</strong> Novig publishes its straight-book fee as a bounded range rather than a point estimate, so it has no single defensible daily number to rank against the others. ProphetX charges on a trader's net gains per market rather than per contract, so a daily fee cannot be derived from its tape at all.</p>
+<p class="chart-note">Every venue here is read from one file on one lineage, so the bars are comparable across the row. Kalshi's own <a href="./fees">fee revenue page</a> counts both charged sides and will therefore print a larger all-time number than "fee cost" does here — that gap is the maker side, and it is real rather than a discrepancy. <strong>Two venues are absent rather than zero, and a third is mostly absent.</strong> Novig publishes its straight-book fee as a bounded range rather than a point estimate, so it has no single defensible daily number to rank against the others. ProphetX charges on a trader's net gains per market rather than per contract, so a daily fee cannot be derived from its tape at all. Rothera's fee estimate only starts ${fmtDate(rotheraFeeStart)}, so the ${(100 * rotheraUncovered).toFixed(0)}% of its contracts traded before that carry no fee and are not drawn.</p>
 
 ## Cumulative fee revenue
 
@@ -175,6 +183,10 @@ display(renderDateBrush({
 ```js
 const [cumFrom, cumTo] = cumDateSel;
 const cumWindow = cumRows.filter(d => d.date >= cumFrom && d.date <= cumTo);
+// Rothera's line begins where its fee estimate begins, not where the venue does.
+// Dropping the uncovered days silently left a full-looking line, so mark the start.
+const rotheraStartMark = cumVenues.includes("Rothera") && rotheraFeeStart >= cumFrom && rotheraFeeStart <= cumTo
+  ? [rotheraFeeStart] : [];
 const feeCumulative = cumVenues.flatMap(venue => {
   let running = 0;
   return cumWindow
@@ -210,6 +222,8 @@ Plot.plot({
     // Crypto.com/Nadex and Rothera stacked on it.
     ...(cumScale === "Linear" ? [Plot.areaY(feeCumulative, {x: "date", y1: 0, y2: "cumulative", fill: "venue", fillOpacity: 0.1})] : []),
     Plot.lineY(feeCumulative, {x: "date", y: "cumulative", stroke: "venue", strokeWidth: 2}),
+    Plot.ruleX(rotheraStartMark, {stroke: VENUE_COLORS["Rothera"], strokeDasharray: "4,3", strokeOpacity: 0.8}),
+    Plot.text(rotheraStartMark, {x: d => d, text: () => "Rothera fee data starts", frameAnchor: "top", textAnchor: "start", dx: 5, dy: 4, fill: VENUE_COLORS["Rothera"], fontSize: 11}),
     Plot.ruleX(feeCumulative, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(feeCumulative, Plot.pointerX({
       x: "date", y: "cumulative",
@@ -265,9 +279,19 @@ Plot.plot({
 
 ## Realized fee per contract
 
-<p class="section-intro">Reported one-side fees divided by reported contracts. This changes with the venue's actual price mix; venues without a defensible daily numerator are absent, not zero.</p>
+<p class="section-intro">Reported one-side fees divided by reported contracts, with Crypto.com/Nadex restated per $1 of contract because it redenominated twice. This changes with the venue's actual price mix; venues without a defensible daily numerator are absent, not zero.</p>
 
 ```js
+// Crypto.com/Nadex REDENOMINATED TWICE ($100 -> $10 -> $1) and competitor_daily.csv
+// counts one of each as one contract, so the raw ratio draws its first 141 days at
+// 100c against Kalshi's 0.84c -- a 119x cost gap that never existed, since $1.00 on
+// a $100 contract is the same ~1% -- and the shared auto-scaled axis then flattens
+// every other venue onto the baseline. Restated per $1 of contract rather than
+// withheld the way CME once was, so the 225 days before Aug 5, 2025 stay readable.
+const contractDollars = (venue, date) => venue !== "Crypto.com/Nadex" ? 1
+  : +date < Date.UTC(2025, 4, 13) ? 100
+  : +date < Date.UTC(2025, 7, 5) ? 10
+  : 1;
 const realizedFees = daily
   .map(d => ({
     date: d.date,
@@ -276,7 +300,7 @@ const realizedFees = daily
     fees: d.fees == null || d.fees === "" ? null : +d.fees
   }))
   .filter(d => d.date && d.contracts > 0 && d.fees != null && d.fees > 0)
-  .map(d => ({...d, centsPerContract: 100 * d.fees / d.contracts}));
+  .map(d => ({...d, centsPerContract: 100 * d.fees / (d.contracts * contractDollars(d.venue, d.date))}));
 const realizedNames = Array.from(new Set(realizedFees.map(d => d.venue)));
 const realizedWindow = view(Inputs.radio(["90 days", "All history"], {label: "Window", value: "90 days"}));
 const realizedEnd = d3.max(realizedFees, d => d.date);
@@ -306,14 +330,14 @@ Plot.plot({
   height: 320,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Reported fee per contract (¢)", grid: true},
+  y: {label: "Reported fee per $1 of contract (¢)", grid: true},
   color: {legend: true, domain: realizedNames, range: realizedNames.map(d => VENUE_COLORS[d] ?? "#64748B")},
   marks: [
     Plot.ruleY([0]),
     Plot.lineY(realizedBrushed, {x: "date", y: "centsPerContract", stroke: "venue", strokeWidth: 1.8, curve: "monotone-x"}),
     Plot.tip(realizedBrushed, Plot.pointerX({
       x: "date", y: "centsPerContract",
-      title: d => `${d.venue}\n${fmtDate(d.date)}\n${d.centsPerContract.toFixed(3)}¢ per contract`
+      title: d => `${d.venue}\n${fmtDate(d.date)}\n${d.centsPerContract.toFixed(3)}¢ per $1 of contract`
     }))
   ]
 })

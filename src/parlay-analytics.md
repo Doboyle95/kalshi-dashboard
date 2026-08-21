@@ -168,15 +168,28 @@ const tline = timeRaw
     };
   })
   .sort((a,b) => a.date - b.date);
+
+// Sample size for the method box, derived from the loaded file rather than hardcoded --
+// the old literals ("~15.9M parlays, ~99.7M legs") had gone stale by 2.7x. Legs are
+// n_parlays x mean_legs, so mean_legs' 2dp rounding costs <0.1%.
+const anatomySample = {
+  parlays: d3.sum(tline, d => d.n_parlays),
+  legs: d3.sum(tline, d => d.n_parlays * d.mean_legs)
+};
+
+// Same staleness class: the mean-legs caption carried a hardcoded "7.2" that the
+// series had already passed. Read the newest month off the file instead.
+const latestMeanLegs = tline.length ? tline[tline.length - 1].mean_legs : null;
 ```
 
 ```js
 // Daily series for "The rise of multi-leg betting": sum parlay_volume_by_type_daily
 // (already loaded above) across ALL classes per date, INCLUDING "unclassified
 // (pending legs)". Unlike the monthly series (classified-only trade_facts), recent
-// days never vanish while leg-mapping catches up — it can therefore run a few
-// percent above the monthly bars. pct_pending in the tooltip surfaces that share
-// per day (audit aid).
+// days never vanish while leg-mapping catches up. NOTE: pending volume does NOT
+// account for the monthly/daily gap — the two series come from different producers
+// on different bases, and since ~Feb 2026 pending has been worth only ~0-2pp of a
+// gap running 4-9%. pct_pending in the tooltip surfaces that share per day.
 const dayStr = d => d instanceof Date ? d3.utcFormat("%Y-%m-%d")(d) : String(d);
 const volDay = (() => {
   const by = new Map();
@@ -192,6 +205,18 @@ const volDay = (() => {
     .map(([k, v]) => ({date: d3.utcParse("%Y-%m-%d")(k), day: k, total_vol: v.vol,
                        pct_pending: v.vol ? 100 * v.pending / v.vol : 0}))
     .sort((a, b) => a.date - b.date);
+})();
+
+// Measured monthly-vs-daily gap for the caption, on the last COMPLETE month (the
+// current month is partial in both series). Derived, not hardcoded: the old caption
+// blamed pending-classification volume, which now explains almost none of it.
+const riseBasisNote = (() => {
+  const by = d3.rollup(volDay, v => d3.sum(v, d => d.total_vol), d => d.day.slice(0, 7));
+  const rows = tline.filter(d => d.total_vol > 0 && by.has(d.month));
+  const last = rows[rows.length - 2] ?? rows[rows.length - 1];
+  if (!last) return "";
+  const gap = 100 * (by.get(last.month) / last.total_vol - 1);
+  return ` — different bases, so in ${last.month} the daily view ran ${gap.toFixed(0)}% above the monthly bar`;
 })();
 ```
 
@@ -216,7 +241,7 @@ const inParlayRange = row => row.date >= parlayBrushFrom && row.date <= parlayBr
 
 ## The rise of multi-leg betting
 
-_Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. The daily view counts all parlay volume including tickets still pending leg-classification, so recent days are always present (the tooltip shows the pending share)._
+_Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. Monthly bars come from the leg-classified anatomy file, daily bars from the volume-by-type feed that counts every parlay contract${riseBasisNote}._
 
 ```js
 const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View"}));
@@ -240,7 +265,7 @@ display(Plot.plot({
 }))
 ```
 
-_Mean legs per parlay crept up past 6 and is still rising &mdash; 7.2 in the latest month._
+_Mean legs per parlay crept up past 6 and is still rising &mdash; ${latestMeanLegs ?? "—"} in the latest month._
 
 ```js
 Plot.plot({
@@ -257,19 +282,22 @@ Plot.plot({
 })
 ```
 
-_Composition: share of volume in 4+-leg parlays, and share that is same-game (correlated). The same-game share dipped sharply in Feb–Mar 2026._
+_Composition on two different bases: share of **volume** in 4+-leg parlays, and share of **tickets** that are same-game (correlated). The same-game ticket share dipped sharply in Feb–Mar 2026._
 
 ```js
+// pct_correlated is TICKET-based, not volume-weighted — the served file carries no
+// correlated-volume column, and the two bases differ by up to ~13pp (and swap
+// direction in Sep 2025), so the series is labelled by its real basis.
 const compTidy = [
   ...tline.map(d => ({date: d.date, month: d.month, value: d.pct_vol_4plus,   series: "% volume in 4+-leg"})),
-  ...tline.map(d => ({date: d.date, month: d.month, value: d.pct_correlated,  series: "% same-game (correlated)"}))
+  ...tline.map(d => ({date: d.date, month: d.month, value: d.pct_correlated,  series: "% tickets same-game (correlated)"}))
 ];
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 260, marginLeft: 56,
   x: {type: "utc", label: null},
   y: {label: "Share", grid: true, domain: [0, 100], tickFormat: d => d + "%"},
-  color: {legend: true, domain: ["% volume in 4+-leg", "% same-game (correlated)"], range: ["#f4a736", "#e4572e"]},
+  color: {legend: true, domain: ["% volume in 4+-leg", "% tickets same-game (correlated)"], range: ["#f4a736", "#e4572e"]},
   marks: [
     Plot.line(compTidy.filter(inParlayRange), {x: "date", y: "value", stroke: "series", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.dot(compTidy.filter(inParlayRange), {x: "date", y: "value", fill: "series", r: 3}),
@@ -722,7 +750,8 @@ Plot.plot({
   <summary>About this page &amp; method</summary>
   <p><strong>Source.</strong> The parlay market collector — every Kalshi parlay
   market (<code>KXMVE*</code> series) that has traded, from launch (Sep 2025)
-  through the latest collected day. ~15.9M traded parlays, ~99.7M legs.</p>
+  through the latest collected day. ~${fmtCount(anatomySample.parlays)} traded
+  parlays, ~${fmtCount(anatomySample.legs)} legs.</p>
   <p><strong>Same-game vs multi-game.</strong> Each leg's underlying game is
   derived from its <code>event_ticker</code>. Legs of one game listed under
   different market types (moneyline / total / spread) collapse to one game, so

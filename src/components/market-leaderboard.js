@@ -156,8 +156,16 @@ export const LB_VENUES = {
     unit: "contracts",
     hasPeriod: false,
     outcomesHeader: "Outcomes",
-    topHeader: "Busiest outcome",
-    topIsCode: false,
+    // No "Busiest outcome" column. market_leaderboard.csv's top_outcome is not
+    // measured -- the producer sets top_outcome = winner_ticker, so the two are
+    // byte-identical on 1,000 of 1,000 rows (measured 2026-08-21). Checked against
+    // real per-outcome volume it names the busiest outcome on only 364 of 926
+    // resolvable markets -- wrong 60.7% of the time, and systematically biased
+    // toward outcomes that won (KXMENWORLDCUP-26 showed -ES at 133M when -AR
+    // traded 326M). Restore only once the producer computes a real
+    // max-contracts-per-event_ticker; the Winner column beside it already
+    // carries the value this column was really showing.
+    topHeader: null,
     winnerIsCode: false,
     coverage: "All time.",
     // market_leaderboard.csv HAS a market_name column and it is the ticker
@@ -176,7 +184,6 @@ export const LB_VENUES = {
       fees: feeOf(r.fees_total, num(r.contracts)),
       outcomes: num(r.n_outcomes),
       winner: o.winnerFn ? str(o.winnerFn(r)) : str(r.winner),
-      top: o.topFn ? str(o.topFn(str(r.top_outcome), str(r.market_key))) : str(r.top_outcome),
       lastTrade: dateOf(r.last_trade_date),
       period: "all"
     })

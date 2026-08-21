@@ -109,7 +109,7 @@ const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "var(--accent-ka
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
-  <p>Gross P&L shows how settled taker bets performed before fees; net P&L subtracts the fees they paid. Maker P&L is the other side of those same trades. ROI is measured against the taker's entry cost: the yes price for yes bets, and 100 minus the price for no bets.</p>
+  <p>Gross P&L shows how settled taker bets performed before fees; net P&L subtracts the fees they paid. Maker P&L is the other side of those same trades. ROI is measured against the taker's entry cost (the yes price for yes bets, 100 minus the price for no bets), counting only the settled share of each day's stakes so it matches the settled-only P&L.</p>
 </details>
 
 ```js
@@ -156,19 +156,26 @@ const filteredMakerDaily = makerDaily
   .filter(d => d.date >= startDate && d.date <= endDate)
   .sort((a, b) => a.date - b.date);
 
+// pnl_gross/pnl_net/fees_taker cover SETTLED contracts only; notional_total covers every
+// contract staked. Dividing one by the other flatters recent dates, where little has settled
+// yet (all-time coverage ~95%, but the last 30 days are ~78% and the newest day under 10%).
+// Scale each day's taker-side volume by that day's settled share so both sides match.
+const settledStake = d => d.contracts_total ? (d.notional_total || 0) * (d.contracts_settled || 0) / d.contracts_total : 0;
+
 const totals = {
   gross: d3.sum(filteredDaily, d => d.pnl_gross || 0),
   net: d3.sum(filteredDaily, d => d.pnl_net || 0),
   fees: d3.sum(filteredDaily, d => d.fees_taker || 0),
   takerVolume: d3.sum(filteredDaily, d => d.notional_total || 0),
+  settledVolume: d3.sum(filteredDaily, settledStake),
   settled: d3.sum(filteredDaily, d => d.contracts_settled || 0),
   total: d3.sum(filteredDaily, d => d.contracts_total || 0)
 };
 totals.netPerFace = totals.settled ? totals.net / totals.settled * 100 : 0;
 totals.feesPerFace = totals.settled ? totals.fees / totals.settled * 100 : 0;
-totals.grossRoi = totals.takerVolume ? totals.gross / totals.takerVolume * 100 : 0;
-totals.netRoi = totals.takerVolume ? totals.net / totals.takerVolume * 100 : 0;
-totals.feeDragRoi = totals.takerVolume ? totals.fees / totals.takerVolume * 100 : 0;
+totals.grossRoi = totals.settledVolume ? totals.gross / totals.settledVolume * 100 : 0;
+totals.netRoi = totals.settledVolume ? totals.net / totals.settledVolume * 100 : 0;
+totals.feeDragRoi = totals.settledVolume ? totals.fees / totals.settledVolume * 100 : 0;
 totals.coverage = totals.total ? totals.settled / totals.total * 100 : 0;
 
 const makerTotals = {
@@ -187,12 +194,12 @@ const makerTotals = {
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Taker fees paid</div>
     <div class="kpi-value" title="$${totals.fees.toLocaleString()}">${fmtUSD(totals.fees)}</div>
-    <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of taker-side volume</div>
+    <div class="kpi-meta">${fmtROI(totals.feeDragRoi)} of settled taker-side volume</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Net ROI on taker cost</div>
     <div class="kpi-value">${fmtROI(totals.netRoi)}</div>
-    <div class="kpi-meta" title="$${totals.takerVolume.toLocaleString()} taker-side volume">${fmtUSD(totals.takerVolume)} taker-side volume</div>
+    <div class="kpi-meta" title="$${totals.settledVolume.toLocaleString()} settled taker-side volume, of $${totals.takerVolume.toLocaleString()} staked">${fmtUSD(totals.settledVolume)} settled taker-side volume · ${fmtPct(totals.coverage)} settled</div>
   </div>
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Settled coverage</div>
@@ -205,13 +212,15 @@ const makerTotals = {
 let runningGross = 0;
 let runningNet = 0;
 let runningTakerVolume = 0;
+let runningSettledVolume = 0;
 const cumulativeRows = filteredDaily.flatMap(d => {
   runningGross += d.pnl_gross || 0;
   runningNet += d.pnl_net || 0;
   runningTakerVolume += d.notional_total || 0;
+  runningSettledVolume += settledStake(d);
   return [
-    {date: d.date, series: "Before fees", value: runningGross, takerVolume: runningTakerVolume},
-    {date: d.date, series: "After fees", value: runningNet, takerVolume: runningTakerVolume}
+    {date: d.date, series: "Before fees", value: runningGross, takerVolume: runningTakerVolume, settledVolume: runningSettledVolume},
+    {date: d.date, series: "After fees", value: runningNet, takerVolume: runningTakerVolume, settledVolume: runningSettledVolume}
   ];
 });
 
@@ -222,7 +231,8 @@ const cumulativeTip = Array.from(
       const out = {date: rows[0].date};
       for (const row of rows) out[row.series] = row.value;
       out.takerVolume = rows[0].takerVolume;
-      out.netRoi = out.takerVolume ? out["After fees"] / out.takerVolume * 100 : 0;
+      out.settledVolume = rows[0].settledVolume;
+      out.netRoi = out.settledVolume ? out["After fees"] / out.settledVolume * 100 : 0;
       return out;
     },
     d => +d.date
@@ -261,7 +271,7 @@ Plot.plot({
     Plot.ruleX(cumulativeTip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.25})),
     Plot.tip(cumulativeTip, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])} ($${d["Before fees"].toLocaleString()})\nAfter fees: ${fmtUSD(d["After fees"])} ($${d["After fees"].toLocaleString()})\nTaker-side volume: ${fmtUSD(d.takerVolume)} ($${d.takerVolume.toLocaleString()})\nNet ROI: ${fmtROI(d.netRoi)}`
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d["Before fees"])} ($${d["Before fees"].toLocaleString()})\nAfter fees: ${fmtUSD(d["After fees"])} ($${d["After fees"].toLocaleString()})\nSettled taker-side volume: ${fmtUSD(d.settledVolume)} ($${d.settledVolume.toLocaleString()})\nNet ROI: ${fmtROI(d.netRoi)}`
     })),
     Plot.ruleY([0], {stroke: "currentColor", strokeOpacity: 0.35})
   ]
@@ -358,7 +368,8 @@ const dailyBars = filteredDaily
   .map(d => ({
     ...d,
     netPerFace: d.contracts_settled ? d.pnl_net / d.contracts_settled * 100 : 0,
-    netRoi: d.notional_total ? d.pnl_net / d.notional_total * 100 : 0
+    settledVolume: settledStake(d),
+    netRoi: settledStake(d) ? d.pnl_net / settledStake(d) * 100 : 0
   }));
 ```
 
@@ -389,7 +400,7 @@ Plot.plot({
       x2: d => new Date(d.date.getTime() + 864e5),
       y: "pnl_net",
       fill: d => Math.max(-20, Math.min(20, d.netRoi)),
-      title: d => `${fmtDate(d.date)}\nNet taker P&L: ${fmtUSD(d.pnl_net)}\nGross: ${fmtUSD(d.pnl_gross)}\nFees: ${fmtUSD(d.fees_taker)}\nTaker-side volume: ${fmtUSD(d.notional_total)}\nNet ROI: ${fmtROI(d.netRoi)}\nSettled contracts: ${fmtCount(d.contracts_settled)}`,
+      title: d => `${fmtDate(d.date)}\nNet taker P&L: ${fmtUSD(d.pnl_net)}\nGross: ${fmtUSD(d.pnl_gross)}\nFees: ${fmtUSD(d.fees_taker)}\nSettled taker-side volume: ${fmtUSD(d.settledVolume)}\nNet ROI: ${fmtROI(d.netRoi)}\nSettled contracts: ${fmtCount(d.contracts_settled)}`,
       tip: true
     }),
     Plot.ruleY([0])

@@ -154,7 +154,7 @@ display(marketLeaderboard({
 
 ## The same game, on two venues
 
-<p class="section-intro">Every fixture both Kalshi and Polymarket US listed, one dot each. Kalshi trades more of the same game in all six sports, but the gap runs from about 4&times; in baseball to 162&times; in the NFL.</p>
+<p class="section-intro">Every fixture both Kalshi and Polymarket US listed, one dot each. Kalshi trades more of the same game in all six sports, but the gap runs from about ${xvGapText}.</p>
 
 ```js
 const xvenue = await DataAttachment("data/polymarket_kalshi_same_fixture.csv").csv({typed: true});
@@ -184,10 +184,18 @@ const xvMedian = new Map(
 );
 const xvExtent = d3.extent([...xvRows.map(d => d.kalshi), ...xvRows.map(d => d.poly)]);
 // Constant-ratio guides. 1x is parity; the others mark where Kalshi traded 10, 100 or
-// 1000 times the same fixture -- the range the league medians actually span
-// (MLB 4.0x, WNBA 4.0x, NHL 5.8x, NBA 13.1x, IPL 18.7x, NFL 162.4x).
+// 1000 times the same fixture -- the range the league medians actually span.
 const xvGuides = [{mult: 1, label: "parity"}, {mult: 10, label: "10x"},
                   {mult: 100, label: "100x"}, {mult: 1000, label: "1000x"}];
+
+// The prose above and in the notes below quotes the extreme league medians and the
+// settled-winner check. Both are derived here, never typed, so they cannot drift.
+const xvLeagueWord = l => ({MLB: "baseball", NHL: "hockey"})[l] ?? `the ${l}`;
+const xvByMedian = Array.from(xvMedian).sort((a, b) => a[1] - b[1]);
+const xvGapText = xvByMedian.length === 0 ? "—" : [xvByMedian[0], xvByMedian[xvByMedian.length - 1]]
+  .map(([l, m]) => `${Math.round(m)}× in ${xvLeagueWord(l)}`).join(" to ");
+const xvAgree = xvenue.filter(d => d.outcome_check === "agree").length;
+const xvTestable = xvAgree + xvenue.filter(d => d.outcome_check === "disagree").length;
 
 // LINEAR IS THE DEFAULT because log-log is hard to read at a glance, and in linear
 // space the constant-ratio guides become straight rays from the origin, easier still.
@@ -255,7 +263,7 @@ Plot.plot({
 <details class="surface-card compact-details">
   <summary>About this comparison — read before quoting any number</summary>
   <p><strong>This is not a random sample of either book.</strong> Kalshi publishes no per-fixture file; the only per-market data it publishes is two all-time leaderboards capped at its top 1,000 and 2,000 markets. A fixture outside those caps cannot appear here at all, so the ${xvRows.length} shown are weighted towards big games — and towards games Kalshi traded heavily, which is the very quantity being compared. Read the ratios as "on the fixtures both venues listed and Kalshi traded a lot of", not as a market-share estimate.</p>
-  <p><strong>The join is constructed, and it is checked.</strong> Polymarket US publishes a third-party <code>sportradar_game_id</code> on 92.5% of its events; Kalshi publishes no fixture identifier of any kind, so that id can only ever name one side and cannot be the key. Fixtures are matched on league, date and the unordered team pair through a 159-row crosswalk, with a one-day tolerance for games that cross midnight in one venue's timezone and not the other. Where both venues have settled, the two agree on the winner on <strong>309 of 309</strong> fixtures; the producer refuses to publish if a single one disagrees, because a disagreement would mean the crosswalk had mapped two different teams onto each other.</p>
+  <p><strong>The join is constructed, and it is checked.</strong> Polymarket US publishes a third-party <code>sportradar_game_id</code> on 92.5% of its events; Kalshi publishes no fixture identifier of any kind, so that id can only ever name one side and cannot be the key. Fixtures are matched on league, date and the unordered team pair through a 159-row crosswalk, with a one-day tolerance for games that cross midnight in one venue's timezone and not the other. Where both venues have settled, the two agree on the winner on <strong>${xvAgree} of ${xvTestable}</strong> fixtures; the producer refuses to publish if a single one disagrees, because a disagreement would mean the crosswalk had mapped two different teams onto each other.</p>
   <p><strong>The two venues disagree about team order, and only in one league.</strong> All 47 flipped fixtures are IPL, and every IPL fixture is flipped; no other league has one. That is a listing convention, not an error, and nothing here is aligned by position — but it is why a comparison built on "first team" rather than team identity would be silently wrong for an entire sport.</p>
   <p><strong>Soccer is absent by construction.</strong> Polymarket lists a soccer fixture as three separate binary markets (home, away, draw) where Kalshi lists one, so the two are not the same object and a join would compare a two-outcome market against one leg of a three-outcome one.</p>
   <p><strong>Contracts are each venue's own unit</strong> and are not adjusted. Polymarket US contract counts are fractional; Kalshi's are whole.</p>

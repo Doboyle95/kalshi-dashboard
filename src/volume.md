@@ -435,16 +435,31 @@ const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2);
 const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
 const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
 
+// daily_sports_vs_nonsports.csv builds fees_sports/fees_nonsports with parlay tickets
+// excluded and carries no fees_parlay, so parlay fees are exactly the residual against
+// daily_overall.fees_total -- confirmed by it landing at $0.00 for every pre-2025 date,
+// before parlays existed. The Parlay fee band used to be hardcoded to 0. A date missing
+// from daily_overall (or a failed load) degrades to 0 instead of throwing.
+const feesTotalByDate = new Map((daily ?? []).map(d => [+d.date, +d.fees_total || 0]));
+const parlayFeesFor = sp =>
+  Math.max(0, (feesTotalByDate.get(+sp?.date) ?? 0) - (+sp?.fees_sports || 0) - (+sp?.fees_nonsports || 0));
+
 const tidySports =
   sportsView === "Sports only"
     ? fd2.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
         const sp = fs2.find(r => +r.date === +d.date) || {};
-        const totalContracts2 = sportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
+        // fees_sports carries no parlay dollars, so the pro-rata denominator must drop
+        // parlay contracts too -- including them handed the parlay band ~60% of the
+        // dollars that belong to the real sports. Parlay gets its own residual instead.
+        const totalContracts2 = sportsOrder.reduce((s, g) => g === "Parlay" ? s : s + (w[g] || 0), 0) || 1;
         const totalFees2 = sp.fees_sports || 0;
+        const parlayFees2 = parlayFeesFor(sp);
         return sportsOrder.map(g => ({
           date: d.date, category: g,
-          value: sportsMetric === "Fees" ? totalFees2 * ((w[g] || 0) / totalContracts2) : (w[g] || 0)
+          value: sportsMetric !== "Fees" ? (w[g] || 0)
+            : g === "Parlay" ? parlayFees2
+            : totalFees2 * ((w[g] || 0) / totalContracts2)
         }));
       })
   : sportsView === "Non-sports only"
@@ -472,7 +487,7 @@ const tidySports =
       return [
         {date: d.date, category: "Non-sports", value: sportsMetric === "Fees" ? (+d.fees_nonsports || 0) : (+d.contracts_nonsports || 0)},
         {date: d.date, category: "Sports",     value: sportsMetric === "Fees" ? (+d.fees_sports    || 0) : sportsVal},
-        {date: d.date, category: "Parlay",     value: sportsMetric === "Fees" ? 0 : (+d.contracts_parlay || 0)}
+        {date: d.date, category: "Parlay",     value: sportsMetric === "Fees" ? parlayFeesFor(d) : (+d.contracts_parlay || 0)}
       ];
     });
 

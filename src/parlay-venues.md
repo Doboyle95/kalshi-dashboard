@@ -105,10 +105,11 @@ const headline = Array.from(d3.group(series, d => d.venue), ([venue, v]) => {
   const dates = v.map(d => d.date).sort((a, b) => a - b);
   const to = dates[dates.length - 1];
   // Second, like-for-like number: the venue's OWN last 30 days. A venue whose window spans a
-  // product launch has a lifetime share far below its current one -- Nadex is 18% over its
-  // file and 36% over the last month -- and a lifetime bar on its own would read as a
-  // contradiction of the same venue's figure on the categories page, which uses a 30-day
-  // window. Both are correct; the difference is entirely the window, so both are drawn.
+  // product launch has a lifetime share far below its current one -- Nadex's lifetime share is
+  // about half its current one -- and a lifetime bar on its own would read as a contradiction
+  // of the same venue's figure on the Products page, which rolls 30 days to the last day EVERY
+  // venue reported. This one ends at each venue's own last day, so the two can differ by a day
+  // or two. Both are correct; the difference is the window, so both are drawn.
   const cut = d3.utcDay.offset(to, -(RECENT_DAYS - 1));
   const w = v.filter(d => d.date >= cut);
   const rParlay = d3.sum(w, d => d.parlay), rTot = d3.sum(w, d => d.tot);

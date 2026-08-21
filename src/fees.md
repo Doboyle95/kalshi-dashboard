@@ -300,7 +300,7 @@ const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
 
 ## Cumulative fee revenue
 
-<p class="section-intro">How much sports and non-sports have each added to Kalshi's fee revenue over time.</p>
+<p class="section-intro">How much non-sports, sports and parlays have each added to Kalshi's fee revenue over time; the three bands add to the all-time total above.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> watch the slope, not just the height — a steeper stretch means Kalshi was collecting fees faster in that period.</div>
 
@@ -311,13 +311,27 @@ const dr2 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "
 ```js
 const [s2, e2] = dr2;
 const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2).slice().sort((a, b) => a.date - b.date);
-let sCum = 0, nsCum = 0;
+
+// Parlay fees land in fees_total but in neither fees_sports nor fees_nonsports, so summing
+// only those two ran ~10% under the all-time KPI. Take parlays as the residual against
+// daily_overall.csv (exactly $0 before 2025, when parlays launched).
+const feesTotalByDate = new Map(daily.map(d => [+d.date, d.fees_total || 0]));
+
+// The stack is built explicitly rather than left to Plot's stack transform — areaY given a
+// bare `y` stacks implicitly, which is what made this chart disagree with the KPI unnoticed.
+let sCum = 0, nsCum = 0, pCum = 0;
 const cumFeesSplit = fs2.flatMap(d => {
-  sCum  += d.fees_sports    || 0;
-  nsCum += d.fees_nonsports || 0;
+  const s  = d.fees_sports    || 0;
+  const ns = d.fees_nonsports || 0;
+  nsCum += ns;
+  sCum  += s;
+  // Clamped: the two files are written by different producers, so a refresh race could
+  // briefly put fees_sports + fees_nonsports above fees_total and invert the top band.
+  pCum  += Math.max(0, (feesTotalByDate.get(+d.date) ?? (s + ns)) - s - ns);
   return [
-    {date: d.date, category: "Sports",     cumul: sCum},
-    {date: d.date, category: "Non-sports", cumul: nsCum}
+    {date: d.date, category: "Non-sports", cumul: nsCum, y0: 0,            y1: nsCum},
+    {date: d.date, category: "Sports",     cumul: sCum,  y0: nsCum,        y1: nsCum + sCum},
+    {date: d.date, category: "Parlays",    cumul: pCum,  y0: nsCum + sCum, y1: nsCum + sCum + pCum}
   ];
 });
 ```
@@ -346,17 +360,22 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {legend: true, domain: ["Non-sports", "Sports"], range: ["var(--accent-kalshi)", "#1a9641"]},
+  color: {legend: true, domain: ["Non-sports", "Sports", "Parlays"], range: ["var(--accent-kalshi)", "#1a9641", "#7b1fa2"]},
   marks: [
     Plot.areaY(cumFeesSplit, {
-      x: "date", y: "cumul", fill: "category",
-      order: ["Non-sports", "Sports"],
+      x: "date", y1: "y0", y2: "y1", fill: "category",
       fillOpacity: 0.85, curve: "monotone-x"
     }),
     Plot.ruleX(cumFeesTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
     Plot.tip(cumFeesTipData, Plot.pointerX({
       x: "date",
-      title: d => `${fmtDate(d.date)}\nSports: $${(d.Sports||0).toLocaleString(undefined,{maximumFractionDigits:0})}\nNon-sports: $${(d["Non-sports"]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`
+      title: d => [
+        fmtDate(d.date),
+        `Non-sports: $${(d["Non-sports"]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`,
+        `Sports: $${(d.Sports||0).toLocaleString(undefined,{maximumFractionDigits:0})}`,
+        `Parlays: $${(d.Parlays||0).toLocaleString(undefined,{maximumFractionDigits:0})}`,
+        `Total: $${((d["Non-sports"]||0) + (d.Sports||0) + (d.Parlays||0)).toLocaleString(undefined,{maximumFractionDigits:0})}`
+      ].join("\n")
     })),
     Plot.ruleY([0])
   ]

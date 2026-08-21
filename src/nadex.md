@@ -5,7 +5,7 @@ title: Crypto.com/Nadex
 <div class="page-hero" data-accent="nadex">
   <div class="page-eyebrow">Crypto.com · Nadex</div>
   <h1>Crypto.com/Nadex</h1>
-  <p class="page-lead">Crypto.com's Nadex exchange is small — $1 event binaries whose only public record is the exchange's daily bulletin. No single game dominates it: the multi-leg <strong>COMBOS</strong> parlay line is the largest product here, and it is what the busiest days are mostly made of.</p>
+  <p class="page-lead">Crypto.com's Nadex exchange is small — event binaries whose only public record is the exchange's daily bulletin. No single game dominates it: the multi-leg <strong>COMBOS</strong> parlay line is the largest product here, and it is what the busiest days are mostly made of.</p>
 </div>
 
 ```js
@@ -168,7 +168,7 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of Nadex's own daily bulletins. $1 per contract denomination. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of Nadex's own daily bulletins. Nadex redenominated twice — contracts were $100 through May 12, 2025, $10 through Aug 4, 2025 and $1 since — so a contract count is not comparable across those dates. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
 
 ## Parlay adoption history
 

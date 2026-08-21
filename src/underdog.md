@@ -397,9 +397,25 @@ import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/m
 ```
 
 ```js
+// The excluded share is DERIVED, not written down. Parlays were 0% of this venue
+// through 2026-07-29 and are over half of some days now, so the hardcoded 8.45%
+// in the shared spec was true for about a day. Same file the charts above use.
+const udTotal  = d3.sum(daily, d => d.contracts || 0);
+const udParlay = d3.sum(daily, d => d.contracts_parlay || 0);
+const underdogSpec = udTotal > 0
+  ? {
+      ...LB_VENUES.underdog,
+      coverage: `Since ${d3.utcFormat("%Y-%m-%d")(d3.min(daily, d => d.date))} only — ${daily.length} days. `
+        + `Parlay tickets are excluded (${(100 * udParlay / udTotal).toFixed(1)}% of the venue's contracts): `
+        + "a bespoke basket keyed by a 19-digit hash cannot be ranked or searched against a repeatedly-traded game line."
+    }
+  : LB_VENUES.underdog;   // no daily file: keep the shared note rather than invent a share
+```
+
+```js
 display(marketLeaderboard({
   hashPrefix: "udlb",
   rowsPerPage: 20,
-  venues: [{spec: LB_VENUES.underdog, rows: normalizeLeaderboard("underdog", lbRows)}]
+  venues: [{spec: underdogSpec, rows: normalizeLeaderboard("underdog", lbRows)}]
 }));
 ```

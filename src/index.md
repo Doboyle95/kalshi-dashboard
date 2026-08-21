@@ -13,6 +13,16 @@ dailyBriefingBody.innerHTML = safeMarkdown(dailyMarked, dailyBriefing?.insights 
 const fmtBriefingStamp = value => value
   ? new Date(value).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"})
   : "pending";
+// The card used to say "Today's briefing". Generation is a scheduled job that can
+// fail, and a failed run silently ages that label into a lie, so the card carries the
+// stamp the JSON itself holds and states the age once it stops being current.
+const briefingAgeDays = dailyBriefingReady && dailyBriefing?.generated_at
+  ? d3.utcDay.count(d3.utcDay.floor(new Date(dailyBriefing.generated_at)), d3.utcDay.floor(new Date()))
+  : null;
+// Filled in by the reconciliation cell further down. The hero deliberately renders
+// from the JSON alone: the remote CSV loaders throw on transport failure, and a dead
+// gateway must not blank the briefing too.
+const briefingCorrection = html`<p class="caption" style="margin: 0 0 0.45rem" hidden></p>`;
 ```
 
 <div class="page-hero briefing-hero">
@@ -22,12 +32,13 @@ const fmtBriefingStamp = value => value
     <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
   </div>
   <aside class="daily-intel">
-    <div class="daily-intel-topline"><span>Today's briefing</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingStamp(dailyBriefing.data_through)}` : "First run pending"}</span></div>
+    <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingStamp(dailyBriefing.data_through)}` : "First run pending"}</span></div>
     <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
     ${dailyBriefingBody}
+    ${briefingCorrection}
     <div class="daily-intel-actions">
-      <a href="./chat" data-ask-prefill data-question="Go deeper on today's prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
-      <span>${dailyBriefingReady ? `Generated ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Generated once daily after source files settle"}</span>
+      <a href="./chat" data-ask-prefill data-question="Go deeper on this prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
+      <span>${briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : ""}</span>
     </div>
   </aside>
 </div>
@@ -104,6 +115,34 @@ const growthBoard = buildVenueScoreboard(platformRows.filter(row => !row.sparse)
 const fastestGrowth = growthBoard
   .filter(row => row.change != null && row.recentDays >= 7 && row.previousDays >= 7)
   .sort((a, b) => b.change - a.change)[0];
+```
+
+```js
+// The generator freezes its anchor row while Kalshi's newest day is still filling, so
+// the narrated Kalshi headline can undershoot the chart directly below it -- 1.40B
+// against 1.42B for Aug 19, and +13.85% against a true +14.98%. Recompute the same
+// measure from the served CSV: the seven prior complete days reproduce the anchor's
+// own prior_seven_day_avg to the digit, so the restated growth stays on the briefing's
+// baseline rather than a new one. The prose is left alone -- patching a model's own
+// sentence is worse than annotating it -- so one line states the settled figure.
+const briefingAnchor = (dailyBriefing?.anchor?.rows ?? []).find(row => row.venue === "Kalshi");
+const briefingAnchorDay = briefingAnchor?.report_date ? String(briefingAnchor.report_date).slice(0, 10) : null;
+const briefingKalshiDays = platformRows.filter(row => row.venue === "Kalshi" && !row.partial);
+const briefingAnchorIndex = briefingAnchorDay
+  ? briefingKalshiDays.findIndex(row => row.date.toISOString().slice(0, 10) === briefingAnchorDay)
+  : -1;
+const briefingSettled = briefingAnchorIndex >= 7 ? briefingKalshiDays[briefingAnchorIndex] : null;
+const briefingNarrated = +briefingAnchor?.reported_contract_volume || null;
+// A tenth of a percent is rounding; anything wider is a number the reader can see
+// disagreeing with the chart.
+if (briefingSettled && briefingNarrated && Math.abs(briefingSettled.contracts / briefingNarrated - 1) > 0.001) {
+  const baseline = d3.mean(briefingKalshiDays.slice(briefingAnchorIndex - 7, briefingAnchorIndex), row => row.contracts);
+  briefingCorrection.textContent = `Kalshi's ${fmtDay(briefingSettled.date)} day has since settled at ${fmtCount(briefingSettled.contracts)} contracts, ${fmtPct(briefingSettled.contracts / baseline - 1)} on the same seven-day baseline; the briefing above quotes a still-filling ${fmtCount(briefingNarrated)}.`;
+  briefingCorrection.hidden = false;
+} else {
+  briefingCorrection.textContent = "";
+  briefingCorrection.hidden = true;
+}
 ```
 
 <h2 class="briefing-scale-title">Volume across exchanges</h2>

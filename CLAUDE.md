@@ -80,8 +80,15 @@ that map in the same commit.
 ## Working with categories.md
 
 `src/categories.md` contains the Individual Market Leaderboard. It has to turn
-raw Kalshi `market_key` / `winner_ticker` / `top_outcome` strings into
-human-readable Market / Winner / Highest-vol. strike cells.
+raw Kalshi `market_key` / `winner_ticker` strings into human-readable Market /
+Winner cells.
+
+There is no longer a "Highest-vol. strike" cell, and none should be added back
+until the producer changes: `market_leaderboard.csv`'s `top_outcome` is set to
+`winner_ticker` rather than measured, so it duplicated the Winner column beside
+it and named the genuinely busiest outcome on only 364 of 926 resolvable
+markets. `fmtStrike` / `TOP_OUTCOME_NAMES` in `ticker-names.js` are retained for
+that eventual fix but are currently unused.
 
 The conversion logic lives in these functions in the big `js` block that
 starts with `// ── Category colors ──`:

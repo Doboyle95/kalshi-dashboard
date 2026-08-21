@@ -44,7 +44,7 @@ display(freshnessPanel({
   items: [
     {label: "Category trends", date: latestDate(topDaily), updatedAt: fileUpdatedAt(freshness, "daily_top_categories.csv"), meta: "Can be within 15 minutes locally after near-live refresh"},
     {label: "Category leaderboard", value: `${leaderboard.length.toLocaleString()} series`, updatedAt: fileUpdatedAt(freshness, "category_leaderboard.csv"), meta: "All-time raw API rebuild", tone: "settlement"},
-    {label: "Market leaderboard", value: `${mktLeaderboard.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "market_leaderboard.csv"), meta: "All-time raw API + settlement metadata", tone: "settlement"}
+    {label: "Market leaderboard", value: `Top ${mktLeaderboard.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "market_leaderboard.csv"), meta: "All-time raw API + settlement metadata", tone: "settlement"}
   ],
   note: "Trend charts can be fresher than all-time leaderboards. Winner fields and settled outcomes depend on settlement metadata refreshes."
 }));
@@ -2676,11 +2676,25 @@ const mtRolled = d3.rollup(
   r => MT_REMAP[r.market_type] || "Other"
 );
 
-const mtDaily = Array.from(mtRolled, ([dateStr, byType]) => {
+const mtDated = Array.from(mtRolled, ([dateStr, byType]) => {
   const row = {date: new Date(dateStr)};
   for (const g of mtOrder) row[g] = byType.get(g) || 0;
   return row;
 }).sort((a, b) => a.date - b.date);
+
+// Kalshi traded no sports at all from 2024-02 to 2024-10, so the file simply has no rows
+// across those months. A gap is interpolated, not read as zero, which drew a smooth ramp
+// where nothing traded — so densify to one row per UTC day and emit the zeros explicitly.
+const mtByDate = new Map(mtDated.map(row => [+row.date, row]));
+const mtDaily = mtDated.length === 0 ? mtDated
+  : d3.utcDay.range(mtDated[0].date, d3.utcDay.offset(mtDated[mtDated.length - 1].date, 1))
+      .map(date => {
+        const known = mtByDate.get(+date);
+        if (known) return known;
+        const row = {date};
+        for (const g of mtOrder) row[g] = 0;
+        return row;
+      });
 ```
 
 ```js
@@ -2753,7 +2767,7 @@ Plot.plot({
 
 ## All-time individual market leaderboard
 
-<p class="section-intro">Every individual market, ranked. Filter by theme with the legend chips, search for a specific market, or sort any column to see what's biggest by volume, fees, or trades.</p>
+<p class="section-intro">The ${mktLeaderboard.length.toLocaleString()} largest individual markets by contracts — ${mktCoveragePct} of Kalshi's all-time volume; the smaller tail, including some categories entirely, is not in the table. Filter by theme with the legend chips, search for a specific market, or sort any column to see what's biggest by volume, fees, or trades.</p>
 
 Ranked by total contracts across all outcomes. Each row is one market (e.g. "Super Bowl 2026 winner"), not an individual yes/no contract.
 
@@ -2768,12 +2782,18 @@ const fmtC = n => n >= 1e9 ? (n/1e9).toFixed(2)+"B"
                : n >= 1e3 ? (n/1e3).toFixed(0)+"k"
                : String(n);
 
+// market_leaderboard.csv is the producer's top-N cut, not every market, so the intro
+// states the share of all-time Kalshi contracts it covers (category_leaderboard.csv is
+// the all-time total, the same denominator the treemap's Other tiles are drawn against).
+const mktAllTimeContracts = d3.sum(leaderboard, d => d.contracts);
+const mktCoveragePct = mktAllTimeContracts > 0
+  ? (100 * d3.sum(mktLeaderboard, d => d.contracts) / mktAllTimeContracts).toFixed(1) + "%"
+  : "an unpublished share";
+
 // Sort all-time by contracts and assign rank
 const mktRanked = [...mktLeaderboard]
   .sort((a, b) => b.contracts - a.contracts)
   .map((d, i) => {
-    const mk  = (d.market_key  ?? "").trim();
-    const top = (d.top_outcome ?? "").trim();
     return {
       ...d,
       rank:           i + 1,
@@ -2781,7 +2801,8 @@ const mktRanked = [...mktLeaderboard]
       // display_winner columns); fall back to the ticker parser when blank.
       display_name:   (d.display_name && String(d.display_name).trim()) || bestName(d),
       winner_display: (d.display_winner && String(d.display_winner).trim()) || fmtWinner(d),
-      top_short:      fmtStrike(top, mk),
+      // No "Highest-vol. strike" column: the producer sets top_outcome = winner_ticker
+      // rather than measuring per-outcome volume, so it only ever duplicated Winner.
       display_cat:    getSportDisplayCategory(d)
     };
   });
@@ -2939,7 +2960,7 @@ const mktDisplay = mktFiltered.map(d => {
 display(html`<div style="font-size:0.82em;color:var(--text-faint,#888);margin:0.3rem 0 0.6rem">Tip: click any column header to sort. Click again to reverse.</div>`);
 
 const tbl = Inputs.table(mktDisplay, {
-  columns: ["rank", "_c", "display_name", "market_date", "contracts", "fees_total", "winner_display", "top_short"],
+  columns: ["rank", "_c", "display_name", "market_date", "contracts", "fees_total", "winner_display"],
   header: {
     rank:          "#",
     _c:            "",
@@ -2947,8 +2968,7 @@ const tbl = Inputs.table(mktDisplay, {
     market_date:   "Date",
     contracts:     "Volume (contracts)",
     fees_total:    "Kalshi fees",
-    winner_display:"Winner",
-    top_short:     "Highest-vol. strike"
+    winner_display:"Winner"
   },
   format: {
     rank: d => d,

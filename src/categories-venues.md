@@ -26,8 +26,15 @@ const ud = await DataAttachment("data/underdog_categories_daily.csv").csv({typed
 // One window for all eight venues. Every figure on this page is inside it; nothing is
 // all-time. That matters more than it sounds: over all time ForecastEx reads as a 36%
 // football venue, and it has listed no sport since February.
-const WIN_LO = "2026-07-15", WIN_HI = "2026-08-13";
+//
+// The window is DERIVED, never pinned -- a literal here froze the page on the day it was
+// written and quietly dropped the newest week of every venue. WIN_HI is the last day EVERY
+// loaded file has reported, which is also the last day none of them is still half-collecting;
+// a per-venue max would compare eight different windows and read as a venue difference.
 const iso = d => d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+const WIN_HI = d3.min([kCat, kParlay, dkex, fx, nadex, pm, px, roth, ud],
+  rows => d3.max(rows ?? [], r => r.date ? iso(r.date) : null)) ?? iso(new Date());
+const WIN_LO = iso(d3.utcDay.offset(new Date(WIN_HI), -29));
 const inWin = d => { const s = iso(d); return s >= WIN_LO && s <= WIN_HI; };
 
 // The shared taxonomy is BROAD, because the broadest venue sets the ceiling: Kalshi
@@ -43,7 +50,7 @@ const WX = new Set(["Weather", "Climate and Weather"]);
 const CRYPTO = new Set(["Crypto"]);
 
 // ⚠ "Other" is NOT one thing. At Underdog it is the combo/parlay bucket -- verified to three
-// decimals against underdog_daily.contracts_parlay (36.575% vs 36.575%). At Nadex and DKeX it
+// decimals against underdog_daily.contracts_parlay, re-checked 2026-08-21. At Nadex and DKeX it
 // is a genuine residual, and Nadex carries a SEPARATE explicit "Parlays" value. Mapping
 // "Other" globally would move a third of Underdog's book into the wrong bucket.
 const PARLAY_VALUE = {
@@ -122,6 +129,10 @@ const order = perVenue.slice().sort((a, b) => {
 const stacked = perVenue.flatMap(d => d.shares.map(s => ({venue: d.venue, ...s, tot: d.tot})));
 const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d / 1e6).toFixed(1)}M` : d >= 1e3 ? `${(d / 1e3).toFixed(0)}k` : d3.format(",.0f")(d);
 const nonSport = v => 100 - (perVenue.find(d => d.venue === v)?.shares.filter(s => s.bucket.startsWith("Sports")).reduce((x, s) => x + s.pct, 0) ?? 0);
+// Computed, not asserted: the window moves, so a hard-coded "under 2% at five of the eight"
+// goes wrong the week a venue lists its first non-sport market.
+const restVenues = perVenue.map(d => d.venue).filter(v => v !== "Kalshi" && v !== "ForecastEx");
+const restNonSportMax = d3.max(restVenues, nonSport) ?? 0;
 ```
 
 ## The mix, venue by venue
@@ -143,7 +154,7 @@ const categoryBuckets = categoryScope === "Excluding sports"
   : BUCKETS;
 ```
 
-<div class="instruction-line">Share of each venue's contracts over ${WIN_LO} to ${WIN_HI}. The pale green band is parlay volume inside sports. Use the scope control to inspect smaller non-sports categories without a second duplicate chart.</div>
+<div class="instruction-line">Share of each venue's contracts over ${WIN_LO} to ${WIN_HI} &mdash; a rolling 30 days ending on the last day every venue reported. The pale green band is parlay volume inside sports. Use the scope control to inspect smaller non-sports categories without a second duplicate chart.</div>
 
 ```js
 Plot.plot({
@@ -168,7 +179,7 @@ Plot.plot({
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi is the only sports-led venue with a materially non-sport book: <strong>${nonSport("Kalshi").toFixed(1)}%</strong> of its contracts are not sport, against <strong>${nonSport("ForecastEx").toFixed(1)}%</strong> at ForecastEx &mdash; which trades no sport at all &mdash; and under 2% at five of the eight.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Kalshi is the only sports-led venue with a materially non-sport book: <strong>${nonSport("Kalshi").toFixed(1)}%</strong> of its contracts are not sport, against <strong>${nonSport("ForecastEx").toFixed(1)}%</strong> at ForecastEx &mdash; which trades no sport at all &mdash; and at most <strong>${restNonSportMax.toFixed(1)}%</strong> at the other ${restVenues.length}.</div>
 
 <div class="module-links">
   <a href="./parlay-venues">Compare parlay adoption →</a>
