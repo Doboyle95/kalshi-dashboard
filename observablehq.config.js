@@ -78,39 +78,66 @@ const VENUES = [
     ["Parlays", "/parlay-analytics"],
     ["Parlay outcomes", "/parlay"]
   ]},
+  // Competitor tabs mirror Kalshi's order -- Activity, Products, Trading behavior,
+  // Economics, Outcomes -- and a venue carries a tab only where it publishes the
+  // data behind it. The gaps are deliberate and each has a measured reason:
+  //   Underdog   no Outcomes  -- no settled outcome joinable to a traded price
+  //   Nadex      no Trading behavior -- no trade-size or volume-at-price series
+  //   ProphetX   no Economics -- publishes no fees at all
+  //   Novig      no Economics, no volume-at-price -- same
+  //   Rothera    Products only -- end-of-day market data, no tape
+  //   CME        Activity only -- a combined FanDuel/DraftKings bulletin
   // /polymarket-calibration is Polymarket's Outcomes module rather than an
   // orphaned page. Every built page has an intentional home in SITE_MAP below.
   {name: "Polymarket US", accent: "polymarket", tabs: [
     ["Activity", "/polymarket"],
+    ["Products", "/polymarket-products"],
+    ["Trading behavior", "/polymarket-behavior"],
+    ["Economics", "/polymarket-economics"],
     ["Outcomes", "/polymarket-calibration"]
   ]},
-  // Every venue publishing a calibration file gets an Outcomes tab, so "does this
-  // venue price things correctly" lives in one predictable place per venue rather
-  // than as a section buried in an Activity page. Underdog, Rothera, CME and
-  // Robinhood have no Outcomes tab because none of them publishes a settled
-  // outcome that can be joined to a traded price -- not an oversight.
   {name: "ForecastEx", accent: "forecastex", tabs: [
     ["Activity", "/forecastex"],
+    ["Products", "/forecastex-products"],
+    ["Trading behavior", "/forecastex-behavior"],
+    ["Economics", "/forecastex-economics"],
     ["Outcomes", "/forecastex-outcomes"]
   ]},
   {name: "DKeX", accent: "dkex", tabs: [
     ["Activity", "/dkex"],
+    ["Products", "/dkex-products"],
+    ["Trading behavior", "/dkex-behavior"],
+    ["Economics", "/dkex-economics"],
     ["Outcomes", "/dkex-outcomes"]
   ]},
-  {name: "Underdog Exchange", accent: "underdog", tabs: [["Activity", "/underdog"]]},
+  {name: "Underdog Exchange", accent: "underdog", tabs: [
+    ["Activity", "/underdog"],
+    ["Products", "/underdog-products"],
+    ["Trading behavior", "/underdog-behavior"],
+    ["Economics", "/underdog-economics"]
+  ]},
   {name: "Crypto.com/Nadex", accent: "nadex", tabs: [
     ["Activity", "/nadex"],
+    ["Products", "/nadex-products"],
+    ["Economics", "/nadex-economics"],
     ["Outcomes", "/nadex-outcomes"]
   ]},
   {name: "ProphetX", accent: null, tabs: [
     ["Activity", "/prophetx"],
+    ["Products", "/prophetx-products"],
+    ["Trading behavior", "/prophetx-behavior"],
     ["Outcomes", "/prophetx-outcomes"]
   ]},
   {name: "Novig", accent: null, tabs: [
     ["Activity", "/novig"],
+    ["Products", "/novig-products"],
+    ["Trading behavior", "/novig-behavior"],
     ["Outcomes", "/novig-outcomes"]
   ]},
-  {name: "Rothera", accent: "rothera", tabs: [["Activity", "/rothera"]]},
+  {name: "Rothera", accent: "rothera", tabs: [
+    ["Activity", "/rothera"],
+    ["Products", "/rothera-products"]
+  ]},
   {name: "CME", accent: "cme", tabs: [["Activity", "/cme"]]}
 ];
 

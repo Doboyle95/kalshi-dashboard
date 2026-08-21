@@ -8,6 +8,7 @@ title: Products
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {bucketOf, BUCKETS, BUCKET_COLORS} from "./components/venue-modules.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -37,51 +38,11 @@ const WIN_HI = d3.min([kCat, kParlay, dkex, fx, nadex, pm, px, roth, ud],
 const WIN_LO = iso(d3.utcDay.offset(new Date(WIN_HI), -29));
 const inWin = d => { const s = iso(d); return s >= WIN_LO && s <= WIN_HI; };
 
-// The shared taxonomy is BROAD, because the broadest venue sets the ceiling: Kalshi
-// publishes one "Sports" value while seven others name the sport. Rolling the sports up is
-// lossy and the loss is stated on the page; inventing a sport split for Kalshi would be
-// worse, because it would be fabricated.
-const SPORT = new Set(["Baseball", "Soccer", "Tennis", "Golf", "Basketball", "Basketball (pro)",
-  "Basketball (college)", "Football", "Combat sports", "MMA", "Boxing", "Motorsport", "Hockey",
-  "Cricket", "Rugby", "Table tennis", "Esports", "Aussie Rules", "Sports"]);
-const ECON = new Set(["Economics", "Financials", "Commodities", "Companies"]);
-const POL = new Set(["Politics", "Elections"]);
-const WX = new Set(["Weather", "Climate and Weather"]);
-const CRYPTO = new Set(["Crypto"]);
-
-// ⚠ "Other" is NOT one thing. At Underdog it is the combo/parlay bucket -- verified to three
-// decimals against underdog_daily.contracts_parlay, re-checked 2026-08-21. At Nadex and DKeX it
-// is a genuine residual, and Nadex carries a SEPARATE explicit "Parlays" value. Mapping
-// "Other" globally would move a third of Underdog's book into the wrong bucket.
-const PARLAY_VALUE = {
-  "Nadex": new Set(["Parlays"]),
-  "ProphetX": new Set(["Parlay (multi-event)"]),
-  "Underdog": new Set(["Other"])
-};
-
-function bucketOf(venue, raw) {
-  if ((PARLAY_VALUE[venue] ?? new Set()).has(raw)) return "Sports · parlays";
-  if (SPORT.has(raw)) return "Sports";
-  if (CRYPTO.has(raw)) return "Crypto";
-  if (POL.has(raw)) return "Politics & elections";
-  if (ECON.has(raw)) return "Economics & financials";
-  if (WX.has(raw)) return "Weather & climate";
-  return "Other";
-}
-
-const BUCKETS = ["Sports", "Sports · parlays", "Crypto", "Politics & elections",
-                 "Economics & financials", "Weather & climate", "Other"];
-
-// Parlays are a lighter shade of the Sports colour so the two read as one block.
-const BC = {
-  "Sports": "#0E7C6B",
-  "Sports · parlays": "#7FD4C6",
-  "Crypto": "var(--accent-dkex)",
-  "Politics & elections": "var(--accent-polymarket)",
-  "Economics & financials": "var(--accent-cme)",
-  "Weather & climate": "#6366F1",
-  "Other": "var(--pc-unclassified)"
-};
+// The taxonomy, bucket order and bucket colours moved to components/venue-modules.js
+// when the per-venue Products pages were added, so this comparison and those pages
+// cannot drift apart on what "Sports" means. BC stays as a local alias so the marks
+// below read exactly as before.
+const BC = BUCKET_COLORS;
 
 function roll(venue, rows, catCol, volCol) {
   const agg = new Map();
