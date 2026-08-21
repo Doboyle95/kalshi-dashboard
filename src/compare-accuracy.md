@@ -41,8 +41,9 @@ const kClusterMap = new Map(kClusters.map(d => [`${d.group}|${d.price_bin}`, d])
 // ONE BASIS FOR EVERY VENUE: x is the contract-weighted price ACTUALLY PAID inside the bin,
 // never the bin midpoint. Mixing the two is not a like-for-like comparison -- on Kalshi the
 // midpoint sits ~1.3c above the paid price in the 0-5c bin alone, which manufactures a
-// longshot bias that is not there. Polymarket US is the one venue whose producer ships no
-// price-paid column; it stays on midpoints and says so in its own label.
+// longshot bias that is not there. As of 2026-08-21 EVERY venue here can do this: the
+// Polymarket producer now publishes sum_price_contracts too, so the "(midpoint)" label
+// this page used to carry for it is retired rather than merely hidden.
 const PM_MIDPOINT = "Polymarket US (midpoint)";
 const normalized = [
   ...kCurve.filter(d => d.group === "ALL").map(d => {
@@ -54,7 +55,15 @@ const normalized = [
   }),
   // calibration_polymarket.csv sums sum_price_MIDPOINT -- there is no paid-price column to
   // switch to, so this venue is labelled rather than silently compared against the others.
-  ...pm.filter(d => d.group === "ALL_DEEP").map(d => ({venue: PM_MIDPOINT, bin: +d.price_bin, implied: number(d.implied_prob), actual: number(d.actual_win_rate_wt), error: number(d.calib_error), se: number(d.se_wt), events: number(d.n_events_eff ?? d.n_events), contracts: number(d.n_contracts)})),
+  // calibration_polymarket.csv gained sum_price_contracts on 2026-08-21; before that it
+  // summed the MIDPOINT only, which is why this venue was previously labelled apart.
+  // Fall back to implied_prob if an older generation is being served, and say so.
+  ...pm.filter(d => d.group === "ALL_DEEP").map(d => {
+    const contracts = number(d.n_contracts), sumPrice = number(d.sum_price_contracts), actual = number(d.actual_win_rate_wt);
+    const paid = contracts > 0 && sumPrice != null ? sumPrice / contracts / 100 : null;
+    const implied = paid ?? number(d.implied_prob);
+    return {venue: paid == null ? PM_MIDPOINT : "Polymarket US", bin: +d.price_bin, implied, actual, error: implied == null || actual == null ? null : actual - implied, se: number(d.se_wt), events: number(d.n_events_eff ?? d.n_events), contracts};
+  }),
   ...fx.filter(d => d.group === "ALL_EX_ELECTION").map(d => {
     // calib_error_qty is ForecastEx's own CONTRACT-weighted error; adding it back to the
     // contract-weighted win rate recovers the paid price. Its implied_prob column is
@@ -124,7 +133,7 @@ const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.ve
 
 ## Actual vs implied win rate
 
-<p class="section-intro">Every venue sits at the contract-weighted price actually paid, except Polymarket US, which ships bin midpoints only; Crypto.com/Nadex covers the ~64% of its contracts that match a settlement here, the missing third mostly combos.</p>
+<p class="section-intro">Every venue sits at the contract-weighted price actually paid; Crypto.com/Nadex covers the ~64% of its contracts that match a settlement here, the missing third mostly combos.</p>
 
 ```js
 Plot.plot({

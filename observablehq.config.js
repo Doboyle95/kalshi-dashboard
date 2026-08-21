@@ -84,11 +84,28 @@ const VENUES = [
     ["Activity", "/polymarket"],
     ["Outcomes", "/polymarket-calibration"]
   ]},
-  {name: "ForecastEx", accent: "forecastex", tabs: [["Activity", "/forecastex"]]},
-  {name: "DKeX", accent: "dkex", tabs: [["Activity", "/dkex"]]},
+  // Every venue publishing a calibration file gets an Outcomes tab, so "does this
+  // venue price things correctly" lives in one predictable place per venue rather
+  // than as a section buried in an Activity page. Underdog, Rothera, CME and
+  // Robinhood have no Outcomes tab because none of them publishes a settled
+  // outcome that can be joined to a traded price -- not an oversight.
+  {name: "ForecastEx", accent: "forecastex", tabs: [
+    ["Activity", "/forecastex"],
+    ["Outcomes", "/forecastex-outcomes"]
+  ]},
+  {name: "DKeX", accent: "dkex", tabs: [
+    ["Activity", "/dkex"],
+    ["Outcomes", "/dkex-outcomes"]
+  ]},
   {name: "Underdog Exchange", accent: "underdog", tabs: [["Activity", "/underdog"]]},
-  {name: "Crypto.com/Nadex", accent: "nadex", tabs: [["Activity", "/nadex"]]},
-  {name: "ProphetX", accent: null, tabs: [["Activity", "/prophetx"]]},
+  {name: "Crypto.com/Nadex", accent: "nadex", tabs: [
+    ["Activity", "/nadex"],
+    ["Outcomes", "/nadex-outcomes"]
+  ]},
+  {name: "ProphetX", accent: null, tabs: [
+    ["Activity", "/prophetx"],
+    ["Outcomes", "/prophetx-outcomes"]
+  ]},
   {name: "Novig", accent: null, tabs: [
     ["Activity", "/novig"],
     ["Outcomes", "/novig-outcomes"]
