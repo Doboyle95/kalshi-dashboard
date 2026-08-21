@@ -83,12 +83,24 @@ that map in the same commit.
 raw Kalshi `market_key` / `winner_ticker` strings into human-readable Market /
 Winner cells.
 
-There is no longer a "Highest-vol. strike" cell, and none should be added back
-until the producer changes: `market_leaderboard.csv`'s `top_outcome` is set to
-`winner_ticker` rather than measured, so it duplicated the Winner column beside
-it and named the genuinely busiest outcome on only 364 of 926 resolvable
-markets. `fmtStrike` / `TOP_OUTCOME_NAMES` in `ticker-names.js` are retained for
-that eventual fix but are currently unused.
+There is no longer a "Highest-vol. strike" cell. It was dropped because
+`market_leaderboard.csv`'s `top_outcome` was set to `winner_ticker` rather than
+measured, so it duplicated the Winner column beside it and named the genuinely
+busiest outcome on only 364 of 926 resolvable markets. `fmtStrike` /
+`TOP_OUTCOME_NAMES` in `ticker-names.js` are retained for the fix and are
+currently unused.
+
+**The producer side is now fixed** (KalshiData `ea9ca12`, 2026-08-21), but it
+only reaches readers on the next leaderboard rebuild — `settlement_cycle`
+(0 */4) or `leaderboard_refresh` (15 5). Checked 2026-08-21 against published
+generation `3f73649c7c2a1dc20c44`: `top_outcome` was still byte-identical to
+`winner_ticker` on all 1,000 rows.
+
+**Verify the published CSV before restoring the column.** Restoring it while the
+data is still a copy puts the original defect straight back. Resolve the current
+generation from `/dashboard-data/current.json`, pull `market_leaderboard.csv`
+from it, and require a non-zero count of rows where `top_outcome` differs from
+`winner_ticker`.
 
 The conversion logic lives in these functions in the big `js` block that
 starts with `// ── Category colors ──`:
