@@ -326,14 +326,16 @@ function siteHeader({path}) {
   // behind the More caret, next to Methodology and the theme switch -- which is where
   // you put things people already know exist, not the one piece of original research on
   // the site. Labelled plainly by subject: a reader looking for it looks for the company
-  // name. It is deliberately NOT in the Venues menu, because Robinhood is a distributor
-  // that routes to Kalshi and Rothera, not a venue of its own.
+  // name. "(FCM)" marks what the page actually draws on -- Robinhood Derivatives' daily
+  // CFTC filings as a futures commission merchant -- and keeps it from reading as a venue
+  // entry. It is deliberately NOT in the Venues menu: Robinhood is a distributor routing
+  // to Kalshi and Rothera, not a venue of its own, and Rothera is already listed there.
   const primary = [
     link("Briefing", "/", here === "/"),
     venuesMenu,
     compareMenu,
     link("Markets & trades", "/market-explorer", here === "/market-explorer"),
-    link("Robinhood", "/robinhood", here === "/robinhood")
+    link("Robinhood (FCM)", "/robinhood", here === "/robinhood")
   ].join("");
 
   const compareMobile = compareLinks.map(([label, p]) => link(label, p, p === here)).join("");
