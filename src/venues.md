@@ -21,4 +21,10 @@ title: Venue Deep Dives
   <a href="./cme"><strong>CME event contracts</strong><span>Sparse bulletin coverage · Calls and puts</span></a>
 </div>
 
-<p class="chart-note">Robinhood-on-Kalshi is distribution-channel research rather than a venue. It lives under <a href="./robinhood">Scale &amp; Liquidity research</a>.</p>
+## Distribution
+
+<div class="venue-directory">
+  <a href="./robinhood"><strong>Robinhood (FCM)</strong><span>Estimated Kalshi volume · Reported vs estimated · Kalshi/Rothera split</span></a>
+</div>
+
+<p class="chart-note">Robinhood routes order flow to Kalshi and to Rothera rather than running an exchange, so it is measured from its daily CFTC filings rather than from venue data.</p>

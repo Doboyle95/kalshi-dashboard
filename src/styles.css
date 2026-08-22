@@ -2911,6 +2911,27 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   font-size: 0.79rem;
 }
 
+/* Section heading inside the Venues dropdown, spanning both columns like
+   .masthead-drop-all. Robinhood is not a venue -- it distributes to Kalshi and Rothera --
+   so it sits under its own label rather than as a peer entry in the list. */
+.masthead-menu-group {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.65rem 0.15rem;
+  border-top: 1px solid var(--divider);
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-weight: 720;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+/* A lone entry under a section heading; without this it takes one grid cell and leaves
+   an empty one beside it. */
+.masthead-drop-menu > a.masthead-drop-wide {
+  grid-column: 1 / -1;
+}
+
 .masthead-theme,
 .masthead-mobile-theme {
   display: flex;
