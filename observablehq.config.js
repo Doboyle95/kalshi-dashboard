@@ -294,22 +294,33 @@ function siteHeader({path}) {
   // "All venues" keeps the directory reachable for anyone who wants the overview, and
   // keeps the page's SITE_MAP entry honest rather than orphaned.
   //
-  // It reuses .masthead-more wholesale so it inherits that dropdown's summary, caret,
-  // marker-suppression, open and active styling -- including the Editorial Desk overrides
-  // -- without touching nine selector lists. .masthead-venues only re-anchors the panel.
+  // Both menus reuse .masthead-more wholesale so they inherit that dropdown's summary,
+  // caret, marker-suppression, open and active styling -- including the Editorial Desk
+  // overrides -- without touching nine selector lists. .masthead-drop-menu only
+  // re-anchors the panel left and lays it out in two columns.
   // <details> means this still needs no JavaScript.
-  const venueEntry = (v) =>
-    '<a href="' + v.tabs[0][1] + '"' + (v === current ? ' aria-current="true"' : "") + ">" +
-    escapeHtml(v.name) + "</a>";
-
-  const venuesMenu =
-    '<details class="masthead-more masthead-venues' + (isVenue ? " is-active" : "") + '">' +
-      "<summary>Venues</summary>" +
-      '<div class="masthead-menu masthead-venue-menu">' +
-        VENUES.map(venueEntry).join("") +
-        link("All venues", "/venues", here === "/venues", "masthead-venue-all") +
-      "</div>" +
+  const dropdown = (label, active, entries, tail) =>
+    '<details class="masthead-more' + (active ? " is-active" : "") + '">' +
+      "<summary>" + escapeHtml(label) + "</summary>" +
+      '<div class="masthead-menu masthead-drop-menu">' + entries + tail + "</div>" +
     "</details>";
+
+  const venuesMenu = dropdown("Venues", isVenue,
+    VENUES.map((v) =>
+      '<a href="' + v.tabs[0][1] + '"' + (v === current ? ' aria-current="true"' : "") + ">" +
+      escapeHtml(v.name) + "</a>").join(""),
+    link("All venues", "/venues", here === "/venues", "masthead-drop-all"));
+
+  // Compare is a dropdown for the same reason Venues is: /compare loads no data either.
+  // It is a question-led index, so pointing the primary nav at it cost the reader a full
+  // page load -- and with no client-side router that is the real price of a navigation --
+  // before they reached a single chart. The menu lists the six modules that DO carry
+  // data; the hub stays reachable at the foot, where its honest-coverage framing still
+  // earns a visit for anyone choosing a lens rather than jumping straight to one.
+  const compareMenu = dropdown("Compare", isCompare,
+    compareLinks.filter(([, p]) => p !== "/compare")
+      .map(([label, p]) => link(label, p, p === here)).join(""),
+    link("Overview", "/compare", here === "/compare", "masthead-drop-all"));
 
   // Robinhood sits in the primary row rather than inside More. It was reachable only
   // behind the More caret, next to Methodology and the theme switch -- which is where
@@ -320,7 +331,7 @@ function siteHeader({path}) {
   const primary = [
     link("Briefing", "/", here === "/"),
     venuesMenu,
-    link("Compare", "/compare", isCompare),
+    compareMenu,
     link("Markets & trades", "/market-explorer", here === "/market-explorer"),
     link("Robinhood", "/robinhood", here === "/robinhood")
   ].join("");

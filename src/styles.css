@@ -2877,11 +2877,12 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   font-weight: 680;
 }
 
-/* The Venues dropdown sits in the primary nav rather than at the right edge, so its
-   panel anchors LEFT -- .masthead-menu's `right: 0` would push a 26rem panel off the
-   left of the viewport on a narrow desktop window. Ten venues in one column is a 400px
-   drop; two columns keeps it inside a short laptop viewport under the ~115px bar. */
-.masthead-venue-menu {
+/* Shared by the Venues and Compare dropdowns. Both sit in the primary nav rather than
+   at the right edge, so the panel anchors LEFT -- .masthead-menu's `right: 0` would
+   push a 26rem panel off the left of the viewport on a narrow desktop window. Ten
+   venues in one column is a 400px drop; two columns keeps it inside a short laptop
+   viewport under the ~115px bar, and Compare's seven entries fit the same grid. */
+.masthead-drop-menu {
   right: auto;
   left: 0;
   display: grid;
@@ -2892,14 +2893,16 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 }
 
 /* The current venue, marked with aria-current="true" rather than "page" because the
-   reader may be on a module of that venue rather than its entry page. */
-.masthead-venue-menu > a[aria-current="true"] {
+   reader may be on a module of that venue rather than its entry page. Compare's
+   entries ARE their own pages, so they carry aria-current="page" and pick up the
+   .masthead-menu rule above instead. */
+.masthead-drop-menu > a[aria-current="true"] {
   background: var(--surface-muted);
   color: var(--theme-foreground);
   font-weight: 680;
 }
 
-.masthead-venue-all {
+.masthead-drop-all {
   grid-column: 1 / -1;
   margin-top: 0.25rem;
   padding-top: 0.5rem;
