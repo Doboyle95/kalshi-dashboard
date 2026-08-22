@@ -282,7 +282,7 @@ function siteHeader({path}) {
   const comparePaths = new Set(compareLinks.map(([, p]) => p));
   const isCompare = comparePaths.has(here);
   const isVenue = here === "/venues" || Boolean(current);
-  const isMore = here === "/robinhood" || here === "/methodology";
+  const isMore = here === "/methodology";
   const link = (label, p, active, className = "") =>
     '<a href="' + p + '"' + (className ? ' class="' + className + '"' : "") +
     (active ? ' aria-current="page"' : "") + '>' + escapeHtml(label) + '</a>';
@@ -311,11 +311,18 @@ function siteHeader({path}) {
       "</div>" +
     "</details>";
 
+  // Robinhood sits in the primary row rather than inside More. It was reachable only
+  // behind the More caret, next to Methodology and the theme switch -- which is where
+  // you put things people already know exist, not the one piece of original research on
+  // the site. Labelled plainly by subject: a reader looking for it looks for the company
+  // name. It is deliberately NOT in the Venues menu, because Robinhood is a distributor
+  // that routes to Kalshi and Rothera, not a venue of its own.
   const primary = [
     link("Briefing", "/", here === "/"),
     venuesMenu,
     link("Compare", "/compare", isCompare),
-    link("Markets & trades", "/market-explorer", here === "/market-explorer")
+    link("Markets & trades", "/market-explorer", here === "/market-explorer"),
+    link("Robinhood", "/robinhood", here === "/robinhood")
   ].join("");
 
   const compareMobile = compareLinks.map(([label, p]) => link(label, p, p === here)).join("");
@@ -332,7 +339,6 @@ function siteHeader({path}) {
       link("Ask Data", "/chat", here === "/chat", "masthead-ask") +
       '<details class="masthead-more' + (isMore ? ' is-active' : '') + '">' +
         '<summary>More</summary><div class="masthead-menu">' +
-          link("Robinhood research", "/robinhood", here === "/robinhood") +
           link("Methodology & coverage", "/methodology", here === "/methodology") +
           '<div class="masthead-theme"><span>Theme</span><div class="theme-toggle" role="group" aria-label="Theme"></div></div>' +
         '</div>' +
