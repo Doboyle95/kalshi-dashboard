@@ -24,6 +24,7 @@ display(DataAttachment.marker);
 const monthly = await DataAttachment("data/rh_monthly_estimates.csv").csv({typed: true});
 const weekly  = await DataAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
 const reported = await DataAttachment("data/rh_actual_vs_estimate.csv").csv({typed: true});
+const filing = await DataAttachment("data/rh_daily_filing.csv").csv({typed: true});
 import {renderDateBrush} from "./components/date-brush.js";
 import {freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -254,6 +255,59 @@ Plot.plot({
       },
       tip: {format: {x: false, y: false, fill: false, z: false}}
     })
+  ]
+})
+```
+
+## The daily filing behind it
+
+<p class="section-intro">CFTC line [8530] as Robinhood files it, and the Kalshi-only figure left after Rothera's positions are removed. The gap between the two lines opened in June 2026 and is the whole reason the correction exists.</p>
+
+```js
+// Two lines rather than a stack: the point is the DIVERGENCE, and a stack hides it by
+// making the upper series ride on the lower one. Dollars, not contracts -- [8530] is a
+// market value, which is why the estimate needs a coefficient to reach a volume at all.
+const filingSeries = filing.flatMap(d => [
+  {date: d.date, series: "As filed", value: d.swap_open_long},
+  {date: d.date, series: "Kalshi only", value: d.kalshi_open_long}
+]);
+const fmtM = n => "$" + ((n ?? 0) / 1e6).toFixed(1) + "M";
+```
+
+```js
+Plot.plot({
+  marginLeft: 62, marginBottom: 40,
+  height: 300,
+  width,
+  x: {label: null, tickRotate: -35},
+  y: {
+    label: "Open position (market value)",
+    grid: true,
+    tickFormat: d => "$" + (+d / 1e6).toFixed(0) + "M"
+  },
+  color: {
+    domain: ["As filed", "Kalshi only"],
+    range: ["var(--accent-rothera)", "var(--accent-robinhood)"],
+    legend: true
+  },
+  marks: [
+    Plot.ruleY([0]),
+    Plot.line(filingSeries, {
+      x: "date", y: "value", stroke: "series", strokeWidth: 1.6
+    }),
+    // One tip for both series at the hovered date, rather than two marks fighting over
+    // the pointer.
+    Plot.tip(filing, Plot.pointerX({
+      x: "date",
+      y: "swap_open_long",
+      channels: {
+        Date: d => fmtWeek(d.date),
+        "As filed": d => fmtM(d.swap_open_long),
+        Rothera: d => d.rothera_oi_value > 0 ? fmtM(d.rothera_oi_value) : "—",
+        "Kalshi only": d => fmtM(d.kalshi_open_long)
+      },
+      format: {x: false, y: false}
+    }))
   ]
 })
 ```
