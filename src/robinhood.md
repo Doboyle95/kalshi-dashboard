@@ -12,6 +12,7 @@ title: Robinhood on Kalshi
   <summary>Methodology</summary>
   <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient — currently <strong>5.2455</strong> — that converts a share of positions held into a share of volume traded.</p>
   <p><strong>Rothera is subtracted first.</strong> It clears through the same firm, so from June 2026 its open positions sit inside the same filing. Left in, June 2026 estimates 66% high.</p>
+  <p><strong>What the estimate covers.</strong> It is fitted against Robinhood's announced total less Rothera, so it predicts everything Robinhood sends anywhere except Rothera. ForecastEx sports and weather volume — which we attribute to Robinhood — is then taken off to leave Kalshi alone. That is an attribution, not a second estimate: the coefficient is not refitted and the total does not change.</p>
   <p><strong>Accuracy.</strong> The coefficient is calibrated against the ten months where Robinhood published an actual figure. Mean error across those months is <strong>4.2%</strong>.</p>
   <p>Robinhood does not file at weekends. Weekend volume is already reflected in the open-interest level either side of it.</p>
 </details>
@@ -203,7 +204,7 @@ Plot.plot({
 
 ## Where Robinhood's volume goes
 
-<p class="section-intro">Robinhood reports an all-venue total each month; taking off the Rothera volume we measure ourselves leaves its Kalshi figure, with no estimate involved. Faded bars are months it has not reported yet.</p>
+<p class="section-intro">Robinhood reports an all-venue total each month; taking off the Rothera and ForecastEx volume we measure ourselves leaves its Kalshi figure, with no estimate involved. Faded bars are months it has not reported yet.</p>
 
 ```js
 // Long form, one row per destination, so Plot stacks them. Rothera is OBSERVED in every
@@ -211,8 +212,9 @@ Plot.plot({
 // Robinhood has to publish -- so the split runs to the end of the data even where the
 // Kalshi side is still an estimate.
 const destStack = reportedParsed.flatMap(d => [
-  {...d, dest: "Kalshi",  value: d.rh_kalshi_billions},
-  {...d, dest: "Rothera", value: d.rothera_billions ?? 0}
+  {...d, dest: "Kalshi",     value: d.rh_kalshi_billions},
+  {...d, dest: "Rothera",    value: d.rothera_billions ?? 0},
+  {...d, dest: "ForecastEx", value: d.forecastex_billions ?? 0}
 ]).filter(d => d.value > 0);
 ```
 
@@ -224,8 +226,8 @@ Plot.plot({
   x: {interval: d3.utcMonth, label: null, tickFormat: d => d3.utcFormat("%b '%y")(d), tickRotate: -35},
   y: {label: "Contracts (billions)", grid: true, tickFormat: d => (+d).toFixed(1) + "B"},
   color: {
-    domain: ["Kalshi", "Rothera"],
-    range: ["var(--accent-robinhood)", "var(--accent-rothera)"],
+    domain: ["Kalshi", "Rothera", "ForecastEx"],
+    range: ["var(--accent-robinhood)", "var(--accent-rothera)", "var(--accent-forecastex)"],
     legend: true
   },
   marks: [
@@ -235,7 +237,7 @@ Plot.plot({
     // not re-laying for whoever edits this next.
     Plot.barY(destStack, {
       x: "month_date", y: "value", fill: "dest", z: "dest",
-      order: ["Kalshi", "Rothera"],
+      order: ["Kalshi", "Rothera", "ForecastEx"],
       // Opacity carries reported-vs-estimated; colour carries destination. Two variables,
       // two visual channels, so neither has to be read out of the other.
       fillOpacity: d => d.is_actual ? 0.9 : 0.4,
@@ -243,9 +245,9 @@ Plot.plot({
         Month: d => fmtDate(d.month_date),
         Destination: d => d.dest,
         Contracts: d => fmtB(d.value) + " contracts",
-        Basis: d => d.dest === "Rothera"
-          ? "Measured from Rothera"
-          : (d.is_actual ? "Reported by Robinhood" : "Estimated"),
+        Basis: d => d.dest === "Kalshi"
+          ? (d.is_actual ? "Reported by Robinhood" : "Estimated")
+          : "Measured from " + d.dest,
         "All venues": d => d.rh_total_billions > 0
           ? fmtB(d.rh_total_billions) + " contracts"
           : "not yet reported"
