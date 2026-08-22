@@ -201,44 +201,56 @@ Plot.plot({
 })
 ```
 
-## Reported where Robinhood has published it
+## Where Robinhood's volume goes
 
-<p class="section-intro">Robinhood reports an all-venue total each month. Subtracting Rothera gives its Kalshi volume directly — no estimate involved. Paler bars are months it has not yet reported.</p>
+<p class="section-intro">Robinhood reports an all-venue total each month; taking off the Rothera volume we measure ourselves leaves its Kalshi figure, with no estimate involved. Faded bars are months it has not reported yet.</p>
+
+```js
+// Long form, one row per destination, so Plot stacks them. Rothera is OBSERVED in every
+// month including the unreported ones -- it is our own collection, not something
+// Robinhood has to publish -- so the split runs to the end of the data even where the
+// Kalshi side is still an estimate.
+const destStack = reportedParsed.flatMap(d => [
+  {...d, dest: "Kalshi",  value: d.rh_kalshi_billions},
+  {...d, dest: "Rothera", value: d.rothera_billions ?? 0}
+]).filter(d => d.value > 0);
+```
 
 ```js
 Plot.plot({
   marginLeft: 58, marginBottom: 50,
-  height: 340,
+  height: 360,
   width,
   x: {interval: d3.utcMonth, label: null, tickFormat: d => d3.utcFormat("%b '%y")(d), tickRotate: -35},
-  y: {label: "Contracts to Kalshi (billions)", grid: true, tickFormat: d => (+d).toFixed(1) + "B"},
+  y: {label: "Contracts (billions)", grid: true, tickFormat: d => (+d).toFixed(1) + "B"},
+  color: {
+    domain: ["Kalshi", "Rothera"],
+    range: ["var(--accent-robinhood)", "var(--accent-rothera)"],
+    legend: true
+  },
   marks: [
     Plot.ruleY([0]),
-    // Two marks rather than a fill scale: this needs exactly two visual states, and an
-    // ordinal fill scale would add a legend that says less than the caption already does.
-    Plot.barY(reportedParsed.filter(d => d.is_actual), {
-      x: "month_date", y: "rh_kalshi_billions",
-      fill: "var(--accent-robinhood)", fillOpacity: 0.9,
+    // `z` is passed explicitly even though barY would inherit it from `fill`: an array
+    // `order` without a z channel throws "missing channel: z", and that is a trap worth
+    // not re-laying for whoever edits this next.
+    Plot.barY(destStack, {
+      x: "month_date", y: "value", fill: "dest", z: "dest",
+      order: ["Kalshi", "Rothera"],
+      // Opacity carries reported-vs-estimated; colour carries destination. Two variables,
+      // two visual channels, so neither has to be read out of the other.
+      fillOpacity: d => d.is_actual ? 0.9 : 0.4,
       channels: {
         Month: d => fmtDate(d.month_date),
-        Basis: () => "Reported by Robinhood",
-        "To Kalshi": d => fmtB(d.rh_kalshi_billions) + " contracts",
-        "To Rothera": d => d.rothera_billions > 0 ? fmtB(d.rothera_billions) + " contracts" : "—",
-        "All venues": d => fmtB(d.rh_total_billions) + " contracts",
-        "Share of Kalshi": d => fmtPct(d.rh_share_pct)
+        Destination: d => d.dest,
+        Contracts: d => fmtB(d.value) + " contracts",
+        Basis: d => d.dest === "Rothera"
+          ? "Measured from Rothera"
+          : (d.is_actual ? "Reported by Robinhood" : "Estimated"),
+        "All venues": d => d.rh_total_billions > 0
+          ? fmtB(d.rh_total_billions) + " contracts"
+          : "not yet reported"
       },
-      tip: {format: {x: false, y: false, fill: false}}
-    }),
-    Plot.barY(reportedParsed.filter(d => !d.is_actual), {
-      x: "month_date", y: "rh_kalshi_billions",
-      fill: "var(--accent-robinhood)", fillOpacity: 0.3,
-      channels: {
-        Month: d => fmtDate(d.month_date),
-        Basis: () => "Estimated — not yet reported",
-        "To Kalshi": d => fmtB(d.rh_kalshi_billions) + " contracts",
-        "Share of Kalshi": d => fmtPct(d.rh_share_pct)
-      },
-      tip: {format: {x: false, y: false, fill: false}}
+      tip: {format: {x: false, y: false, fill: false, z: false}}
     })
   ]
 })
