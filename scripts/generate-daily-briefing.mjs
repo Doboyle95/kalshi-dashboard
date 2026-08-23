@@ -27,8 +27,30 @@ async function request(path, options = {}, timeoutMs = 120_000) {
   }
 }
 
-const health = await request("/health", {method: "GET"}, 30_000);
-if (!health.ok) throw new Error(`Daily briefing: data service unhealthy: ${health.error || "unknown error"}`);
+// ── Publishing policy ────────────────────────────────────────────────────────
+// This job PUBLISHES. It does not withhold a briefing because something about it
+// was less than perfect. Every check below records a note and carries on; the only
+// thing that stops a publish is having no prose at all to publish, because there is
+// then literally nothing to write.
+//
+// It used to be the other way round, and the cost was three days of nothing: a
+// ten-venue hard gate turned one wrong SQL filter into a silent outage on 08-20,
+// 08-21 and 08-22. A four-venue briefing that says it covers four venues is worth
+// more than a blank card, and a great deal more than a card still showing Tuesday.
+const notes = [];
+
+// Not fatal in either direction. /health is a summary, not a gate: if the service can
+// still answer /ask and /insights, a briefing built on a degraded service and labelled
+// as such beats no briefing. And a health endpoint that is itself down must not be the
+// thing that stops the day -- it only supplies the model name and the through-date.
+let health = {};
+try {
+  health = await request("/health", {method: "GET"}, 30_000);
+  if (!health.ok) notes.push(`data service reported unhealthy: ${health.error || "unknown error"}`);
+} catch (error) {
+  health = {};
+  notes.push(`health check failed: ${error.message}`);
+}
 
 const requiredVenues = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange", "Crypto.com/Nadex", "ProphetX", "Novig", "Rothera", "CME"];
 
@@ -53,46 +75,54 @@ const anchorQuestion = [
 // One corrective retry that names what went missing turns that class of drift from a
 // failed day into a second attempt, which is the difference between this publishing
 // daily and publishing when the model happens to agree with itself.
+// Returns whatever the anchor produced plus a description of what is missing from it.
+// It never rejects: the caller decides, and the caller's answer is always "publish".
 async function fetchAnchor(correction) {
-  const anchor = await request("/ask", {
-    method: "POST",
-    body: JSON.stringify({question: correction ? `${anchorQuestion} ${correction}` : anchorQuestion})
-  });
-  if (!Array.isArray(anchor.rows) || !anchor.rows.length || !anchor.sql) {
-    return {error: "anchor query returned no usable rows"};
+  let anchor;
+  try {
+    anchor = await request("/ask", {
+      method: "POST",
+      body: JSON.stringify({question: correction ? `${anchorQuestion} ${correction}` : anchorQuestion})
+    });
+  } catch (error) {
+    return {rows: [], missing: requiredVenues, fault: `anchor query failed: ${error.message}`};
   }
-  for (const table of ["daily_overall", "competitor_daily", "prophetx_daily", "cme_daily"]) {
-    if (!anchor.sql.toLowerCase().includes(table)) {
-      return {error: `anchor SQL omitted required source ${table}`};
-    }
-  }
-  const rows = anchor.rows.map((row) => ({
+  const rows = (Array.isArray(anchor.rows) ? anchor.rows : []).map((row) => ({
     ...row,
     venue: row.venue === "Polymarket_US" ? "Polymarket US" : row.venue,
     reporting_density: row.venue === "CME" ? "sparse bulletin" : "regular"
   }));
   const returned = new Set(rows.map((row) => row.venue));
   const missing = requiredVenues.filter((venue) => !returned.has(venue));
-  if (missing.length) return {error: `anchor query omitted ${missing.join(", ")}`, missing};
-  return {anchor, rows};
+  const omittedSources = ["daily_overall", "competitor_daily", "prophetx_daily", "cme_daily"]
+    .filter((table) => !String(anchor.sql || "").toLowerCase().includes(table));
+  return {anchor, rows, missing, omittedSources};
 }
 
+// Two attempts, and we keep the BETTER of the two rather than the later one — a
+// correction that makes things worse should not cost us the good first answer.
 let attempt = await fetchAnchor();
-if (attempt.error) {
-  console.warn(`Daily briefing: first anchor attempt failed (${attempt.error}); retrying with a correction.`);
-  const correction = attempt.missing?.length
+if (attempt.missing.length) {
+  console.warn(`Daily briefing: first anchor attempt missing ${attempt.missing.join(", ")}; retrying with a correction.`);
+  const correction = attempt.rows.length
     ? `Your previous attempt omitted ${attempt.missing.join(", ")}. Those platforms are present in competitor_daily; the usual cause is filtering on complete = TRUE when their flag is NULL. Return a row for all ten venues.`
     : "Your previous attempt did not return a usable table. Return one row per venue for all ten venues, and read from daily_overall, competitor_daily, prophetx_daily and cme_daily.";
-  attempt = await fetchAnchor(correction);
+  const second = await fetchAnchor(correction);
+  if (second.rows.length > attempt.rows.length) attempt = second;
 }
-if (attempt.error) throw new Error(`Daily briefing: ${attempt.error}`);
-const anchor = attempt.anchor;
+
+const anchor = attempt.anchor || {};
 const normalizedAnchorRows = attempt.rows;
+if (attempt.fault) notes.push(attempt.fault);
+if (attempt.omittedSources?.length) notes.push(`anchor SQL did not read ${attempt.omittedSources.join(", ")}`);
+if (attempt.missing.length) notes.push(`anchor covered ${normalizedAnchorRows.length} of ${requiredVenues.length} venues; missing ${attempt.missing.join(", ")}`);
 
 const editorialQuestion = [
   "Write the daily Predict Charts briefing for readers who follow prediction markets and their overlap with sports betting.",
   `The broad data service is currently updated through ${health.aggregate_through || health.raw_trades_through || "the latest available date"}.`,
-  "Use the supplied venue-volume table as the anchor. It already covers all ten venues with a seven-day baseline for each, so venue-versus-venue movement, share shifts and relative momentum are available to you without running any further query.",
+  attempt.missing.length
+    ? `Use the supplied venue-volume table as the anchor. It carries a seven-day baseline for each venue it covers, but this run it covers only ${normalizedAnchorRows.length} of ${requiredVenues.length} venues -- ${attempt.missing.join(", ")} are absent from it. Write the briefing from what is there, and say plainly in the coverage note which venues are not covered today. Do not describe a partial field as the whole industry, and do not guess at the missing venues.`
+    : "Use the supplied venue-volume table as the anchor. It already covers all ten venues with a seven-day baseline for each, so venue-versus-venue movement, share shifts and relative momentum are available to you without running any further query.",
   "Then run only the supporting context queries needed to find genuinely interesting changes. Cross-venue evidence to prefer: competitor_daily contracts and fees for the non-Kalshi platforms, prophetx_daily, cme_daily, Novig, parlay adoption at venues that identify multi-leg products, and settled-outcome accuracy where a venue has enough settled contracts. Kalshi-only depth, to use sparingly rather than by default: product mix, sports versus non-sports, fee revenue, taker-side volume or P&L, and unusually large individual trades.",
   "At least two of the bullets must be about a venue other than Kalshi, or must compare venues against each other. Kalshi is the deepest tape here, not the subject of the briefing: one that is entirely about Kalshi has failed even if every number in it is correct. The anchor table alone always supports a cross-venue bullet, so this never requires inventing significance.",
   "Supporting datasets often lag the volume anchor by a day or two: query each supporting table's own latest complete date and state that date, rather than requiring it to have a row on the newest Kalshi date. If an anchor-date query is empty, retry against that table's MAX(date).",
@@ -103,18 +133,45 @@ const editorialQuestion = [
   "Explicitly mark evidence that is Kalshi-only, distinguish a venue's latest reported day from a common calendar day, and finish with one short coverage note. Do not add a headline or generic methodology explanation."
 ].join(" ");
 
-const deeper = await request("/insights", {
-  method: "POST",
-  body: JSON.stringify({
-    question: editorialQuestion,
-    sql: anchor.sql,
-    rows: normalizedAnchorRows,
-    columns: anchor.columns
-  })
-}, 180_000);
+async function fetchInsights() {
+  try {
+    const deeper = await request("/insights", {
+      method: "POST",
+      body: JSON.stringify({
+        question: editorialQuestion,
+        sql: anchor.sql,
+        rows: normalizedAnchorRows,
+        columns: anchor.columns
+      })
+    }, 180_000);
+    return {deeper, insights: String(deeper.insights || "").trim()};
+  } catch (error) {
+    return {deeper: {}, insights: "", fault: `insights request failed: ${error.message}`};
+  }
+}
 
-const insights = String(deeper.insights || "").trim();
-if (insights.length < 120) throw new Error("Daily briefing: deeper model returned an implausibly short briefing");
+let written = await fetchInsights();
+// One retry on an empty or stub answer, then take what we have. The old floor was 120
+// characters and it THREW -- a short answer became no answer, which is the worse of the
+// two outcomes for a card that states its own age. The floor now decides whether to try
+// again, not whether to publish.
+if (written.insights.length < 120) {
+  console.warn(`Daily briefing: first insights attempt returned ${written.insights.length} chars; retrying once.`);
+  const retry = await fetchInsights();
+  if (retry.insights.length > written.insights.length) written = retry;
+}
+const deeper = written.deeper;
+const insights = written.insights;
+if (written.fault) notes.push(written.fault);
+else if (insights.length < 120) notes.push(`briefing prose came back unusually short (${insights.length} characters)`);
+
+// The ONE condition that stops a publish: nothing to publish. Leaving the previous file
+// in place keeps the last real briefing on the page, which renders its own date and its
+// own age, rather than blanking the card.
+if (!insights) {
+  console.error(`Daily briefing: no prose returned; leaving the previous briefing in place. Notes: ${notes.join("; ") || "none"}`);
+  process.exit(1);
+}
 const anchorDates = normalizedAnchorRows
   .map((row) => new Date(row.report_date))
   .filter((date) => !Number.isNaN(+date));
@@ -129,6 +186,16 @@ const result = {
   service_through: health.aggregate_through || health.raw_trades_through || null,
   title: "What changed in prediction markets",
   insights,
+  // What this run actually managed, so the card can say so instead of the reader
+  // having to infer it. `notes` is for the build log and for anyone reading the JSON;
+  // the page only surfaces the venue count.
+  coverage: {
+    venues_expected: requiredVenues.length,
+    venues_covered: normalizedAnchorRows.length,
+    venues_missing: attempt.missing,
+    degraded: attempt.missing.length > 0 || notes.length > 0
+  },
+  notes,
   evidence: Array.isArray(deeper.evidence) ? deeper.evidence : [],
   anchor: {
     question: anchorQuestion,
@@ -140,4 +207,5 @@ const result = {
 };
 
 await writeFile(outputFile, `${JSON.stringify(result, null, 2)}\n`, "utf8");
-console.log(`Daily briefing written through ${result.data_through || "latest data"}.`);
+console.log(`Daily briefing written through ${result.data_through || "latest data"}: ${result.coverage.venues_covered}/${result.coverage.venues_expected} venues, ${insights.length} characters.`);
+if (notes.length) console.warn(`Daily briefing published WITH NOTES: ${notes.join("; ")}`);

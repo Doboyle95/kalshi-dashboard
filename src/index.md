@@ -25,6 +25,13 @@ const fmtBriefingDate = value => value
 const fmtBriefingStamp = value => value
   ? new Date(value).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York"})
   : "pending";
+// The job publishes even when a run is short of something, rather than withholding the
+// whole card, so the card has to be able to say what a run was short of. Absent on the
+// seed and on any briefing written before coverage was recorded, which reads as fine.
+const briefingCoverage = dailyBriefing?.coverage;
+const briefingShortBy = briefingCoverage && briefingCoverage.venues_covered < briefingCoverage.venues_expected
+  ? `${briefingCoverage.venues_covered} of ${briefingCoverage.venues_expected} venues`
+  : "";
 // The card used to say "Today's briefing". Generation is a scheduled job that can
 // fail, and a failed run silently ages that label into a lie, so the card carries the
 // stamp the JSON itself holds and states the age once it stops being current.
@@ -50,7 +57,7 @@ const briefingCorrection = html`<p class="caption" style="margin: 0 0 0.45rem" h
     ${briefingCorrection}
     <div class="daily-intel-actions">
       <a href="./chat" data-ask-prefill data-question="Go deeper on this prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
-      <span>${briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : ""}</span>
+      <span>${[briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : "", briefingShortBy].filter(Boolean).join(" · ")}</span>
     </div>
   </aside>
 </div>
