@@ -39,12 +39,22 @@ jobs:
       # morning's main run and lose that day entirely. The 18:30 run always regenerates.
       - name: Skip the late run if the briefing already refreshed today
         id: freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           today="$(date -u +%F)"
-          have="$(node -e 'try{process.stdout.write(String(JSON.parse(require("fs").readFileSync("src/daily-briefing.json","utf8")).generated_at||"").slice(0,10))}catch(e){}')"
-          echo "committed=$have today=$today event=${{ github.event_name }} schedule=${{ github.event.schedule }}"
-          if [ "${{ github.event.schedule }}" = "30 22 * * *" ] && [ "$have" = "$today" ]; then
-            echo "Earlier run already refreshed the briefing today; skipping."
+          # This used to test whether the COMMITTED briefing was dated today, which is a
+          # different question and gets the wrong answer whenever a card was published by
+          # hand: on 2026-08-23 a hand-published briefing carried today's date and would
+          # have suppressed this backstop had the 18:30 run failed. Ask the real question.
+          # A failed lookup yields "", which floors to 0 and generates -- failing toward
+          # one extra model call rather than toward a missing day.
+          succeeded="$(gh run list --workflow=daily_briefing.yml --limit 40 \
+            --json conclusion,createdAt,event \
+            --jq "[.[] | select(.event == \"schedule\" and .conclusion == \"success\" and (.createdAt | startswith(\"$today\")))] | length")"
+          echo "successful_scheduled_runs_today=${succeeded:-unknown} today=$today event=${{ github.event_name }} schedule=${{ github.event.schedule }}"
+          if [ "${{ github.event.schedule }}" = "30 22 * * *" ] && [ "${succeeded:-0}" -gt 0 ]; then
+            echo "A scheduled run already succeeded today; skipping the late attempt."
             echo "stale=false" >> "$GITHUB_OUTPUT"
           else
             echo "stale=true" >> "$GITHUB_OUTPUT"

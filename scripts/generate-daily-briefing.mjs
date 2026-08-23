@@ -259,13 +259,19 @@ function draftFaults(result) {
   return [...mixFaults(text), ...wordingFaults(text, sqls)];
 }
 
-async function fetchInsights(correction) {
+// The SECOND correction is deliberately more concrete than the first. Restating the rule
+// is enough when the model simply forgot it; by the time it has failed twice the usual
+// cause is that it could not find an angle, and repeating the rule louder does not help --
+// naming the tables and the comparison does.
+const ESCALATION = " Be concrete this time. Query daily_sports_vs_nonsports, parlay_pnl_unified_daily, taker_pnl_daily or category_daily for Kalshi's own latest complete date, compare that figure against its average over the prior thirty reported days, and put the result in the Kalshi bullet after the headline volume.";
+
+async function fetchInsights(correction, attemptNo = 0) {
   try {
     const deeper = await request("/insights", {
       method: "POST",
       body: JSON.stringify({
         question: correction?.length
-          ? `${editorialQuestion} Your previous draft missed a binding requirement: ${correction.join(" Also, ")}. Rewrite it so every requirement is met, keeping the same plain language. Do not mention the requirement, the retry, or any gap in the data to the reader -- if you cannot satisfy it from what you have, query for something you can and write that bullet instead.`
+          ? `${editorialQuestion} Your previous draft missed a binding requirement: ${correction.join(" Also, ")}. Rewrite it so every requirement is met, keeping the same plain language. Do not mention the requirement, the retry, or any gap in the data to the reader -- if you cannot satisfy it from what you have, query for something you can and write that bullet instead.${attemptNo >= 2 ? ESCALATION : ""}`
           : editorialQuestion,
         sql: anchor.sql,
         rows: normalizedAnchorRows,
@@ -286,12 +292,12 @@ let faults = draftFaults(written);
 // publish; they only decide whether to try again.
 if (written.insights.length < 120 || faults.length) {
   const why = written.insights.length < 120 ? `${written.insights.length} characters` : faults.join("; ");
-  console.warn(`Daily briefing: first insights attempt fell short (${why}); retrying once.`);
+  console.warn(`Daily briefing: first insights attempt fell short (${why}); correcting.`);
   // Up to two corrective attempts. One was not enough: on 2026-08-23 a run failed the
   // Kalshi-depth requirement on the first draft AND its retry, publishing a card that was
   // pure volume. Each attempt is one model call, and only on a day that needs it.
   for (let attemptNo = 0; attemptNo < 2 && faults.length; attemptNo++) {
-    const retry = await fetchInsights(faults);
+    const retry = await fetchInsights(faults, attemptNo + 1);
     const retryFaults = draftFaults(retry);
     // Fewer unmet requirements wins; a tie falls back to the longer answer, which is the
     // old behaviour and the right tiebreak when the retry only rephrased.
