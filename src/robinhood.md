@@ -25,6 +25,7 @@ const monthly = await DataAttachment("data/rh_monthly_estimates.csv").csv({typed
 const weekly  = await DataAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
 const reported = await DataAttachment("data/rh_actual_vs_estimate.csv").csv({typed: true});
 const filing = await DataAttachment("data/rh_daily_filing.csv").csv({typed: true});
+const fcmCmp = await DataAttachment("data/fcm_comparison.csv").csv({typed: true});
 import {renderDateBrush} from "./components/date-brush.js";
 import {freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -305,6 +306,58 @@ Plot.plot({
         "As filed": d => fmtM(d.swap_open_long),
         Rothera: d => d.rothera_oi_value > 0 ? fmtM(d.rothera_oi_value) : "—",
         "Kalshi only": d => fmtM(d.kalshi_open_long)
+      },
+      format: {x: false, y: false}
+    }))
+  ]
+})
+```
+
+## The three FCMs side by side
+
+<p class="section-intro">The same filing, line [8530], for the three firms distributing event contracts. Note the scale is logarithmic — Robinhood's book is roughly a hundred times FanDuel's.</p>
+
+<div class="surface-card compact-details" style="padding:0.75rem 1rem;">
+  <p style="margin:0;">These firms serve different customers, so the same overnight position can correspond to very different amounts of trading at each. The shapes are comparable; the levels are not a proxy for relative volume.</p>
+</div>
+
+```js
+// Long form for a colour-keyed line per firm. Zeros are dropped rather than clamped: a
+// log scale cannot place them, and in every case a zero means the firm had not started
+// yet rather than that it held nothing that day.
+const FCMS = [
+  {key: "robinhood", label: "Robinhood Derivatives", color: "var(--accent-robinhood)"},
+  {key: "coinbase",  label: "Coinbase Financial Markets", color: "var(--accent-secondary)"},
+  {key: "fanduel",   label: "FanDuel Prediction Markets", color: "var(--accent-cme)"}
+];
+const fcmSeries = fcmCmp.flatMap(d =>
+  FCMS.map(f => ({date: d.date, firm: f.label, value: d[f.key]}))
+).filter(d => d.value > 0);
+```
+
+```js
+Plot.plot({
+  marginLeft: 66, marginBottom: 40,
+  height: 340,
+  width,
+  x: {label: null, tickRotate: -35},
+  y: {
+    type: "log",
+    label: "Open position (market value, log scale)",
+    grid: true,
+    tickFormat: d => d >= 1e6 ? "$" + (d / 1e6) + "M" : "$" + (d / 1e3) + "k"
+  },
+  color: {domain: FCMS.map(f => f.label), range: FCMS.map(f => f.color), legend: true},
+  marks: [
+    Plot.line(fcmSeries, {x: "date", y: "value", stroke: "firm", strokeWidth: 1.5}),
+    Plot.tip(fcmCmp, Plot.pointerX({
+      x: "date",
+      y: "robinhood",
+      channels: {
+        Date: d => fmtWeek(d.date),
+        Robinhood: d => d.robinhood > 0 ? fmtM(d.robinhood) : "—",
+        Coinbase: d => d.coinbase > 0 ? fmtM(d.coinbase) : "—",
+        FanDuel: d => d.fanduel > 0 ? fmtM(d.fanduel) : "—"
       },
       format: {x: false, y: false}
     }))
