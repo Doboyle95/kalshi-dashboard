@@ -1,0 +1,130 @@
+{
+  "_readme": [
+    "Public prose whose truth moves with the data. Each entry names where the claim lives,",
+    "quotes enough of it to find, and says how to tell whether it still holds.",
+    "",
+    "kind 'assert' is checked mechanically and is the reliable half: metric + op + value.",
+    "kind 'review' has no mechanical test and is surfaced for a human to judge -- honest,",
+    "rather than pretending a number settles a question of wording.",
+    "",
+    "This registry is NOT a gate. check-prose-claims.mjs reports; it never fails a build,",
+    "never blocks a deploy, and never edits a page. Adding an entry can only produce a line",
+    "in a fortnightly report.",
+    "",
+    "When a claim flips, fix the PROSE and then update or delete the entry. Do not move the",
+    "threshold to make the report green -- the threshold is the claim."
+  ],
+  "claims": [
+    {
+      "id": "dkex-tiny-next-to-kalshi",
+      "file": "src/dkex.md",
+      "quote": "volume is still tiny next to Kalshi",
+      "kind": "assert",
+      "metric": "shareOfKalshi",
+      "args": {"venue": "DKeX", "days": 30},
+      "op": "<",
+      "value": 0.02,
+      "why": "\"tiny next to Kalshi\" stops being fair somewhere around a couple of percent. Daniel named this one as the example of a claim nobody would notice going stale."
+    },
+    {
+      "id": "dkex-public-files-young",
+      "file": "src/dkex.md",
+      "quote": "The public files are young",
+      "kind": "assert",
+      "metric": "reportedDays",
+      "args": {"venue": "DKeX"},
+      "op": "<",
+      "value": 200,
+      "why": "\"Young\" reads oddly once a venue has most of a year of public reporting behind it."
+    },
+    {
+      "id": "nadex-exchange-is-small",
+      "file": "src/nadex.md",
+      "quote": "Nadex exchange is small",
+      "kind": "assert",
+      "metric": "shareOfKalshi",
+      "args": {"venue": "Crypto.com/Nadex", "days": 30},
+      "op": "<",
+      "value": 0.05,
+      "why": "Nadex has been growing on the share charts; \"small\" is a comparative and will not stay true by itself."
+    },
+    {
+      "id": "kalshi-order-of-magnitude-on-fees",
+      "file": "src/compare-fees.md",
+      "quote": "Kalshi is roughly an order of magnitude above the field",
+      "kind": "assert",
+      "metric": "kalshiFeeLeadOverNextVenue",
+      "args": {"days": 30},
+      "op": ">",
+      "value": 4,
+      "why": "An explicit multiple. If a competitor closes the fee gap this is simply wrong, and it is the sentence telling readers to untick Kalshi to read the chart."
+    },
+    {
+      "id": "underdog-zero-trade-days",
+      "file": "src/underdog.md",
+      "quote": "day with no row is a day the exchange did not report",
+      "kind": "assert",
+      "metric": "zeroTradeDayShare",
+      "args": {"venue": "Underdog Exchange"},
+      "op": "<",
+      "value": 0.05,
+      "why": "The page previously said most calendar days reported zero trades, which was false by the time anyone checked. If the file ever does start carrying zero rows, the current wording needs revisiting too."
+    },
+    {
+      "id": "novig-only-aggressor-flag",
+      "file": "src/novig-outcomes.md",
+      "quote": "only competitor that publishes an aggressor flag",
+      "kind": "review",
+      "why": "Repeated on five venue pages. Already contestable: Polymarket US carries exchange-wide maker/taker on its AUTHENTICATED websocket, and this site reads its public CSV, which does not. True of the public feeds, and worth re-reading whenever a competitor's feed changes."
+    },
+    {
+      "id": "rothera-almost-all-sports",
+      "file": "src/rothera.md",
+      "quote": "right now it's almost all sports",
+      "kind": "review",
+      "why": "Says \"right now\", and names the World Cup specifically, so it is dated by construction. Re-read after any major tournament ends."
+    },
+    {
+      "id": "rothera-events-per-bin",
+      "file": "src/rothera.md",
+      "quote": "22–51 effective events per 5-cent bin",
+      "kind": "review",
+      "why": "Hardcoded range with no cell behind it, so it cannot self-update as Rothera's book grows."
+    },
+    {
+      "id": "robinhood-hundred-times-fanduel",
+      "file": "src/robinhood.md",
+      "quote": "roughly a hundred times FanDuel's",
+      "kind": "review",
+      "why": "A stated multiple from the CFTC FCM series, which has not advanced since 2026-05-01 because its input is a lost-laptop file. Frozen inputs make frozen prose look current."
+    },
+    {
+      "id": "market-explorer-not-yet-normalized",
+      "file": "src/market-explorer.md",
+      "quote": "not yet normalized into the shared finder",
+      "kind": "review",
+      "why": "A to-do stated as a fact. It goes stale the moment someone does the work, and nothing else would flag it."
+    },
+    {
+      "id": "underdog-everything-is-sport",
+      "file": "src/underdog.md",
+      "quote": "Everything Underdog has reported so far is a sports contract",
+      "kind": "review",
+      "why": "Found by the discovery scan, not registered by hand. An absolute claim about a venue's whole book, which one non-sport listing falsifies."
+    },
+    {
+      "id": "novig-moneyline-barely-half",
+      "file": "src/novig.md",
+      "quote": "moneyline alone is barely half of Novig's straight book",
+      "kind": "review",
+      "why": "Found by the discovery scan. A stated proportion of a young book, so it moves as Novig's product mix does."
+    },
+    {
+      "id": "cme-some-of-their-contracts",
+      "file": "src/cme.md",
+      "quote": "clear some of their contracts through CME",
+      "kind": "review",
+      "why": "Corrected 2026-08-22 from \"clear their event contracts\", which read as all of them. Re-read if either sportsbook changes where it clears."
+    }
+  ]
+}

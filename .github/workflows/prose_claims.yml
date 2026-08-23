@@ -1,0 +1,66 @@
+name: Check prose claims
+
+# Public prose states things that were true when they were written. Nothing notices
+# when they stop being true -- /underdog claimed "most calendar days so far report
+# zero trades" long after the file had stopped containing a single zero-trade day.
+#
+# Fortnightly is deliberate: these claims move on the scale of weeks, and a daily
+# issue nobody reads is worse than a fortnightly one somebody does.
+on:
+  schedule:
+    # 09:10 UTC on the 1st and 15th. Not on the hour: GitHub queues scheduled runs
+    # heavily at :00 and they drift by tens of minutes.
+    - cron: "10 9 1,15 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: prose-claims
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check registered claims against the current data
+        id: check
+        run: node scripts/check-prose-claims.mjs | tee /tmp/prose-report.md
+        env:
+          CHAT_API_URL: ${{ secrets.CHAT_API_URL }}
+
+      # An issue rather than a commit: the report is a prompt for a person to edit
+      # prose, not an artefact the site needs. One issue is reused so a fortnightly
+      # job cannot accumulate a wall of them.
+      - name: Open or update the review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLIPPED: ${{ steps.check.outputs.flipped }}
+          DETACHED: ${{ steps.check.outputs.detached }}
+        run: |
+          title="Prose claims: fortnightly review"
+          body="$(cat /tmp/prose-report.md)"
+          existing="$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number' || true)"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+            echo "Commented on issue #$existing"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      # Surfaced separately so a flipped claim is visible in the run list itself,
+      # without failing anything -- this job reports, it does not gate.
+      - name: Summarise
+        if: always()
+        run: |
+          echo "### Prose claim check" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Flipped: ${{ steps.check.outputs.flipped }} · Detached: ${{ steps.check.outputs.detached }}" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/prose-report.md >> "$GITHUB_STEP_SUMMARY" || true
