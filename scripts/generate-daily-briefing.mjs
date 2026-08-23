@@ -67,6 +67,10 @@ const anchorQuestion = [
   // say so here rather than leaving the model to guess.
   "In competitor_daily the `complete` column is only populated for Polymarket_US and is NULL for every other platform, where NULL means the row IS complete. Filter it as COALESCE(complete, TRUE) or omit the filter entirely; never write `complete = TRUE`, which silently discards every platform whose flag is NULL.",
   "Exclude partial days. CME is the sparse bulletin series; a normal seven-day lookback spanning seven calendar days is regular, not sparse.",
+  // Venues report on different cadences and some are routinely a day or more behind the
+  // newest date on the board. A single global MAX(date) filter silently deletes exactly
+  // those venues, which is not the same thing as their having no data.
+  "Resolve the latest complete reported day SEPARATELY FOR EACH VENUE. Do not filter the whole result to one shared calendar date, and do not require a venue to have a row on the newest date any venue reported: a venue whose most recent complete day is a few days old is reporting normally and still belongs in the table, on its own date. Each venue's prior-seven-day baseline is its own prior seven REPORTED days, which for an irregular reporter spans more than seven calendar days.",
   `Every one of these ten venues must appear in the result: ${requiredVenues.join(", ")}.`
 ].join(" ");
 
@@ -112,7 +116,38 @@ if (attempt.missing.length) {
 }
 
 const anchor = attempt.anchor || {};
-const normalizedAnchorRows = attempt.rows;
+
+// How far behind the newest reported day each venue is, computed here rather than left
+// for the model to work out from a column of dates. Venues do not all report on the same
+// cadence -- measured over the last 60 days, Novig has 18 reported days and Underdog 34,
+// against Kalshi's 60, and CME is a bulletin. A venue whose latest complete day is a few
+// days old is reporting normally, not missing, and must stay eligible for a bullet; the
+// briefing just has to say which day it is talking about. Handing the model the lag as a
+// number is what lets it say that instead of quietly dropping the venue.
+const anchorTimes = attempt.rows
+  .map((row) => +new Date(row.report_date))
+  .filter((value) => Number.isFinite(value));
+const newestAnchorTime = anchorTimes.length ? Math.max(...anchorTimes) : null;
+const normalizedAnchorRows = attempt.rows.map((row) => {
+  const time = +new Date(row.report_date);
+  const daysBehind = newestAnchorTime != null && Number.isFinite(time)
+    ? Math.round((newestAnchorTime - time) / 86_400_000)
+    : null;
+  return {
+    ...row,
+    days_behind_newest_venue: daysBehind,
+    reporting_recency: daysBehind == null ? "unknown"
+      : daysBehind === 0 ? "current"
+      : daysBehind <= 3 ? `${daysBehind} day${daysBehind === 1 ? "" : "s"} behind — normal reporting lag`
+      : `${daysBehind} days behind — state this date explicitly`
+  };
+});
+// anchor.columns describes the model-written SELECT, so the fields added here are absent
+// from it and would be dropped from the row summary /insights builds.
+const anchorColumns = [
+  ...(Array.isArray(anchor.columns) ? anchor.columns : []),
+  ...["reporting_density", "days_behind_newest_venue", "reporting_recency"]
+].filter((name, index, all) => all.indexOf(name) === index);
 if (attempt.fault) notes.push(attempt.fault);
 if (attempt.omittedSources?.length) notes.push(`anchor SQL did not read ${attempt.omittedSources.join(", ")}`);
 if (attempt.missing.length) notes.push(`anchor covered ${normalizedAnchorRows.length} of ${requiredVenues.length} venues; missing ${attempt.missing.join(", ")}`);
@@ -126,6 +161,11 @@ const editorialQuestion = [
   "Then run only the supporting context queries needed to find genuinely interesting changes. Cross-venue evidence to prefer: competitor_daily contracts and fees for the non-Kalshi platforms, prophetx_daily, cme_daily, Novig, parlay adoption at venues that identify multi-leg products, and settled-outcome accuracy where a venue has enough settled contracts. Kalshi-only depth, to use sparingly rather than by default: product mix, sports versus non-sports, fee revenue, taker-side volume or P&L, and unusually large individual trades.",
   "At least two of the bullets must be about a venue other than Kalshi, or must compare venues against each other. Kalshi is the deepest tape here, not the subject of the briefing: one that is entirely about Kalshi has failed even if every number in it is correct. The anchor table alone always supports a cross-venue bullet, so this never requires inventing significance.",
   "Supporting datasets often lag the volume anchor by a day or two: query each supporting table's own latest complete date and state that date, rather than requiring it to have a row on the newest Kalshi date. If an anchor-date query is empty, retry against that table's MAX(date).",
+  // Daniel, 2026-08-22: a venue must not become ineligible simply because its newest row
+  // is not from yesterday. Novig reports about 18 days in 60 and Underdog about 34, so
+  // treating "not current" as "not reportable" would quietly reduce this to the venues
+  // that happen to publish daily.
+  "Every anchor row carries days_behind_newest_venue and reporting_recency. A venue that is a few days behind is reporting normally, NOT missing or stale: it stays fully eligible for a bullet whenever its trend is the interesting one, and you simply name the date you are describing. Do not silently drop a venue, and do not downgrade a genuinely interesting move to a lesser one, merely because a different venue has a newer row. Only when a venue is far behind the rest should its lag itself be the point, and then say so plainly rather than omitting the venue.",
   "For Kalshi supporting tables, never use a date later than Kalshi's report_date in the supplied anchor table; later category, mix, fee, P&L, or trade rows may be intraday partials even when they lack an is_partial column.",
   "Do not treat category_daily's broad Sports category as the same measure as the three-way sports/non-sports/parlay split. Use daily_sports_vs_nonsports for sports and parlay shares, and use category_daily only for narrower named categories such as elections or commodities.",
   "Return three to five concise bullets, no more than 160 words total. Lead each bullet with a bold factual phrase and quantify changes against a sensible recent baseline. Do not force a TOPIC when nothing notable happened there -- but that is not licence to drop back to Kalshi for every bullet, since the anchor table always carries cross-venue movement worth reporting.",
@@ -141,7 +181,7 @@ async function fetchInsights() {
         question: editorialQuestion,
         sql: anchor.sql,
         rows: normalizedAnchorRows,
-        columns: anchor.columns
+        columns: anchorColumns
       })
     }, 180_000);
     return {deeper, insights: String(deeper.insights || "").trim()};
@@ -201,7 +241,7 @@ const result = {
     question: anchorQuestion,
     sql: anchor.sql,
     rows: normalizedAnchorRows,
-    columns: anchor.columns
+    columns: anchorColumns
   },
   model: health.model || null
 };
