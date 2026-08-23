@@ -153,32 +153,58 @@ if (attempt.omittedSources?.length) notes.push(`anchor SQL did not read ${attemp
 if (attempt.missing.length) notes.push(`anchor covered ${normalizedAnchorRows.length} of ${requiredVenues.length} venues; missing ${attempt.missing.join(", ")}`);
 
 const editorialQuestion = [
-  "Write the daily Predict Charts briefing for readers who follow prediction markets and their overlap with sports betting.",
+  "Write today's Predict Charts briefing: three to five short bullets on what actually moved in prediction markets, for readers who follow the space and its overlap with sports betting. The briefing has a required shape. At least one bullet leads with Kalshi data from beyond plain volume -- where the money went and what traded, not just how much. At least two are about a venue other than Kalshi, or compare venues against each other. Choose those two kinds of bullet first, then fill the rest.",
   `The broad data service is currently updated through ${health.aggregate_through || health.raw_trades_through || "the latest available date"}.`,
   attempt.missing.length
-    ? `Use the supplied venue-volume table as the anchor. It carries a seven-day baseline for each venue it covers, but this run it covers only ${normalizedAnchorRows.length} of ${requiredVenues.length} venues -- ${attempt.missing.join(", ")} are absent from it. Write the briefing from what is there, and say plainly in the coverage note which venues are not covered today. Do not describe a partial field as the whole industry, and do not guess at the missing venues.`
-    : "Use the supplied venue-volume table as the anchor. It already covers all ten venues with a seven-day baseline for each, so venue-versus-venue movement, share shifts and relative momentum are available to you without running any further query.",
-  "Then run only the supporting context queries needed to find genuinely interesting changes. Cross-venue evidence to prefer: competitor_daily contracts and fees for the non-Kalshi platforms, prophetx_daily, cme_daily, Novig, parlay adoption at venues that identify multi-leg products, and settled-outcome accuracy where a venue has enough settled contracts. Kalshi-only depth, to use sparingly rather than by default: product mix, sports versus non-sports, fee revenue, taker-side volume or P&L, and unusually large individual trades.",
-  "At least two of the bullets must be about a venue other than Kalshi, or must compare venues against each other. Kalshi is the deepest tape here, not the subject of the briefing: one that is entirely about Kalshi has failed even if every number in it is correct. The anchor table alone always supports a cross-venue bullet, so this never requires inventing significance.",
-  "Supporting datasets often lag the volume anchor by a day or two: query each supporting table's own latest complete date and state that date, rather than requiring it to have a row on the newest Kalshi date. If an anchor-date query is empty, retry against that table's MAX(date).",
+    ? `The venue-volume figures below carry a one-week average for each venue they cover, but this run covers only ${normalizedAnchorRows.length} of ${requiredVenues.length} venues -- ${attempt.missing.join(", ")} are absent. Write from what is there and do not guess at the rest. End with one plain sentence naming the venues missing today; that is the only closing sentence allowed. Never describe a partial field as the whole industry.`
+    : "The venue-volume figures below already cover all ten venues with a one-week average for each, so venue-versus-venue movement and share shifts are available to you without running any further query.",
+  "Then run only the supporting context queries needed to find genuinely interesting changes. Cross-venue evidence to prefer: competitor_daily contracts and fees for the non-Kalshi platforms, prophetx_daily, cme_daily, Novig, parlay adoption at venues that identify multi-leg products, and settled-outcome accuracy where a venue has enough settled contracts. Kalshi goes far deeper than volume, and that depth is the most valuable material here: product mix, sports versus non-sports, parlay share, fee revenue, taker-side volume, taker P&L, settlement accuracy, and unusually large individual trades.",
+  "Two mix requirements, both binding. At least two bullets must be about a venue other than Kalshi or must compare venues against each other -- Kalshi is the deepest tape here, not the subject of the briefing, and the venue figures alone always support a cross-venue bullet, so this never requires inventing significance. And at least one bullet must be LED by Kalshi data from beyond plain volume, as its own finding rather than a clause inside a cross-venue comparison: taker P&L, fee revenue, settlement accuracy, parlay economics, sports versus non-sports mix, or an unusually large trade. Nothing else in this industry is measured to that depth, so it is worth a bullet of its own most days. That bullet must cover the same recent window as the rest of the briefing: a figure for the latest reported day or the past week, set against a recent baseline. Never reach for an all-time or months-old cumulative total -- this card reports what changed, not what has accumulated. A briefing that is entirely Kalshi has failed; so has one that only ever counts contracts.",
+  "Other datasets often lag the venue volume figures by a day or two: query each one's own latest complete date and use it, rather than requiring a row on the newest Kalshi date. If a query for that date comes back empty, retry against that table's MAX(date).",
   // Daniel, 2026-08-22: a venue must not become ineligible simply because its newest row
   // is not from yesterday. Novig reports about 18 days in 60 and Underdog about 34, so
   // treating "not current" as "not reportable" would quietly reduce this to the venues
   // that happen to publish daily.
-  "Every anchor row carries days_behind_newest_venue and reporting_recency. A venue that is a few days behind is reporting normally, NOT missing or stale: it stays fully eligible for a bullet whenever its trend is the interesting one, and you simply name the date you are describing. Do not silently drop a venue, and do not downgrade a genuinely interesting move to a lesser one, merely because a different venue has a newer row. Only when a venue is far behind the rest should its lag itself be the point, and then say so plainly rather than omitting the venue.",
-  "For Kalshi supporting tables, never use a date later than Kalshi's report_date in the supplied anchor table; later category, mix, fee, P&L, or trade rows may be intraday partials even when they lack an is_partial column.",
+  "Every row in the venue figures below carries days_behind_newest_venue and reporting_recency. A venue that is a few days behind is reporting normally, NOT missing or stale: it stays fully eligible for a bullet whenever its trend is the interesting one, and you simply name the date you are describing. Do not silently drop a venue, and do not downgrade a genuinely interesting move to a lesser one, merely because a different venue has a newer row. Only when a venue is far behind the rest should its lag itself be the point, and then say so plainly rather than omitting the venue.",
+  "For Kalshi supporting tables, never use a date later than Kalshi's report date in the venue figures below; later category, mix, fee, P&L, or trade rows may be intraday partials even when they lack an is_partial column. EARLIER is fine and expected. Kalshi own depth tables routinely trail its volume row by a day: when the category, mix, fee, P&L or trade table has no complete row on that date, fall back to the latest complete date in that table and name that date in the bullet. A missing row for the newest day is a reporting lag, never a reason to drop the Kalshi bullet, and never something to tell the reader about.",
   "Do not treat category_daily's broad Sports category as the same measure as the three-way sports/non-sports/parlay split. Use daily_sports_vs_nonsports for sports and parlay shares, and use category_daily only for narrower named categories such as elections or commodities.",
-  "Return three to five concise bullets, no more than 160 words total. Lead each bullet with a bold factual phrase and quantify changes against a sensible recent baseline. Do not force a TOPIC when nothing notable happened there -- but that is not licence to drop back to Kalshi for every bullet, since the anchor table always carries cross-venue movement worth reporting.",
+  "Return three to five bullets, no more than 150 words in total. One sentence per bullet, two at the very most. Lead each with a short bold phrase naming the finding, then give the numbers against a sensible recent baseline. Bold only that opening phrase -- leave the figures themselves unbolded. Do not force a topic when nothing notable happened there. Kalshi's headline contract count is rarely the most interesting figure available to you; do not open with it unless the move is genuinely unusual. Before you finish, check the draft against the two mix requirements above and rewrite a bullet if either is unmet.",
   "Do not imply a cause, mechanism, or relationship unless a supporting query directly measures it. If the evidence only establishes two simultaneous changes, describe them separately rather than saying one explains the other.",
-  "Explicitly mark evidence that is Kalshi-only, distinguish a venue's latest reported day from a common calendar day, and finish with one short coverage note. Do not add a headline or generic methodology explanation."
+  "PLAIN LANGUAGE, and this is the thing most often got wrong. Write for someone who follows prediction markets and has never seen our database. Keep our internal vocabulary out of the prose entirely: no anchor, baseline table, supporting dataset or query, coverage note, reporting density or recency, sparse bulletin, complete or partial flags, and never name a table or a column, nor quote the value of one. A venue that reports irregularly is described that way in ordinary words -- \"CME, which reports in irregular bulletins\" -- never by repeating an internal label. Write \"its average over the past week\", not \"its prior seven-day baseline\"; write \"on Aug. 21\", not \"its latest complete reported day\". Reach for the shorter, more ordinary word every time, and if a sentence only survives with another clause bolted on, cut the clause instead. A reader should know what happened after one pass. Never narrate the reporting process, and never tell the reader what you did or did not find in the data: no sentence about what a dataset does or does not provide, what could not be measured, or what any instruction here asked of you. If a bullet will not work, write a different bullet and say nothing about the one you dropped. Mark a figure as Kalshi-only where that matters, but in plain words and inside the sentence. No headline, no note about method or coverage, no further reading.",
+  "EVERY BULLET REPORTS SOMETHING THAT HAPPENED. Never spend a bullet on a quirk of the data, on how two reporting dates line up, or on why a figure might be misread. A venue reporting on a lag still belongs, per the rule above -- name the date its figure covers and report the move. What must not happen is a bullet whose subject is the gap between reporting dates rather than anything that traded.",
+  "RECENT INDUSTRY REPORTING appears in the context above. Drawing on it is optional, never required, and capped at one bullet. It earns that bullet when a development from the current or previous month lines up with a movement your own figures already show -- a venue launching or opening a product, a rule or fee change, a legal or regulatory turn. Describe that development in your own words, as something that happened in the market. Never name a publication, a writer, an article or a headline, never link, and never add a further-reading line. Reporting may never supply a number, and may never be given as the cause of a movement -- state the development and the figure plainly and let the reader connect them. Ignore anything older than the current or previous month. If nothing fits, leave news out; that is the normal outcome and costs the briefing nothing."
 ].join(" ");
 
-async function fetchInsights() {
+// The mix requirements are stated in the prompt, and the model honours them about half
+// the time: over five runs on 2026-08-22 two drafts carried no Kalshi depth at all and one
+// mentioned Kalshi only as a volume clause. Same treatment as the ten-venue gate above --
+// check mechanically, correct once, publish whatever we end up with. This is a floor and
+// not a grader: a lenient pass costs nothing, a false fail costs one retry.
+const OTHER_VENUES = requiredVenues.filter((venue) => venue !== "Kalshi");
+const KALSHI_DEPTH = /\b(fees?|revenue|p&l|pnl|profit|loss(es)?|parlays?|sports|non-sports|settled?|settlement|accuracy|takers?|makers?|mix|categor(y|ies)|trade size)\b/i;
+const KALSHI_DEPTH_FAULT = "at least one bullet must be led by Kalshi data from beyond plain volume -- taker P&L, fee revenue, settlement accuracy, parlay economics, sports versus non-sports mix, or an unusually large trade -- for the latest reported day or the past week against a recent baseline, never an all-time or months-old cumulative total";
+
+function mixFaults(text) {
+  const bullets = text.split(/\n(?=\s*[-*])/).map((b) => b.trim()).filter(Boolean);
+  const crossVenue = bullets.filter((b) => OTHER_VENUES.some((venue) => b.includes(venue))).length;
+  const faults = [];
+  if (crossVenue < 2) {
+    faults.push("at least two bullets must be about a venue other than Kalshi, or must compare venues against each other");
+  }
+  if (!bullets.some((b) => /kalshi/i.test(b) && KALSHI_DEPTH.test(b))) {
+    faults.push(KALSHI_DEPTH_FAULT);
+  }
+  return faults;
+}
+
+async function fetchInsights(correction) {
   try {
     const deeper = await request("/insights", {
       method: "POST",
       body: JSON.stringify({
-        question: editorialQuestion,
+        question: correction?.length
+          ? `${editorialQuestion} Your previous draft missed a binding requirement: ${correction.join(" Also, ")}. Rewrite it so every requirement is met, keeping the same plain language. Do not mention the requirement, the retry, or any gap in the data to the reader -- if you cannot satisfy it from what you have, query for something you can and write that bullet instead.`
+          : editorialQuestion,
         sql: anchor.sql,
         rows: normalizedAnchorRows,
         columns: anchorColumns
@@ -191,15 +217,26 @@ async function fetchInsights() {
 }
 
 let written = await fetchInsights();
-// One retry on an empty or stub answer, then take what we have. The old floor was 120
-// characters and it THREW -- a short answer became no answer, which is the worse of the
-// two outcomes for a card that states its own age. The floor now decides whether to try
-// again, not whether to publish.
-if (written.insights.length < 120) {
-  console.warn(`Daily briefing: first insights attempt returned ${written.insights.length} chars; retrying once.`);
-  const retry = await fetchInsights();
-  if (retry.insights.length > written.insights.length) written = retry;
+let faults = written.insights ? mixFaults(written.insights) : [];
+// One retry on a stub answer or an unmet mix, then take what we have. The old floor was
+// 120 characters and it THREW -- a short answer became no answer, which is the worse of
+// the two outcomes for a card that states its own age. Neither check decides whether to
+// publish; they only decide whether to try again.
+if (written.insights.length < 120 || faults.length) {
+  const why = written.insights.length < 120 ? `${written.insights.length} characters` : faults.join("; ");
+  console.warn(`Daily briefing: first insights attempt fell short (${why}); retrying once.`);
+  const retry = await fetchInsights(faults);
+  const retryFaults = retry.insights ? mixFaults(retry.insights) : [];
+  // Fewer unmet requirements wins; a tie falls back to the longer answer, which is the
+  // old behaviour and the right tiebreak when the retry only rephrased.
+  const better = retryFaults.length < faults.length
+    || (retryFaults.length === faults.length && retry.insights.length > written.insights.length);
+  if (retry.insights && better) {
+    written = retry;
+    faults = retryFaults;
+  }
 }
+if (faults.length) notes.push(`briefing mix unmet after retry: ${faults.join("; ")}`);
 const deeper = written.deeper;
 const insights = written.insights;
 if (written.fault) notes.push(written.fault);
