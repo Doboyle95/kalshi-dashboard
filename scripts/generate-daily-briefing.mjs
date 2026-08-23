@@ -30,32 +30,64 @@ async function request(path, options = {}, timeoutMs = 120_000) {
 const health = await request("/health", {method: "GET"}, 30_000);
 if (!health.ok) throw new Error(`Daily briefing: data service unhealthy: ${health.error || "unknown error"}`);
 
+const requiredVenues = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange", "Crypto.com/Nadex", "ProphetX", "Novig", "Rothera", "CME"];
+
 const anchorQuestion = [
   "Build the anchor table for today's Predict Charts industry briefing.",
   "For each prediction-market venue, use its latest complete reported day and return venue, report date, reported contract volume, the average of its prior seven complete reported days, and percent change versus that average.",
   "Use daily_overall for Kalshi and exclude rows where is_partial is true. Use competitor_daily only for platforms other than Kalshi, add ProphetX from prophetx_daily, and add CME from cme_daily. Never use competitor_daily's Kalshi row; it is not the authoritative Kalshi total.",
-  "Exclude partial days. CME is the sparse bulletin series; a normal seven-day lookback spanning seven calendar days is regular, not sparse."
+  // Added 2026-08-22 after three consecutive scheduled failures. competitor_daily.complete
+  // is populated for Polymarket_US ONLY; it is NULL for ForecastEx, DKeX, Underdog Exchange,
+  // Crypto.com/Nadex, Novig and Rothera. `complete = TRUE` therefore drops six of the ten
+  // venues, because NULL = TRUE is NULL rather than false, and the ten-venue gate below
+  // then fails. That is exactly what happened on 08-20, 08-21 and 08-22. The dashboard's
+  // own convention (components/venue-data.js) is that a missing flag means complete, so
+  // say so here rather than leaving the model to guess.
+  "In competitor_daily the `complete` column is only populated for Polymarket_US and is NULL for every other platform, where NULL means the row IS complete. Filter it as COALESCE(complete, TRUE) or omit the filter entirely; never write `complete = TRUE`, which silently discards every platform whose flag is NULL.",
+  "Exclude partial days. CME is the sparse bulletin series; a normal seven-day lookback spanning seven calendar days is regular, not sparse.",
+  `Every one of these ten venues must appear in the result: ${requiredVenues.join(", ")}.`
 ].join(" ");
 
-const anchor = await request("/ask", {
-  method: "POST",
-  body: JSON.stringify({question: anchorQuestion})
-});
-if (!Array.isArray(anchor.rows) || !anchor.rows.length || !anchor.sql) {
-  throw new Error("Daily briefing: anchor query returned no usable rows");
+// The anchor SQL is model-written, so it varies run to run: the same prompt produced
+// working SQL on 08-20 and a six-venue-short result on the three scheduled runs after it.
+// One corrective retry that names what went missing turns that class of drift from a
+// failed day into a second attempt, which is the difference between this publishing
+// daily and publishing when the model happens to agree with itself.
+async function fetchAnchor(correction) {
+  const anchor = await request("/ask", {
+    method: "POST",
+    body: JSON.stringify({question: correction ? `${anchorQuestion} ${correction}` : anchorQuestion})
+  });
+  if (!Array.isArray(anchor.rows) || !anchor.rows.length || !anchor.sql) {
+    return {error: "anchor query returned no usable rows"};
+  }
+  for (const table of ["daily_overall", "competitor_daily", "prophetx_daily", "cme_daily"]) {
+    if (!anchor.sql.toLowerCase().includes(table)) {
+      return {error: `anchor SQL omitted required source ${table}`};
+    }
+  }
+  const rows = anchor.rows.map((row) => ({
+    ...row,
+    venue: row.venue === "Polymarket_US" ? "Polymarket US" : row.venue,
+    reporting_density: row.venue === "CME" ? "sparse bulletin" : "regular"
+  }));
+  const returned = new Set(rows.map((row) => row.venue));
+  const missing = requiredVenues.filter((venue) => !returned.has(venue));
+  if (missing.length) return {error: `anchor query omitted ${missing.join(", ")}`, missing};
+  return {anchor, rows};
 }
-for (const table of ["daily_overall", "competitor_daily", "prophetx_daily", "cme_daily"]) {
-  if (!anchor.sql.toLowerCase().includes(table)) throw new Error(`Daily briefing: anchor SQL omitted required source ${table}`);
+
+let attempt = await fetchAnchor();
+if (attempt.error) {
+  console.warn(`Daily briefing: first anchor attempt failed (${attempt.error}); retrying with a correction.`);
+  const correction = attempt.missing?.length
+    ? `Your previous attempt omitted ${attempt.missing.join(", ")}. Those platforms are present in competitor_daily; the usual cause is filtering on complete = TRUE when their flag is NULL. Return a row for all ten venues.`
+    : "Your previous attempt did not return a usable table. Return one row per venue for all ten venues, and read from daily_overall, competitor_daily, prophetx_daily and cme_daily.";
+  attempt = await fetchAnchor(correction);
 }
-const normalizedAnchorRows = anchor.rows.map((row) => ({
-  ...row,
-  venue: row.venue === "Polymarket_US" ? "Polymarket US" : row.venue,
-  reporting_density: row.venue === "CME" ? "sparse bulletin" : "regular"
-}));
-const requiredVenues = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange", "Crypto.com/Nadex", "ProphetX", "Novig", "Rothera", "CME"];
-const returnedVenues = new Set(normalizedAnchorRows.map((row) => row.venue));
-const missingVenues = requiredVenues.filter((venue) => !returnedVenues.has(venue));
-if (missingVenues.length) throw new Error(`Daily briefing: anchor query omitted ${missingVenues.join(", ")}`);
+if (attempt.error) throw new Error(`Daily briefing: ${attempt.error}`);
+const anchor = attempt.anchor;
+const normalizedAnchorRows = attempt.rows;
 
 const editorialQuestion = [
   "Write the daily Predict Charts briefing for readers who follow prediction markets and their overlap with sports betting.",

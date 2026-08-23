@@ -4,6 +4,12 @@ on:
   schedule:
     # Early afternoon Eastern: late enough for the prior day's venue files to land.
     - cron: "30 18 * * *"
+    # Second attempt, ~4h later. The generate step is skipped when the briefing was
+    # already refreshed today, so on a normal day this run costs one checkout and
+    # makes no model call. It exists because the anchor SQL is model-written and can
+    # vary: 08-20, 08-21 and 08-22 all failed the ten-venue gate on the only attempt
+    # of the day, and a single daily attempt turns one bad roll into a missing day.
+    - cron: "30 22 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -27,13 +33,32 @@ jobs:
         with:
           node-version: 20
 
+      # The skip applies to the LATE cron only, keyed on the schedule expression rather
+      # than on "is it a schedule run" -- an off-hours manual or catch-up generation
+      # stamps generated_at with a UTC date that would otherwise suppress the NEXT
+      # morning's main run and lose that day entirely. The 18:30 run always regenerates.
+      - name: Skip the late run if the briefing already refreshed today
+        id: freshness
+        run: |
+          today="$(date -u +%F)"
+          have="$(node -e 'try{process.stdout.write(String(JSON.parse(require("fs").readFileSync("src/daily-briefing.json","utf8")).generated_at||"").slice(0,10))}catch(e){}')"
+          echo "committed=$have today=$today event=${{ github.event_name }} schedule=${{ github.event.schedule }}"
+          if [ "${{ github.event.schedule }}" = "30 22 * * *" ] && [ "$have" = "$today" ]; then
+            echo "Earlier run already refreshed the briefing today; skipping."
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate briefing from Ask Data
+        if: steps.freshness.outputs.stale == 'true'
         run: node scripts/generate-daily-briefing.mjs
         env:
           CHAT_API_URL: ${{ secrets.CHAT_API_URL }}
           CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
 
       - name: Publish only a changed briefing
+        if: steps.freshness.outputs.stale == 'true'
         id: publish
         run: |
           if git diff --quiet -- src/daily-briefing.json; then

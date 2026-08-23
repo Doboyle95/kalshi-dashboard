@@ -10,8 +10,20 @@ const dailyBriefing = await FileAttachment("daily-briefing.json").json();
 const dailyBriefingReady = dailyBriefing?.status === "ready";
 const dailyBriefingBody = html`<div class="daily-intel-body"></div>`;
 dailyBriefingBody.innerHTML = safeMarkdown(dailyMarked, dailyBriefing?.insights || "The daily briefing is not available yet.");
-const fmtBriefingStamp = value => value
+// Two formatters on purpose, because the two fields are different kinds of value.
+// `data_through` is a bare calendar date ("2026-08-21") that Date parses as UTC
+// midnight, so it has to be read back in UTC or it slips a day for anyone west of
+// Greenwich.
+const fmtBriefingDate = value => value
   ? new Date(value).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"})
+  : "pending";
+// `generated_at` is an INSTANT. Formatting it in UTC stamps an evening run with
+// tomorrow's date -- a 03:06Z generation is 23:06 the previous day in New York, so the
+// card read "Aug 23" on the evening of the 22nd. The 18:30Z schedule happens to land on
+// the same date either way, which is why this only shows up on a manual or catch-up run.
+// The site already reports in Eastern elsewhere (the hourly charts), so stamp it in ET.
+const fmtBriefingStamp = value => value
+  ? new Date(value).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York"})
   : "pending";
 // The card used to say "Today's briefing". Generation is a scheduled job that can
 // fail, and a failed run silently ages that label into a lie, so the card carries the
@@ -32,7 +44,7 @@ const briefingCorrection = html`<p class="caption" style="margin: 0 0 0.45rem" h
     <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
   </div>
   <aside class="daily-intel">
-    <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingStamp(dailyBriefing.data_through)}` : "First run pending"}</span></div>
+    <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingDate(dailyBriefing.data_through)}` : "First run pending"}</span></div>
     <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
     ${dailyBriefingBody}
     ${briefingCorrection}
