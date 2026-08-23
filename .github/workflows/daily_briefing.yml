@@ -52,10 +52,14 @@ jobs:
 
       - name: Generate briefing from Ask Data
         if: steps.freshness.outputs.stale == 'true'
+        # Deliberately NO env block. The script prefers process.env.CHAT_API_URL /
+        # CHAT_TOKEN over src/chat-endpoint.json, and the repository secrets are stale --
+        # they produced "/ask returned HTTP 401" on every scheduled run to date
+        # (08-20, 08-21, 08-22), so this job has never once succeeded on its schedule.
+        # chat-endpoint.json is republished by the VM every 5 minutes and only ever with
+        # a URL that has just answered /health, which makes it the trustworthy source
+        # here. Local runs can still override with the env vars.
         run: node scripts/generate-daily-briefing.mjs
-        env:
-          CHAT_API_URL: ${{ secrets.CHAT_API_URL }}
-          CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
 
       - name: Publish only a changed briefing
         if: steps.freshness.outputs.stale == 'true'
