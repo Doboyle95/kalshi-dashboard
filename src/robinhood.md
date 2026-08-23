@@ -56,6 +56,21 @@ const reportedParsed = reported
 // `complete` is written FALSE for the week still in progress. Its share is sound (both
 // sides are partial) but its volume is not a weekly total, so it is kept out of the
 // volume view and left in the share view rather than dropped from the file.
+// One palette for every destination chart on this page.
+//
+// Kalshi takes --accent-kalshi rather than --accent-robinhood: the segment IS Kalshi
+// volume, and the two green tokens are near-indistinguishable side by side (#5FB81E vs
+// #00C805 in light, #3DDC84 vs #21E065 in dark -- worse). Rothera goes neutral-dark for
+// maximum separation from teal, which also survives red-green colour blindness in a way
+// green-on-green does not.
+const DEST = [
+  {key: "kalshi",     label: "Kalshi",     color: "var(--accent-kalshi)"},
+  {key: "rothera",    label: "Rothera",    color: "var(--theme-foreground)"},
+  {key: "forecastex", label: "ForecastEx", color: "var(--accent-forecastex)"}
+];
+const DEST_DOMAIN = DEST.map(d => d.label);
+const DEST_RANGE  = DEST.map(d => d.color);
+
 const isComplete = d => d.complete === true || String(d.complete).toUpperCase() === "TRUE";
 const weeklyComplete = weekly.filter(isComplete);
 ```
@@ -89,7 +104,7 @@ display(freshnessPanel({
 }));
 ```
 
-## Estimated Robinhood volume on Kalshi
+## Estimated Robinhood volume by destination
 
 ```js
 const rhGrain = view(Inputs.radio(["Weekly", "Monthly"], {label: "Period", value: "Weekly"}));
@@ -99,7 +114,7 @@ const rhGrain = view(Inputs.radio(["Weekly", "Monthly"], {label: "Period", value
 const rhMetric = view(Inputs.radio(["Estimated volume", "Share of Kalshi"], {label: "Metric", value: "Estimated volume"}));
 ```
 
-<p class="section-intro">Estimated only — Robinhood does not report a Kalshi-specific figure.</p>
+<p class="section-intro">Estimated only — Robinhood does not report a per-venue figure. Rothera and ForecastEx are measured; Kalshi is what the model infers.</p>
 
 ```js
 // One series drives both the brush and the chart, so the two can never disagree about
@@ -108,10 +123,12 @@ const rhMetric = view(Inputs.radio(["Estimated volume", "Share of Kalshi"], {lab
 const rhSeries = rhGrain === "Monthly"
   ? monthlyParsed.map(d => ({
       date: d.month_date, value: d.rh_est_billions, share: d.rh_share_pct,
+      rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0,
       kalshi: d.kalshi_billions, label: fmtDate(d.month_date)
     }))
   : (rhMetric === "Estimated volume" ? weeklyComplete : weekly).map(d => ({
       date: d.week_start, value: d.rh_est_billions, share: d.rh_share_pct,
+      rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0,
       kalshi: d.kalshi_billions, label: "Week of " + fmtWeek(d.week_start)
     }));
 ```
@@ -122,7 +139,8 @@ const rhSel = Mutable(d3.extent(rhSeries, d => d.date));
 
 ```js
 display(renderDateBrush({
-  data: rhSeries.map(d => ({date: d.date, value: rhMetric === "Estimated volume" ? d.value : d.share})),
+  data: rhSeries.map(d => ({date: d.date,
+    value: rhMetric === "Estimated volume" ? d.value + d.rothera + d.fx : d.share})),
   initialRange: d3.extent(rhSeries, d => d.date),
   onSelect: range => { rhSel.value = range; },
   color: "var(--accent-robinhood)",
@@ -132,6 +150,12 @@ display(renderDateBrush({
 
 ```js
 const rhView = rhSeries.filter(d => d.date >= rhSel[0] && d.date <= rhSel[1]);
+// Long form for the stack. Kalshi is the estimate; the other two are measured.
+const rhStack = rhView.flatMap(d => [
+  {...d, dest: "Kalshi", v: d.value},
+  {...d, dest: "Rothera", v: d.rothera},
+  {...d, dest: "ForecastEx", v: d.fx}
+]).filter(d => d.v > 0);
 ```
 
 ```js
@@ -141,12 +165,12 @@ const rhLast = rhView.length ? rhView[rhView.length - 1] : null;
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">Peak ${rhGrain.toLowerCase()} (estimated)</div>
+    <div class="kpi-label">Peak ${rhGrain.toLowerCase()} on Kalshi (estimated)</div>
     <div class="kpi-value">${rhMetric === "Estimated volume" ? fmtB(rhPeak?.value) : fmtPct(rhPeak?.share)}</div>
     <div class="kpi-meta">${rhPeak ? `${rhPeak.label} — ${fmtPct(rhPeak.share)} of Kalshi` : ""}</div>
   </div>
   <div class="kpi-card" data-accent="robinhood">
-    <div class="kpi-label">Latest ${rhGrain.toLowerCase()} (estimated)</div>
+    <div class="kpi-label">Latest ${rhGrain.toLowerCase()} on Kalshi (estimated)</div>
     <div class="kpi-value">${rhMetric === "Estimated volume" ? fmtB(rhLast?.value) : fmtPct(rhLast?.share)}</div>
     <div class="kpi-meta">${rhLast ? `${rhLast.label} — ${fmtPct(rhLast.share)} of Kalshi` : ""}</div>
   </div>
@@ -165,25 +189,29 @@ Plot.plot({
     ? {interval: d3.utcMonth, label: null, tickFormat: d => d3.utcFormat("%b '%y")(d), tickRotate: -35}
     : {label: null, tickRotate: -35},
   y: {
-    label: rhMetric === "Estimated volume" ? "Estimated contracts (billions)" : "Estimated share of Kalshi (%)",
+    label: rhMetric === "Estimated volume" ? "Contracts (billions)" : "Estimated share of Kalshi (%)",
     grid: true,
     tickFormat: d => rhMetric === "Estimated volume" ? (+d).toFixed(1) + "B" : d + "%"
   },
+  color: rhMetric === "Estimated volume"
+    ? {domain: DEST_DOMAIN, range: DEST_RANGE, legend: true}
+    : undefined,
   marks: [
     Plot.ruleY([0]),
     rhMetric === "Estimated volume"
-      ? Plot.barY(rhView, {
-          x: "date", y: "value",
-          fill: "var(--accent-robinhood)", fillOpacity: 0.85,
+      ? Plot.barY(rhStack, {
+          x: "date", y: "v", fill: "dest", z: "dest",
+          order: DEST_DOMAIN, fillOpacity: 0.9,
           // Named channels rather than formatting x/y: Plot labels a tip row with the
           // channel's own name, and with `label: null` on x that falls back to the raw
-          // field name. Suppressing x/y and naming three channels gives clean rows.
+          // field name. Suppressing x/y gives clean rows.
           channels: {
             Period: d => d.label,
-            Estimated: d => fmtB(d.value) + " contracts",
-            "Share of Kalshi": d => fmtPct(d.share)
+            Destination: d => d.dest,
+            Contracts: d => fmtB(d.v) + " contracts",
+            "Kalshi share": d => fmtPct(d.share)
           },
-          tip: {format: {x: false, y: false, fill: false}}
+          tip: {format: {x: false, y: false, fill: false, z: false, fillOpacity: false}}
         })
       : Plot.line(rhView, {
           x: "date", y: "share",
@@ -227,11 +255,7 @@ Plot.plot({
   width,
   x: {interval: d3.utcMonth, label: null, tickFormat: d => d3.utcFormat("%b '%y")(d), tickRotate: -35},
   y: {label: "Contracts (billions)", grid: true, tickFormat: d => (+d).toFixed(1) + "B"},
-  color: {
-    domain: ["Kalshi", "Rothera", "ForecastEx"],
-    range: ["var(--accent-robinhood)", "var(--accent-rothera)", "var(--accent-forecastex)"],
-    legend: true
-  },
+  color: {domain: DEST_DOMAIN, range: DEST_RANGE, legend: true},
   marks: [
     Plot.ruleY([0]),
     // `z` is passed explicitly even though barY would inherit it from `fill`: an array
@@ -254,7 +278,9 @@ Plot.plot({
           ? fmtB(d.rh_total_billions) + " contracts"
           : "not yet reported"
       },
-      tip: {format: {x: false, y: false, fill: false, z: false}}
+      // fillOpacity carries reported-vs-estimated visually and is named in the Basis
+      // row already; without suppressing it Plot adds a raw "0.9"/"0.4" line to the tip.
+      tip: {format: {x: false, y: false, fill: false, z: false, fillOpacity: false}}
     })
   ]
 })
@@ -286,9 +312,10 @@ Plot.plot({
     grid: true,
     tickFormat: d => "$" + (+d / 1e6).toFixed(0) + "M"
   },
+  // Same two-greens problem as the stacks: as-filed goes neutral-dark, Kalshi teal.
   color: {
     domain: ["As filed", "Kalshi only"],
-    range: ["var(--accent-rothera)", "var(--accent-robinhood)"],
+    range: ["var(--theme-foreground)", "var(--accent-kalshi)"],
     legend: true
   },
   marks: [
