@@ -128,6 +128,26 @@ const anchorTimes = attempt.rows
   .map((row) => +new Date(row.report_date))
   .filter((value) => Number.isFinite(value));
 const newestAnchorTime = anchorTimes.length ? Math.max(...anchorTimes) : null;
+// Percentage change alone ranks a rounding-error venue above everything else. On
+// Aug 21 ForecastEx's +37.37% was ~270k contracts at 0.16% of measured volume, and it
+// took the lead bullet over Kalshi moving 83M. Share is free to derive from the rows we
+// already have and is what lets the briefing size a move instead of implying every
+// percentage means the same thing.
+//
+// It is APPROXIMATE on purpose: venues report on different dates (see the lag handling
+// above), so this sums each venue's own latest complete day rather than one shared
+// calendar day. Good enough to rank scale, not exact enough to quote to a decimal --
+// the prompt says to round it.
+function anchorVolume(row) {
+  for (const [key, value] of Object.entries(row)) {
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    if (/average|avg|prior|percent|pct|change|rank|behind|share/i.test(key)) continue;
+    if (/volume|contract/i.test(key)) return value;
+  }
+  return null;
+}
+const anchorVolumeTotal = attempt.rows.reduce((sum, row) => sum + (anchorVolume(row) || 0), 0);
+
 const normalizedAnchorRows = attempt.rows.map((row) => {
   const time = +new Date(row.report_date);
   const daysBehind = newestAnchorTime != null && Number.isFinite(time)
@@ -139,14 +159,17 @@ const normalizedAnchorRows = attempt.rows.map((row) => {
     reporting_recency: daysBehind == null ? "unknown"
       : daysBehind === 0 ? "current"
       : daysBehind <= 3 ? `${daysBehind} day${daysBehind === 1 ? "" : "s"} behind — normal reporting lag`
-      : `${daysBehind} days behind — state this date explicitly`
+      : `${daysBehind} days behind — state this date explicitly`,
+    approx_share_of_measured_volume_pct: anchorVolumeTotal > 0 && anchorVolume(row) != null
+      ? Number(((anchorVolume(row) / anchorVolumeTotal) * 100).toFixed(3))
+      : null
   };
 });
 // anchor.columns describes the model-written SELECT, so the fields added here are absent
 // from it and would be dropped from the row summary /insights builds.
 const anchorColumns = [
   ...(Array.isArray(anchor.columns) ? anchor.columns : []),
-  ...["reporting_density", "days_behind_newest_venue", "reporting_recency"]
+  ...["reporting_density", "days_behind_newest_venue", "reporting_recency", "approx_share_of_measured_volume_pct"]
 ].filter((name, index, all) => all.indexOf(name) === index);
 if (attempt.fault) notes.push(attempt.fault);
 if (attempt.omittedSources?.length) notes.push(`anchor SQL did not read ${attempt.omittedSources.join(", ")}`);
@@ -169,6 +192,8 @@ const editorialQuestion = [
   "For Kalshi supporting tables, never use a date later than Kalshi's report date in the venue figures below; later category, mix, fee, P&L, or trade rows may be intraday partials even when they lack an is_partial column. EARLIER is fine and expected. Kalshi own depth tables routinely trail its volume row by a day: when the category, mix, fee, P&L or trade table has no complete row on that date, fall back to the latest complete date in that table and name that date in the bullet. A missing row for the newest day is a reporting lag, never a reason to drop the Kalshi bullet, and never something to tell the reader about.",
   "Do not treat category_daily's broad Sports category as the same measure as the three-way sports/non-sports/parlay split. Use daily_sports_vs_nonsports for sports and parlay shares, and use category_daily only for narrower named categories such as elections or commodities.",
   "Return three to five bullets, no more than 150 words in total. One sentence per bullet, two at the very most. Lead each with a short bold phrase naming the finding, then give the numbers against a sensible recent baseline. Bold only that opening phrase -- leave the figures themselves unbolded. Do not force a topic when nothing notable happened there. Kalshi's headline contract count is rarely the most interesting figure available to you; do not open with it unless the move is genuinely unusual. Before you finish, check the draft against the two mix requirements above and rewrite a bullet if either is unmet.",
+  "SIGNIFICANCE IS NOT PERCENTAGE CHANGE, and ranking by percentage is the most common way this briefing goes wrong. Every row carries approx_share_of_measured_volume_pct, its rough size against the ten venues together. The same percentage means very different things at different venues: the smaller and mid-sized ones routinely swing 30-40% in a day, while the largest rarely move more than 25%, so a big percentage is often an ordinary day. Weigh two separate things before calling any move notable -- whether it is unusual for THAT venue, judged against its own recent range, and whether it is large enough to matter at industry scale. One query over that venue's last thirty reported days settles the first. These rules decide which venue MOVES are worth reporting; they do not replace the required shape stated at the top. The Kalshi bullet from beyond plain volume is still required, and Kalshi's scale means it always clears the materiality bar -- but a bullet about Kalshi's SIZE or share is not that bullet, and does not satisfy it.",
+  "The LEAD bullet must clear both bars. A venue holding well under 1% of measured volume does not open the briefing on a percentage alone -- at that size even a huge percentage is a few hundred thousand contracts against billions elsewhere. This is NOT licence to fall back on the two largest venues: a smaller venue whose move is genuinely unusual FOR IT is more interesting than an ordinary day at a big one, and it still earns a bullet further down the list. When you report a small venue, give the absolute figure and round its share so the reader can size it, and never call it the sharpest move in the industry without that context. That share is APPROXIMATE -- each venue contributes its own latest reported day, so the days do not all match -- and must be written as a rounded approximation, at most one decimal and always hedged: \"about 0.2%\", \"roughly a fifth\", \"under 1% of measured volume\". Never quote it to two or more decimals, and never present it as an exact or measured market share.",
   "Do not imply a cause, mechanism, or relationship unless a supporting query directly measures it. If the evidence only establishes two simultaneous changes, describe them separately rather than saying one explains the other.",
   "PLAIN LANGUAGE, and this is the thing most often got wrong. Write for someone who follows prediction markets and has never seen our database. Keep our internal vocabulary out of the prose entirely: no anchor, baseline table, supporting dataset or query, coverage note, reporting density or recency, sparse bulletin, complete or partial flags, and never name a table or a column, nor quote the value of one. A venue that reports irregularly is described that way in ordinary words -- \"CME, which reports in irregular bulletins\" -- never by repeating an internal label. Write \"its average over the past week\", not \"its prior seven-day baseline\"; write \"on Aug. 21\", not \"its latest complete reported day\". Reach for the shorter, more ordinary word every time, and if a sentence only survives with another clause bolted on, cut the clause instead. A reader should know what happened after one pass. Never narrate the reporting process, and never tell the reader what you did or did not find in the data: no sentence about what a dataset does or does not provide, what could not be measured, or what any instruction here asked of you. If a bullet will not work, write a different bullet and say nothing about the one you dropped. Mark a figure as Kalshi-only where that matters, but in plain words and inside the sentence. No headline, no note about method or coverage, no further reading.",
   "EVERY BULLET REPORTS SOMETHING THAT HAPPENED. Never spend a bullet on a quirk of the data, on how two reporting dates line up, or on why a figure might be misread. A venue reporting on a lag still belongs, per the rule above -- name the date its figure covers and report the move. What must not happen is a bullet whose subject is the gap between reporting dates rather than anything that traded.",
