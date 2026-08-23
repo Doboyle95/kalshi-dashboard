@@ -19,7 +19,10 @@
     prophetx: {depth: "Trade-level", best: "Trade size, prices, parlays, and calibration", available: "Activity · Price distribution · Parlays · Outcomes", limit: "History and scale are narrower than Kalshi's."},
     novig: {depth: "Trade-level, short", best: "Fee regimes, parlays, and leading markets", available: "Activity · Fees · Parlays · Outcomes", limit: "The regulated-exchange history begins in August 2026."},
     rothera: {depth: "Moderate", best: "Robinhood's own exchange and product mix", available: "Activity · Products · Top markets", limit: "End-of-day files do not provide trade-level behavior."},
-    cme: {depth: "Sparse bulletin", best: "FanDuel + DraftKings combined CME volume", available: "Collected-day activity · Calls and puts", limit: "Missing bulletin days are unknown, not zero."}
+    // No `best`: this series is a partial view of two sportsbooks that clear only some
+    // of their contracts through CME, so there is nothing it is genuinely best for.
+    // The renderer below drops any row whose value is absent.
+    cme: {depth: "Sparse bulletin", available: "Collected-day activity · Calls and puts", limit: "Missing bulletin days are unknown, not zero."}
   };
   let focusState = null;
 
@@ -297,7 +300,7 @@
       ["Best for", data.best],
       ["Available evidence", data.available],
       ["Main limitation", data.limit]
-    ].forEach(([label, value]) => {
+    ].filter(([, value]) => value).forEach(([label, value]) => {
       const item = document.createElement("div");
       const labelEl = document.createElement("span");
       const valueEl = document.createElement("strong");

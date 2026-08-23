@@ -5,7 +5,7 @@ title: Underdog Exchange
 <div class="page-hero" data-accent="underdog">
   <div class="page-eyebrow">Underdog Fantasy</div>
   <h1>Underdog Exchange</h1>
-  <p class="page-lead">Underdog Exchange is Underdog Fantasy's CFTC-regulated event-contract exchange. Public reporting began June 24, 2026, and the exchange is still extremely early-stage — most calendar days so far report zero trades. The reports include individual trade prints plus daily market volume and open interest.</p>
+  <p class="page-lead">Underdog Exchange is Underdog Fantasy's CFTC-regulated event-contract exchange. The reports include individual trade prints plus daily market volume and open interest.</p>
 </div>
 
 ```js
@@ -36,7 +36,7 @@ display(freshnessPanel({
     {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "underdog_daily.csv"), meta: "Public Underdog Exchange trade + market reports", tone: "competitor"},
     {label: "Market report", date: latestDate(betType), updatedAt: fileUpdatedAt(freshness, "underdog_market_leaderboard.csv"), meta: "Per-market volume, aggregated to bet type and to the leaderboard", tone: "competitor"}
   ],
-  note: "Underdog Exchange reports are published on Underdog Fantasy's CFTC public-reporting site and lag the trading day by roughly 12-24 hours. Fees are not published in these files, and long stretches with no new date shown here mean the exchange genuinely reported zero trades that day — this is a very new, low-volume exchange, not a data gap."
+  note: "Underdog Exchange reports are published on Underdog Fantasy's CFTC public-reporting site and lag the trading day by roughly 12-24 hours. Fees are not published in these files. A day with no row is a day the exchange did not report, which is not the same as a day with no trades."
 }));
 display(askPageLink({
   question: "Summarize recent Underdog Exchange volume, category mix, bet-type mix, and open interest.",

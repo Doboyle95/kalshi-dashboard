@@ -5,7 +5,7 @@ title: CME (FanDuel + DraftKings)
 <div class="page-hero" data-accent="cme">
   <div class="page-eyebrow">CME · FanDuel + DraftKings</div>
   <h1>CME Event Contracts</h1>
-  <p class="page-lead">FanDuel and DraftKings clear their event contracts through CME. CME publishes daily call/put volume in its Daily Bulletins — these have to be collected by hand within a 24-hour window, so the series is sparse and starts in early 2026, but it's the only public window into the two big sportsbooks' prediction-market volume.</p>
+  <p class="page-lead">FanDuel and DraftKings clear some of their contracts through CME. The Daily Bulletins are collected by hand inside a 24-hour window, so the series is sparse and starts in early 2026.</p>
 </div>
 
 ```js
@@ -23,7 +23,7 @@ display(freshnessPanel({
   items: [
     {label: "Daily volume", date: latestDate(cme), updatedAt: fileUpdatedAt(freshness, "cme_daily.csv"), meta: "CME Daily Bulletin (manual collection)", tone: "competitor"}
   ],
-  note: "CME event-contract volume is collected by hand from daily bulletins within a 24-hour availability window, so days are missing. Figures are FanDuel + DraftKings combined (both clear through CME); they are not trade-level prints."
+  note: "CME event-contract volume is collected by hand from daily bulletins within a 24-hour availability window, so days are missing. Figures are the FanDuel and DraftKings contracts cleared through CME, combined; they are not trade-level prints."
 }));
 display(askPageLink({
   question: "Summarize FanDuel + DraftKings (CME) event-contract volume and how it compares to Kalshi.",
@@ -104,6 +104,6 @@ display(Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>About this data</summary>
-  <p>CME publishes a "Event Contracts – Swap-based" section in its Daily Bulletin showing total call and put volume (and open interest). FanDuel and DraftKings both list their prediction-market contracts as CME swaps, so these figures are the <strong>two sportsbooks combined</strong> — they can't be split apart from the public bulletin alone.</p>
+  <p>CME publishes a "Event Contracts – Swap-based" section in its Daily Bulletin showing total call and put volume (and open interest). FanDuel and DraftKings each clear <strong>some</strong> of their contracts as CME swaps, so these figures are those two streams combined — they can't be split apart from the public bulletin alone, and they are not either sportsbook's whole prediction-market book.</p>
   <p>Each bulletin is only available for about 24 hours, so collection is manual and days are missing — especially before April. We show every day we have rather than interpolating. Volume is contract count for the CME regular-trading-hours session; it is not a trade-level feed, so use it for scale and trend, not microstructure.</p>
 </details>
