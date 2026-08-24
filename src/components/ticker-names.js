@@ -122,6 +122,32 @@ export const WC_TEAMS = {
   AR:"Argentina",
   ES:"Spain",
 };
+
+// KXMENWORLDCUP-26 (outright tournament winner) names 50 of its 66 outcomes with
+// 2-letter ISO codes and the other 16 with the same 3-letter FIFA codes WC_TEAMS
+// already holds. Kept as a SEPARATE map spread over WC_TEAMS rather than merged
+// into it: parseGame() tokenizes KXWCGAME/KXWCADVANCE/KXWCSPREAD/KXWCSCORE codes
+// by longest-match over Object.keys(teamMap), so adding 50 two-letter keys to
+// WC_TEAMS itself would change how the per-game markets split their codes.
+//
+// Every entry below was read off that market's own title in market_metadata
+// ("Will the Canada win the 2026 Men's World Cup?" -> CA:"Canada"), which is the
+// bar the note above sets: any 2-letter code here must be checked against a real
+// ticker. Spellings follow Kalshi's titles, which already agree with WC_TEAMS'
+// (GB is "England", US is "USA", KR is "South Korea").
+export const WC_OUTRIGHT_ISO2 = {
+  AE:"United Arab Emirates", AR:"Argentina", AT:"Austria", AU:"Australia",
+  BE:"Belgium", BR:"Brazil", CA:"Canada", CH:"Switzerland", CL:"Chile",
+  CM:"Cameroon", CN:"China", CO:"Colombia", CR:"Costa Rica", DE:"Germany",
+  DK:"Denmark", EC:"Ecuador", ES:"Spain", FR:"France", GB:"England", GE:"Georgia",
+  GH:"Ghana", GR:"Greece", HR:"Croatia", HU:"Hungary", IE:"Republic of Ireland",
+  IR:"Iran", IT:"Italy", JP:"Japan", KR:"South Korea", MA:"Morocco", MX:"Mexico",
+  NI:"Northern Ireland", NL:"Netherlands", NO:"Norway", PE:"Peru", PL:"Poland",
+  PT:"Portugal", PY:"Paraguay", RO:"Romania", RS:"Serbia", SA:"Saudi Arabia",
+  SC:"Scotland", SE:"Sweden", SN:"Senegal", TN:"Tunisia", TR:"Turkey", UA:"Ukraine",
+  US:"USA", UY:"Uruguay", WA:"Wales",
+};
+export const WC_OUTRIGHT_TEAMS = {...WC_TEAMS, ...WC_OUTRIGHT_ISO2};
 export const CRICKET_TEAMS = {
   // International teams (T20 World Cup, WBC, etc.)
   IND:"India", PAK:"Pakistan", AUS:"Australia", ENG:"England", SA:"South Africa",
@@ -205,6 +231,11 @@ export const CBB_TEAMS = {
 // specific lookups should use getTeamsForMarket to avoid cross-sport collisions)
 export const ALL_TEAMS = {...NFL_TEAMS, ...NBA_TEAMS, ...CBB_TEAMS};
 
+// Routing target for a family whose outcome codes nothing here can decode and whose
+// codes the ALL_TEAMS default would answer WRONGLY. Returning this leaves them as
+// raw codes, visible for triage -- the outcome this file prefers to a wrong name.
+export const NO_DICTIONARY = {};
+
 // PGA Tour player code ? last name
 export const GOLF_PLAYERS = {
   SSCH:"Scheffler", RMCI:"McIlroy",  JROS:"Rose",      TFLE:"Fleetwood",
@@ -213,6 +244,29 @@ export const GOLF_PLAYERS = {
   JTHA:"Thomas",    XSCI:"Scheffler",LWEN:"Wiesberger", RPAL:"Palmer",
   RM:"McIlroy",     SS:"Scheffler",  CAME:"Cam Young",  LABE:"Aberg",
   JBRI:"Bradley",
+};
+
+// Best Picture nominees for the 2026 ceremony. Read off each market's own subtitle
+// in market_metadata (KXOSCARPIC-26-SIN -> "Sinners"), never inferred from the code:
+// SIN is the film "Sinners", and guessing would have produced the tennis player
+// Sinner, which is exactly what this map exists to stop.
+//
+// Deliberately scoped to the -26 ceremony in getTeamsForMarket below. Unlike state
+// or ISO country codes, an award's code set IS its nominee list and is re-minted
+// every year, so a -27 market reusing SIN for a different film would be given a
+// confidently wrong name by a family-wide map. KXOSCARPIC-27 falls back to its raw
+// codes until its own map is added -- the same triage path PGA_EVENTS describes, and
+// the reason there is no map for the other fourteen KXOSCAR* award families.
+//
+// TIE is absent on purpose: decodeOutcomeSuffix answers "TIE" from a shared branch
+// above, before any dictionary is consulted.
+export const OSCAR_BEST_PICTURE_26 = {
+  AHO:"A House of Dynamite", AVA:"Avatar: Fire and Ash", BUG:"Bugonia", F1:"F1",
+  FRAN:"Frankenstein", HAM:"Hamnet", ITW:"It Was Just an Accident", JAY:"Jay Kelly",
+  MAR:"Marty Supreme", NOO:"No Other Choice", ONE:"One Battle After Another",
+  REN:"Rental Family", SEC:"The Secret Agent", SEN:"Sentimental Value",
+  SIN:"Sinners", SPRI:"Springsteen: Deliver Me from Nowhere", TRA:"Train Dreams",
+  WIC:"Wicked: For Good",
 };
 
 // Route a market_key to the right sport-specific team dictionary so e.g. a
@@ -227,11 +281,34 @@ export function getTeamsForMarket(mk) {
   if (/^KXMLB/.test(mk))                       return MLB_TEAMS;
   if (/^KXNHL/.test(mk))                       return NHL_TEAMS;
   if (/^KXUCL|^KXEPL|^KXLALIGA/.test(mk))      return SOCCER_TEAMS;
-  if (/^KXWCGAME|^KXWCADVANCE|^KXWCSPREAD|^KXWCSCORE|^KXMENWORLDCUP/.test(mk)) return WC_TEAMS;
+  if (/^KXWCGAME|^KXWCADVANCE|^KXWCSPREAD|^KXWCSCORE/.test(mk)) return WC_TEAMS;
+  // Outright winner market -- 2-letter ISO codes on top of the FIFA ones.
+  if (/^KXMENWORLDCUP/.test(mk))               return WC_OUTRIGHT_TEAMS;
   if (/^KXT20|^KXICC|^KXWBC/.test(mk))         return CRICKET_TEAMS;
   if (/^KXIPL/.test(mk))                       return IPL_TEAMS;
-  if (/^KXATP|^KXWTA|^KXWMEN|^KXFOMEN|^KXUSOMEN|^KXAOMEN|^KXAUSOPEN/.test(mk)) return TENNIS_PLAYERS;
-  if (/^KXPGATOUR|^KXMASTERS|^KXUSOPEN/.test(mk)) return GOLF_PLAYERS;
+  // The women's singles families are spelled W-WOMEN / USO-WOMEN / FO-WOMEN / AO-WOMEN,
+  // which none of the men's prefixes match; before they were listed here they reached
+  // TENNIS_PLAYERS only via the cross-map that used to end decodeOutcomeSuffix.
+  if (/^KXATP|^KXWTA|^KXWMEN|^KXWWOMEN|^KXFOMEN|^KXFOWOMEN|^KXUSOMEN|^KXUSOWOMEN|^KXAOMEN|^KXAOWOMEN|^KXAUSOPEN/.test(mk)) return TENNIS_PLAYERS;
+  // PGA here is the Producers GUILD of America, not the Professional Golfers'
+  // Association: KXPGAAWARDS-26-DOC names films ("Will Sentimental Value win the
+  // Darryl F. Zanuck Award for Outstanding Producer..."). It must be taken out of the
+  // KXPGA* golf prefix below, and it cannot simply fall through to the ALL_TEAMS
+  // default either -- that answers the film code ALA with CBB's "Alabama". Must stay
+  // ABOVE the golf line.
+  if (/^KXPGAAWARDS/.test(mk))                 return NO_DICTIONARY;
+  // KXPGA* covers the championship (KXPGA-25), the round-lead, top-N, head-to-head
+  // and cut markets. KXUSOPEN is the GOLF US Open ("Will the Aaron Baddeley win the
+  // US Open Championship?"); the tennis one is KXUSOMEN*/KXUSOWOMEN*, matched above.
+  //
+  // The exclusion is KXPGARYDER- with the dash, not KXPGARYDER: the Ryder Cup team
+  // market (KXPGARYDER-RC25) settles to USA / EU / EUR / TIE, but KXPGARYDERTOP-25
+  // ("Will Bryson DeChambeau win the Ryder Cup Top Points Scorer?") is an ordinary
+  // player market with 4-letter golf codes. A dashless exclusion swallows both and
+  // costs KXPGARYDERTOP 18 correct player names.
+  if (/^KXPGA(?!RYDER-)|^KXMASTERS|^KXUSOPEN|^KXTHEOPEN/.test(mk)) return GOLF_PLAYERS;
+  if (/^CLOSESTSTATE/.test(mk))                return STATE_NAMES;
+  if (/^KXOSCARPIC-26/.test(mk))               return OSCAR_BEST_PICTURE_26;
   return ALL_TEAMS;
 }
 
@@ -664,6 +741,23 @@ export const WINNER_BY_MARKET = {
   "KXSUPERBOWLAD-SB2026":"Various",
 };
 
+// Ticker families whose B-prefixed strike buckets are DATES (YYMMDD), not numbers.
+//
+// The digits cannot decide this. KXHORMUZNORM-26MAR17-B260701 is 2026-07-01 -- its
+// title is "...be above 60 before July 1, 2026?" -- while KXBTC-26JAN1600-B104125 is
+// a $104,125 price bucket, and both are six digits. KXBTC, KXBTCY, KXBNBY, KXHYPEY,
+// PROLLS and NASDAQ100D all mint six-digit price buckets, so a shape-scoped rule
+// would render prices as dates and dates as prices.
+//
+// Every family here was confirmed from its own market title in market_metadata:
+//   KXTRADEDEALCUBA-27-B260501         "...trade deal with Cuba before May 1, 2026?"
+//   KXLEAVEHOUSECOMBO-27JAN01-B261103  "...be exactly 4 before November 3, 2026?"
+//   KXHORMUZNORM-26MAR17-B260715       "...be above 60 before July 15, 2026?"
+// Add a family only on that same evidence. An unlisted family is treated as a
+// number, which is the safe direction: the digits stay visible either way.
+const B_DATE_BUCKET_FAMILIES = /^KXHORMUZNORM|^KXTRADEDEALCUBA|^KXLEAVEHOUSECOMBO/;
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 // -- Shared outcome-suffix decoding --------------------------------------------
 // fmtStrike (busiest-traded outcome) and fmtWinner (settled outcome) read the same
 // Kalshi outcome tickers off the same rows, so the suffix -> human-name rules live
@@ -706,6 +800,19 @@ export function decodeOutcomeSuffix(short, mk) {
   // non-numeric codes: it stripped the leading B off "B1F7402D1E7" and rendered
   // "1F7402D1E7".
   if (/^KXMVE/.test(mk)) return "-";
+  // KXOSCARWINNERS is the same shape of market for the Oscars: one contract per
+  // COMBINATION of winners across several awards -- "Will Mikey Madison, Zoe Saldana,
+  // The Wild Robot, Emilia Perez, Sing Sing win Best Actress, Best Supporting
+  // Actress, ...?" -- named with a 5-hex-digit combination id. 10,066 of them, a new
+  // combination mints a new id, and the readable form exists only in the market
+  // title, never in the code, so nothing in this file could ever decode "DF0B4".
+  // Same reasoning as KXMVE above, same "-".
+  //
+  // This also disarms an ambiguity in the /^B[0-9]/ branch below: 111 of these ids
+  // are all digits after a leading B ("B8231"), so that branch would otherwise
+  // comma-format a combination id into the number "8,231". The other 316 B-prefixed
+  // ids ("B7C4B") are the case that branch already refuses to strip.
+  if (/^KXOSCARWINNERS/.test(mk)) return "-";
   // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
   if (short === "TIE") return "Draw";
   // Fed rate outcomes
@@ -742,7 +849,26 @@ export function decodeOutcomeSuffix(short, mk) {
     if (Number.isFinite(n) && n >= 1000) return n.toLocaleString();
     return short;
   }
-  if (/^B[0-9]/.test(short)) return short.slice(1);
+  // B-prefixed strike buckets. The B is Kalshi's bucket prefix, not part of the value.
+  if (/^B[0-9]/.test(short)) {
+    const rest = short.slice(1);
+    // /^B[0-9]/ only means "B then a digit" -- it does NOT mean the rest is a number.
+    // It matched the parlay combination id B1F7402D1E7 and rendered "1F7402D1E7", a
+    // mangled id passing for data. Anything non-numeric keeps its B and stays raw.
+    if (!/^[0-9]+(\.[0-9]+)?$/.test(rest)) return short;
+    // Date buckets before number formatting -- see B_DATE_BUCKET_FAMILIES for why the
+    // family, not the shape, has to decide. Without this, KXHORMUZNORM's B260701
+    // formats to "260,701", which reads convincingly as a price.
+    const bd = B_DATE_BUCKET_FAMILIES.test(mk) ? rest.match(/^(\d{2})(\d{2})(\d{2})$/) : null;
+    if (bd && +bd[2] >= 1 && +bd[2] <= 12 && +bd[3] >= 1 && +bd[3] <= 31)
+      return `by ${MONTH_ABBR[+bd[2] - 1]} ${+bd[3]}, 20${bd[1]}`;
+    // Otherwise a number, and it gets the same comma-thousands treatment the bare
+    // number branch above gives. Returning rest unformatted is what made
+    // KXBTCY-27JAN0100 render "52500" instead of "52,500".
+    const n = Number(rest);
+    if (Number.isFinite(n) && n >= 1000) return n.toLocaleString();
+    return rest;
+  }
   // World Cup exact-score outcomes like "MEX2ECU0" -> "Mexico 2-0 Ecuador"
   if (/^KXWCSCORE/.test(mk)) {
     const sc = short.match(/^([A-Z]{3})(\d+)([A-Z]{3})(\d+)$/);
@@ -754,9 +880,31 @@ export function decodeOutcomeSuffix(short, mk) {
   // Nothing was stripped (the outcome ticker IS the market key, a single-outcome
   // market) - there's no code left to decode, so don't leak the raw ticker.
   if (short === mk) return "-";
-  // Sport-aware team / player fallback
+  // Sport-aware team / player fallback. No cross-map: this line used to read
+  //   teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short
+  // which consulted the golf and tennis dictionaries for EVERY market, whatever sport
+  // it was -- so a code its own map missed was answered by whichever player happened
+  // to share it. That is CLAUDE.md correctness rule 1, and it was live on three
+  // published outcomes: CLOSESTSTATE-24-AZ (Arizona) rendered "Zverev",
+  // KXOSCARPIC-26-SIN (the film Sinners) rendered "Sinner", and KXMENWORLDCUP-26-CA
+  // (Canada) rendered "Alcaraz" -- the same failure that once made the World Cup's
+  // busiest outcome read "Rublev". It was wrong inside correctly-routed golf families
+  // too: KXMASTERS-25-JS is Jordan Spieth and read "Sinner", KXUSOPEN-25-TF is Tommy
+  // Fleetwood and read "Fritz".
+  //
+  // A cross-map can only ever fire for a market whose own family we have not
+  // classified, and for such a market there is nothing to justify reading its code as
+  // a golfer or a tennis player rather than a state, a film or a country. So it has no
+  // sound case: it is a guess, and this file's rule is that an unverified guess is
+  // worse than a fallback to the raw code, which stays visible for triage.
+  //
+  // Every row that reached it is now routed to a dictionary that answers directly:
+  // measured over market_leaderboard.csv, large_trades.csv and
+  // taker_pnl_by_market_leaderboard.csv in all four published generations, it was the
+  // last resort for exactly 14 (market_key, code) pairs, all 14 of which the routing
+  // table above now resolves.
   const teamMap = getTeamsForMarket(mk);
-  return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
+  return teamMap[short] ?? short;
 }
 
 export function fmtWinner(d) {

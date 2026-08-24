@@ -84,8 +84,11 @@ serves both. Add a new suffix rule here, once; a rule added to only one caller i
 how the Winner cell came to read `H0` beside a Busiest-outcome cell reading
 `Hold`. Order matters — these are tried top to bottom:
 
-1. `KXMVE*` parlays → `"—"` (opaque combination id, no fix path; see rule 6 in
-   `CLAUDE.md`). Must stay above step 8.
+1. `KXMVE*` parlays and `KXOSCARWINNERS*` → `"—"` (opaque combination id, no fix
+   path; see rule 6 in `CLAUDE.md`). Must stay above step 8. `KXOSCARWINNERS` is
+   one contract per *combination* of winners across several awards, named with a
+   5-hex-digit id; 111 of those ids are all digits after a leading `B`, so without
+   this step 8 would comma-format the id `B8231` into the number `8,231`.
 2. `TIE` → `Draw` (soccer 3-way markets).
 3. Fed codes: `H0` → `Hold`, `H2` → `+2 bps (hike)`, `C25` → `-25 bps (cut)`.
 4. Days: `42D` → `42 days`, `1D` → `1 day`.
@@ -94,11 +97,29 @@ how the Winner cell came to read `H0` beside a Busiest-outcome cell reading
 7. Percent: if `market_key` starts with `POPVOTEMOV`, bare numbers or `B1.4`
    get a `%` suffix. **No other markets get `%`** — Bitcoin price strikes
    and Electoral College margins are raw integers.
-8. Bare numbers ≥ 1000 get comma-formatting (e.g. `494000` → `494,000`);
-   `B`-prefixed levels drop the `B` (`B4800` → `4800`).
+8. Bare numbers ≥ 1000 get comma-formatting (e.g. `494000` → `494,000`).
+   `B`-prefixed buckets drop the `B` and get the **same** comma-formatting
+   (`B4800` → `4,800`) — returning the digits unformatted is what made
+   `KXBTCY-27JAN0100` render `52500`. Two guards on that:
+   - The remainder must actually be numeric. `/^B[0-9]/` only means "B then a
+     digit", so it also matched the id `B1F7402D1E7` and rendered `1F7402D1E7`;
+     anything non-numeric now keeps its `B` and stays raw.
+   - **Families whose `B` buckets are dates are listed in
+     `B_DATE_BUCKET_FAMILIES`**, because the digits cannot tell you which it is:
+     `KXHORMUZNORM-…-B260701` is 2026-07-01 and `KXBTC-…-B104125` is \$104,125,
+     and both are six digits. Add a family there only on the evidence of its own
+     market title, the way the three present ones were.
 9. `KXWCSCORE*` exact scores: `MEX2ECU0` → `Mexico 2-0 Ecuador`.
 10. Nothing was stripped (suffix equals the market key) → `"—"`.
-11. Fallback: team/player decode via `getTeamsForMarket`.
+11. Fallback: team/player decode via `getTeamsForMarket`, then the **raw code**.
+    There is deliberately no cross-map. This step used to end
+    `?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short]`, i.e. it asked the golf and
+    tennis dictionaries about every market whatever its sport, so a code the
+    market's own dict missed was answered by whichever player shared it —
+    `CLOSESTSTATE-24-AZ` (Arizona) read "Zverev", `KXOSCARPIC-26-SIN` (the film
+    Sinners) read "Sinner", `KXMENWORLDCUP-26-CA` (Canada) read "Alcaraz". A raw
+    code is the correct answer here: it is visible and triageable, and an
+    unverified guess is worse.
 
 ## Sport routing — `getTeamsForMarket(market_key)`
 
@@ -115,9 +136,24 @@ Which dict to use for a given market prefix:
 | `KXUCL…`, `KXEPL…`, `KXLALIGA…`             | `SOCCER_TEAMS`  |
 | `KXT20…`, `KXICC…`, `KXWBC…`                | `CRICKET_TEAMS` |
 | `KXIPL…`                                    | `IPL_TEAMS`     |
-| `KXATP…`, `KXWTA…`, `KXWMEN…`, `KXFOMEN…`, `KXUSOMEN…`, `KXAOMEN…`, `KXAUSOPEN…` | `TENNIS_PLAYERS` |
-| `KXPGATOUR…`, `KXMASTERS…`, `KXUSOPEN…`     | `GOLF_PLAYERS`  |
+| `KXMENWORLDCUP…`                            | `WC_OUTRIGHT_TEAMS` (FIFA 3-letter **+** ISO 2-letter) |
+| `KXATP…`, `KXWTA…`, `KXWMEN…`, `KXWWOMEN…`, `KXFOMEN…`, `KXFOWOMEN…`, `KXUSOMEN…`, `KXUSOWOMEN…`, `KXAOMEN…`, `KXAOWOMEN…`, `KXAUSOPEN…` | `TENNIS_PLAYERS` |
+| `KXPGAAWARDS…`                              | `NO_DICTIONARY` — Producers **Guild**, not golf |
+| `KXPGA…` (except `KXPGARYDER-`), `KXMASTERS…`, `KXUSOPEN…`, `KXTHEOPEN…` | `GOLF_PLAYERS`  |
+| `CLOSESTSTATE…`                             | `STATE_NAMES`  |
+| `KXOSCARPIC-26…`                            | `OSCAR_BEST_PICTURE_26` |
 | (anything else)                             | `ALL_TEAMS` (fallback) |
+
+Three traps this table has already sprung, all of them a prefix meaning two things:
+
+- `KXUSOPEN` is the **golf** US Open; the tennis one is `KXUSOMEN`/`KXUSOWOMEN`.
+- `KXPGAAWARDS` is the Producers **Guild** of America; its outcomes are films.
+- The golf exclusion is `KXPGARYDER-` **with the dash**. `KXPGARYDER-RC25` is a
+  team event (USA / EU / EUR), but `KXPGARYDERTOP-25` is an ordinary player
+  market, and a dashless exclusion swallows both.
+
+An award map is scoped to its **year** (`KXOSCARPIC-26`) because a code set that
+is a nominee list gets re-minted annually; a state or ISO country map is not.
 
 **This is the most important correctness guardrail.** Team codes are reused
 across sports. Always route by `market_key` before decoding team codes.
@@ -250,6 +286,16 @@ When changing logic, these results must still hold for the current CSV:
 
 - Don't use `ALL_TEAMS` for any code you've already routed via
   `getTeamsForMarket` — it will produce cross-sport collisions.
+- **Don't reinstate a cross-map fallback** (`?? GOLF_PLAYERS[short] ??
+  TENNIS_PLAYERS[short]`) at the end of `decodeOutcomeSuffix`. It can only ever
+  fire for a market whose family is unrouted, and for such a market nothing
+  justifies reading the code as a golfer rather than a state, a film or a country.
+  It was wrong even inside correctly-routed golf families: `KXMASTERS-25-JS` is
+  Jordan Spieth and read "Sinner". Route the family instead.
+- Don't guess what an outcome code stands for. Confirm it against that market's
+  own `title`/`subtitle` in `market_metadata` — that is how `SIN` was established
+  as the film *Sinners* and `CA` as *Canada*. An unverified guess is worse than
+  leaving the raw code visible.
 - Don't add `%` to arbitrary bare-number strikes. Only `POPVOTEMOV*` markets
   get `%`.
 - Don't treat `market_name === market_key` as a valid label — Kalshi leaves
