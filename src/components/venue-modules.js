@@ -97,12 +97,31 @@ export const bucketColor = b => BUCKET_COLORS[b] ?? "var(--pc-unclassified)";
 
 // ── Products ────────────────────────────────────────────────────────────────
 
+// ⚠ THE DAY KEY. `date` arrives as a Date on every page that loads {typed: true} --
+// which is all of them -- and as a string anywhere that does not, so a key expression
+// has to survive both. `String(d.date).slice(0, 10)` does NOT: on a Date it yields
+// "Mon Aug 03", weekday-first, year-less, and a day early west of UTC. It still groups
+// correctly by accident (weekday+month+day is unique inside a two-year window), which
+// is exactly why it survived -- the damage shows up only when something tries to read
+// the key back. Keying on the UTC-midnight timestamp round-trips exactly instead.
+//
+// Number, not ISO string, on purpose: toISOString() THROWS on an unparseable date and
+// the page-side filter admits any truthy value, so one bad row would take the whole
+// PAGE down rather than one chart. Date.UTC() returns NaN, NaN is a valid Map key under
+// SameValueZero so bad rows collapse into one discardable group, and d3.min/d3.max skip
+// NaN so First/Last stay right.
+const utcDay = d => {
+  const v = d instanceof Date ? d : new Date(`${String(d).slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(+v) ? NaN : Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+};
+const isoDay = ms => (Number.isNaN(+ms) || ms == null ? "" : new Date(ms).toISOString().slice(0, 10));
+
 // Category mix over time. `measure` is "Share" or "Contracts": share answers "what
 // is this venue FOR", contracts answers "how big is it" -- and on a venue whose
 // volume grew by orders of magnitude the two look nothing alike, which is why the
 // toggle exists rather than a default.
 export function categoryMix({rows, width, measure = "Share", categories, colorOf, height = 340}) {
-  const byDate = d3.rollup(rows, rs => d3.sum(rs, d => +d.contracts || 0), d => String(d.date).slice(0, 10));
+  const byDate = d3.rollup(rows, rs => d3.sum(rs, d => +d.contracts || 0), d => utcDay(d.date));
   const share = measure === "Share";
   // ⚠ ROLL UP TO ONE ROW PER DAY PER BUCKET BEFORE PLOTTING. Every venue except Kalshi
   // publishes its categories per SPORT -- Novig sends Baseball/Tennis/Basketball/... and
@@ -115,7 +134,7 @@ export function categoryMix({rows, width, measure = "Share", categories, colorOf
   const perDay = d3.rollup(
     rows.filter(d => categories.includes(d.category)),
     rs => d3.sum(rs, d => +d.contracts || 0),
-    d => String(d.date).slice(0, 10),
+    d => utcDay(d.date),
     d => d.category
   );
   const stacked = [];
@@ -126,7 +145,7 @@ export function categoryMix({rows, width, measure = "Share", categories, colorOf
     // Contracts measure keeps those days, where zero is the honest value.
     if (share && !(total > 0)) continue;
     for (const [category, contracts] of byCategory) {
-      stacked.push({date: asDate(day), category, contracts, share: total > 0 ? contracts / total : 0});
+      stacked.push({date: new Date(day), category, contracts, share: total > 0 ? contracts / total : 0});
     }
   }
   const points = stacked
@@ -154,14 +173,20 @@ export function categoryMix({rows, width, measure = "Share", categories, colorOf
 
 // All-time totals behind the chart above, so a thin category is legible as a number
 // even when its band is one pixel tall.
+//
+// ⚠ These three fields keyed on String(d.date).slice(0, 10) until 2026-08-24, which on
+// the Date objects {typed: true} hands them read "Mon Aug 03". `days` came out right by
+// luck, but d3.min/d3.max over those strings compare WEEKDAY NAMES alphabetically, so
+// every venue's First/Last was nonsense -- Novig showed "Fri Aug 07" to "Wed Aug 19"
+// for a file spanning 2026-08-04 to 2026-08-23. Same key helper as the chart above.
 export function categoryTotals(rows) {
   const total = d3.sum(rows, d => +d.contracts || 0);
   return Array.from(
     d3.rollup(rows, rs => ({
       contracts: d3.sum(rs, d => +d.contracts || 0),
-      days: new Set(rs.map(d => String(d.date).slice(0, 10))).size,
-      firstSeen: d3.min(rs, d => String(d.date).slice(0, 10)),
-      lastSeen: d3.max(rs, d => String(d.date).slice(0, 10))
+      days: new Set(rs.map(d => utcDay(d.date)).filter(k => !Number.isNaN(k))).size,
+      firstSeen: isoDay(d3.min(rs, d => utcDay(d.date))),
+      lastSeen: isoDay(d3.max(rs, d => utcDay(d.date)))
     }), d => d.category),
     ([category, v]) => ({category, ...v, share: total > 0 ? v.contracts / total : 0})
   ).sort((a, b) => b.contracts - a.contracts);
