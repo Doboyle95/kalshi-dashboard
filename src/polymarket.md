@@ -466,11 +466,11 @@ Plot.plot({
 <p class="section-intro">Multi-leg parlays &mdash; Polymarket&rsquo;s &ldquo;Combinatoric Athletic Outcome Contracts&rdquo;, or combos &mdash; first traded 2026-08-05 and opened to all users on 2026-08-20. The earlier activity reflects the limited-access rollout; data from August 20 onward reflects the public launch.</p>
 
 ```js
-// Same toggle as Kalshi's parlay pages, and the same wording, so the two read alike.
-const parlayMetric = view(Inputs.radio(["volume", "stakes"], {
-  value: "volume", label: "Metric",
-  format: x => x === "volume" ? "Volume (contracts)" : "Taker stakes ($)"
-}));
+// Same two toggles, same wording and the same shared builder as every other venue's
+// parlay chart, so they read alike.
+import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
+const parlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
+const parlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabel}));
 ```
 
 ```js
@@ -494,6 +494,15 @@ const parlayRows = parlay
   }))
   .sort((a, b) => a.date - b.date);
 
+// The chart's own rows: one per day whatever the file's grain, with the venue's all-day
+// total carried along so a month's share is recomputed from its own numerator and
+// denominator rather than averaging twenty daily percentages.
+const parlayDaily = toDailyParlay(parlay, {
+  date: "date", contracts: "contracts", stake: "stake_usd",
+  complete: "complete", venue: "venue_contracts",
+  keep: (cur, r) => { cur.trades = (cur.trades ?? 0) + (+r.trades || 0); }
+});
+
 const parlayPeak = d3.greatest(parlayRows, d => d.pct);
 // Contracts ARE dollars on this venue: every matured combo settles at exactly 1 or 0
 // (voids at 0.50), so a contract is a $1 claim and the count is a face-value figure --
@@ -507,29 +516,18 @@ const fmtUSD0 = n => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n 
 ```
 
 ```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 280,
-  marginLeft: 76,
-  x: {type: "utc", label: null},
-  y: {
-    label: parlayMetric === "volume" ? "Daily volume (contracts)" : "Daily taker stakes ($)",
-    grid: true,
-    tickFormat: d => parlayMetric === "volume" ? fmtAxisNum(d) : fmtUSD0(d)
-  },
-  marks: [
-    // Bars, not an area: twelve days of a launch ramp is a series of discrete days, and a
-    // smoothed curve over that few points invents a shape the data does not have.
-    Plot.rectY(parlayRows, {
-      x1: d => d.date,
-      x2: d => new Date(d.date.getTime() + 864e5),
-      y: d => parlayMetric === "volume" ? d.contracts : d.stake,
-      fill: "#B07AA1", fillOpacity: 0.85, tip: true,
-      title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts)} contracts\n${fmtUSD0(d.stake)} staked\n${d.trades.toLocaleString()} trades\n${d.pct.toFixed(2)}% of the venue that day`
-    }),
-    Plot.ruleY([0])
-  ]
+// Bars, not an area: a launch ramp this short is a series of discrete periods, and a
+// smoothed curve over that few points invents a shape the data does not have.
+// volumeUnit "dollars" because a matured combo settles at exactly 1 or 0, so the contract
+// count IS a face-value dollar figure here — labelling it a bare count understates it.
+parlayChart({
+  daily: parlayDaily,
+  granularity: parlayGranularity,
+  metric: parlayMetric,
+  color: "#B07AA1",
+  width, height: 280,
+  volumeUnit: "dollars",
+  extraTip: d => `${(d.trades ?? 0).toLocaleString()} trades`
 })
 ```
 

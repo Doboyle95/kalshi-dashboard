@@ -21,6 +21,11 @@ const pct1     = n => (n == null ? "n/a" : n.toFixed(1) + "%");
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {renderDateBrush} from "./components/date-brush.js";
+// Only the toggle wording, so this chart and the five venue parlay charts that DO use the
+// shared builder cannot end up calling the same thing two different names. The chart itself
+// stays here: it is the one parlay chart fed by two producers on two bases, and it carries
+// leg-count fields in its tooltip that no venue file has.
+import {metricLabel} from "./components/parlay-series.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const heRaw   = await DataAttachment("data/parlay_house_edge_by_legs.csv").csv({typed: true});
@@ -164,7 +169,11 @@ const tline = timeRaw
       median_legs: +d.median_legs,
       pct_vol_4plus: +d.pct_vol_4plus,
       pct_correlated: +d.pct_correlated,
-      total_vol: +d.total_vol
+      total_vol: +d.total_vol,
+      // Dollars the buyer put up, taker-YES only, on the same entry-cohort month as
+      // total_vol beside it. Both attribute a parlay's whole life to the month it FIRST
+      // traded, so neither is a calendar-month cash figure.
+      taker_stake: +d.taker_stake
     };
   })
   .sort((a,b) => a.date - b.date);
@@ -196,13 +205,19 @@ const volDay = (() => {
   for (const r of volTypeRaw) {
     if (!r.date) continue;
     const k = dayStr(r.date);
-    const cur = by.get(k) || {vol: 0, pending: 0};
+    const cur = by.get(k) || {vol: 0, pending: 0, stake: 0};
     cur.vol += +r.contracts || 0;
+    // taker_yes_stake is the dollars the buyer paid, taker-YES only. Its denominator is
+    // NOT contracts': 12.6% of parlay contracts carry a taker-side value of exactly zero
+    // (the 'na' side, plus yes prints at price 0), so dividing the two columns into each
+    // other does not give an average price for the whole book.
+    cur.stake += +r.taker_yes_stake || 0;
     if (+r.unmapped_flag === 1) cur.pending += +r.contracts || 0;
     by.set(k, cur);
   }
   return [...by.entries()]
     .map(([k, v]) => ({date: d3.utcParse("%Y-%m-%d")(k), day: k, total_vol: v.vol,
+                       taker_stake: v.stake,
                        pct_pending: v.vol ? 100 * v.pending / v.vol : 0}))
     .sort((a, b) => a.date - b.date);
 })();
@@ -210,14 +225,18 @@ const volDay = (() => {
 // Measured monthly-vs-daily gap for the caption, on the last COMPLETE month (the
 // current month is partial in both series). Derived, not hardcoded: the old caption
 // blamed pending-classification volume, which now explains almost none of it.
-const riseBasisNote = (() => {
-  const by = d3.rollup(volDay, v => d3.sum(v, d => d.total_vol), d => d.day.slice(0, 7));
-  const rows = tline.filter(d => d.total_vol > 0 && by.has(d.month));
+// Takes the metric because the two columns have their own gaps: the monthly file is an
+// INNER join on leg_facts, so the unclassified tail it drops is a different share of the
+// dollars than it is of the contracts.
+const riseBasisNote = metric => {
+  const key = metric === "stakes" ? "taker_stake" : "total_vol";
+  const by = d3.rollup(volDay, v => d3.sum(v, d => d[key]), d => d.day.slice(0, 7));
+  const rows = tline.filter(d => d[key] > 0 && by.has(d.month));
   const last = rows[rows.length - 2] ?? rows[rows.length - 1];
   if (!last) return "";
-  const gap = 100 * (by.get(last.month) / last.total_vol - 1);
+  const gap = 100 * (by.get(last.month) / last[key] - 1);
   return ` — different bases, so in ${last.month} the daily view ran ${gap.toFixed(0)}% above the monthly bar`;
-})();
+};
 ```
 
 <div class="instruction-line"><strong>Shared time window:</strong> drag the brush once to update every time-series chart on this page. The underlying tables and cross-sectional charts stay on their full available sample.</div>
@@ -241,25 +260,33 @@ const inParlayRange = row => row.date >= parlayBrushFrom && row.date <= parlayBr
 
 ## The rise of multi-leg betting
 
-_Parlay volume in **contracts** — from a standing start in late 2025 to billions of contracts per month. Monthly bars come from the leg-classified anatomy file, daily bars from the volume-by-type feed that counts every parlay contract${riseBasisNote}._
+_From a standing start in late 2025 to billions of contracts a month. **Stakes** is the money bettors actually paid, and a long-shot ticket is a lot of contracts and very little of it${riseBasisNote(riseMetric)}._
 
 ```js
 const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View"}));
+const riseMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: metricLabel}));
 ```
 
 ```js
 const riseDaily = riseGranularity === "Daily";
+const riseStakes = riseMetric === "stakes";
+// One key, read off both sources, so the toggle cannot show contracts on one granularity
+// and dollars on the other.
+const riseKey = riseStakes ? "taker_stake" : "total_vol";
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 72,
   x: {type: "utc", label: null},
-  y: {label: riseDaily ? "Daily parlay volume (contracts)" : "Monthly parlay volume (contracts)", grid: true, tickFormat: d => d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M"},
+  y: {label: `${riseDaily ? "Daily" : "Monthly"} parlay ${riseStakes ? "stakes (USD)" : "volume (contracts)"}`, grid: true,
+      tickFormat: riseStakes ? (d => fmtUSD(d)) : (d => d>=1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")},
   marks: [
+    // Both numbers are in the tooltip on both settings, so flipping the toggle never hides
+    // the one the reader was looking at.
     riseDaily
-      ? Plot.rectY(volDay.filter(inParlayRange), {x: "date", interval: d3.utcDay, y: "total_vol", fill: "#f4a736",
-          tip: true, title: d => `${d.day}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nPending classification: ${pct1(d.pct_pending)}`})
-      : Plot.rectY(tline.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "#f4a736",
-          tip: true, title: d => `${d.month}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
+      ? Plot.rectY(volDay.filter(inParlayRange), {x: "date", interval: d3.utcDay, y: riseKey, fill: "#f4a736",
+          tip: true, title: d => `${d.day}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nTaker stakes: ${fmtUSD(d.taker_stake)}\nPending classification: ${pct1(d.pct_pending)}`})
+      : Plot.rectY(tline.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: riseKey, fill: "#f4a736",
+          tip: true, title: d => `${d.month}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nTaker stakes: ${fmtUSD(d.taker_stake)}\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
     Plot.ruleY([0])
   ]
 }))
@@ -664,7 +691,7 @@ const lotteryFloor = new Date("2026-06-07");
 <div class="control-strip">
 
 ```js
-const lotteryMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: x => x === "volume" ? "Volume (contracts)" : "Taker stakes ($)"}));
+const lotteryMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: metricLabel}));
 ```
 
 </div>
