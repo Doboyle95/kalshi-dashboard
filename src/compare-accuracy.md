@@ -260,9 +260,21 @@ const rolled = Array.from(
 ).sort((a, b) => a.perContract - b.perContract);
 
 // Kalshi publishes ALL as well as its two halves; showing all three double-counts the
-// same contracts in one bar chart, so the aggregate is held out of the comparison and
-// reported on its own below.
-const headline = rolled.filter(d => !(d.venue === "Kalshi" && d.group === "ALL"));
+// same contracts in one chart, so the aggregate is held out of the comparison and
+// reported on its own below. DERIVED, not hardcoded to Kalshi, because both charts on this
+// page need this rule and a hardcoded one drifted: the line chart below never got it and
+// plotted Kalshi's aggregate on top of its own single-markets series, in the same venue
+// colour, for as long as the chart has existed. Derived NARROWLY, too -- ProphetX's producer
+// also emits group='ALL', but as its ONLY group, so a blanket "drop every ALL row" would
+// delete the one venue whose missing half is the point. Only an aggregate that its own
+// halves reconstruct is held out.
+const aggregateVenues = new Set(
+  Array.from(d3.group(pnl, d => d.venue))
+    .filter(([, rows]) => new Set(rows.map(d => d.group)).size > 1)
+    .map(([venue]) => venue)
+);
+const isDoubleCounted = d => d.group === "ALL" && aggregateVenues.has(d.venue);
+const headline = rolled.filter(d => !isDoubleCounted(d));
 const kalshiAll = rolled.find(d => d.venue === "Kalshi" && d.group === "ALL");
 const parlayRows = rolled.filter(d => d.group === "PARLAY");
 
@@ -409,10 +421,15 @@ realised, but not an edge`,
 // Bins thinner than this carry too little volume to read as anything but noise on a
 // per-contract axis, where a handful of contracts can swing a bin by whole cents.
 const MIN_BIN_CONTRACTS = 1000;
-const byBin = pnl
+// Hold the double-counted aggregate out FIRST, on the same rule the bar chart uses, then
+// count `dropped` against what survives it. The caption below attributes every omitted row
+// to thin volume, so folding the aggregate's bins into that count would print a false
+// reason for them.
+const comparableBins = pnl.filter(d => !isDoubleCounted(d));
+const byBin = comparableBins
   .filter(d => d.contracts >= MIN_BIN_CONTRACTS)
   .map(d => ({...d, label: seriesLabel(d.venue, d.group)}));
-const dropped = pnl.length - byBin.length;
+const dropped = comparableBins.length - byBin.length;
 ```
 
 ```js
