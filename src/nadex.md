@@ -232,6 +232,36 @@ Plot.plot({
 })
 ```
 
+## Parlay volume
+
+<p class="section-intro">The same product in contracts rather than as a share, so a busy month is visible as a busy month.</p>
+
+```js
+import {GRANULARITIES, parlayChart, toDailyParlay} from "./components/parlay-series.js";
+const ndParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Monthly", label: "View"}));
+```
+
+```js
+// Volume only, and there is no metric toggle here on purpose. The one Nadex stake series
+// is keyed on the SETTLEMENT session, not the trading day, and it starts eight months after
+// parlays did — putting it behind the same toggle as this chart would offer two bars that
+// look comparable and count different populations. The money is in Parlay P&L below.
+//
+// The denominator is attached after the rollup rather than read off a column: catDaily has
+// one row per category per day, so a per-row venue field would be counted once per category.
+const ndVenueByDay = d3.rollup(
+  catDaily, v => d3.sum(v, d => +d.contracts || 0), d => d3.utcFormat("%Y-%m-%d")(d.date)
+);
+const ndParlayDaily = toDailyParlay(
+  catDaily.filter(d => d.category === "Parlays"),
+  {date: "date", contracts: "contracts"}
+).map(d => ({...d, venue: ndVenueByDay.get(d.day) ?? null}));
+display(parlayChart({
+  daily: ndParlayDaily, granularity: ndParlayGranularity, metric: "volume",
+  color: "var(--accent-nadex)", width, height: 280
+}));
+```
+
 ## Parlay P&L
 
 ```js

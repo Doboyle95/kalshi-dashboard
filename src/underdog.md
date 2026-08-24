@@ -239,6 +239,41 @@ Plot.plot({
 })
 ```
 
+## Parlay volume and stakes
+
+<p class="section-intro">The same parlay band on its own, in contracts and in the money bettors put up for them.</p>
+
+```js
+import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
+const udParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
+const udParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabel}));
+const brushParlay = view(makeBrush(daily, UNDERDOG));
+```
+
+```js
+// A UDXCOMBO print's price is the combo's OWN price, not one leg's, so quantity x price is
+// what the buyer paid. Underdog reports whole days only -- a date with no row is a date the
+// exchange did not report, not a quiet day -- so no per-day partial flag is passed; only the
+// running month is faded.
+const [pS, pE] = brushParlay;
+const udParlayDaily = toDailyParlay(
+  daily.filter(d => d.date >= pS && d.date <= pE),
+  {date: "date", contracts: "contracts_parlay", stake: "stake_parlay", venue: "contracts"}
+);
+display(parlayChart({
+  daily: udParlayDaily, granularity: udParlayGranularity, metric: udParlayMetric,
+  color: UNDERDOG, width, height: 260
+}));
+```
+
+```js
+const udParlayContracts = d3.sum(daily, d => +d.contracts_parlay || 0);
+const udParlayStake = d3.sum(daily, d => +d.stake_parlay || 0);
+const udAllContracts = d3.sum(daily, d => +d.contracts || 0);
+```
+
+<p class="chart-note">Parlays are ${(100 * udParlayContracts / udAllContracts).toFixed(1)}% of Underdog's contracts but only $${fmtCount(udParlayStake)} of stake, bought at ${(100 * udParlayStake / udParlayContracts).toFixed(1)}&cent; each.</p>
+
 ## Category mix
 
 <p class="section-intro">Volume by sport, parsed from each contract's ticker.</p>

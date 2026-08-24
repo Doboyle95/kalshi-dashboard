@@ -74,6 +74,8 @@ const parlayAll = d3.sum(
   ).values()
 );
 const maxLegs = d3.max(parlay, d => d.legs);
+// Dollars parlay takers paid, on the same rows as parlayTotal above.
+const parlayStakeTotal = d3.sum(parlay.filter(d => d.legs > 1), d => +d.taker_value || 0);
 const novigDateSel = Mutable([d3.min(daily, d => d.date), d3.max(daily, d => d.date)]);
 display(renderDateBrush({
   data: daily.map(d => ({date: d.date, value: d.contracts})),
@@ -411,6 +413,36 @@ if (feeT) display(html`<div class="instruction-line" style="border-left-color:va
   <p><strong>The split is exhaustive, which is the check that matters.</strong> Parlay contracts plus straight contracts equal this page's own daily volume on every date, to the cent, so the fee calculation neither double-counts a trade nor drops one. Fees are counted on the taker side only, consistent with every other number on this page.</p>
   ${takeRateNote}
 </details>
+
+## Parlay volume and stakes
+
+```js
+import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
+const nvParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
+const nvParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabel}));
+```
+
+```js
+// The venue denominator is attached AFTER the daily rollup, never as a column. This file
+// has one row per leg count, and every one of them carries the same day total, so reading
+// it as a per-row field adds the denominator once per leg bucket and the share lands about
+// eight times too small. Same derivation as the KPI above: sum(pct_of_day) = 100*sum(v)/total.
+const nvDayTotal = d3.rollup(
+  parlay.filter(d => +d.pct_of_day > 0),
+  v => 100 * d3.sum(v, d => d.contracts) / d3.sum(v, d => +d.pct_of_day),
+  d => String(d.date)
+);
+const nvParlayDaily = toDailyParlay(
+  parlay.filter(d => d.legs > 1 && d.date >= novigBrushFrom && d.date <= novigBrushTo),
+  {date: "date", contracts: "contracts", stake: "taker_value"}
+).map(d => ({...d, venue: nvDayTotal.get(String(d.date)) ?? null}));
+display(parlayChart({
+  daily: nvParlayDaily, granularity: nvParlayGranularity, metric: nvParlayMetric,
+  color: NV, width, height: 280
+}));
+```
+
+<div class="instruction-line">Parlays are ${parlayAll ? `${(100 * parlayTotal / parlayAll).toFixed(1)}%` : "—"} of Novig's contracts, bought at ${(100 * parlayStakeTotal / parlayTotal).toFixed(1)}&cent; each &mdash; a price quoted all-in, so the parlay fee is already inside it.</div>
 
 ## Parlays by leg count
 

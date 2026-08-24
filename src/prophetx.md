@@ -45,6 +45,8 @@ const partial = daily.filter(d => d.complete !== 1);
 const totalContracts = d3.sum(complete, d => d.contracts);
 const totalTrades = d3.sum(complete, d => d.trade_count);
 const parlayContracts = d3.sum(complete, d => d.contracts_parlay);
+// Dollars parlay buyers paid. Complete days only, like every other figure quoted here.
+const parlayStakes = d3.sum(complete, d => d.stake_parlay);
 const meanDaily = totalContracts / complete.length;
 const usable = recon.filter(r => r.usable === 1).length;
 const pxBrushSeries = daily.map(d => ({date: d.date, value: d.contracts})).sort((a, b) => a.date - b.date);
@@ -132,6 +134,35 @@ Plot.plot({
 const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true});
 const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
 ```
+
+## Parlay volume and stakes
+
+```js
+import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
+const pxParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
+const pxParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabel}));
+```
+
+```js
+// Both metrics off the tape, on the page's shared window. The partial newest date is kept
+// rather than filtered out the way the charts above do it — parlayChart fades an unfinished
+// period instead of dropping it, which is the same disclosure without the gap.
+//
+// A MULTI-EVENT contract's price is the parlay's own price: mean price falls monotonically
+// with leg count (0.34 at two legs to 0.02 at twelve) where a complement would rise, and
+// only 11 of 18,262 multi-print parlays ever show a price and its complement. That is why
+// this venue publishes a dollar figure for parlays and for nothing else.
+const pxParlayDaily = toDailyParlay(
+  daily.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo),
+  {date: "date", contracts: "contracts_parlay", stake: "stake_parlay", complete: "complete", venue: "contracts"}
+);
+display(parlayChart({
+  daily: pxParlayDaily, granularity: pxParlayGranularity, metric: pxParlayMetric,
+  color: PX, width, height: 280
+}));
+```
+
+<div class="instruction-line">Parlays are ${(100 * parlayContracts / totalContracts).toFixed(1)}% of ProphetX's contracts, bought at ${(100 * parlayStakes / parlayContracts).toFixed(1)}&cent; each.</div>
 
 ## Biggest games by volume
 
