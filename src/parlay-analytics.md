@@ -691,7 +691,7 @@ const lotteryFloor = new Date("2026-06-07");
 <div class="control-strip">
 
 ```js
-const lotteryMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: x => x === "volume" ? "Volume (contracts)" : "Taker stakes ($)"}));
+const lotteryMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: metricLabel}));
 ```
 
 </div>
