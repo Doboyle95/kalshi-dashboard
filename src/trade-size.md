@@ -645,7 +645,8 @@ function rowsForTable(tableName, metricLabel) {
       taker_stake: d.taker_stake,
       taker_side: d.taker_side || "-",
       metric_value: metricValue(d, metricKey),
-      pct_of_market: d.pct_of_market
+      pct_of_market: d.pct_of_market,
+      is_block_trade: d.is_block_trade
     }));
 }
 ```
@@ -679,6 +680,12 @@ function tradeDetail(row) {
   ];
   if (row.one_party_stake != null) facts.push({label: "One-party stake", value: fmtUSD(row.one_party_stake)});
   if (row.taker_stake != null) facts.push({label: "Taker stake", value: fmtUSD(row.taker_stake)});
+  // Kalshi flags block trades itself; no competitor venue publishes one. Null
+  // is "not known", which is most of this leaderboard -- the flag is only
+  // captured from 2026-08-24 on, plus a backfill of the window the API still
+  // serves. Do not render null as "No".
+  if (row.venue === "Kalshi") facts.push({label: "Block trade",
+    value: row.is_block_trade == null ? "Not known" : row.is_block_trade ? "Yes" : "No"});
   return {
     crumb: `${fmtCount(row.contracts)} trade`,
     eyebrow: `Individual trade · ${row.venue}`,
