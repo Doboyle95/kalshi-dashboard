@@ -2801,6 +2801,116 @@ const mktRanked = [...mktLeaderboard]
     };
   });
 
+// The Date column carries TWO different facts depending on the row, and the table has
+// no room to say which. Returned together so `mktDisplay` and the inspector drawer
+// can never disagree about either the value or what it means.
+const mktRowDate = d => {
+  const parsed = parseMarketDateFromKey(d.market_key);
+  if (parsed) return {date: parsed, basis: "Game or event date, decoded from the ticker"};
+  const raw = d.last_trade_date;
+  const ltd = raw instanceof Date
+    ? raw
+    : (typeof raw === "string" && raw ? new Date(raw) : null);
+  // An unsettled market's last trade date only means "so far", so the cell stays blank
+  // rather than implying the market has ended.
+  return d.winner_ticker && String(d.winner_ticker).trim() && ltd
+    ? {date: ltd, basis: "Last day a trade printed — the effective settlement date"}
+    : {date: null, basis: null};
+};
+
+```
+
+```js
+// ── Click-to-inspect for the Individual Market Leaderboard ───────────────────
+// The same Kalshi market opens a drawer on /market-explorer, and did nothing here — in
+// the largest market table on the site, the one a reader reaches after filtering to a
+// category. This wires the Market cell to the shared inspector.
+//
+// It cannot reuse components/inspect-tables.js: those builders take normalizeLeaderboard's
+// row shape, and these rows are THIS page's own decode of market_leaderboard.csv
+// (bestName / fmtWinner / getSportDisplayCategory). So the row -> detail mapping is local,
+// and it reads the already-decoded display_name / winner_display / display_cat straight off
+// the row rather than decoding a second time — the drawer cannot name a market differently
+// from the cell that opened it.
+const mktInspector = typeof window === "undefined" ? null : window.PredictChartsInspector;
+
+// ⚠ The pc_* selection namespace is GLOBAL and restore()'s key does NOT scope it — it only
+// stops one page restoring twice. Without the state.source check in the resolver below, a
+// selection link copied from /market-explorer or /trade-size would resolve against THESE
+// rows and silently open a different market.
+const MKT_INSPECT_SOURCE = "categories-markets";
+
+function mktMarketDetail(row) {
+  if (!row) return null;
+  const name = row.display_name || row.market_key;
+  const {date, basis} = mktRowDate(row);
+  const settled = !!(row.winner_ticker && String(row.winner_ticker).trim());
+  // fmtWinner returns "-" when nothing decodes. That is an absence, not an outcome.
+  const winner = settled && row.winner_display && row.winner_display !== "-"
+    ? row.winner_display
+    : null;
+  const feesRaw = row.fees_total;
+  const fees = (feesRaw == null || feesRaw === "" || isNaN(+feesRaw)) ? null : +feesRaw;
+  const outcomes = (row.n_outcomes == null || row.n_outcomes === "" || isNaN(+row.n_outcomes))
+    ? null
+    : Math.round(+row.n_outcomes);
+  return {
+    crumb: name,
+    eyebrow: `Kalshi market · ${row.display_cat || row.kalshi_category || "Uncategorized"}`,
+    title: name,
+    subtitle: row.market_key,
+    value: `${fmtC(row.contracts)} contracts`,
+    delta: `#${row.rank} of the ${mktRanked.length.toLocaleString()} largest Kalshi markets by contracts`,
+    facts: [
+      {label: "Category", value: row.display_cat || row.kalshi_category || "Not published"},
+      {label: "Volume", value: `${Math.round(row.contracts || 0).toLocaleString()} contracts`},
+      // Same rule as the Kalshi fees column: a published 0 is a fee holiday or a pre-fee
+      // market, not a measured zero, so it reads N/A there and it reads N/A here.
+      {label: "Kalshi fees", value: fees ? `$${fmtC(fees)}` : "N/A"},
+      {label: date ? (basis.startsWith("Game") ? "Game date" : "Last trade") : "Date",
+       value: date ? fmtDate(date) : "Not dated in this file"},
+      {label: "Outcomes", value: outcomes == null ? "Not published" : outcomes.toLocaleString()},
+      {label: "Series", value: row.report_ticker || "—"}
+    ],
+    sections: [
+      {title: "Available market evidence", items: [
+        {label: "Settlement",
+         description: settled
+           ? "Kalshi published a winning outcome ticker for this market"
+           : "No winning outcome in this leaderboard rebuild — still open, or awaiting settlement metadata",
+         value: settled ? "Settled" : "Not settled"},
+        winner
+          ? {label: "Winner", description: "Decoded from the winning outcome ticker; Kalshi publishes no winner name", value: winner}
+          : null,
+        date ? {label: "Date basis", description: basis, value: fmtDate(date)} : null
+      ].filter(Boolean)},
+      {title: "Continue exploring", items: [
+        {label: "Open Market Explorer", description: "The same market beside every other venue's", value: "→", href: "./market-explorer"},
+        {label: "Open Kalshi volume", description: "Daily contracts and the all-time trend", value: "→", href: "./volume"}
+      ]}
+    ],
+    coverage: `market_leaderboard.csv is the producer's top ${mktRanked.length.toLocaleString()} markets by contracts — ${mktCoveragePct} of Kalshi's all-time volume — so a rank here is a rank within that cut, not within everything Kalshi has listed. Kalshi publishes no readable market name on any of these rows: the title is decoded from the ticker ${row.market_key} by this site.`,
+    state: {kind: "market", source: MKT_INSPECT_SOURCE, venue: "kalshi", market: row.market_key},
+    ask: {
+      question: `Explain the Kalshi market ${name} (${row.market_key}). Cover what it traded, how it settled, and what an all-time top-${mktRanked.length} cut does and does not tell me.`,
+      context: `Predict Charts Categories market-leaderboard selection: ${row.market_key} · ${name}.`
+    }
+  };
+}
+
+// Resolve against mktRanked, the FULL ranked set, never the filtered view: a reader
+// following a shared link lands with whatever category chip and search term the hash
+// restores, and the linked row may not be among the visible ones.
+const mktOpenMarket = mktInspector
+  ? (row, element) => mktInspector.open(mktMarketDetail(row), {replace: true, source: element})
+  : null;
+
+if (mktInspector) {
+  mktInspector.restore(MKT_INSPECT_SOURCE, state =>
+    state.source === MKT_INSPECT_SOURCE && state.kind === "market" && state.market
+      ? mktMarketDetail(mktRanked.find(d => d.market_key === state.market))
+      : null);
+}
 ```
 
 ```js
@@ -2888,6 +2998,11 @@ display(html`<style>
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; line-height: 1.2; max-height: 2.4em;
   }
+  /* The Market cell is a button so it can open the inspector. The shared
+     .inspector-inline-button rule in styles.css supplies the underline and colours but
+     not layout, and a default inline-block button would shrink-wrap the clamped name and
+     collapse this column. Same three declarations .lb-market-button uses. */
+  .mkt-table .inspector-inline-button { display: block; width: 100%; padding: 0; }
   /* Rank column (2nd child): tighter padding so "#" stays narrow. */
   .mkt-table td:nth-child(2), .mkt-table th:nth-child(2) { padding-left: 0.45em; padding-right: 0.45em; }
   /* Date column (5th child): keep YYYY/MM/DD on one line so it can't be clipped. */
@@ -2933,21 +3048,14 @@ display(html`<style>
 const mktDisplay = mktFiltered.map(d => {
   const fees = d.fees_total;
   const feesNum = (fees == null || fees === "" || isNaN(+fees)) ? null : +fees;
-  const parsed = parseMarketDateFromKey(d.market_key);
-  const ltd = d.last_trade_date instanceof Date
-    ? d.last_trade_date
-    : (typeof d.last_trade_date === "string" && d.last_trade_date
-        ? new Date(d.last_trade_date) : null);
-  // Show parsed game date for any market (incl. scheduled future games).
-  // For markets without a parseable date, only show last_trade_date if the
-  // market has actually settled — otherwise leave blank.
-  const isSettled = !!(d.winner_ticker && String(d.winner_ticker).trim());
-  const displayDate = parsed || (isSettled ? ltd : null);
+  // Show the parsed game date for any market (incl. scheduled future games); for markets
+  // without a parseable date, show last_trade_date only once the market has settled.
+  // mktRowDate owns that rule so the inspector drawer states the same basis.
   return {
     ...d,
     _c: d.display_cat || d.kalshi_category || "",
     fees_total: feesNum,
-    market_date: displayDate
+    market_date: mktRowDate(d).date
   };
 });
 
@@ -2982,8 +3090,20 @@ const tbl = Inputs.table(mktDisplay, {
     },
     contracts:  d => fmtC(d),
     fees_total: d => (d == null || d === 0) ? "N/A" : "$" + fmtC(+d),
-    // Market name: wrap to <=2 lines then ellipsis; full name on hover.
-    display_name: v => html`<div class="mkt-name" title=${v ?? ""}>${v}</div>`,
+    // Market name: wrap to <=2 lines then ellipsis; full name on hover, and a button
+    // that opens the market in the inspector drawer.
+    //
+    // ⚠ `index` indexes the ORIGINAL array, not the sorted view Inputs.table is showing,
+    // so `data[index]` is still this row after the reader sorts a column. Do not re-sort
+    // here — that is precisely what would break it.
+    display_name: (v, index, data) => {
+      const cell = html`<div class="mkt-name" title=${v ?? ""}>${v}</div>`;
+      if (!mktOpenMarket) return cell;
+      const row = data[index];
+      return html`<button type="button" class="inspector-inline-button"
+        aria-label=${`Inspect the ${v ?? row.market_key} market`}
+        onclick=${event => mktOpenMarket(row, event.currentTarget)}>${cell}</button>`;
+    },
   },
   align: {
     rank: "right",
