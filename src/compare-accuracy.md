@@ -381,10 +381,20 @@ realised, but not an edge`,
     }),
     // Direct-label every bar: there are few enough that a value axis alone would be
     // harder to read than the numbers themselves.
-    Plot.text(headline, {
+    // SPLIT ON THE SIGN, and it has to be split. textAnchor and dx are CONSTANT mark
+    // options in Plot, never channels: a function is written verbatim into the attribute
+    // (text-anchor="d => ...") and dx is coerced with +dx, giving transform="translate(NaN,20)".
+    // Chrome rejects the whole transform, so the labels lost the half-row band centring AND
+    // the 6px gap -- every value printed 20px high and centred on its own bar end. The two
+    // predicates are exact complements so no row can fall through and lose its label.
+    Plot.text(headline.filter(d => d.perContract < 0), {
       y: "label", x: "perContract", text: d => fmtCents(d.perContract),
-      textAnchor: d => d.perContract < 0 ? "end" : "start",
-      dx: d => d.perContract < 0 ? -6 : 6,
+      textAnchor: "end", dx: -6,
+      fill: "var(--theme-foreground)", fontWeight: 600
+    }),
+    Plot.text(headline.filter(d => !(d.perContract < 0)), {
+      y: "label", x: "perContract", text: d => fmtCents(d.perContract),
+      textAnchor: "start", dx: 6,
       fill: "var(--theme-foreground)", fontWeight: 600
     })
   ]
@@ -416,9 +426,18 @@ Plot.plot({
   color: {legend: true, domain: Object.keys(VENUE_COLOR), range: Object.values(VENUE_COLOR)},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.line(byBin, {
+    // Same constant-vs-channel rule as the labels above, and this one failed SILENTLY:
+    // strokeDasharray as a function landed on the <g> as text, so NOTHING drew dashed while
+    // the caption below promised "Dashed lines are parlays" -- and a venue's parlay and
+    // single-market series share one colour, so the two were indistinguishable.
+    Plot.line(byBin.filter(d => d.group === "PARLAY"), {
       x: "price_bin", y: "pnl_per_contract", stroke: "venue",
-      strokeWidth: 2, strokeDasharray: d => d.group === "PARLAY" ? "4,3" : null,
+      strokeWidth: 2, strokeDasharray: "4,3",
+      z: "label", curve: "monotone-x"
+    }),
+    Plot.line(byBin.filter(d => d.group !== "PARLAY"), {
+      x: "price_bin", y: "pnl_per_contract", stroke: "venue",
+      strokeWidth: 2,
       z: "label", curve: "monotone-x"
     }),
     Plot.dot(byBin, {
