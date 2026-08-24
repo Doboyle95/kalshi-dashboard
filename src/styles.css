@@ -2648,14 +2648,10 @@ svg[class^="plot-"] g[aria-label="tip"] text {
    two sibling offsets Framework adds to reserve space for the fixed bar, restoring
    the values a header-less page already uses (main margin-top 1rem, toc top 0). */
 #observablehq-header {
-  position: sticky;
-  top: 0;
-  z-index: 3;
+  position: static;
   display: block;
   height: auto;
   margin: 0;
-  /* Padding rather than margin: a sticky element's margin box is transparent, so
-     page content would be visible scrolling through the gap beneath the card. */
   padding: 0 0 var(--space-4);
   border: 0;
   background: var(--theme-background);
@@ -2669,21 +2665,303 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   top: 0;
 }
 
-/* Anchor targets have to clear the pinned bar. 9a2ea615d cut scroll-padding-top
-   to 2.5rem precisely BECAUSE nothing covered the top of the viewport; pinning it
-   again re-opens that, and /volume alone has 12 in-page anchors.
-   --observablehq-header-height cannot be reused here -- it is a fixed 2.2rem
-   consumed by sibling selectors in calc() -- so these are literals sized to the
-   measured bar: ~114px with a tab row, ~66px without, plus clearance.
-   Specificity matters: the framework's own rule is :root:has(#observablehq-header)
-   at (1,1,0), so a bare :root:has(.venue-tabs) at (0,2,0) would LOSE. Naming the
-   id inside :has() takes these to (1,2,0). */
-:root:has(#observablehq-header .venue-tabs) {
-  scroll-padding-top: 130px;
+/* Nothing covers the top of the viewport at any width now: above 1008px the menu
+   is a left rail, below it the bar is in normal flow and scrolls away. So the two
+   literal offsets that used to clear a pinned bar (130px with a tab row, 82px
+   without) are gone -- leaving them would put that much dead space above every
+   anchor target for no reason, because :has() matches on DOM presence and the
+   strip is still in the DOM, merely display:none.
+   Specificity: the framework's own rule is :root:has(#observablehq-header) at
+   (1,1,0). This matches it exactly and wins on order, since styles.css is
+   imported after observablehq:default.css. */
+:root:has(#observablehq-header) {
+  scroll-padding-top: 2.5rem;
 }
 
-:root:has(#observablehq-header .venue-nav):not(:has(.venue-tabs)) {
-  scroll-padding-top: 82px;
+/* ═══════════════════════════════════════════════════════════════════════════
+   Site rail  (the menu)
+   ───────────────────────────────────────────────────────────────────────────
+   Framework's own sidebar is off (`sidebar: false`), so this is the ONLY
+   site-wide navigation. Emitted for every page by observablehq.config.js
+   `railHeader`, in Node at build time, into #observablehq-header.
+
+   Above 1008px it is a fixed left column; below, it collapses behind a "Menu"
+   checkbox and the in-page venue strip carries module switching. 1008px is
+   Framework's own sidebar breakpoint (640px content + 6rem + 272px), reused so
+   there is no width at which neither nav is usable.
+
+   Zero JavaScript: venue expansion is <details>, the drawer is a checkbox. Both
+   work with JS disabled, and neither is an Observable cell that could fail
+   silently.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --rail-w: 256px;
+}
+
+/* Visually hidden but still focusable -- display:none would take the checkbox out
+   of the tab order, and since a <label> is not focusable either that would leave
+   the drawer unopenable by keyboard. Framework styles its own sidebar toggle the
+   same way rather than hiding it. */
+#rail-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#rail-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-size: var(--text-label);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+#rail-toggle-label:hover {
+  color: var(--theme-foreground);
+}
+
+.rail-bars {
+  position: relative;
+  width: 13px;
+  height: 9px;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+.rail-bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 100%;
+  border-top: 2px solid currentColor;
+}
+
+.site-rail {
+  display: none;
+  font-size: var(--text-body);
+  line-height: 1.4;
+}
+
+#rail-toggle:checked ~ .site-rail {
+  display: block;
+}
+
+.rail-brand {
+  display: block;
+  margin-bottom: var(--space-4);
+  color: var(--theme-foreground);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.rail-group {
+  margin-bottom: var(--space-4);
+}
+
+.rail-h {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2);
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rail-note {
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-faint);
+}
+
+.site-rail a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.28rem var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.site-rail a:hover {
+  background: var(--surface-muted);
+  color: var(--theme-foreground);
+  text-decoration: none;
+}
+
+.site-rail a[aria-current="page"] {
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  color: var(--accent-primary);
+  font-weight: 680;
+}
+
+.site-rail a:focus-visible,
+.rail-venue > summary:focus-visible,
+#rail-toggle:focus-visible + #rail-toggle-label {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ── venues: the third level, one open at a time ── */
+
+.rail-venue {
+  --rail-accent: var(--text-faint);
+}
+
+.rail-venue[data-accent="kalshi"]     { --rail-accent: var(--accent-kalshi); }
+.rail-venue[data-accent="polymarket"] { --rail-accent: var(--accent-polymarket); }
+.rail-venue[data-accent="forecastex"] { --rail-accent: var(--accent-forecastex); }
+.rail-venue[data-accent="dkex"]       { --rail-accent: var(--accent-dkex); }
+.rail-venue[data-accent="underdog"]   { --rail-accent: var(--accent-underdog); }
+.rail-venue[data-accent="nadex"]      { --rail-accent: var(--accent-nadex); }
+.rail-venue[data-accent="rothera"]    { --rail-accent: var(--accent-rothera); }
+.rail-venue[data-accent="cme"]        { --rail-accent: var(--accent-cme); }
+
+.rail-venue > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.28rem var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rail-venue > summary::-webkit-details-marker { display: none; }
+.rail-venue > summary::marker { content: ""; }
+
+/* Two margin-left:auto in one flex row split the free space between them, which
+   would strand the count in the middle. The count takes the auto when it exists;
+   the caret takes it only when it does not. */
+.rail-venue > summary::after {
+  content: "";
+  margin-left: var(--space-2);
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  opacity: 0.5;
+}
+
+.rail-venue[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.rail-venue > summary:hover {
+  background: var(--surface-muted);
+  color: var(--theme-foreground);
+}
+
+.rail-venue[open] > summary {
+  color: var(--theme-foreground);
+  font-weight: 620;
+}
+
+.rail-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-faint) 45%, transparent);
+}
+
+.rail-venue[open] > summary .rail-dot {
+  background: var(--rail-accent);
+}
+
+.rail-count {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-venue > summary:not(:has(.rail-count))::after {
+  margin-left: auto;
+}
+
+.rail-sub {
+  margin: 2px 0 var(--space-2) calc(var(--space-2) + 3px);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--divider);
+}
+
+.rail-sub a {
+  font-size: 0.85rem;
+}
+
+/* ── wide: the rail becomes a fixed left column ──
+   Mirrors what Framework does for its own sidebar: the element runs to the
+   viewport edge while its CONTENT lines up with the centred body, so it does not
+   detach from the page on a wide screen. #observablehq-header sits inside
+   #observablehq-center, but position:fixed resolves against the viewport, so the
+   padding added to #observablehq-center below does not shift it. */
+@media (min-width: 1008px) {
+  #observablehq-header {
+    --rail-edge: calc(max(0rem, (100vw - var(--observablehq-max-width)) / 2));
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 3;
+    box-sizing: border-box;
+    width: calc(var(--rail-w) + var(--rail-edge));
+    padding: var(--space-5) var(--space-3) var(--space-6);
+    padding-left: calc(var(--rail-edge) + var(--space-3));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--surface-muted);
+    border-right: 1px solid var(--card-border);
+  }
+
+  #observablehq-center {
+    padding-left: var(--rail-w);
+  }
+
+  /* Both gone above the breakpoint: a focusable control that toggles nothing is
+     a keyboard trap. */
+  #rail-toggle,
+  #rail-toggle-label {
+    display: none;
+  }
+
+  /* Always open above the breakpoint, checked or not. */
+  .site-rail,
+  #rail-toggle:checked ~ .site-rail {
+    display: block;
+  }
+
+  /* NOTE: hiding .venue-nav above this breakpoint is NOT done here. `.venue-nav`
+     sets display:flex some 40 lines below, at the same specificity (0,1,0), so a
+     rule placed here loses on order and the strip renders inside the rail --
+     measured at 1280px before this note existed: a 216x217 block at the rail's
+     foot. The override lives at the END of this file instead. */
 }
 
 .venue-nav {
@@ -2867,6 +3145,17 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 
   .venue-tabs a {
     flex: 0 0 auto;
+  }
+}
+
+/* Above 1008px the rail already lists the current venue's modules, expanded, so
+   the in-page strip is redundant. It has to be switched off HERE, after every
+   .venue-nav rule above: the rule that sets display:flex has the same specificity
+   (0,1,0), so the same declaration inside the rail's own media block earlier in
+   this file loses on source order and the strip renders inside the rail. */
+@media (min-width: 1008px) {
+  .venue-nav {
+    display: none;
   }
 }
 

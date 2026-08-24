@@ -126,6 +126,11 @@ export function buildVenueScoreboard(rows, {windowDays = 30} = {}) {
       average7,
       recentTotal,
       recentDays: recent.length,
+      // Exposed so a caller can require BOTH sides of the comparison to be full.
+      // `change` alone only guarantees previousTotal > 0, so a venue with three
+      // reported days behind it can post a huge percentage off a thin base --
+      // harmless in a 30-day window, much easier to hit in a 7-day one.
+      previousDays: previous.length,
       change: previousTotal > 0 ? recentTotal / previousTotal - 1 : null,
       coverage: `${venueRows.length.toLocaleString()} reported day${venueRows.length === 1 ? "" : "s"}`,
       sparse: venueRows.some(row => row.sparse)

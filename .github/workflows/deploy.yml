@@ -59,12 +59,23 @@ jobs:
         env:
           CHAT_API_URL: ${{ secrets.CHAT_API_URL }}
           CHAT_TOKEN: ${{ secrets.CHAT_TOKEN }}
+          # Stamps <meta name="x-site-build"> into every page. Compare the served
+          # value against `git ls-remote origin main` to detect a wedged deploy.
+          KALSHI_BUILD_STAMP: ${{ github.sha }}
 
       - name: Copy static files not handled by Framework's build
         # Framework only bundles files that are part of its page/asset graph, so a
         # well-known root path like robots.txt (must be served at exactly /robots.txt)
         # has to be copied in manually after the build step.
         run: cp src/robots.txt dist/robots.txt
+
+      - name: Emit the probe route manifest
+        # Derived from the emitted dist/*.html set, never a hand list. The autopilot
+        # browser probe fetches this instead of carrying five hardcoded routes and five
+        # literal heading strings, which the redesign would otherwise break -- one page
+        # header change that adds an h1 fails every route at once and reads as an outage.
+        # The VM-side build calls the same script, so both hosts probe the same routes.
+        run: node scripts/emit-probe-routes.mjs dist /kalshi-dashboard/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
