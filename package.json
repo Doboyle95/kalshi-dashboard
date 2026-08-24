@@ -9,6 +9,7 @@
     "test:data-loader": "node --test tests/remote-data.test.mjs",
     "test:data-watchdog": "python3 -m unittest tests.test_freshness_remote",
     "test:data-transport": "npm run test:data-loader && npm run test:data-watchdog",
+    "check:module-globals": "node scripts/check-module-globals.mjs",
     "clean": "rm -rf dist"
   },
   "type": "module",

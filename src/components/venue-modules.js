@@ -12,6 +12,12 @@
 // deliberately short -- one line per chart. The caveats live in the page's own
 // details block, not in the caption.
 
+// Plot and d3 are implicit globals in a page's markdown cells ONLY. This is an
+// imported module, so it must import them itself -- otherwise every builder below
+// throws "ReferenceError: Plot is not defined" at call time, which the build cannot see.
+import * as Plot from "npm:@observablehq/plot";
+import * as d3 from "npm:d3";
+
 export const fmtCount = n => {
   const a = Math.abs(n ?? 0), s = (n ?? 0) < 0 ? "−" : "";
   return s + (a >= 1e9 ? `${(a / 1e9).toFixed(2)}bn` : a >= 1e6 ? `${(a / 1e6).toFixed(1)}M` : a >= 1e3 ? `${(a / 1e3).toFixed(0)}k` : String(Math.round(a)));

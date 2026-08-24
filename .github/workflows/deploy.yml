@@ -63,6 +63,14 @@ jobs:
       - name: Test external data contracts
         run: npm run test:data-transport
 
+      - name: Check module globals
+        # `observable build` never evaluates a module body, so a src/components/*.js
+        # that uses Plot or d3 without importing them builds clean and blanks every
+        # chart on every page that imports it -- with no error text on the page. That
+        # shipped on 2026-08-21 and ran for three days. Runs before the build because
+        # it is the cheap check and its failure makes the build pointless.
+        run: npm run check:module-globals
+
       - name: Build
         run: npm run build
         env:

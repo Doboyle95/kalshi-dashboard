@@ -22,6 +22,11 @@
 // /compare-accuracy, which still mixes the two bases across venues. These pages
 // do not; do not "make them consistent" with that page by reverting them.
 
+// Plot is an implicit global in a page's markdown cells ONLY. This is an imported
+// module, so it must import Plot itself -- otherwise every chart below throws
+// "ReferenceError: Plot is not defined" at call time, which the build cannot see.
+import * as Plot from "npm:@observablehq/plot";
+
 // Build a normalized row set from one venue's rows via accessors, so each page
 // names its own columns once and everything downstream is uniform.
 //
