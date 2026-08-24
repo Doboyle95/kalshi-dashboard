@@ -10,7 +10,8 @@ title: ProphetX · Trading behavior
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {tradeSizeMix, volumeAtPrice, largeTradeRows, metricsFor, fmtCount, fmtUSD, fmtPct, fmtPrice, fmtDate} from "./components/venue-modules.js";
+import {tradeSizeMix, volumeAtPrice, metricsFor, fmtCount, fmtUSD, fmtPct, fmtPrice, fmtDate} from "./components/venue-modules.js";
+import {attachTradeInspector, venueTradeRows} from "./components/inspect-tables.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const sizeAll = await DataAttachment("data/trade_size_daily.csv").csv({typed: true});
@@ -27,6 +28,16 @@ const VENUE = "ProphetX";
 // read "All" on those rows too, but keying on it would be relying on a coincidence.
 const size = sizeAll.filter(d => d.platform === "ProphetX" && d.segment_type === "All");
 const lt = ltAll.filter(d => d.venue === VENUE);
+
+// Clicking a market name opens the same inspector drawer /trade-size opens for the very
+// same rows. `source` is this page's own key because the pc_* selection namespace is
+// global -- a link copied from another venue's page must not resolve against these rows.
+// The handler is given every table x metric combination, not just the visible one, so a
+// shared link still finds its trade after the reader switches the ranking.
+const openTrade = attachTradeInspector({source: "prophetx-trades", venue: VENUE, largeTrades: lt, metrics: metricsFor(lt, VENUE)});
+// index is into the ORIGINAL array, not the sorted view, so data[index] stays correct
+// after the reader sorts a column.
+const tradeCell = (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTrade(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`;
 ```
 
 ## Trade size mix
@@ -84,12 +95,12 @@ const overallMetric = view(Inputs.radio(metricsFor(lt, VENUE), {label: "Rank by"
 </div>
 
 ```js
-const overallRows = largeTradeRows(lt, {venue: VENUE, table: "overall", metricLabel: overallMetric});
+const overallRows = venueTradeRows(lt, {venue: VENUE, table: "overall", metricLabel: overallMetric});
 display(overallRows.length
   ? Inputs.table(overallRows, {
       columns: ["date", "market", "contracts", "price", "metric_value"],
       header: {date: "Date", market: "Market", contracts: "Contracts", price: "Price", metric_value: overallMetric},
-      format: {date: fmtDate, contracts: d => fmtCount(d), price: fmtPrice, metric_value: d => overallMetric === "Contracts" ? fmtCount(d) : fmtUSD(d)},
+      format: {date: fmtDate, market: tradeCell, contracts: d => fmtCount(d), price: fmtPrice, metric_value: d => overallMetric === "Contracts" ? fmtCount(d) : fmtUSD(d)},
       align: {contracts: "right", metric_value: "right"},
       width: {market: 260}, rows: 15
     })
@@ -109,12 +120,12 @@ const smallMetric = view(Inputs.radio(metricsFor(lt, VENUE), {label: "Rank by", 
 </div>
 
 ```js
-const smallRows = largeTradeRows(lt, {venue: VENUE, table: "small_market", metricLabel: smallMetric});
+const smallRows = venueTradeRows(lt, {venue: VENUE, table: "small_market", metricLabel: smallMetric});
 display(smallRows.length
   ? Inputs.table(smallRows, {
       columns: ["date", "market", "contracts", "price", "metric_value", "pct_of_market"],
       header: {date: "Date", market: "Market", contracts: "Contracts", price: "Price", metric_value: smallMetric, pct_of_market: "% of market"},
-      format: {date: fmtDate, contracts: d => fmtCount(d), price: fmtPrice, metric_value: d => smallMetric === "Contracts" ? fmtCount(d) : fmtUSD(d), pct_of_market: d => d == null ? "—" : fmtPct(d)},
+      format: {date: fmtDate, market: tradeCell, contracts: d => fmtCount(d), price: fmtPrice, metric_value: d => smallMetric === "Contracts" ? fmtCount(d) : fmtUSD(d), pct_of_market: d => d == null ? "—" : fmtPct(d)},
       align: {contracts: "right", metric_value: "right", pct_of_market: "right"},
       width: {market: 260}, rows: 15
     })

@@ -607,12 +607,21 @@ Plot.plot({
 // and coerces market codes. Every column is coerced explicitly there instead.
 const lbRows = await DataAttachment("data/nadex_market_leaderboard.csv").csv();
 import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+import {attachMarketInspector} from "./components/inspect-tables.js";
 ```
 
 ```js
+// Clicking a market name opens the same inspector drawer /market-explorer uses. The rows
+// are held in a const because the click handler and the shared-link resolver both read them.
+//
+// `source` is this page's own key, and that matters: selection state lives in the GLOBAL
+// pc_* query namespace, so a link copied from another venue's leaderboard would otherwise
+// resolve against these rows and open the wrong market.
+const lbMarkets = normalizeLeaderboard("nadex", lbRows);
 display(marketLeaderboard({
   hashPrefix: "ndlb",
   rowsPerPage: 20,
-  venues: [{spec: LB_VENUES.nadex, rows: normalizeLeaderboard("nadex", lbRows)}]
+  venues: [{spec: LB_VENUES.nadex, rows: lbMarkets}],
+  onMarketSelect: attachMarketInspector({source: "nadex-markets", rows: lbMarkets})
 }));
 ```

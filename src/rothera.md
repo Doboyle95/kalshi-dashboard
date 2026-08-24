@@ -307,11 +307,20 @@ Plot.plot({
 // and coerces market codes. Every column is coerced explicitly there instead.
 const lbRows = await DataAttachment("data/rothera_market_leaderboard.csv").csv();
 import {LB_VENUES, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+import {attachMarketInspector} from "./components/inspect-tables.js";
 ```
 
 ```js
+// Clicking a market name opens the same inspector drawer /market-explorer uses. The rows
+// are held in a const because the click handler and the shared-link resolver both read them.
+//
+// `source` is this page's own key, and that matters: selection state lives in the GLOBAL
+// pc_* query namespace, so a link copied from another venue's leaderboard would otherwise
+// resolve against these rows and open the wrong market.
+const lbMarkets = normalizeLeaderboard("rothera", lbRows);
 display(marketLeaderboard({
   hashPrefix: "rolb",
-  venues: [{spec: LB_VENUES.rothera, rows: normalizeLeaderboard("rothera", lbRows)}]
+  venues: [{spec: LB_VENUES.rothera, rows: lbMarkets}],
+  onMarketSelect: attachMarketInspector({source: "rothera-markets", rows: lbMarkets})
 }));
 ```
