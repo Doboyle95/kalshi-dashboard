@@ -94,7 +94,13 @@ const VENUES = [
     ["Products", "/polymarket-products"],
     ["Trading behavior", "/polymarket-behavior"],
     ["Economics", "/polymarket-economics"],
-    ["Outcomes", "/polymarket-calibration"]
+    ["Outcomes", "/polymarket-calibration"],
+    // Added 2026-08-24, mirroring Kalshi's own "Parlay outcomes" tab. Polymarket
+    // parlays are house-quoted (caoc), so buyer == taker and the P&L is a true taker
+    // series rather than a price-bias proxy. They went from nothing to roughly a
+    // quarter of the venue's volume in three weeks, which is too big to stay a
+    // footnote on another page.
+    ["Parlay outcomes", "/polymarket-parlay"]
   ]},
   {name: "ForecastEx", accent: "forecastex", tabs: [
     ["Activity", "/forecastex"],
