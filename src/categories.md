@@ -1767,9 +1767,9 @@ const wideDaily = topDaily.map(row => {
     const wg = wideCategoryForTicker(cat);
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
-  const parlay       = +sp.contracts_parlay    || 0;
-  const totSports    = +sp.contracts_sports    || 0;
-  const totNonSports = +sp.contracts_nonsports || 0;
+  const parlay       = +sp.contracts_parlay              || 0;
+  const totSports    = +sp.contracts_sports_nonparlay    || 0;
+  const totNonSports = +sp.contracts_nonsports           || 0;
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
     groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
@@ -1786,14 +1786,8 @@ const wideDaily = topDaily.map(row => {
   } else {
     pPend = parlay;
   }
-  // Regime detection (same rule as volume.md's "Both" view): pre-May-2026 rows count
-  // contracts_parlay INSIDE contracts_sports (shares sum to ~1 + share_parlay); from
-  // 2026-05-01 parlay is disjoint (shares sum to ~1.00). In the overlap regime the
-  // parlay volume must be subtracted from the sports remainder, because Parlay is
-  // ALSO stacked as its own band here — the old always-disjoint assumption double-
-  // counted parlay for Oct 2025→Apr 2026 (stack total +23% on 2026-04-30).
-  const shareSum = (+sp.share_sports || 0) + (+sp.share_nonsports || 0) + (+sp.share_parlay || 0);
-  const parlayInSports = shareSum > 1.01;
+  // No regime detection: contracts_sports_nonparlay excludes parlay by construction,
+  // and Parlay is stacked as its own band here, so the two never double-count.
   return {
     date: row.date,
     ...groups,
@@ -1801,7 +1795,7 @@ const wideDaily = topDaily.map(row => {
     "Parlay (correlated)":  pCorr,
     "Parlay (independent)": pIndep,
     "Parlay (pending)":     pPend,
-    "Other sports":     Math.max(0, totSports - (parlayInSports ? parlay : 0) - knownSports),
+    "Other sports":     Math.max(0, totSports - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
@@ -2173,7 +2167,7 @@ const wideDailyFees = topDailyFees.map(row => {
     const wg = wideCategoryForTicker(cat);
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
-  const feesSports    = +sp.fees_sports    || 0;
+  const feesSports    = +sp.fees_sports_nonparlay || 0;
   const feesNonSports = +sp.fees_nonsports || 0;
   const feesParlay    = Math.max(0, (feesTotalByDate.get(+row.date) || 0) - feesSports - feesNonSports);
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +

@@ -321,16 +321,16 @@ const feesTotalByDate = new Map(daily.map(d => [+d.date, d.fees_total || 0]));
 // bare `y` stacks implicitly, which is what made this chart disagree with the KPI unnoticed.
 let sCum = 0, nsCum = 0, pCum = 0;
 const cumFeesSplit = fs2.flatMap(d => {
-  const s  = d.fees_sports    || 0;
+  const s  = d.fees_sports_nonparlay || 0;
   const ns = d.fees_nonsports || 0;
   nsCum += ns;
   sCum  += s;
   // Clamped: the two files are written by different producers, so a refresh race could
-  // briefly put fees_sports + fees_nonsports above fees_total and invert the top band.
+  // briefly put fees_sports_nonparlay + fees_nonsports above fees_total and invert the top band.
   pCum  += Math.max(0, (feesTotalByDate.get(+d.date) ?? (s + ns)) - s - ns);
   return [
     {date: d.date, category: "Non-sports", cumul: nsCum, y0: 0,            y1: nsCum},
-    {date: d.date, category: "Sports",     cumul: sCum,  y0: nsCum,        y1: nsCum + sCum},
+    {date: d.date, category: "Sports (excl. parlays)", cumul: sCum,  y0: nsCum,        y1: nsCum + sCum},
     {date: d.date, category: "Parlays",    cumul: pCum,  y0: nsCum + sCum, y1: nsCum + sCum + pCum}
   ];
 });
@@ -360,7 +360,7 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {legend: true, domain: ["Non-sports", "Sports", "Parlays"], range: ["var(--accent-kalshi)", "#1a9641", "#7b1fa2"]},
+  color: {legend: true, domain: ["Non-sports", "Sports (excl. parlays)", "Parlays"], range: ["var(--accent-kalshi)", "#1a9641", "#7b1fa2"]},
   marks: [
     Plot.areaY(cumFeesSplit, {
       x: "date", y1: "y0", y2: "y1", fill: "category",
@@ -405,15 +405,15 @@ const feeRate = (
       }))
     : sports.map(d => ({
         date: d.date,
-        contracts: feeRateView === "Sports" ? (d.contracts_sports || 0) : (d.contracts_nonsports || 0),
-        fees: feeRateView === "Sports" ? (d.fees_sports || 0) : (d.fees_nonsports || 0)
+        contracts: feeRateView === "Sports (excl. parlays)" ? (d.contracts_sports_nonparlay || 0) : (d.contracts_nonsports || 0),
+        fees: feeRateView === "Sports (excl. parlays)" ? (d.fees_sports_nonparlay || 0) : (d.fees_nonsports || 0)
       }))
 )
   .filter(d => d.date >= s3 && d.date <= e3 && d.contracts > 0)
   .map(d => ({date: d.date, rate: d.fees / d.contracts * 100}));
 
 const feeRateColor =
-  feeRateView === "Sports" ? "#1a9641"
+  feeRateView === "Sports (excl. parlays)" ? "#1a9641"
   : feeRateView === "Non-sports" ? "var(--accent-kalshi)"
   : "var(--accent-secondary)";
 ```
@@ -445,7 +445,7 @@ Plot.plot({
 <div class="control-strip">
 
 ```js
-const feeRateView = view(Inputs.radio(["Overall", "Sports", "Non-sports"], {
+const feeRateView = view(Inputs.radio(["Overall", "Sports (excl. parlays)", "Non-sports"], {
   label: "Segment",
   value: "Overall"
 }));

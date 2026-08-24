@@ -215,22 +215,19 @@ const volWideDaily = topDaily.map(row => {
     const wg = wideCatByReportTicker.get(cat) || volWideMap[cat];
     if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
   }
-  const parlay       = +sp.contracts_parlay    || 0;
-  const totSports    = +sp.contracts_sports    || 0;
-  const totNonSports = +sp.contracts_nonsports || 0;
-  // Regime detection, same rule as the "Both (stacked)" view below: pre-May-2026 rows
-  // count contracts_parlay INSIDE contracts_sports (shares sum to ~1 + share_parlay);
-  // from 2026-05-01 parlay is a disjoint third bucket (shares sum to ~1.00). Subtract
-  // parlay from the sports remainder only in the overlap regime — always subtracting
-  // (the old behavior) erased up to the full parlay volume from "Other sports" on
-  // disjoint rows (~318M contracts on 2026-06-15), or clamped it to zero.
-  const shareSum = (+sp.share_sports || 0) + (+sp.share_nonsports || 0) + (+sp.share_parlay || 0);
-  const parlayInSports = shareSum > 1.01;
+  const parlay       = +sp.contracts_parlay              || 0;
+  const totSports    = +sp.contracts_sports_nonparlay    || 0;
+  const totNonSports = +sp.contracts_nonsports           || 0;
+  // No regime detection any more. contracts_sports_nonparlay is disjoint from
+  // contracts_parlay by construction (the producers build it with `& !is_parlay`),
+  // and that holds on all 1,880 rows of the current file, so nothing has to be
+  // subtracted here. The old `shareSum > 1.01` test existed only because the
+  // unsuffixed contracts_sports did not say whether parlay was inside it.
   const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
     date: row.date, ...groups, Parlay: parlay,
-    "Other sports":     Math.max(0, totSports - (parlayInSports ? parlay : 0) - knownSports),
+    "Other sports":     Math.max(0, totSports - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
@@ -442,18 +439,18 @@ const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance
 // from daily_overall (or a failed load) degrades to 0 instead of throwing.
 const feesTotalByDate = new Map((daily ?? []).map(d => [+d.date, +d.fees_total || 0]));
 const parlayFeesFor = sp =>
-  Math.max(0, (feesTotalByDate.get(+sp?.date) ?? 0) - (+sp?.fees_sports || 0) - (+sp?.fees_nonsports || 0));
+  Math.max(0, (feesTotalByDate.get(+sp?.date) ?? 0) - (+sp?.fees_sports_nonparlay || 0) - (+sp?.fees_nonsports || 0));
 
 const tidySports =
   sportsView === "Sports only"
     ? fd2.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
         const sp = fs2.find(r => +r.date === +d.date) || {};
-        // fees_sports carries no parlay dollars, so the pro-rata denominator must drop
-        // parlay contracts too -- including them handed the parlay band ~60% of the
-        // dollars that belong to the real sports. Parlay gets its own residual instead.
+        // fees_sports_nonparlay carries no parlay dollars, so the pro-rata denominator
+        // must drop parlay contracts too -- including them handed the parlay band ~60%
+        // of the dollars that belong to the real sports. Parlay gets its own residual.
         const totalContracts2 = sportsOrder.reduce((s, g) => g === "Parlay" ? s : s + (w[g] || 0), 0) || 1;
-        const totalFees2 = sp.fees_sports || 0;
+        const totalFees2 = sp.fees_sports_nonparlay || 0;
         const parlayFees2 = parlayFeesFor(sp);
         return sportsOrder.map(g => ({
           date: d.date, category: g,
@@ -474,19 +471,13 @@ const tidySports =
         }));
       })
   : fs2.flatMap(d => {
-      // Data quirk: in older periods (pre-May 2026), contracts_parlay was counted
-      // *inside* contracts_sports (so sports + nonsports = total). Starting around
-      // May 2026, parlay became a disjoint third bucket (sports + nonsports + parlay
-      // = total). Detect via share sum; subtract parlay from sports for the old
-      // regime so the three stacks always reconcile to daily_overall.contracts_total.
-      const shareSum = (+d.share_sports || 0) + (+d.share_nonsports || 0) + (+d.share_parlay || 0);
-      const parlayDisjoint = shareSum <= 1.01;
-      const sportsVal = parlayDisjoint
-        ? (+d.contracts_sports || 0)
-        : Math.max(0, (+d.contracts_sports || 0) - (+d.contracts_parlay || 0));
+      // The three bands are disjoint by construction, so they reconcile to
+      // daily_overall.contracts_total with no adjustment. The old share-sum regime
+      // test is gone: it only existed because the unsuffixed contracts_sports did
+      // not say whether parlay was counted inside it.
       return [
         {date: d.date, category: "Non-sports", value: sportsMetric === "Fees" ? (+d.fees_nonsports || 0) : (+d.contracts_nonsports || 0)},
-        {date: d.date, category: "Sports",     value: sportsMetric === "Fees" ? (+d.fees_sports    || 0) : sportsVal},
+        {date: d.date, category: "Sports (excl. parlays)", value: sportsMetric === "Fees" ? (+d.fees_sports_nonparlay || 0) : (+d.contracts_sports_nonparlay || 0)},
         {date: d.date, category: "Parlay",     value: sportsMetric === "Fees" ? parlayFeesFor(d) : (+d.contracts_parlay || 0)}
       ];
     });
@@ -494,7 +485,7 @@ const tidySports =
 const subOrder =
   sportsView === "Sports only"    ? sportsOrder
   : sportsView === "Non-sports only" ? nonSportsOrder
-  : ["Non-sports", "Sports", "Parlay"];
+  : ["Non-sports", "Sports (excl. parlays)", "Parlay"];
 
 const useTableau = sportsView !== "Both (stacked)";
 
@@ -534,7 +525,7 @@ Plot.plot({
   y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: useTableau
     ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
-    : {legend: true, domain: ["Non-sports", "Sports", "Parlay"], range: ["#5b8def", "#1a9641", "#74c476"]},  // Non-sports = distinct blue; Sports + Parlay = one green family (parlays are sports-dominated)
+    : {legend: true, domain: ["Non-sports", "Sports (excl. parlays)", "Parlay"], range: ["#5b8def", "#1a9641", "#74c476"]},  // Non-sports = distinct blue; sports + Parlay = one green family (parlays are sports-dominated)
   marks: [
     Plot.areaY(tidySports, {
       x: "date", y: "value", fill: "category",
@@ -583,11 +574,11 @@ const hourlyToday = (() => {
 })();
 const hourlyLong = hourlyToday.flatMap(d => [
   {hour_et: d.hour_et, group: "Non-sports", contracts: d.contracts_nonsports, partial: isPartialHour(d)},
-  {hour_et: d.hour_et, group: "Sports", contracts: d.contracts_sports, partial: isPartialHour(d)},
+  {hour_et: d.hour_et, group: "Sports (excl. parlays)", contracts: d.contracts_sports_nonparlay, partial: isPartialHour(d)},
   {hour_et: d.hour_et, group: "Parlay", contracts: d.contracts_parlay, partial: isPartialHour(d)}
 ]);
 const fmtHour12 = h => h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
-const groupColors = {"Non-sports": "#5b8def", Sports: "#1a9641", Parlay: "#74c476"};
+const groupColors = {"Non-sports": "#5b8def", ["Sports (excl. parlays)"]: "#1a9641", Parlay: "#74c476"};
 ```
 
 <div class="plot-shell">
@@ -608,14 +599,14 @@ if (!hourlyToday.length) {
     marks: [
       Plot.barY(hourlyLong, {x: "hour_et", y: "contracts", fill: "group", fillOpacity: d => d.partial ? 0.45 : 1, rx: 2}),
       Plot.text(hourlyToday.filter(isPartialHour), {
-        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay,
+        x: "hour_et", y: d => d.contracts_sports_nonparlay + d.contracts_nonsports + d.contracts_parlay,
         dy: -10, text: () => "still counting", fontSize: 11, fill: "currentColor"
       }),
       Plot.tip(hourlyToday, Plot.pointerX({
-        x: "hour_et", y: d => d.contracts_sports + d.contracts_nonsports + d.contracts_parlay,
+        x: "hour_et", y: d => d.contracts_sports_nonparlay + d.contracts_nonsports + d.contracts_parlay,
         title: d => [
           fmtHour12(d.hour_et),
-          `Sports: ${d.trades_sports.toLocaleString()} trades · ${d.contracts_sports.toLocaleString()} contracts · $${d.taker_side_notional_sports.toLocaleString()} taker-side`,
+          `Sports excl. parlays: ${d.trades_sports_nonparlay.toLocaleString()} trades · ${d.contracts_sports_nonparlay.toLocaleString()} contracts · $${d.taker_side_notional_sports_nonparlay.toLocaleString()} taker-side`,
           `Parlay: ${d.trades_parlay.toLocaleString()} trades · ${d.contracts_parlay.toLocaleString()} contracts · $${d.taker_side_notional_parlay.toLocaleString()} taker-side`,
           `Non-sports: ${d.trades_nonsports.toLocaleString()} trades · ${d.contracts_nonsports.toLocaleString()} contracts · $${d.taker_side_notional_nonsports.toLocaleString()} taker-side`,
           isPartialHour(d) ? "Hour still in progress" : null
@@ -637,10 +628,10 @@ if (!hourlyToday.length) {
 const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function weeklyMetricValue(d, metric, segment) {
   const key = metric === "Trades" ? "trades" : metric === "Contracts" ? "contracts" : "taker_side_notional";
-  const sportsValue = d[`${key}_sports`] || 0;
+  const sportsValue = d[`${key}_sports_nonparlay`] || 0;
   const nonsportsValue = d[`${key}_nonsports`] || 0;
   const parlayValue = d[`${key}_parlay`] || 0;
-  if (segment === "Sports") return sportsValue;
+  if (segment === "Sports (excl. parlays)") return sportsValue;
   if (segment === "Parlay") return parlayValue;
   if (segment === "Non-sports") return nonsportsValue;
   return sportsValue + nonsportsValue + parlayValue;
@@ -656,7 +647,7 @@ const weeklyMetric = view(Inputs.radio(["Trades", "Contracts", "Taker-side $"], 
 ```
 
 ```js
-const weeklySegment = view(Inputs.radio(["Combined", "Sports", "Parlay", "Non-sports"], {label: "Segment", value: "Combined"}));
+const weeklySegment = view(Inputs.radio(["Combined", "Sports (excl. parlays)", "Parlay", "Non-sports"], {label: "Segment", value: "Combined"}));
 ```
 
 ```js
