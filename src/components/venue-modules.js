@@ -274,7 +274,10 @@ export function largeTradeRows(largeTrades, {venue, table, metricLabel}) {
       market: d.market_name || d.ticker_name,
       contracts: +d.contracts_traded || 0,
       price: d.price,
-      metric_value: +d[metricKey] || 0,
+      // "contracts" is the metric NAME, not a column: the count lives in contracts_traded.
+      // Indexing the row by the metric name resolves for the two stake metrics and yields
+      // undefined -> 0 for this one, so the ranking column read 0 on every row.
+      metric_value: metricKey === "contracts" ? +d.contracts_traded || 0 : +d[metricKey] || 0,
       pct_of_market: d.pct_of_market === "" || d.pct_of_market == null ? null : +d.pct_of_market,
       window_left_censored: String(d.window_left_censored) === "true" || +d.window_left_censored === 1
     }));

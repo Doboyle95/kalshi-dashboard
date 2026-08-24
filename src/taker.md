@@ -11,6 +11,9 @@ title: Taker-Side Volume
 ```js
 const fmtUSD  = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-$" : "$"; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : a.toFixed(0)); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
+const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
+const fmtPct = n => `${((n ?? 0) * 100).toFixed((n ?? 0) >= 0.1 ? 1 : 2)}%`;
+const fmtPrice = p => p == null || p === "" ? "-" : `${Number(p) % 1 === 0 ? Number(p).toFixed(0) : Number(p).toFixed(2)}¢`;
 ```
 
 ```js
@@ -25,6 +28,7 @@ const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {renderDateBrush} from "./components/date-brush.js";
+import {bestName, fmtStrike} from "./components/ticker-names.js";
 import {buildReportTickerToCat, TAKER_DETAIL_ORDER, TAKER_DETAIL_COLORS, TAKER_GENERAL_MAP, TAKER_GENERAL_ORDER, TAKER_GENERAL_COLORS} from "./components/taker-categories.js";
 ```
 
@@ -32,7 +36,8 @@ import {buildReportTickerToCat, TAKER_DETAIL_ORDER, TAKER_DETAIL_COLORS, TAKER_G
 display(freshnessPanel({
   items: [
     {label: "Taker-side volume", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
-    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Taker-side volume in dollars, broken out by category"}
+    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Taker-side volume in dollars, broken out by category"},
+    {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
 }));
@@ -399,3 +404,102 @@ Plot.plot({
   <summary>How taker-side volume is calculated</summary>
   <p>Every matched trade has an aggressor (taker) who crosses the spread and a liquidity provider (maker) who rests. The taker's cost depends on which side they take: a yes-side taker pays the yes price per contract; a no-side taker pays <em>1 − yes price</em> per contract. Summing those dollar amounts across all takers gives total taker-side volume — the prediction-market equivalent of handle in sports betting. Unlike raw contract count, taker-side volume is unaffected by artificial inflation from high-frequency trading in near-certain contracts.</p>
 </details>
+
+## Largest individual trades
+
+<p class="section-intro">The single biggest prints Kalshi has published — raw contracts, the larger side's dollar stake and what the taker specifically put up don't always pick the same winners.</p>
+
+```js
+// Loaded HERE, not in the page's shared block at the top: build_chart_catalog.py credits a
+// series to the nearest "##" heading ABOVE its DataAttachment call, so a file loaded from a
+// shared block gets filed under whatever section happens to sit above it.
+const largeTrades = await DataAttachment("data/large_trades.csv").csv({typed: true});
+```
+
+```js
+const LT_METRIC_KEYS = {"Contracts": "contracts", "One-party stake": "one_party_stake", "Taker stake": "taker_stake"};
+
+// DERIVED FROM THE FILE, not a hand-kept list: Kalshi flags an aggressor on every print so all
+// three rankings exist today, but an option offered for a metric the producer stopped emitting
+// would render an empty table rather than disappear.
+const ltMetrics = Object.keys(LT_METRIC_KEYS).filter(label => largeTrades.some(d => d.metric === LT_METRIC_KEYS[label]));
+
+function largeTradeRows(table, metricLabel) {
+  const metricKey = LT_METRIC_KEYS[metricLabel];
+  return largeTrades
+    .filter(d => d.table === table && d.metric === metricKey)
+    .sort((a, b) => +a.rank - +b.rank)
+    .map(d => ({
+      date: d.date,
+      // Same sport-by-sport classification the charts above use, falling back to Kalshi's own
+      // coarser kalshi_category when a report_ticker is not in the leaderboard.
+      category: reportTickerToCat.get(d.report_ticker) || d.kalshi_category || "Uncategorized",
+      market: bestName({market_key: d.market_key, market_name: "", "i.market_name": ""}),
+      outcome: fmtStrike(d.ticker_name, d.market_key),
+      contracts: +d.contracts_traded || 0,
+      price: d.price,
+      taker_side: d.taker_side || "-",
+      // "contracts" is the metric NAME, not a column: the count lives in contracts_traded.
+      // Indexing the row by the metric name resolves for the two stake metrics and yields
+      // undefined -> 0 for this one, so the ranking column read 0 on every row.
+      metric_value: metricKey === "contracts" ? +d.contracts_traded || 0 : +d[metricKey] || 0,
+      pct_of_market: d.pct_of_market === "" || d.pct_of_market == null ? null : +d.pct_of_market
+    }));
+}
+```
+
+<div class="control-strip">
+
+```js
+const overallMetric = view(Inputs.radio(ltMetrics, {label: "Rank by", value: "Contracts"}));
+```
+
+</div>
+
+```js
+const overallRows = largeTradeRows("overall", overallMetric);
+display(overallRows.length
+  ? Inputs.table(overallRows, {
+      columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"],
+      header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", metric_value: overallMetric},
+      format: {date: fmtDate, contracts: fmtCount, price: fmtPrice, metric_value: overallMetric === "Contracts" ? fmtCount : fmtUSD},
+      align: {contracts: "right", metric_value: "right"},
+      rows: 15
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">No large-trade rows are being served.</div>`);
+```
+
+<div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices, where one side risks close to the full dollar and the other almost nothing.</div>
+
+## Largest trades in small markets
+
+<p class="section-intro">The same rankings restricted to trades that were unusually large <em>for the market they happened in</em> — a print that ate a big share of everything that market ever traded, not just a big number in isolation.</p>
+
+<div class="control-strip">
+
+```js
+const smallMarketMetric = view(Inputs.radio(ltMetrics, {label: "Rank by", value: ltMetrics.includes("Taker stake") ? "Taker stake" : "Contracts"}));
+```
+
+</div>
+
+```js
+const smallMarketRows = largeTradeRows("small_market", smallMarketMetric);
+display(smallMarketRows.length
+  ? Inputs.table(smallMarketRows, {
+      columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"],
+      header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", metric_value: smallMarketMetric, pct_of_market: "% of market"},
+      format: {date: fmtDate, contracts: fmtCount, price: fmtPrice, metric_value: smallMarketMetric === "Contracts" ? fmtCount : fmtUSD, pct_of_market: d => d == null ? "-" : fmtPct(d)},
+      align: {contracts: "right", metric_value: "right", pct_of_market: "right"},
+      rows: 15
+    })
+  : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">No small-market rows are being served.</div>`);
+```
+
+<details class="surface-card compact-details">
+  <summary>How this is calculated</summary>
+  <p>A trade qualifies here when it was at least 100,000 contracts <strong>and</strong> at least 20% of that market's entire lifetime volume in that one print, excluding parlays. Parlays are left out because a parlay combo is by construction its own tiny market, so almost any parlay trade looks like a huge share of a thin one — and the per-combo volume totals behind that ratio aren't reliable at that granularity. Parlays still appear in the table above, which has no market-share requirement.</p>
+  <p>Because the denominator — the market's lifetime volume — keeps growing while a market is still active, a trade can drop out of this list over time even though the trade itself never changes.</p>
+</details>
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./trade-size">Trading behavior across venues</a>, which ranks the same prints against every other venue's tape.</div>
