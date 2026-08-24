@@ -752,7 +752,7 @@ const overallRows = overallKalshi
 ```js
 Inputs.table(overallRows, {
   columns: overallKalshi
-    ? ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"]
+    ? ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "is_block_trade", "metric_value"]
     : ["date", "market", "contracts", "price", "metric_value"],
   header: {
     date: "Date",
@@ -762,6 +762,7 @@ Inputs.table(overallRows, {
     contracts: "Contracts",
     price: "Price",
     taker_side: "Taker side",
+    is_block_trade: "Block trade",
     metric_value: overallMetricLabel
   },
   format: {
@@ -769,6 +770,7 @@ Inputs.table(overallRows, {
     market: (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTradeDetail(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`,
     contracts: fmtCount,
     price: fmtPrice,
+    is_block_trade: value => value == null ? "—" : value ? "Yes" : "No",
     metric_value: overallMetricLabel === "Contracts" ? fmtCount : fmtUSD
   },
   align: {contracts: "right", metric_value: "right"},
@@ -777,7 +779,7 @@ Inputs.table(overallRows, {
 ```
 
 <p class="chart-note">${overallKalshi
-  ? html`Kalshi is the only venue here with an aggressor flag on every print and a market-name dictionary, so it carries the extra Category, Outcome and Taker-side columns.`
+  ? html`Kalshi is the only venue here with an aggressor flag on every print and a market-name dictionary, so it carries the extra Category, Outcome and Taker-side columns. <strong>Block trade</strong> is Kalshi's own flag; &mdash; means we cannot tell, not that it was an ordinary trade.`
   : html`Covers this venue's collected tape, not its whole history. Market labels are whatever the venue itself publishes &mdash; ProphetX and Novig name their fixtures, DKeX, Polymarket and Underdog publish only an opaque contract id, and none of them is renamed here. <strong>Taker stake</strong> is offered on Kalshi and Novig only, the two venues that flag the aggressor.`}</p>
 
 ## Largest trades in small markets
@@ -809,7 +811,7 @@ const smallMarketRows = smallMarketKalshi
 ```js
 Inputs.table(smallMarketRows, {
   columns: smallMarketKalshi
-    ? ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"]
+    ? ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "is_block_trade", "metric_value", "pct_of_market"]
     : ["date", "market", "contracts", "price", "metric_value", "pct_of_market"],
   header: {
     date: "Date",
@@ -819,6 +821,7 @@ Inputs.table(smallMarketRows, {
     contracts: "Contracts",
     price: "Price",
     taker_side: "Taker side",
+    is_block_trade: "Block trade",
     metric_value: smallMarketMetricLabel,
     pct_of_market: "% of market"
   },
@@ -827,6 +830,7 @@ Inputs.table(smallMarketRows, {
     market: (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTradeDetail(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`,
     contracts: fmtCount,
     price: fmtPrice,
+    is_block_trade: value => value == null ? "—" : value ? "Yes" : "No",
     metric_value: smallMarketMetricLabel === "Contracts" ? fmtCount : fmtUSD,
     pct_of_market: fmtPct
   },
