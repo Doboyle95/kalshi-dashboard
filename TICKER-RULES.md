@@ -33,6 +33,7 @@ Three things vary by sport: the **series prefix**, the **team-code dictionary**
 row → bestName → (Market column)
 row → fmtWinner → (Winner column)
 row → fmtStrike(top_outcome, market_key) → (Highest-vol. strike column)
+        └─ both end in decodeOutcomeSuffix(suffix, market_key)
 row → getSportDisplayCategory → (Row color)
 ```
 
@@ -58,25 +59,46 @@ Priority:
 2. Fed metadata fix: `"Hike 0bps"` → `"Hold"`.
 3. `d.winner` text if ≤50 chars and not starting with `::`.
 4. `d.winner` with `:: ` prefix stripped.
-5. Decode `winner_ticker` suffix via `getTeamsForMarket(market_key)`, then
-   `GOLF_PLAYERS`, then `TENNIS_PLAYERS`.
-6. `WINNER_BY_MARKET[market_key]` (for markets with no `winner_ticker` at all).
-7. `"—"`.
+5. `TOP_OUTCOME_NAMES[winner_ticker]` — exact name for a full outcome ticker.
+6. `decodeOutcomeSuffix(suffix, market_key)` — the shared decoder below.
+7. `WINNER_BY_MARKET[market_key]` (for markets with no `winner_ticker` at all).
+8. `"—"`.
+
+Steps 5 and 6 run only when `winner_ticker !== market_key`. That guard is load-
+bearing, not incidental: for a single-outcome market the winner *is* the plain
+`yes`/`no` from step 3, and `TOP_OUTCOME_NAMES` holds strike-shaped entries for
+exactly those markets (`"KXGOVSHUT-26JAN31"` → `"by Jan 31, 2026"`). Hoisting the
+lookup above step 3 replaces a correct `yes` with a restatement of the question.
 
 ### Highest-vol. strike (`fmtStrike`)
 
 Priority:
 
 1. `TOP_OUTCOME_NAMES[top_outcome]` — hard override (keyed on full ticker).
-2. Fed codes: `H0` → `Hold`, `H2` → `-2×25 bps`, `C25` → `-25 bps (cut)`.
-3. Days: `42D` → `42 days`.
-4. Dates: `26MAR01` → `by Mar 1`.
-5. Spreads: if `market_key` contains `SPREAD`, `SEA4` → `Seahawks -4`.
-6. Percent: if `market_key` starts with `POPVOTEMOV`, bare numbers or `B1.4`
+2. `decodeOutcomeSuffix(suffix, market_key)`.
+
+### Outcome suffixes (`decodeOutcomeSuffix`) — shared by both columns
+
+`winner_ticker` and `top_outcome` are the same kind of string, so one decoder
+serves both. Add a new suffix rule here, once; a rule added to only one caller is
+how the Winner cell came to read `H0` beside a Busiest-outcome cell reading
+`Hold`. Order matters — these are tried top to bottom:
+
+1. `KXMVE*` parlays → `"—"` (opaque combination id, no fix path; see rule 6 in
+   `CLAUDE.md`). Must stay above step 8.
+2. `TIE` → `Draw` (soccer 3-way markets).
+3. Fed codes: `H0` → `Hold`, `H2` → `+2 bps (hike)`, `C25` → `-25 bps (cut)`.
+4. Days: `42D` → `42 days`, `1D` → `1 day`.
+5. Dates: `26MAR01` → `by Mar 1`.
+6. Spreads: if `market_key` contains `SPREAD`, `SEA4` → `Seahawks -4`.
+7. Percent: if `market_key` starts with `POPVOTEMOV`, bare numbers or `B1.4`
    get a `%` suffix. **No other markets get `%`** — Bitcoin price strikes
    and Electoral College margins are raw integers.
-7. Bare numbers ≥ 1000 get comma-formatting (e.g. `494000` → `494,000`).
-8. Fallback: team/player decode via `getTeamsForMarket`.
+8. Bare numbers ≥ 1000 get comma-formatting (e.g. `494000` → `494,000`);
+   `B`-prefixed levels drop the `B` (`B4800` → `4800`).
+9. `KXWCSCORE*` exact scores: `MEX2ECU0` → `Mexico 2-0 Ecuador`.
+10. Nothing was stripped (suffix equals the market key) → `"—"`.
+11. Fallback: team/player decode via `getTeamsForMarket`.
 
 ## Sport routing — `getTeamsForMarket(market_key)`
 
@@ -189,12 +211,12 @@ When changing logic, these results must still hold for the current CSV:
 | `PRES-2024` | Presidency 2024 | Trump | Harris | Elections |
 | `KXSB-26` | Super Bowl LX | Seahawks | Patriots | Football |
 | `KXMLBGAME-25OCT27TORLAD` | World Series 2025 Game 3 | Dodgers | Dodgers | Other sport |
-| `KXFEDDECISION-25SEP` | Sep '25 Fed rate decision | Cut 25bps | Hold | Economics |
+| `KXFEDDECISION-25SEP` | Sep '25 Fed rate decision | -25 bps (cut) | Hold | Economics |
 | `POPVOTEMOV-24-R-B` | Popular vote margin (R, wider) | — | 2.5% | Elections |
 | `KXBTCMAXY-25-DEC31` | Bitcoin max price 2025 | — | 129,999.99 | Crypto |
 | `KXNFLSPREAD-26FEB08SEANE` | Seahawks vs. Patriots (spread) | Seahawks -5 | Seahawks -4 | Football |
 | `KXKHAMENEIOUT-AKHA` | Khamenei out of power | it's complicated… | by March 1 | Politics |
-| `KXMVE…` (any) | Parlay | (from winner_ticker) | (from top_outcome) | Sports |
+| `KXMVE…` (any) | Parlay | — | — | Sports |
 
 ## Adding a new ticker — playbook
 
@@ -212,8 +234,17 @@ When changing logic, these results must still hold for the current CSV:
    - Strike wrong → `TOP_OUTCOME_NAMES` (use full ticker as key).
 5. If the whole family of tickers needs the same fix, prefer a regex branch
    over per-ticker overrides.
-6. `npm run build` — confirm no regressions and the site builds cleanly.
-7. Commit, push, PR.
+6. `npm run build` — confirm the site builds cleanly. **A green build is not a
+   regression check**: every decoding defect in this file's history survived one.
+   Run the old and the new module over every row of `market_leaderboard.csv`,
+   `large_trades.csv` and `taker_pnl_by_market_leaderboard.csv` and diff the cells
+   — that is what caught `fmtWinner`'s 19 raw suffixes and, before it, the World Cup
+   row that read "Rublev".
+7. Verify with a real render, not just the build — `/categories` and
+   `/market-explorer` both call `fmtWinner`, from different modules.
+   `kalshi-fmtwinner-probe.mjs` on the VM is a 114-check Playwright probe of both;
+   its header carries the local rig recipe.
+8. Commit, push, PR.
 
 ## Things to NOT do
 
@@ -227,3 +258,10 @@ When changing logic, these results must still hold for the current CSV:
   legitimate winners have long names.
 - Don't remove the `::` strip in `fmtWinner` — Kalshi encodes
   category-winner text as `":: or another Republican…"` etc.
+- Don't add a suffix rule to `fmtStrike` or `fmtWinner` directly — it belongs in
+  `decodeOutcomeSuffix`, which both end in. A rule added to one caller only is the
+  defect that made the Winner column read `H0`, `0D` and `B4800` while the
+  Busiest-outcome column beside it read `Hold`, `0 days` and `4800`.
+- Don't hoist `fmtWinner`'s `TOP_OUTCOME_NAMES` lookup above its `winner` /
+  binary-outcome branch. It is scoped to `winner_ticker !== market_key` on
+  purpose — see the Winner section above.

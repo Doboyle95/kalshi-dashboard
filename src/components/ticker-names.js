@@ -664,6 +664,101 @@ export const WINNER_BY_MARKET = {
   "KXSUPERBOWLAD-SB2026":"Various",
 };
 
+// -- Shared outcome-suffix decoding --------------------------------------------
+// fmtStrike (busiest-traded outcome) and fmtWinner (settled outcome) read the same
+// Kalshi outcome tickers off the same rows, so the suffix -> human-name rules live
+// here once. Before this was factored out fmtWinner decoded only TIE / SPREAD /
+// exact-score / team-map and passed everything else through raw, so the Winner cell
+// read "H0" where the Busiest-outcome cell beside it read "Hold", and "0D" beside
+// "0 days".
+//
+// This is the decoding TAIL only - the two callers are NOT interchangeable and keep
+// their own front matter. fmtStrike takes two scalars and consults TOP_OUTCOME_NAMES;
+// fmtWinner takes the whole row, has its own WINNER_OVERRIDES / WINNER_BY_MARKET
+// maps, a >50-char guard that drops market-rule prose, and a binary-market branch
+// that must keep answering "yes" rather than restating the strike (KXGOVSHUT-26JAN31
+// settled yes; its Winner cell should say so, not "by Jan 31, 2026").
+//
+// Branch order is fmtStrike's, unchanged, so the busiest-outcome column it has always
+// served is bit-identical.
+export function decodeOutcomeSuffix(short, mk) {
+  // Parlays (KXMVE*, CLAUDE.md rule 6) name their outcomes with an opaque
+  // 11-hex-digit combination id - a hash of the leg set, not a contract name.
+  // Every KXMVE outcome suffix in the published market_leaderboard.csv is exactly
+  // 11 hex characters (53 of 53 rows, generation f4ba118b6ffaebf519be), the
+  // markets carry up to 1,056 outcomes each, and a new parlay mints a new id - so
+  // unlike an undecoded player code there is no dictionary that could ever decode
+  // one and no fix path in this repo. Leaving it visible is not triage-useful
+  // (nobody can look "7B807C188FF" up) and it reads as data corruption, so blank
+  // it with the same "-" absence convention the branches below already use. The
+  // settled-outcome column needs the same blanking for the same reason: 30 of the
+  // 53 KXMVE rows carry an 11-hex winner_ticker, and showing the id cleaned in one
+  // cell and raw in the next would put it on screen twice over.
+  //
+  // Scoped to the whole KXMVE family rather than to the hex shape deliberately: a
+  // parlay outcome has no readable form to suppress, whereas a shape-scoped guard
+  // would let a future non-hex parlay code fall through to the last line's
+  // GOLF_PLAYERS/TENNIS_PLAYERS cross-map and answer with a confident wrong name
+  // - correctness rule 1, the bug that rendered the World Cup's busiest outcome
+  // as "Rublev".
+  //
+  // Must sit above the /^B[0-9]/ branch further down, which is unsound on
+  // non-numeric codes: it stripped the leading B off "B1F7402D1E7" and rendered
+  // "1F7402D1E7".
+  if (/^KXMVE/.test(mk)) return "-";
+  // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
+  if (short === "TIE") return "Draw";
+  // Fed rate outcomes
+  if (short === "H0") return "Hold";
+  if (/^H(\d+)$/.test(short)) return `+${short.slice(1)} bps (hike)`;
+  if (/^C(\d+)$/.test(short)) return `-${short.slice(1)} bps (cut)`;
+  // Shutdown length - e.g. "42D" -> "42 days". Pluralized because this branch now
+  // feeds the Winner cell too, and KXGOVSHUTLENGTH-26FEB28 settled to "1D".
+  const daysM = short.match(/^(\d+)D$/);
+  if (daysM) return `${daysM[1]} ${daysM[1] === "1" ? "day" : "days"}`;
+  // Date-style strike like "26MAR01" -> "by Mar 1"
+  const dateM = short.match(/^(\d{2})([A-Z]{3})(\d{2})$/);
+  if (dateM) {
+    const mon = dateM[2];
+    return `by ${mon[0]+mon.slice(1).toLowerCase()} ${parseInt(dateM[3],10)}`;
+  }
+  // Spread strike like "SEA4" / "IND7" when in a spread market
+  if (/SPREAD/.test(mk)) {
+    const spM = short.match(/^([A-Z]+)(\d+)$/);
+    if (spM) {
+      const teamMap = getTeamsForMarket(mk);
+      const teamName = teamMap[spM[1]] ?? spM[1];
+      return `${teamName} -${spM[2]}`;
+    }
+  }
+  // Percentage-formatted strikes - only for popular-vote-margin markets.
+  // Bitcoin and electoral-college-margin strikes are bare numbers that are NOT %.
+  const isPctMarket = /^POPVOTEMOV/.test(mk);
+  if (isPctMarket && /^[0-9]+(\.[0-9]+)?$/.test(short)) return short + "%";
+  if (isPctMarket && /^B[0-9]/.test(short))             return short.slice(1) + "%";
+  // Non-pct bare numbers: show as-is (formatted with comma thousands)
+  if (/^[0-9]+(\.[0-9]+)?$/.test(short)) {
+    const n = Number(short);
+    if (Number.isFinite(n) && n >= 1000) return n.toLocaleString();
+    return short;
+  }
+  if (/^B[0-9]/.test(short)) return short.slice(1);
+  // World Cup exact-score outcomes like "MEX2ECU0" -> "Mexico 2-0 Ecuador"
+  if (/^KXWCSCORE/.test(mk)) {
+    const sc = short.match(/^([A-Z]{3})(\d+)([A-Z]{3})(\d+)$/);
+    if (sc) {
+      const teamMap = getTeamsForMarket(mk);
+      return `${teamMap[sc[1]] ?? sc[1]} ${sc[2]}-${sc[4]} ${teamMap[sc[3]] ?? sc[3]}`;
+    }
+  }
+  // Nothing was stripped (the outcome ticker IS the market key, a single-outcome
+  // market) - there's no code left to decode, so don't leak the raw ticker.
+  if (short === mk) return "-";
+  // Sport-aware team / player fallback
+  const teamMap = getTeamsForMarket(mk);
+  return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
+}
+
 export function fmtWinner(d) {
   const mk   = (d.market_key ?? "").trim();
   const rawW = (d.winner ?? "").trim();
@@ -684,29 +779,22 @@ export function fmtWinner(d) {
   }
   if (w.startsWith("::")) { const a = w.replace(/^::\s*/, "").trim(); if (a) return a; }
   if (wt && wt !== mk) {
+    // Exact names for specific full outcome tickers. winner_ticker and top_outcome
+    // are the same kind of string - a complete Kalshi outcome ticker - so the map
+    // fmtStrike consults answers this column too, and the two maps already agree
+    // wherever they overlap (KXFEDCHAIRNOM-29-KW is "Warsh" in both).
+    // WINNER_OVERRIDES is still checked first: it is the hard override.
+    //
+    // Deliberately INSIDE the `wt !== mk` branch, below the binary-outcome check
+    // above, not at the top of the function. TOP_OUTCOME_NAMES carries strike-shaped
+    // entries for single-outcome markets ("KXGOVSHUT-26JAN31": "by Jan 31, 2026"),
+    // which is the right label for the busiest *contract* but the wrong answer for
+    // the settled outcome - that market resolved yes and the Winner cell has to say
+    // so. Hoisting this lookup would turn two correct "yes" cells into a restatement
+    // of the market's own question.
+    if (TOP_OUTCOME_NAMES[wt]) return TOP_OUTCOME_NAMES[wt];
     const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
-    // Parlay settlement outcomes are the same opaque combination ids fmtStrike
-    // blanks - 30 of the 53 KXMVE rows carry an 11-hex winner_ticker, and this
-    // function's tail leaked it into the Winner cell beside the strike cell.
-    // Blanking one column and not the other would put the same id on screen
-    // twice over, once cleaned and once not. Placed after the published-winner
-    // text check above, so real settlement prose still wins if Kalshi ever
-    // publishes it for a parlay.
-    if (/^KXMVE/.test(mk)) return "-";
-    // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
-    if (short === "TIE") return "Draw";
-    const teamMap = getTeamsForMarket(mk);
-    // Spread winners like "SEA10" -> "Seahawks -10"
-    if (/SPREAD/.test(mk)) {
-      const sp = short.match(/^([A-Z]+)(\d+)$/);
-      if (sp) return `${teamMap[sp[1]] ?? sp[1]} -${sp[2]}`;
-    }
-    // World Cup exact-score outcomes like "MEX2ECU0" -> "Mexico 2-0 Ecuador"
-    if (/^KXWCSCORE/.test(mk)) {
-      const sc = short.match(/^([A-Z]{3})(\d+)([A-Z]{3})(\d+)$/);
-      if (sc) return `${teamMap[sc[1]] ?? sc[1]} ${sc[2]}-${sc[4]} ${teamMap[sc[3]] ?? sc[3]}`;
-    }
-    return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
+    return decodeOutcomeSuffix(short, mk);
   }
   if (WINNER_BY_MARKET[mk]) return WINNER_BY_MARKET[mk];
   return "-";
@@ -850,77 +938,7 @@ export function fmtStrike(top_outcome, market_key) {
   const short = mk
     ? top_outcome.replace(mk + "-", "")
     : top_outcome.split("-").pop();
-  // Parlays (KXMVE*, CLAUDE.md rule 6) name their outcomes with an opaque
-  // 11-hex-digit combination id - a hash of the leg set, not a contract name.
-  // Every KXMVE outcome suffix in the published market_leaderboard.csv is exactly
-  // 11 hex characters (53 of 53 rows, generation f4ba118b6ffaebf519be), the
-  // markets carry up to 1,056 outcomes each, and a new parlay mints a new id - so
-  // unlike an undecoded player code there is no dictionary that could ever decode
-  // one and no fix path in this repo. Leaving it visible is not triage-useful
-  // (nobody can look "7B807C188FF" up) and it reads as data corruption, so blank
-  // it with the same "-" absence convention the branches below already use.
-  //
-  // Scoped to the whole KXMVE family rather than to the hex shape deliberately: a
-  // parlay outcome has no readable form to suppress, whereas a shape-scoped guard
-  // would let a future non-hex parlay code fall through to the last line's
-  // GOLF_PLAYERS/TENNIS_PLAYERS cross-map and answer with a confident wrong name
-  // - correctness rule 1, the bug that rendered the World Cup's busiest outcome
-  // as "Rublev".
-  //
-  // Must sit above the /^B[0-9]/ branch further down, which is unsound on
-  // non-numeric codes: it stripped the leading B off "B1F7402D1E7" and rendered
-  // "1F7402D1E7".
-  if (/^KXMVE/.test(mk)) return "-";
-  // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
-  if (short === "TIE") return "Draw";
-  // Fed rate outcomes
-  if (short === "H0") return "Hold";
-  if (/^H(\d+)$/.test(short)) return `+${short.slice(1)} bps (hike)`;
-  if (/^C(\d+)$/.test(short)) return `-${short.slice(1)} bps (cut)`;
-  // Shutdown length - e.g. "42D" -> "42 days"
-  const daysM = short.match(/^(\d+)D$/);
-  if (daysM) return `${daysM[1]} days`;
-  // Date-style strike like "26MAR01" ? "by Mar 1"
-  const dateM = short.match(/^(\d{2})([A-Z]{3})(\d{2})$/);
-  if (dateM) {
-    const mon = dateM[2];
-    return `by ${mon[0]+mon.slice(1).toLowerCase()} ${parseInt(dateM[3],10)}`;
-  }
-  // Spread strike like "SEA4" / "IND7" when in a spread market
-  if (/SPREAD/.test(mk)) {
-    const spM = short.match(/^([A-Z]+)(\d+)$/);
-    if (spM) {
-      const teamMap = getTeamsForMarket(mk);
-      const teamName = teamMap[spM[1]] ?? spM[1];
-      return `${teamName} -${spM[2]}`;
-    }
-  }
-  // Percentage-formatted strikes - only for popular-vote-margin markets.
-  // Bitcoin and electoral-college-margin strikes are bare numbers that are NOT %.
-  const isPctMarket = /^POPVOTEMOV/.test(mk);
-  if (isPctMarket && /^[0-9]+(\.[0-9]+)?$/.test(short)) return short + "%";
-  if (isPctMarket && /^B[0-9]/.test(short))             return short.slice(1) + "%";
-  // Non-pct bare numbers: show as-is (formatted with comma thousands)
-  if (/^[0-9]+(\.[0-9]+)?$/.test(short)) {
-    const n = Number(short);
-    if (Number.isFinite(n) && n >= 1000) return n.toLocaleString();
-    return short;
-  }
-  if (/^B[0-9]/.test(short)) return short.slice(1);
-  // World Cup exact-score outcomes like "MEX2ECU0" -> "Mexico 2-0 Ecuador"
-  if (/^KXWCSCORE/.test(mk)) {
-    const sc = short.match(/^([A-Z]{3})(\d+)([A-Z]{3})(\d+)$/);
-    if (sc) {
-      const teamMap = getTeamsForMarket(mk);
-      return `${teamMap[sc[1]] ?? sc[1]} ${sc[2]}-${sc[4]} ${teamMap[sc[3]] ?? sc[3]}`;
-    }
-  }
-  // top_outcome identical to market_key (single-outcome market, nothing to
-  // strip) - there's no code left to decode, so don't leak the raw ticker.
-  if (short === mk) return "-";
-  // Sport-aware team / player fallback
-  const teamMap = getTeamsForMarket(mk);
-  return teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short;
+  return decodeOutcomeSuffix(short, mk);
 }
 
 // Map a row's Kalshi category to a display category used for row coloring:

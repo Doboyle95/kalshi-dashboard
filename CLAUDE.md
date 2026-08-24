@@ -131,8 +131,9 @@ starts with `// ── Category colors ──`:
 | `WINNER_OVERRIDES` | Hard-coded winner display (keyed on `winner_ticker`). |
 | `WINNER_BY_MARKET` | Winner for markets where `winner_ticker` is empty but the market did settle. Keyed on `market_key`. |
 | `TOP_OUTCOME_NAMES` | Human names for specific `top_outcome` strings (full ticker, including market_key prefix). |
-| `fmtWinner(d)` | Runs `WINNER_OVERRIDES` → strips long rule text → uses `winner` field → strips `::` prefixes → falls back to decoding the suffix of `winner_ticker` via `getTeamsForMarket`. Finally falls back to `WINNER_BY_MARKET`. |
-| `fmtStrike(top, mk)` | Runs `TOP_OUTCOME_NAMES` → Fed H0/Hn/Cn → days (`42D` → `42 days`) → date (`26MAR01` → `by Mar 1`) → spread (`SEA4` → `Seahawks -4`) → percentage (**only** for `POPVOTEMOV*` markets) → sport-aware team/player. |
+| `decodeOutcomeSuffix(short, mk)` | The **shared** outcome-suffix decoder both display functions end in: `KXMVE` blank → `TIE` → Fed H0/Hn/Cn → days (`42D` → `42 days`) → date (`26MAR01` → `by Mar 1`) → spread (`SEA4` → `Seahawks -4`) → percentage (**only** for `POPVOTEMOV*`) → bare numbers → `B`-prefixed levels → World Cup exact scores → sport-aware team/player. Add a new suffix rule **here**, once, not in either caller. |
+| `fmtWinner(d)` | Runs `WINNER_OVERRIDES` → strips long rule text → uses `winner` field → strips `::` prefixes → `TOP_OUTCOME_NAMES[winner_ticker]` → `decodeOutcomeSuffix` on the `winner_ticker` suffix. Finally falls back to `WINNER_BY_MARKET`. |
+| `fmtStrike(top, mk)` | Runs `TOP_OUTCOME_NAMES` → `decodeOutcomeSuffix` on the `top_outcome` suffix. |
 | `getSportDisplayCategory(d)` | Splits Kalshi's `Sports` category into `Football` / `Basketball` / `Other sport` for coloring and filtering. |
 
 ### Important correctness rules — do NOT regress these
@@ -184,6 +185,29 @@ starts with `// ── Category colors ──`:
    confident wrong name. It must also stay **above** `fmtStrike`'s `/^B[0-9]/`
    branch, which is unsound on non-numeric codes: it stripped the leading B off
    `B1F7402D1E7` and rendered `1F7402D1E7`.
+7. **The two outcome columns decode the same tickers.** `winner_ticker` (settled
+   outcome) and `top_outcome` (busiest-traded outcome) are the same kind of
+   string — a complete Kalshi outcome ticker — so the suffix rules live once in
+   `decodeOutcomeSuffix`, which `fmtStrike` and `fmtWinner` both end in. Before
+   that was factored out the Winner cell read `H0` where the Busiest-outcome cell
+   beside it read `Hold`; measured 2026-08-24 over the published
+   `market_leaderboard.csv`, `fmtWinner` was passing 19 of 1,000 cells through
+   raw that `fmtStrike` already decoded (all nine `KXFEDDECISION*` holds and cuts,
+   both `KXGOVSHUTLENGTH*` day counts, `PRESPARTYFULL-24`, `POWER-24`,
+   `KXETHMAXY-25DEC31`, `KXRANKLISTGOOGLESEARCH-26JAN`, `KXDHSFUND`,
+   `INXY-23DEC29`). Add a new suffix rule to the shared decoder, not to a caller.
+
+   ⚠ **The callers are still not interchangeable, and the front matter is where
+   the semantics diverge.** `fmtWinner(d)` takes the whole row; `fmtStrike(top, mk)`
+   takes two scalars. `fmtWinner` keeps `WINNER_OVERRIDES`, `WINNER_BY_MARKET`, the
+   `>50`-char rule-prose guard and the `::` strip. Its `TOP_OUTCOME_NAMES` lookup
+   sits **inside** the `winner_ticker !== market_key` branch, below the
+   binary-outcome check — not at the top of the function. That map carries
+   strike-shaped entries for single-outcome markets (`"KXGOVSHUT-26JAN31"`:
+   `"by Jan 31, 2026"`), which is the right label for the busiest *contract* but
+   the wrong answer for the settled outcome: that market resolved yes and the
+   Winner cell has to say so. Hoisting the lookup turns two correct `yes` cells
+   into a restatement of the market's own question.
 
 ### When adding a new market / fixing a new ticker
 
