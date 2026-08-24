@@ -156,16 +156,28 @@ export const LB_VENUES = {
     unit: "contracts",
     hasPeriod: false,
     outcomesHeader: "Outcomes",
-    // No "Busiest outcome" column. market_leaderboard.csv's top_outcome is not
-    // measured -- the producer sets top_outcome = winner_ticker, so the two are
-    // byte-identical on 1,000 of 1,000 rows (measured 2026-08-21). Checked against
-    // real per-outcome volume it names the busiest outcome on only 364 of 926
-    // resolvable markets -- wrong 60.7% of the time, and systematically biased
-    // toward outcomes that won (KXMENWORLDCUP-26 showed -ES at 133M when -AR
-    // traded 326M). Restore only once the producer computes a real
-    // max-contracts-per-event_ticker; the Winner column beside it already
-    // carries the value this column was really showing.
-    topHeader: null,
+    // "Busiest outcome" is back. It was suppressed on 2026-08-21 because the producer
+    // set top_outcome = winner_ticker, so the column only restated the Winner cell
+    // beside it -- byte-identical on 1,000 of 1,000 rows. KalshiData `ea9ca12` fixed the
+    // producer and the published file now carries a real per-outcome measurement:
+    // top_outcome differs from winner_ticker on 628 of 1,000 rows (generation
+    // f7580c55e8126a7dd99b, 2026-08-24; it was 0 of 1,000 three days earlier).
+    // KXMENWORLDCUP-26 settled to -ES (Spain) while -AR (Argentina) traded the most;
+    // PRES-2024 settled to DJT while KH was the busiest outcome. Re-run that count
+    // before trusting this column -- a producer regression would silently make it a
+    // copy of Winner again, and nothing else here would notice.
+    //
+    // Header text is "Busiest outcome", the string every other venue uses, because the
+    // cross-venue view hard-codes that label for the shared column; categories.md calls
+    // its own copy "Highest-vol. strike" and is single-venue, so the two do not collide.
+    //
+    // The values are fmtStrike's, unfiltered, exactly as categories.md renders them --
+    // including the ~150 rows whose suffix does not decode, of which the 53 KXMVE*
+    // parlays show a raw hex outcome id. Blanking them HERE would make these two tables
+    // disagree about the same rows while leaving the real defect (fmtStrike's coverage)
+    // in place; that belongs in fmtStrike, where one fix serves both pages.
+    topHeader: "Busiest outcome",
+    topIsCode: false,
     winnerIsCode: false,
     coverage: "All time.",
     // market_leaderboard.csv HAS a market_name column and it is the ticker
@@ -184,6 +196,13 @@ export const LB_VENUES = {
       fees: feeOf(r.fees_total, num(r.contracts)),
       outcomes: num(r.n_outcomes),
       winner: o.winnerFn ? str(o.winnerFn(r)) : str(r.winner),
+      // fmtStrike's signature is (top_outcome, market_key) -- two scalars, NOT the row
+      // that nameFn and winnerFn take. Handing it `r` throws inside normalizeLeaderboard's
+      // per-row try/catch, which skips the row rather than surfacing anything, so the
+      // whole Kalshi leaderboard would come back EMPTY instead of erroring. Keep both args.
+      // fmtStrike returns "-" for a suffix it cannot decode; that is an absence, not an
+      // outcome, so it is folded to "" and the table's own "—" rendering takes over.
+      top: o.topFn ? str(o.topFn(r.top_outcome, r.market_key)).replace(/^-$/, "") : "",
       lastTrade: dateOf(r.last_trade_date),
       period: "all"
     })
