@@ -92,15 +92,35 @@ export const bucketColor = b => BUCKET_COLORS[b] ?? "var(--pc-unclassified)";
 // toggle exists rather than a default.
 export function categoryMix({rows, width, measure = "Share", categories, colorOf, height = 340}) {
   const byDate = d3.rollup(rows, rs => d3.sum(rs, d => +d.contracts || 0), d => String(d.date).slice(0, 10));
-  const stacked = rows
-    .filter(d => categories.includes(d.category))
-    .map(d => {
-      const total = byDate.get(String(d.date).slice(0, 10)) || 0;
-      const contracts = +d.contracts || 0;
-      return {date: asDate(d.date), category: d.category, contracts, share: total > 0 ? contracts / total : 0};
-    })
-    .filter(d => !Number.isNaN(+d.date));
   const share = measure === "Share";
+  // ⚠ ROLL UP TO ONE ROW PER DAY PER BUCKET BEFORE PLOTTING. Every venue except Kalshi
+  // publishes its categories per SPORT -- Novig sends Baseball/Tennis/Basketball/... and
+  // bucketOf() folds all of them into "Sports", so a single day arrives as six or seven
+  // rows that share an x AND a fill. Plot's stack transform gives each of those its own
+  // sub-band at the same x and the area path is drawn through all of them in array order,
+  // which is what produced the "sails" (sparse venues) and "rain" (dense ones) rendering.
+  // categories-venues.md, which these builders were lifted from, has always summed into
+  // the bucket the same way; the per-day version of that step was what got dropped.
+  const perDay = d3.rollup(
+    rows.filter(d => categories.includes(d.category)),
+    rs => d3.sum(rs, d => +d.contracts || 0),
+    d => String(d.date).slice(0, 10),
+    d => d.category
+  );
+  const stacked = [];
+  for (const [day, byCategory] of perDay) {
+    const total = byDate.get(day) || 0;
+    // A day the venue did not trade has no MIX -- 0% for every bucket is a false reading,
+    // not a small one, and on DKeX it punched 12 full-height holes through the band. The
+    // Contracts measure keeps those days, where zero is the honest value.
+    if (share && !(total > 0)) continue;
+    for (const [category, contracts] of byCategory) {
+      stacked.push({date: asDate(day), category, contracts, share: total > 0 ? contracts / total : 0});
+    }
+  }
+  const points = stacked
+    .filter(d => !Number.isNaN(+d.date))
+    .sort((a, b) => a.date - b.date);
   return Plot.plot({
     style: {fontFamily: "var(--font-sans)"},
     width, height, marginLeft: 62, marginBottom: 34,
@@ -110,7 +130,7 @@ export function categoryMix({rows, width, measure = "Share", categories, colorOf
       : {label: "Contracts", grid: true, tickFormat: d => fmtCount(d)},
     color: {legend: true, domain: categories, range: categories.map(colorOf)},
     marks: [
-      Plot.areaY(stacked, {
+      Plot.areaY(points, {
         x: "date", y: share ? "share" : "contracts", fill: "category",
         order: categories, curve: "monotone-x", fillOpacity: 0.9,
         tip: true,
