@@ -430,15 +430,21 @@ function largeTradeRows(table, metricLabel) {
     .filter(d => d.table === table && d.metric === metricKey)
     .sort((a, b) => +a.rank - +b.rank)
     .map(d => ({
+      table,
+      metric: metricKey,
+      rank: +d.rank,
       date: d.date,
       // Same sport-by-sport classification the charts above use, falling back to Kalshi's own
       // coarser kalshi_category when a report_ticker is not in the leaderboard.
       category: reportTickerToCat.get(d.report_ticker) || d.kalshi_category || "Uncategorized",
       market: bestName({market_key: d.market_key, market_name: "", "i.market_name": ""}),
+      market_key: d.market_key,
       outcome: fmtStrike(d.ticker_name, d.market_key),
       contracts: +d.contracts_traded || 0,
       price: d.price,
       taker_side: d.taker_side || "-",
+      one_party_stake: d.one_party_stake,
+      taker_stake: d.taker_stake,
       // "contracts" is the metric NAME, not a column: the count lives in contracts_traded.
       // Indexing the row by the metric name resolves for the two stake metrics and yields
       // undefined -> 0 for this one, so the ranking column read 0 on every row.
@@ -446,6 +452,76 @@ function largeTradeRows(table, metricLabel) {
       pct_of_market: d.pct_of_market === "" || d.pct_of_market == null ? null : +d.pct_of_market
     }));
 }
+```
+
+```js
+const tradeInspector = window.PredictChartsInspector;
+const METRIC_LABELS = {contracts: "Contracts", one_party_stake: "One-party stake", taker_stake: "Taker stake"};
+const tradeDay = date => date ? new Date(date).toISOString().slice(0, 10) : "unknown-date";
+
+// Identity is built from the trade's own values, never its rank: the leaderboard is rebuilt
+// every ~4h and a still-active market's denominator keeps moving, so a rank-keyed link would
+// silently reopen a DIFFERENT trade.
+const tradeIdentity = row => [row.table, row.metric, tradeDay(row.date), row.market_key || row.market, row.contracts, row.price].join("~");
+const allInspectorTrades = ltMetrics.flatMap(metric => [
+  ...largeTradeRows("overall", metric),
+  ...largeTradeRows("small_market", metric)
+]);
+
+function tradeDetail(row) {
+  if (!row) return null;
+  const metricLabel = METRIC_LABELS[row.metric] || "Selected measure";
+  const ranking = row.table === "small_market" ? "large relative to its market" : "largest individual prints";
+  const context = [
+    row.category ? {label: "Category", description: "Dashboard classification, sport by sport", value: row.category} : null,
+    row.outcome && row.outcome !== "-" ? {label: "Outcome", description: "Decoded contract outcome", value: row.outcome} : null,
+    row.market_key ? {label: "Market code", description: "Raw Kalshi identifier", value: row.market_key} : null
+  ].filter(Boolean);
+  const facts = [
+    {label: "Date", value: fmtDate(row.date)},
+    {label: "Contracts", value: fmtCount(row.contracts)},
+    {label: "Price", value: fmtPrice(row.price)},
+    {label: "Taker side", value: row.taker_side === "-" ? "Not published" : row.taker_side},
+    {label: "% of market", value: row.pct_of_market == null ? "Not in this ranking" : fmtPct(row.pct_of_market)}
+  ];
+  if (row.one_party_stake != null) facts.push({label: "One-party stake", value: fmtUSD(row.one_party_stake)});
+  if (row.taker_stake != null) facts.push({label: "Taker stake", value: fmtUSD(row.taker_stake)});
+  return {
+    crumb: `${fmtCount(row.contracts)} trade`,
+    eyebrow: "Individual trade · Kalshi",
+    title: `${fmtCount(row.contracts)} contracts at ${fmtPrice(row.price)}`,
+    subtitle: row.market || row.market_key || "Unnamed market",
+    value: row.metric === "contracts" ? `${fmtCount(row.metric_value)} contracts` : fmtUSD(row.metric_value),
+    delta: `#${row.rank ?? "—"} by ${metricLabel.toLowerCase()} among ${ranking}`,
+    facts,
+    sections: [
+      {title: "Market context", items: context},
+      {title: "Continue exploring", items: [
+        {label: "Open Market Explorer", description: "Find this or related markets across supported venues", value: "→", href: "./market-explorer"},
+        {label: "Compare against other venues", description: "The same rankings on every venue that publishes a tape", value: "→", href: "./trade-size"}
+      ]}
+    ],
+    coverage: "Taker side is Kalshi's own aggressor flag. Market and outcome names are decoded from the ticker here rather than published by the exchange, so an unrecognised series falls back to its raw code.",
+    state: {kind: "trade", source: "taker", venue: "Kalshi", trade: tradeIdentity(row)},
+    ask: {
+      question: `Explain why this ${fmtCount(row.contracts)}-contract Kalshi trade is notable. Use its price, taker side and share of the market it traded in.`,
+      context: `Predict Charts Kalshi Taker-Side Volume selection: ${row.market || row.market_key} · ${tradeDay(row.date)} · ${fmtPrice(row.price)}.`
+    }
+  };
+}
+
+function openTradeDetail(row, source) {
+  tradeInspector.open(tradeDetail(row), {replace: true, source});
+}
+
+// Namespaced "taker": /trade-size writes source:"trade-size" into the same pc_* query params,
+// so without this a link copied from the comparison would reopen against this page's rows.
+tradeInspector.restore("taker", state => {
+  if (state.source !== "taker" || state.kind !== "trade" || !state.trade) return null;
+  return tradeDetail(allInspectorTrades.find(row => tradeIdentity(row) === state.trade));
+});
+
+const marketCell = (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTradeDetail(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`;
 ```
 
 <div class="control-strip">
@@ -462,14 +538,14 @@ display(overallRows.length
   ? Inputs.table(overallRows, {
       columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"],
       header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", metric_value: overallMetric},
-      format: {date: fmtDate, contracts: fmtCount, price: fmtPrice, metric_value: overallMetric === "Contracts" ? fmtCount : fmtUSD},
+      format: {date: fmtDate, market: marketCell, contracts: fmtCount, price: fmtPrice, metric_value: overallMetric === "Contracts" ? fmtCount : fmtUSD},
       align: {contracts: "right", metric_value: "right"},
       rows: 15
     })
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">No large-trade rows are being served.</div>`);
 ```
 
-<div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices, where one side risks close to the full dollar and the other almost nothing.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices, where one side risks close to the full dollar and the other almost nothing. Click any market name to open the trade.</div>
 
 ## Largest trades in small markets
 
@@ -489,7 +565,7 @@ display(smallMarketRows.length
   ? Inputs.table(smallMarketRows, {
       columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"],
       header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", metric_value: smallMarketMetric, pct_of_market: "% of market"},
-      format: {date: fmtDate, contracts: fmtCount, price: fmtPrice, metric_value: smallMarketMetric === "Contracts" ? fmtCount : fmtUSD, pct_of_market: d => d == null ? "-" : fmtPct(d)},
+      format: {date: fmtDate, market: marketCell, contracts: fmtCount, price: fmtPrice, metric_value: smallMarketMetric === "Contracts" ? fmtCount : fmtUSD, pct_of_market: d => d == null ? "-" : fmtPct(d)},
       align: {contracts: "right", metric_value: "right", pct_of_market: "right"},
       rows: 15
     })
