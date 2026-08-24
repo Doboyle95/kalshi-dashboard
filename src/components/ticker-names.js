@@ -685,6 +685,14 @@ export function fmtWinner(d) {
   if (w.startsWith("::")) { const a = w.replace(/^::\s*/, "").trim(); if (a) return a; }
   if (wt && wt !== mk) {
     const short = mk ? wt.replace(mk + "-", "") : wt.split("-").pop();
+    // Parlay settlement outcomes are the same opaque combination ids fmtStrike
+    // blanks - 30 of the 53 KXMVE rows carry an 11-hex winner_ticker, and this
+    // function's tail leaked it into the Winner cell beside the strike cell.
+    // Blanking one column and not the other would put the same id on screen
+    // twice over, once cleaned and once not. Placed after the published-winner
+    // text check above, so real settlement prose still wins if Kalshi ever
+    // publishes it for a parlay.
+    if (/^KXMVE/.test(mk)) return "-";
     // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
     if (short === "TIE") return "Draw";
     const teamMap = getTeamsForMarket(mk);
@@ -842,6 +850,27 @@ export function fmtStrike(top_outcome, market_key) {
   const short = mk
     ? top_outcome.replace(mk + "-", "")
     : top_outcome.split("-").pop();
+  // Parlays (KXMVE*, CLAUDE.md rule 6) name their outcomes with an opaque
+  // 11-hex-digit combination id - a hash of the leg set, not a contract name.
+  // Every KXMVE outcome suffix in the published market_leaderboard.csv is exactly
+  // 11 hex characters (53 of 53 rows, generation f4ba118b6ffaebf519be), the
+  // markets carry up to 1,056 outcomes each, and a new parlay mints a new id - so
+  // unlike an undecoded player code there is no dictionary that could ever decode
+  // one and no fix path in this repo. Leaving it visible is not triage-useful
+  // (nobody can look "7B807C188FF" up) and it reads as data corruption, so blank
+  // it with the same "-" absence convention the branches below already use.
+  //
+  // Scoped to the whole KXMVE family rather than to the hex shape deliberately: a
+  // parlay outcome has no readable form to suppress, whereas a shape-scoped guard
+  // would let a future non-hex parlay code fall through to the last line's
+  // GOLF_PLAYERS/TENNIS_PLAYERS cross-map and answer with a confident wrong name
+  // - correctness rule 1, the bug that rendered the World Cup's busiest outcome
+  // as "Rublev".
+  //
+  // Must sit above the /^B[0-9]/ branch further down, which is unsound on
+  // non-numeric codes: it stripped the leading B off "B1F7402D1E7" and rendered
+  // "1F7402D1E7".
+  if (/^KXMVE/.test(mk)) return "-";
   // Soccer 3-way markets (World Cup, UCL, etc.) settle to a "TIE" outcome code for draws.
   if (short === "TIE") return "Draw";
   // Fed rate outcomes

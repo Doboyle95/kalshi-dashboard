@@ -169,6 +169,22 @@ starts with `// ── Category colors ──`:
 6. **Parlays.** Any market_key starting with `KXMVE` is a Kalshi parlay
    ("multi-game extended"). Display as `Parlay`, not the raw ticker.
 
+   ⚠ **That applies to the outcome columns too, and for a stronger reason.** A
+   parlay's outcome ticker is an opaque 11-hex-digit combination id — a hash of
+   the leg set (`…-S2026147DC5A372C-7B807C188FF`), not a contract name. Unlike
+   an undecoded player code, which is *deliberately* left visible so someone can
+   look it up and add it to a dict, a combination id has no fix path: there is
+   nothing to look up and every new parlay mints a new id. `fmtStrike` and
+   `fmtWinner` therefore both return `"-"` for `KXMVE*` rather than leaking it.
+   Do not "restore for triage" — measured 2026-08-24, that leaked 53 ids into
+   Highest-vol. strike and 30 into Winner on `/categories`, plus the Outcome
+   column of `/taker` and `/trade-size`, where it read as data corruption. The
+   guard is scoped to the whole family, not to the hex shape, so a future
+   non-hex parlay code cannot fall through to rule 1's cross-map and be given a
+   confident wrong name. It must also stay **above** `fmtStrike`'s `/^B[0-9]/`
+   branch, which is unsound on non-numeric codes: it stripped the leading B off
+   `B1F7402D1E7` and rendered `1F7402D1E7`.
+
 ### When adding a new market / fixing a new ticker
 
 See `TICKER-RULES.md` for the full conversion reference. High-level flow:
