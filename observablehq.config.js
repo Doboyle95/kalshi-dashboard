@@ -401,10 +401,33 @@ export default {
   // Framework's documentation-style sidebar.
   sidebar: false,
   header: siteHeader,
-  head: [
-    // 2026-08-13: keep the site out of search engines while it's not meant to be
-    // freely discoverable -- direct links still work fine, this only affects crawlers.
-    '<meta name="robots" content="noindex, nofollow">',
+  // `head` is a FUNCTION of {title, data, path} for the same reason `header` is (see
+  // markdown.js getHtml): Framework calls it in NODE at BUILD TIME, once per page, so a
+  // per-page tag can be emitted without a browser cell that could fail silently. A page
+  // can still override it with `head:` in its own front matter.
+  head: ({path}) => [
+    // 2026-08-25: the site is now INDEXABLE. The noindex meta that lived here from
+    // 2026-08-13 is gone, and src/robots.txt no longer disallows crawling.
+    //
+    // Removing it makes the duplicate-content problem live, so the canonical below is
+    // part of the same change rather than a follow-up. ONE build artifact is served by
+    // TWO hosts -- GitHub Pages at doboyle95.github.io/kalshi-dashboard/ and the
+    // Cloudflare tunnel at predict-charts.com -- because every emitted link is
+    // page-relative, so the same dist/ works from a subdirectory and from a domain root.
+    // That is what makes the two hosts possible and it is also what would put ~55 pages
+    // into a search index twice, letting Google pick a winner arbitrarily. It could pick
+    // the github.io URL, which carries the old `kalshi-dashboard` name the site is
+    // deliberately no longer branded on.
+    //
+    // predict-charts.com is the canonical host: it is the branded domain and it serves
+    // pages at the root (/volume), where github.io serves them under the repo path.
+    // An absolute URL is required here -- a relative canonical would resolve against
+    // whichever host served the page and defeat the point. rewriteHtmlPaths() leaves
+    // absolute URLs alone (the Google Fonts links below already prove that).
+    //
+    // Framework names the home page "/index" (readPages: join("/", dirname, name)), so
+    // it is normalised to "/" exactly as siteHeader does.
+    '<link rel="canonical" href="https://predict-charts.com' + (path === "/index" ? "/" : path) + '">',
     // Build stamp: the commit this page was built from. A wedged deploy is then
     // detectable from anywhere by comparing this against `git ls-remote origin main`
     // -- no GitHub token needed, and it works on both hosts. Falls back to "unstamped"

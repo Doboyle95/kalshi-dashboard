@@ -1,2 +1,13 @@
+# 2026-08-25: the site is public and meant to be discoverable. This replaces the
+# 2026-08-13 "Disallow: /", which kept it out of search engines while it was still
+# being built out.
+#
+# NOTE: robots.txt is only honoured at a HOST ROOT, so this file governs
+# predict-charts.com/robots.txt and nothing else. On GitHub Pages it is deployed to
+# doboyle95.github.io/kalshi-dashboard/robots.txt, which no crawler reads -- that
+# host's root robots.txt belongs to the user Pages site and currently 404s. Indexing
+# on the github.io host is therefore controlled by the per-page tags in
+# observablehq.config.js, not by this file, and the canonical there points search
+# engines at predict-charts.com.
 User-agent: *
-Disallow: /
+Allow: /
