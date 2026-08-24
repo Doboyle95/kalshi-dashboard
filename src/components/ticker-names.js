@@ -64,6 +64,12 @@ export const MLB_TEAMS = {
   MIL:"Brewers", MIN:"Twins", NYM:"Mets", NYY:"Yankees", OAK:"Athletics",
   PHI:"Phillies", PIT:"Pirates", SD:"Padres", SEA:"Mariners", SF:"Giants",
   STL:"Cardinals", TB:"Rays", TEX:"Rangers", TOR:"Blue Jays", WSH:"Nationals",
+  // Kalshi spells the Nationals BOTH ways across its own MLB families: WSH in
+  // KXMLBGAME/KXMLBF5/KXMLBF3, WAS in KXMLB, KXMLBNL, KXMLBNEXTTEAM, KXMLBFODTEAMS and
+  // KXNEXTTEAMMLB. Both confirmed from the market titles ("Will the Washington win the
+  // Pro Baseball Championship?"). Without this the WAS families fall back to the raw
+  // code -- and before the ALL_TEAMS default was retired they read "Wizards".
+  WAS:"Nationals",
   ATH:"Athletics",
 };
 export const NHL_TEAMS = {
@@ -229,7 +235,22 @@ export const CBB_TEAMS = {
 
 // Combined team lookup for generic winner extraction (fallback only - sport-
 // specific lookups should use getTeamsForMarket to avoid cross-sport collisions)
+//
+// ⚠ NO LONGER the routing default -- see the note on getTeamsForMarket. It mixes pro
+// nicknames with school names, so applying it to an unclassified market produced
+// "Mavericks" for rain in Dallas and "Seahawks" for a Spotify chart. Kept exported
+// because categories.md imports it.
 export const ALL_TEAMS = {...NFL_TEAMS, ...NBA_TEAMS, ...CBB_TEAMS};
+
+// Schools, for the college markets that are neither KXNCAAF (football, already routed
+// to CFB_TEAMS) nor KXNCAAMB/KXNCAAWB (basketball, already routed to CBB_TEAMS):
+// college baseball, softball, hockey, lacrosse, soccer, the conference regular-season
+// and tournament markets, and KXNCAABBGAME.
+//
+// The point of a college-only map is what it LEAVES OUT. Under the old ALL_TEAMS
+// default these markets could be answered by an NBA or NFL entry, so college lacrosse
+// rendered UTA as "Jazz" and college soccer rendered DET as "Pistons".
+export const COLLEGE_TEAMS = {...CFB_TEAMS, ...CBB_TEAMS};
 
 // Routing target for a family whose outcome codes nothing here can decode and whose
 // codes the ALL_TEAMS default would answer WRONGLY. Returning this leaves them as
@@ -271,8 +292,23 @@ export const OSCAR_BEST_PICTURE_26 = {
 
 // Route a market_key to the right sport-specific team dictionary so e.g. a
 // Kalshi MLB "SEA" strike doesn't get labeled "Seahawks".
+// ⚠ The default is NO_DICTIONARY, not ALL_TEAMS. ALL_TEAMS is NFL + NBA + college
+// basketball, so leaving it as the fallback meant those codes were applied to every
+// market we had not classified -- 21,879 markets across 1,061 families, of which about
+// 88% got a name that is simply wrong: "Seahawks" for the top song on Spotify,
+// "Mavericks" for whether it rains in Dallas, "Saints" for what Trump says in the State
+// of the Union, "Hornets" for the tennis player Maxime Chazal. It is the same defect as
+// the golf/tennis cross-map removed in 91612b4a1, one level down: a dictionary applied
+// to a market it has nothing to do with. An unrouted family now falls back to the raw
+// code, which is visible and triageable.
 export function getTeamsForMarket(mk) {
-  if (!mk) return ALL_TEAMS;
+  if (!mk) return NO_DICTIONARY;
+  // "What will X say" markets name PHRASES the speaker might utter, never teams. Must
+  // stay ABOVE the league prefixes: KXNBAMENTION, KXMLBMENTION, KXNFLMENTION,
+  // KXNHLMENTION, KXWCMENTION, KXATPMENTION and KXWBCMENTION are all matched by an
+  // existing league branch below, so without this the announcers' phrases are looked up
+  // in that league's team dictionary. 60+ series, tens of thousands of markets.
+  if (/MENTION/.test(mk))                      return NO_DICTIONARY;
   if (/^KXNFL/.test(mk))                       return NFL_TEAMS;
   if (/^KXSB-/.test(mk))                       return NFL_TEAMS;
   if (/^KXNCAAF/.test(mk))                     return CFB_TEAMS;
@@ -289,6 +325,11 @@ export function getTeamsForMarket(mk) {
   // The women's singles families are spelled W-WOMEN / USO-WOMEN / FO-WOMEN / AO-WOMEN,
   // which none of the men's prefixes match; before they were listed here they reached
   // TENNIS_PLAYERS only via the cross-map that used to end decodeOutcomeSuffix.
+  // KXITF* is deliberately NOT here. The ITF circuit is a different, far larger player
+  // pool than the tour events TENNIS_PLAYERS covers, and its 3-letter codes abbreviate
+  // ITF players: KXITFMATCH's MEN is Joao Mendes, FON is Oriol Font, SHE is Suryanshi
+  // Shekhawat. TENNIS_PLAYERS reads those as Mensik, Fonseca and Shelton. Routing the
+  // family here scored 785 confidently wrong names, so it falls to the raw code instead.
   if (/^KXATP|^KXWTA|^KXWMEN|^KXWWOMEN|^KXFOMEN|^KXFOWOMEN|^KXUSOMEN|^KXUSOWOMEN|^KXAOMEN|^KXAOWOMEN|^KXAUSOPEN/.test(mk)) return TENNIS_PLAYERS;
   // PGA here is the Producers GUILD of America, not the Professional Golfers'
   // Association: KXPGAAWARDS-26-DOC names films ("Will Sentimental Value win the
@@ -309,7 +350,35 @@ export function getTeamsForMarket(mk) {
   if (/^KXPGA(?!RYDER-)|^KXMASTERS|^KXUSOPEN|^KXTHEOPEN/.test(mk)) return GOLF_PLAYERS;
   if (/^CLOSESTSTATE/.test(mk))                return STATE_NAMES;
   if (/^KXOSCARPIC-26/.test(mk))               return OSCAR_BEST_PICTURE_26;
-  return ALL_TEAMS;
+  // College, minus the two families routed above. KXCFPSEED, not KXCFP: KXCFPBELIM is
+  // "Will the CFPB be eliminated?" -- the Consumer Financial Protection Bureau.
+  // KXNCAABMENTION and KXNCAAMENTION are announcer-phrase markets and are taken out by
+  // the MENTION branch at the top.
+  if (/^KXNCAA|^KXCOLLEGE|^KXMAKEMARMAD|^KXCFPSEED|^KX(A10|AAC|ACC|BIG10|BIG12|BIGEAST|MW|SEC|WCC|PAC12)REG/.test(mk)) return COLLEGE_TEAMS;
+  // "Next team" / "next coach out" markets name a team in ONE league, so each routes to
+  // that league rather than to a merged map: the old default answered KXNEXTTEAMMLB's
+  // WAS with the NBA's "Wizards" and KXNEXTTEAMNHL's PHI with the NBA's "76ers".
+  // Each league below was assigned by checking that family's codes against the maps --
+  // 27-34 of 29-34 codes hit the league named, and at most half that for any other.
+  // KXNEXTTEAMVERSTAPPEN is deliberately absent: Formula 1, no map here, 0 code hits.
+  if (/^KXNEXTTEAM(NBA|GIANNIS|LEBRON|WESTBROOK)|^KXNEXTCOACHOUTNBA/.test(mk)) return NBA_TEAMS;
+  if (/^KXNEXTTEAM(NFL|MCLAURIN|MICAH|TYREEK)|^KXNEXTCOACHOUTNFL/.test(mk))    return NFL_TEAMS;
+  if (/^KXNEXTTEAM(MLB|SKUBAL)/.test(mk))      return MLB_TEAMS;
+  if (/^KXNEXTTEAMNHL/.test(mk))               return NHL_TEAMS;
+  // Cricket beyond the KXT20/KXICC/KXWBC/KXIPL families routed above -- Test and ODI
+  // only, and anchored on MATCH. Two separate reasons:
+  //   - ^KXODI would also catch KXODINVCTFINALS ("Will all players purchase the Odin
+  //     more than 3 times at VCT finals?", a Valorant market), and KXBBLGAME is the
+  //     German Basketball Bundesliga ("Rostock Seawolves vs Bayern Munich"), not the
+  //     Big Bash League.
+  //   - The T20 families are NOT here even though they are cricket. Test and ODI are
+  //     played by full-member nations, whose 3-letter codes CRICKET_TEAMS holds; T20
+  //     adds associate nations and domestic franchises, and their codes collide.
+  //     KXWT20MATCH uses IND for INDONESIA in 9 events (KXWT20MATCH-26JUN030200SININD)
+  //     and for India in 11 others, so a dictionary keyed on the code alone cannot be
+  //     right. Measured 0 title mismatches on every code these two families decode.
+  if (/^KXODIMATCH|^KXTESTMATCH/.test(mk))     return CRICKET_TEAMS;
+  return NO_DICTIONARY;
 }
 
 export function parseGame(code, teamMap) {

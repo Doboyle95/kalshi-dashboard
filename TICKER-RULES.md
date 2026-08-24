@@ -142,15 +142,56 @@ Which dict to use for a given market prefix:
 | `KXPGA…` (except `KXPGARYDER-`), `KXMASTERS…`, `KXUSOPEN…`, `KXTHEOPEN…` | `GOLF_PLAYERS`  |
 | `CLOSESTSTATE…`                             | `STATE_NAMES`  |
 | `KXOSCARPIC-26…`                            | `OSCAR_BEST_PICTURE_26` |
-| (anything else)                             | `ALL_TEAMS` (fallback) |
+| `KXNCAA…`, `KXCOLLEGE…`, `KXMAKEMARMAD…`, `KXCFPSEED…`, `KX<conf>REG…` | `COLLEGE_TEAMS` (= CFB + CBB) |
+| `KXNEXTTEAM{NBA,GIANNIS,LEBRON,WESTBROOK}…`, `KXNEXTCOACHOUTNBA…` | `NBA_TEAMS` |
+| `KXNEXTTEAM{NFL,MCLAURIN,MICAH,TYREEK}…`, `KXNEXTCOACHOUTNFL…` | `NFL_TEAMS` |
+| `KXNEXTTEAM{MLB,SKUBAL}…`                    | `MLB_TEAMS` |
+| `KXNEXTTEAMNHL…`                             | `NHL_TEAMS` |
+| `KXODIMATCH…`, `KXTESTMATCH…`                | `CRICKET_TEAMS` |
+| (anything else)                             | **`NO_DICTIONARY`** — the raw code |
 
-Three traps this table has already sprung, all of them a prefix meaning two things:
+### ⚠ The fallback is `NO_DICTIONARY`, and must stay that way
+
+`ALL_TEAMS` used to be the fallback. It is NFL + NBA + college basketball, so every
+market this table had not classified got those codes applied to it: **21,879 markets
+across 1,061 families, about 88% of them named wrongly** — "Seahawks" for the top song
+on Spotify, "Mavericks" for whether it rains in Dallas, "Saints" for what Trump says in
+the State of the Union, "Hornets" for the tennis player Maxime Chazal. Same defect as
+the golf/tennis cross-map, one level down.
+
+Because the fallback is now harmless, **adding a family to this table is only worth it
+when a dictionary genuinely fits**. If none does, leave it out and let the raw code show.
+
+### Prefix traps this table has already sprung
+
+Every one of these is a prefix that means two different things, and every one was found
+by running the change over the whole `market_metadata` universe rather than the ~1,000
+published rows, where none of them appear:
 
 - `KXUSOPEN` is the **golf** US Open; the tennis one is `KXUSOMEN`/`KXUSOWOMEN`.
 - `KXPGAAWARDS` is the Producers **Guild** of America; its outcomes are films.
+- `KXCFPBELIM` is the **Consumer Financial Protection Bureau**, not the College
+  Football Playoff — hence `KXCFPSEED`, not `KXCFP`.
+- `KXBBLGAME` is the German **Basketball** Bundesliga ("Rostock Seawolves vs Bayern
+  Munich"), not the Big Bash League.
+- `KXODINVCTFINALS` is a **Valorant** market ("Will all players purchase the Odin…"),
+  not cricket ODI — hence `KXODIMATCH`.
 - The golf exclusion is `KXPGARYDER-` **with the dash**. `KXPGARYDER-RC25` is a
   team event (USA / EU / EUR), but `KXPGARYDERTOP-25` is an ordinary player
   market, and a dashless exclusion swallows both.
+
+### Two families that look routable and are not
+
+- **`KXITF*`** (ITF tennis) is not routed to `TENNIS_PLAYERS`. The ITF circuit is a far
+  larger player pool than the tour events that map covers, and its codes abbreviate ITF
+  players: `MEN` is Joao Mendes, `FON` is Oriol Font, `SHE` is Suryanshi Shekhawat.
+  `TENNIS_PLAYERS` reads those as Mensik, Fonseca and Shelton — **785 wrong names**.
+- **The T20 cricket families** are not routed to `CRICKET_TEAMS`, though Test and ODI
+  are. Test and ODI are played by full-member nations, whose codes that map holds; T20
+  adds associate nations and domestic franchises, and the codes collide —
+  `KXWT20MATCH` uses `IND` for **Indonesia** in 9 events and India in 11 others.
+  (The pre-existing `^KXT20` route has this same flaw: `AUS` renders "Australia" on
+  "Slovenia vs **Austria**", `NAM` renders "Namibia" on "**Namo** Bandra Blasters".)
 
 An award map is scoped to its **year** (`KXOSCARPIC-26`) because a code set that
 is a nominee list gets re-minted annually; a state or ISO country map is not.
@@ -286,6 +327,12 @@ When changing logic, these results must still hold for the current CSV:
 
 - Don't use `ALL_TEAMS` for any code you've already routed via
   `getTeamsForMarket` — it will produce cross-sport collisions.
+- **Don't make `ALL_TEAMS` the routing fallback again.** It mixes pro nicknames with
+  school names and is right only for the markets explicitly routed to it. The fallback
+  is `NO_DICTIONARY`; a raw code is the correct answer for an unclassified market.
+- **Don't route a family whose codes are ambiguous within itself.** Confirm against
+  titles first: if the same code means two things in the same family (`IND` for both
+  India and Indonesia), no dictionary keyed on the code can be right.
 - **Don't reinstate a cross-map fallback** (`?? GOLF_PLAYERS[short] ??
   TENNIS_PLAYERS[short]`) at the end of `decodeOutcomeSuffix`. It can only ever
   fire for a market whose family is unrouted, and for such a market nothing
