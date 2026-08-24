@@ -2788,6 +2788,8 @@ const mktCoveragePct = mktAllTimeContracts > 0
 const mktRanked = [...mktLeaderboard]
   .sort((a, b) => b.contracts - a.contracts)
   .map((d, i) => {
+    const mk  = (d.market_key  ?? "").trim();
+    const top = (d.top_outcome ?? "").trim();
     return {
       ...d,
       rank:           i + 1,
@@ -2795,8 +2797,15 @@ const mktRanked = [...mktLeaderboard]
       // display_winner columns); fall back to the ticker parser when blank.
       display_name:   (d.display_name && String(d.display_name).trim()) || bestName(d),
       winner_display: (d.display_winner && String(d.display_winner).trim()) || fmtWinner(d),
-      // No "Highest-vol. strike" column: the producer sets top_outcome = winner_ticker
-      // rather than measuring per-outcome volume, so it only ever duplicated Winner.
+      // "Highest-vol. strike" is back. It was dropped on 2026-08-21 because the producer
+      // set top_outcome = winner_ticker instead of measuring per-outcome volume, so the
+      // column only restated the Winner cell beside it. KalshiData `ea9ca12` fixed the
+      // producer and the published file now carries a real measurement: top_outcome
+      // differs from winner_ticker on 629 of 1,000 rows (generation 31aab39ea0b083b94632,
+      // 2026-08-24; it was 0 of 1,000 three days earlier). KXMENWORLDCUP-26 settled to
+      // -ES while -AR traded the most. Re-run that count before trusting this column
+      // again — a producer regression would silently make it a copy of Winner once more.
+      top_short:      fmtStrike(top, mk),
       display_cat:    getSportDisplayCategory(d)
     };
   });
@@ -2849,6 +2858,10 @@ function mktMarketDetail(row) {
   const winner = settled && row.winner_display && row.winner_display !== "-"
     ? row.winner_display
     : null;
+  // Read the decoded string off the row, never fmtStrike(row.top_outcome) again: the
+  // drawer and the cell that opened it must not be able to name different outcomes.
+  // fmtStrike returns "-" when nothing decodes, the same absence convention as fmtWinner.
+  const busiest = row.top_short && row.top_short !== "-" ? row.top_short : null;
   const feesRaw = row.fees_total;
   const fees = (feesRaw == null || feesRaw === "" || isNaN(+feesRaw)) ? null : +feesRaw;
   const outcomes = (row.n_outcomes == null || row.n_outcomes === "" || isNaN(+row.n_outcomes))
@@ -2881,6 +2894,13 @@ function mktMarketDetail(row) {
          value: settled ? "Settled" : "Not settled"},
         winner
           ? {label: "Winner", description: "Decoded from the winning outcome ticker; Kalshi publishes no winner name", value: winner}
+          : null,
+        busiest
+          ? {label: "Highest-vol. strike",
+             description: busiest === winner
+               ? "Highest-volume contract or outcome — here, the outcome that also won"
+               : "Highest-volume contract or outcome — not the outcome that settled",
+             value: busiest}
           : null,
         date ? {label: "Date basis", description: basis, value: fmtDate(date)} : null
       ].filter(Boolean)},
@@ -3062,7 +3082,7 @@ const mktDisplay = mktFiltered.map(d => {
 display(html`<div style="font-size:0.82em;color:var(--text-faint,#888);margin:0.3rem 0 0.6rem">Tip: click any column header to sort. Click again to reverse.</div>`);
 
 const tbl = Inputs.table(mktDisplay, {
-  columns: ["rank", "_c", "display_name", "market_date", "contracts", "fees_total", "winner_display"],
+  columns: ["rank", "_c", "display_name", "market_date", "contracts", "fees_total", "winner_display", "top_short"],
   header: {
     rank:          "#",
     _c:            "",
@@ -3070,7 +3090,8 @@ const tbl = Inputs.table(mktDisplay, {
     market_date:   "Date",
     contracts:     "Volume (contracts)",
     fees_total:    "Kalshi fees",
-    winner_display:"Winner"
+    winner_display:"Winner",
+    top_short:     "Highest-vol. strike"
   },
   format: {
     rank: d => d,
@@ -3110,7 +3131,14 @@ const tbl = Inputs.table(mktDisplay, {
     contracts: "right",
     fees_total: "right"
   },
-  width: {rank: 40, _c: 0, display_name: 300, market_date: 96},
+  // top_short needs more than the 120px default: the header "Highest-vol. strike" wants
+  // 179px and Inputs.table ellipsises one that does not fit -- and a header reading
+  // "Highest-vol. s..." sitting beside "Winner" defeats the point of the column. The
+  // table width is container-fixed, so widening one column narrows the rest; display_name
+  // pays for it (its cell is line-clamped to two lines anyway, so it does not notice).
+  // Measured after: strike 182px and untruncated, Kalshi fees / Winner 141px and
+  // untruncated. "Volume (contracts)" was already ellipsised before this column existed.
+  width: {rank: 40, _c: 0, display_name: 282, market_date: 96, top_short: 162},
   sort: "rank",
   reverse: false,
   rows: 50

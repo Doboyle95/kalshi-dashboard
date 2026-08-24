@@ -83,24 +83,38 @@ that map in the same commit.
 raw Kalshi `market_key` / `winner_ticker` strings into human-readable Market /
 Winner cells.
 
-There is no longer a "Highest-vol. strike" cell. It was dropped because
-`market_leaderboard.csv`'s `top_outcome` was set to `winner_ticker` rather than
-measured, so it duplicated the Winner column beside it and named the genuinely
-busiest outcome on only 364 of 926 resolvable markets. `fmtStrike` /
-`TOP_OUTCOME_NAMES` in `ticker-names.js` are retained for the fix and are
-currently unused.
+The "Highest-vol. strike" cell is **restored** (2026-08-24). It had been dropped
+because `market_leaderboard.csv`'s `top_outcome` was set to `winner_ticker`
+rather than measured, so it duplicated the Winner column beside it and named the
+genuinely busiest outcome on only 364 of 926 resolvable markets. KalshiData
+`ea9ca12` (2026-08-21) fixed the producer, and the published file now carries a
+real measurement: on generation `31aab39ea0b083b94632`, `top_outcome` differs
+from `winner_ticker` on **629 of 1,000 rows** — it was **0 of 1,000** on
+2026-08-21. `KXMENWORLDCUP-26` settled to `-ES` while `-AR` traded the most.
 
-**The producer side is now fixed** (KalshiData `ea9ca12`, 2026-08-21), but it
-only reaches readers on the next leaderboard rebuild — `settlement_cycle`
-(0 */4) or `leaderboard_refresh` (15 5). Checked 2026-08-21 against published
-generation `3f73649c7c2a1dc20c44`: `top_outcome` was still byte-identical to
-`winner_ticker` on all 1,000 rows.
+If the column is ever dropped and restored again, re-run that check first: resolve
+the current generation from `/dashboard-data/current.json`, pull
+`market_leaderboard.csv` from it, and require a non-zero count of rows where
+`top_outcome` differs from `winner_ticker`. Restoring it while the data is a
+copy puts the original defect straight back.
 
-**Verify the published CSV before restoring the column.** Restoring it while the
-data is still a copy puts the original defect straight back. Resolve the current
-generation from `/dashboard-data/current.json`, pull `market_leaderboard.csv`
-from it, and require a non-zero count of rows where `top_outcome` differs from
-`winner_ticker`.
+**`/market-explorer` still suppresses the same column, and its note there is now
+stale.** `LB_VENUES.kalshi` in `components/market-leaderboard.js` sets
+`topHeader: null` *and* its `map()` never emits a `top` field, so the
+`topFn: fmtStrike` that `market-explorer.md` passes is dead code and
+`inspect-tables.js`'s busiest-outcome evidence row (gated on `row.top &&
+spec?.topHeader`) cannot fire for Kalshi. The comment there still cites the
+1,000-of-1,000 measurement. Restoring it is a separate change from this one.
+
+**What `fmtStrike` actually produces on this data** — all 1,000 rows, run
+2026-08-24. 830 decode to a readable name; 17 to a bare number (Bitcoin and index
+strikes, game totals), none of which is given a `%`; **153 leak an undecoded
+ticker suffix** — golf and UFC codes (`WCLA`, `TKIM`, `MCG`), politician codes
+(`SHIL`, `MRUB`), and all 53 `KXMVE*` parlays, whose outcome is an 11-hex-digit
+id rendered raw (`7B807C188FF`). Nothing renders as a percentage at all: the
+`POPVOTEMOV*` branch never fires, because `short` on those rows is `R-B-2.5`,
+not the bare number the branch tests for. So rule 2 below currently holds by
+construction — do **not** "repair" that branch into life without re-measuring.
 
 The conversion logic lives in these functions in the big `js` block that
 starts with `// ── Category colors ──`:
@@ -126,6 +140,21 @@ starts with `// ── Category colors ──`:
 1. **Sport isolation.** MLB/NBA/NHL/NFL team codes overlap (SEA, LA, TOR, etc.).
    Always look up team codes via `getTeamsForMarket(mk)` — not `ALL_TEAMS` —
    unless the market is genuinely ambiguous.
+
+   ⚠ **Routing to the right map is not enough — the map has to contain the code.**
+   The last line of both `fmtStrike` and `fmtWinner` is
+   `teamMap[short] ?? GOLF_PLAYERS[short] ?? TENNIS_PLAYERS[short] ?? short`, so a
+   code the correct map does not know does **not** fall back to the raw code: it
+   falls through to the golf and tennis dictionaries first. Restoring the strike
+   column surfaced exactly this. `KXMENWORLDCUP-26` (the largest market on the
+   site) routes correctly to `WC_TEAMS`, but that map is keyed on 3-letter FIFA
+   codes while the outright-winner ticker uses 2-letter ISO ones, so
+   `top_outcome = …-AR` missed and `TENNIS_PLAYERS.AR` answered — **row 1 read
+   "Rublev" as the World Cup's busiest outcome.** Fixed by adding `AR:"Argentina"`
+   beside the `ES:"Spain"` already there. The failure is silent and the wrong
+   answer is a plausible name, so it survives a green build and a code read;
+   only running the function over real data catches it. Measured across all
+   1,000 rows, that was the only such row — but check after any map change.
 2. **Percentages.** Only `POPVOTEMOV*` markets use bare numbers that mean
    percent. Bitcoin price strikes and Electoral College margin strikes are
    bare numbers — they are NOT percentages. Do not slap `%` on them.

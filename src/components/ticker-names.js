@@ -108,6 +108,18 @@ export const WC_TEAMS = {
   // winner_ticker data (KXMENWORLDCUP-26-ES = Spain, the 2026 champion) rather
   // than guessing all 48 -- an unverified guess here is worse than a fallback
   // to the raw code. Add more as they're confirmed.
+  //
+  // 2026-08-24: AR confirmed the same way, from top_outcome once the producer
+  // started measuring it -- KXMENWORLDCUP-26-AR is the published busiest outcome
+  // of the largest market on the site. These two are every code the
+  // published file uses for this market. AR mattered more than an unnamed code
+  // would suggest: a miss here does not fall back to "AR", it falls through
+  // fmtStrike/fmtWinner's last line to GOLF_PLAYERS then TENNIS_PLAYERS, and
+  // TENNIS_PLAYERS.AR is Rublev -- so row 1 of the Individual Market Leaderboard
+  // read "Rublev" as the World Cup's busiest outcome. (TENNIS_PLAYERS.ES is
+  // Swiatek, so ES only reads "Spain" because WC_TEAMS is consulted first.)
+  // Any 2-letter code added here must be checked against a real ticker.
+  AR:"Argentina",
   ES:"Spain",
 };
 export const CRICKET_TEAMS = {
