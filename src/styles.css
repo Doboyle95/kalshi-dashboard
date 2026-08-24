@@ -2334,7 +2334,6 @@ svg[class^="plot-"] g[aria-label="tip"] text {
   border: 1px solid var(--card-border);
   border-radius: 10px;
   background: var(--card-bg);
-  box-shadow: var(--shadow-card);
 }
 
 .pulse-card {
@@ -2349,7 +2348,6 @@ svg[class^="plot-"] g[aria-label="tip"] text {
 .pulse-card:hover,
 .destination-card:hover {
   border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--card-border));
-  box-shadow: var(--shadow-card-hover);
 }
 
 .pulse-topline {
@@ -4093,6 +4091,7 @@ html[data-theme="light"] {
   --theme-foreground-faintest: #d4cfc5;
   --editorial-ink: #171c19;
   --editorial-paper: #fbf8f1;
+  --editorial-muted: var(--theme-foreground-muted);
   --editorial-accent: #c84f32;
   --editorial-rule: #c8c2b7;
   --editorial-rule-strong: #9f9a91;
@@ -4138,6 +4137,7 @@ html[data-theme="light"] {
     --theme-foreground-faintest: #39423b;
     --editorial-ink: #fbf8f1;
     --editorial-paper: #171c19;
+    --editorial-muted: var(--theme-foreground-muted);
     --editorial-accent: #f17151;
     --editorial-rule: #39423b;
     --editorial-rule-strong: #566158;
@@ -4162,6 +4162,7 @@ html[data-theme="dark"] {
   --theme-foreground-faintest: #39423b;
   --editorial-ink: #fbf8f1;
   --editorial-paper: #171c19;
+  --editorial-muted: var(--theme-foreground-muted);
   --editorial-accent: #f17151;
   --editorial-rule: #39423b;
   --editorial-rule-strong: #566158;
