@@ -163,6 +163,10 @@ const fxMed = fxGaps.length ? fxGaps[Math.floor(fxGaps.length / 2)] : null;
 const fxWithin1 = fxRows.length ? fxRows.filter(d => Math.abs(+d.prob_diff) <= 0.01).length / fxRows.length : null;
 const fxRatios = fxRows.filter(d => +d.novig_contracts > 0 && +d.kalshi_contracts > 0).map(d => +d.kalshi_contracts / +d.novig_contracts).sort((a, b) => a - b);
 const fxVolMult = fxRatios.length ? fxRatios[Math.floor(fxRatios.length / 2)] : null;
+const fxExtent = d3.extent(fxRows.flatMap(d => [+d.kalshi_home_prob, +d.novig_home_prob]));
+const fxDomain = fxRows.length
+  ? [Math.max(0, fxExtent[0] - 0.03), Math.min(1, fxExtent[1] + 0.03)]
+  : [0.2, 0.8];
 ```
 
 ```js
@@ -173,11 +177,11 @@ if (!fxRows.length) display(html`<div class="instruction-line" style="border-lef
 if (fxRows.length) display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: Math.max(360, Math.min(520, width * 0.7)),
   marginLeft: 58, marginBottom: 46, aspectRatio: 1,
-  x: {label: "Kalshi pre-game P(home win)", domain: [0.2, 0.8], tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
-  y: {label: "Novig pre-game P(home win)", domain: [0.2, 0.8], tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
+  x: {label: "Kalshi pre-game P(home win)", domain: fxDomain, tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
+  y: {label: "Novig pre-game P(home win)", domain: fxDomain, tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
   r: {range: [2, 10]},
   marks: [
-    Plot.line([{x: 0.2, y: 0.2}, {x: 0.8, y: 0.8}], {x: "x", y: "y", stroke: "var(--theme-foreground-muted)", strokeDasharray: "4,3", strokeWidth: 1.5}),
+    Plot.line([{x: fxDomain[0], y: fxDomain[0]}, {x: fxDomain[1], y: fxDomain[1]}], {x: "x", y: "y", stroke: "var(--theme-foreground-muted)", strokeDasharray: "4,3", strokeWidth: 1.5}),
     Plot.dot(fxRows, {x: d => +d.kalshi_home_prob, y: d => +d.novig_home_prob, r: d => +d.novig_contracts + +d.kalshi_contracts, fill: NV, fillOpacity: 0.5, stroke: "var(--theme-background)", strokeWidth: 0.6, tip: true,
       title: d => `${d.away_team} @ ${d.home_team}\n${d.game_date}\nKalshi ${(100 * +d.kalshi_home_prob).toFixed(1)}% · Novig ${(100 * +d.novig_home_prob).toFixed(1)}%\ngap ${+d.prob_diff >= 0 ? "+" : "−"}${Math.abs(100 * +d.prob_diff).toFixed(1)}¢\nNovig ${fmtCount(+d.novig_contracts)} · Kalshi ${fmtCount(+d.kalshi_contracts)} contracts`})
   ]

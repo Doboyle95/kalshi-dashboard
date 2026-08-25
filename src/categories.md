@@ -574,9 +574,12 @@ const tmData = (() => {
       .reduce((acc, r) => acc + (+r[cat] || 0), 0);
     if (!total) return null;
     const meta = leaderboard.find(l => l.report_ticker === cat) || {};
+    const fees = topDailyFees
+      .filter(d => d.date >= s && d.date <= e)
+      .reduce((acc, r) => acc + (+r[cat] || 0), 0);
     const value = tmMetric === "Volume"
       ? total
-      : (+meta.fees || 0) * (total / (+meta.contracts || 1));
+      : fees;
     return {report_ticker: cat, is_sports: meta.is_sports ?? "FALSE", value};
   }).filter(d => d && d.value > 0);
 })();
@@ -3222,16 +3225,21 @@ const [cutoff, cutoffTo] = lbDateSel;
 // top 15 in topDaily). Detect that the brush covers the full data span.
 const isAllTime = +cutoff <= +lbMinDate && +cutoffTo >= +lbMaxDate;
 
-// Aggregate contracts from daily data for the selected period (top 15 tickers)
+// Aggregate contracts and reported fees from their daily files for the selected period
+// (top 15 tickers). The old fee path multiplied period volume by an all-time fee rate,
+// which was exact only when the brush happened to cover that same all-time mix.
 const dailyAgg = catCols.map(cat => {
   const total = topDaily
+    .filter(d => d.date >= cutoff && d.date <= cutoffTo)
+    .reduce((s, r) => s + (+r[cat] || 0), 0);
+  const fees = topDailyFees
     .filter(d => d.date >= cutoff && d.date <= cutoffTo)
     .reduce((s, r) => s + (+r[cat] || 0), 0);
   const meta = leaderboard.find(l => l.report_ticker === cat) || {};
   return {
     report_ticker: cat,
     contracts: total,
-    fees: (meta.fees || 0) * (total / (meta.contracts || 1)),
+    fees,
     is_sports: meta.is_sports ?? "FALSE"
   };
 }).filter(d => d.contracts > 0);

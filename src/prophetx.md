@@ -15,9 +15,6 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
 const daily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
-// The reconciliation between the tape and the venue's bulletin is published rather than
-// kept private, because the bulletin is the file a reader would otherwise cite.
-const recon = await DataAttachment("data/prophetx_bulletin_daily.csv").csv({typed: true});
 // Individual fixtures, parsed out of the tape's contract_description. Loaded defensively
 // because it is the newest file of the set and the DEPLOYED allowlist, not the repository
 // one, decides what is actually served.
@@ -48,7 +45,6 @@ const parlayContracts = d3.sum(complete, d => d.contracts_parlay);
 // Dollars parlay buyers paid. Complete days only, like every other figure quoted here.
 const parlayStakes = d3.sum(complete, d => d.stake_parlay);
 const meanDaily = totalContracts / complete.length;
-const usable = recon.filter(r => r.usable === 1).length;
 const pxBrushSeries = daily.map(d => ({date: d.date, value: d.contracts})).sort((a, b) => a.date - b.date);
 const pxDateSel = Mutable([d3.min(pxBrushSeries, d => d.date), d3.max(pxBrushSeries, d => d.date)]);
 display(renderDateBrush({

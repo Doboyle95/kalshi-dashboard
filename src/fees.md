@@ -300,7 +300,7 @@ const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
 
 ## Cumulative fee revenue
 
-<p class="section-intro">How much non-sports, sports and parlays have each added to Kalshi's fee revenue over time; the three bands add to the all-time total above.</p>
+<p class="section-intro">Reported non-sports and sports fees, plus a non-negative parlay residual. The source components sometimes exceed the headline fee total, so treat the bands as an attribution view rather than an exact decomposition until the producer is reconciled.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> watch the slope, not just the height — a steeper stretch means Kalshi was collecting fees faster in that period.</div>
 
@@ -332,8 +332,8 @@ const cumFeesSplit = fs2.flatMap(d => {
   const ns = d.fees_nonsports || 0;
   nsCum += ns;
   sCum  += s;
-  // Clamped: the two files are written by different producers, so a refresh race could
-  // briefly put fees_sports_nonparlay + fees_nonsports above fees_total and invert the top band.
+  // Keep the residual non-negative. The published components sometimes exceed fees_total;
+  // the cause is a producer-side arithmetic issue, not assumed to be a refresh race here.
   pCum  += Math.max(0, (feesTotalByDate.get(+d.date) ?? (s + ns)) - s - ns);
   return [
     {date: d.date, category: BAND_NONSPORT, cumul: nsCum, y0: 0,            y1: nsCum},
@@ -379,7 +379,7 @@ Plot.plot({
       title: d => [
         fmtDate(d.date),
         ...FEE_BANDS.map(b => `${b}: $${(d[b]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`),
-        `Total: $${FEE_BANDS.reduce((t, b) => t + (d[b]||0), 0).toLocaleString(undefined,{maximumFractionDigits:0})}`
+        `Bands shown: $${FEE_BANDS.reduce((t, b) => t + (d[b]||0), 0).toLocaleString(undefined,{maximumFractionDigits:0})}`
       ].join("\n")
     })),
     Plot.ruleY([0])

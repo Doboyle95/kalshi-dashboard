@@ -289,34 +289,6 @@ Plot.plot({
 })
 ```
 
-<details class="surface-card compact-details">
-<summary>Secondary: reported open interest</summary>
-
-<p class="section-intro">Latest reported open interest: <strong>${fmtCount(latestDay?.open_interest || 0)}</strong> contracts on ${fmtDate(latestDay?.date)}. The full diagnostic remains available on the legacy comparison page.</p>
-
-```js
-false ? Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 260,
-  marginLeft: 70,
-  x: {type: "utc", label: null},
-  y: {label: "Open interest", grid: true, tickFormat: d => fmtAxisNum(d)},
-  marks: [
-    Plot.lineY(daily, {
-      x: "date", y: "open_interest",
-      stroke: DKEX, strokeWidth: 2.25,
-      curve: "monotone-x",
-      tip: true,
-      title: d => `${fmtDate(d.date)}\nOpen interest: ${fmtCount(d.open_interest || 0)}`
-    }),
-    Plot.ruleY([0])
-  ]
-}) : null
-```
-
-</details>
-
 ## Settlements
 
 <p class="section-intro">Daily settlement report counts by outcome. DKeX settles a contract at $1.00 (won), $0.00 (lost), or $0.50 &mdash; and $0.50 means the event was <strong>voided or postponed</strong>, so both sides refund at half. Voids are counted separately, not as wins. &ldquo;Other&rdquo; is the rare partial or pro-rated settlement.</p>

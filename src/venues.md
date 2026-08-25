@@ -1,5 +1,5 @@
 ---
-title: Venue Deep Dives
+title: Venues
 ---
 
 <div class="page-hero">
