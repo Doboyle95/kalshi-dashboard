@@ -102,7 +102,7 @@ const uniSorted = uni.slice().sort((a, b) => a.date - b.date);
 let _r = 0, _h = 0, _e = 0, _rg = 0;
 const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; _rg += d.realized_net + d.fees_total; return {date: d.date, realized: _r, realized_gross: _rg, hold: _h, prov: isProv(d)}; });
 const coSorted = cashoutDaily.slice().sort((a, b) => a.date - b.date);
-const cumCo = coSorted.map(d => { _e += d.cashout_edge_gross; return {date: d.date, edge: _e, prov: isProv(d)}; });
+const cumCo = coSorted.map(d => { _e += d.cashout_edge_net; return {date: d.date, edge: _e, prov: isProv(d)}; });
 // Provisional (unsealed) days — settlements still arriving; shown distinctly.
 const provDays = cumU.filter(d => d.prov);
 const provSpan = provDays.length === 1
