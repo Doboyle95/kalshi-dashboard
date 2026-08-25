@@ -1,175 +1,212 @@
-# Predict Charts launch-fix handoff for Claude
+# Predict Charts final launch handoff for Claude
 
-Prepared 2026-08-24 23:13 ET. The dashboard repo is
-`C:\Users\Owner\Documents\kalshi-work\dash` on `main`.
+**Prepared 2026-08-25. Nothing in this handoff has been pushed or deployed.**
 
-## What Claude should do
+The dashboard fixes are committed on a review branch, and the two private-producer fixes
+are committed in a clean local clone. The remaining work is review plus a controlled VM
+rollout/rebuild. Do not declare launch-ready until the producer checklist below is green:
+the currently served generation still contains the stale market-P&L leaderboard and the
+historically overlapping fee/contract buckets.
 
-1. Review every dashboard commit in `origin/main..HEAD`, paying particular attention to
-   calculation bases, Observable dependency resolution, and the data-transfer semaphore.
-2. Run the verification commands below and repeat the browser smoke checks.
-3. Complete or explicitly disposition the two private-VM producer items under
-   **VM work still required**. Do not describe the full launch review as closed while the
-   leaderboard job is still reporting success after its child OOMs.
-4. If review is clean, push dashboard `main` to `origin/main`. Do not stage the user's
-   untracked `LAUNCH-FOLLOWUPS.md` unless Daniel explicitly asks for it to be committed.
-5. Verify both deployments and their build stamps after the push:
-   `https://predict-charts.com/` and
-   `https://doboyle95.github.io/kalshi-dashboard/`.
+## Repositories and commits
 
-## Repository state
+### Dashboard
 
-- Baseline at handoff start: `origin/main` = `5028ee0` (`Don't publish a "vs prior 7" for a venue that doesn't report weekly`).
-- Dashboard implementation tip before this handoff document: `c1cd320`.
-- `LAUNCH-FOLLOWUPS.md` is intentionally untracked and untouched; it is Claude's source
-  review, not part of the dashboard artifact.
-- The baseline already contains the earlier launch-gate work, including `12fd4c5`,
-  `c9441c6`, `d75bd2f`, and `5028ee0`. In particular, follow-ups 1.1 (reported category
-  fees on `/volume`) and 1.2 (brush-aware taker category leaderboard) are already on
-  `origin/main`, which is why they do not appear in the local-only list below.
+- Working copy: `C:\Users\Owner\Documents\kalshi-work\dash`
+- Review branch: `fix/robinhood-fcm-linear-default`
+- Current `main` / `origin/main`: `b1359d9`
+- Preserve the untracked user file `LAUNCH-FOLLOWUPS.md`; it is intentionally not committed.
 
-Use these commands before review:
+Commits to review and cherry-pick onto current `main`, in order:
 
-```bash
-git status --short
-git log --reverse --oneline origin/main..HEAD
-git diff --check origin/main..HEAD
-git diff --stat origin/main..HEAD
-```
+| Commit | Change |
+|---|---|
+| `f540015` | Makes the Robinhood FCM comparison Linear by default, with a Linear/Log toggle. |
+| `bfb2223` | Breaks `/volume`'s Observable circular definition and adds a post-build cycle detector to both deploy workflows. |
 
-## Local commits to review
+`b1359d9` (the prose cleanup already on `main`) is not in this review branch because the
+two branches moved concurrently. Cherry-picking the two commits above onto current `main`
+is the clean integration path.
 
-| Commit | Follow-up | Result |
-|---|---|---|
-| `e7f3dde` | 1.3 | Labels ForecastEx category history as 2025 onward rather than all-time. |
-| `5c00257` | 1.4 | Replaces the misleading generic sports residual with venue-specific parlay/non-parlay labels for Underdog and Nadex. |
-| `778aec4` | 1.5 | Plots cash-out edge on the documented net basis. |
-| `96fabf0` | 1.6 | Keeps Polymarket parlay resolution claims on the clearing-date report basis instead of mixing report and tape dates. |
-| `b89091c` | 2.1, 3.4g | Derives the served P&L pricing-basis claim from the table rows, removes the stale 347-row literal, and removes the invalid cross-date-basis validation claim. Current served data renders all 4 venues exact. |
-| `b32a219` | 2.2 | Describes the actual cash-out filter: 20 or more earlier buys spread across at least 6 hours. |
-| `5ccfe7d` | 2.3 | Derives Underdog coverage from `underdog_daily.csv`, removes the rotating Rothera day literal, and correctly says Underdog is top-1,000 rather than all markets. |
-| `9986788` | 2.4 | Makes the trade inspector acknowledge Novig's published aggressor flag, including its Ask Data prompt. |
-| `c20e7aa` | 2.5 | Points `/parlay` Ask Data at the two files the page actually loads, avoiding the double-counting `TOTAL` row in the obsolete file. |
-| `df17b4d` | 3.1 | Standardizes negative currency as `−$...`, fixes USD axes, and removes the Nadex double negative. |
-| `52ff94f` | 3.2 | Adds `novig_category_daily.csv` to both cross-venue product-mix charts and maps Novig's `Parlay` bucket correctly. The copy now describes traded mix, not products merely offered. |
-| `d0f6738` | 3.3 | Adds `src/favicon.svg` and a per-page icon link. Framework content-hashes it into `dist/_file/`; local HTTP returned 200 `image/svg+xml`. |
-| `ec885bf` | 3.4a/b/d/e/f/h | Renames the Venues title; uses reported daily category fees for narrowed brushes; expands the Novig same-game domain from the data; removes ProphetX's unused bulletin fetch and DKeX's dead chart; and stops claiming fee bands exactly equal the headline. Item 3.4c did not reproduce and required no code change. |
-| `c1cd320` | 4.3 | Adds a module-level four-slot semaphore around data-file transfers only. The manifest retains its unbounded fast path. A queued file's timeout begins after slot acquisition and stays active through body consumption. Adds regression tests for both properties. |
+### Private producer
 
-## Important review notes
+- Clean review clone: `C:\Users\Owner\Documents\kalshi-work\KalshiData-launch-fixes`
+- Base: `5af3389` (`master` from `/root/KalshiData`)
+- Local HEAD: `9d66c08`
 
-### Remote-data semaphore
+Commits to review and apply, in order:
 
-Review `src/components/remote-data.js` and `tests/remote-data.test.mjs` together.
-The intended invariants are:
+| Commit | Change |
+|---|---|
+| `bf3db18` | Makes all four active R sports/nonsports writers exclude parlays from the nonsports bucket, and adds a cross-file publish gate for fee and contract partitions. |
+| `9d66c08` | Raises market-P&L DuckDB memory from 4 GB to 8 GB with a 13 GB scheduler lease; rejects missing/unchanged output; fails the parent after publishing independent healthy boards. |
 
-- no more than four data response bodies transfer concurrently per browser module;
-- the manifest request never waits for a data slot;
-- queue wait time is excluded from each file's abort budget;
-- the slot is held through `arrayBuffer()`, not merely until response headers arrive;
-- errors still propagate to the page marker and no stale repository fallback is introduced.
+The clone shows many unrelated modified files because this Windows checkout normalizes line
+endings differently from the repository. `git diff --ignore-cr-at-eol` is empty for all of
+those files. The two commits above contain only their explicit target paths.
 
-### Category fees
+## What was fixed and why
 
-`src/categories.md` now references `topDailyFees` from cells that appear earlier in the
-Markdown source than the attachment-loading cell. Observable resolves cells as a dependency
-graph rather than executing them top-to-bottom; the full build and real browser load both
-passed. Confirm this remains true in the emitted page rather than moving back to an all-time
-fee-rate proxy.
+### 1. `/volume` runtime failure
 
-### Fee producer disclosure
+`feeWideDaily` depended on `parlayFeesFor`, while `parlayFeesFor` had been emitted in a later
+cell whose dependency graph led back through `feeWideDaily`. Observable Framework built the
+page successfully, but the browser reported three circular-definition errors and blanked the
+sports/category fee section.
 
-The dashboard clamps the inferred parlay fee residual at zero on three pages. Those clamps
-remain deliberately. `src/fees.md` now tells readers the bands are an attribution view rather
-than promising an exact decomposition; this is mitigation, not a repair of the private
-producer arithmetic described below.
+`bfb2223` moves the helper into the upstream data cell. It also adds
+`scripts/check-observable-cycles.mjs`, which parses all emitted page cell definitions after a
+build and rejects any strongly connected component. Both normal deployment and autopilot
+repair validation now run this check.
 
-## Verification already completed
+### 2. Fee/contract component arithmetic
 
-Run from the dashboard repo with the appropriate Node/Python executables:
+The exact producer bug was not a dashboard join or rounding issue. Four active R writers used
+`is_sports == "FALSE"` for nonsports but used `!is_parlay` only for the sports bucket. A parlay
+classified as nonsports was therefore counted in both nonsports and parlay.
 
-```bash
-node --test tests/daily-briefing-rules.test.mjs tests/remote-data.test.mjs tests/venue-data.test.mjs
-python3 -m unittest tests.test_freshness_remote
-node scripts/check-module-globals.mjs
-node node_modules/@observablehq/framework/dist/bin/observable.js build
-```
+`bf3db18` fixes:
 
-Observed results:
+- `R/near_live_update.R`
+- `R/repair_daily_timeseries_window.R`
+- `R/rebuild_daily_timeseries.R`
+- `R/apply_maker_fee_corrections.R`
+
+The publish gate now joins `daily_overall.csv` to `daily_sports_vs_nonsports.csv` by date and
+blocks on missing/duplicate dates, missing/non-finite/negative values, fee components above
+`fees_total` (with two cents of rounding slack), or the three contract buckets above
+`contracts_total`.
+
+Measured against served generation `f6cba110a5dceda94992`:
+
+- 1,881 dates, 2021-06-30 through 2026-08-24;
+- 381 dates have fee overshoot, totaling $8,465,022.74;
+- 34 dates have contract overshoot;
+- 405 distinct dates violate at least one partition invariant.
+
+This new gate is expected to block the current data. That is deliberate; apply the code and
+run the complete historical repair before the next data publish.
+
+### 3. Market-P&L leaderboard OOM and false success
+
+The served generation still carries
+`taker_pnl_by_market_leaderboard.csv` with source mtime from 2026-08-23 07:19 ET while the
+generation itself continues advancing. The exporter was imposing `memory_limit=4GB` on a
+62 GB VM, and the parent flow treated child failure as non-fatal.
+
+`9d66c08` changes the DuckDB default to 8 GB and its scheduler lease from 9 GB to 13 GB. A
+zero child exit is no longer sufficient: the dashboard-facing output must be newly created
+or atomically replaced. The flow still publishes the independent market/category boards,
+then raises if market P&L failed, so Prefect cannot show a false-green parent run.
+
+## Validation already completed
+
+Dashboard validation on `bfb2223`:
 
 - 22 Node tests passed.
-- 7 Python tests passed.
+- 7 Python freshness tests passed.
 - Module-global check passed for all 16 component modules.
-- Observable build passed: 55 pages, 1,436 links validated.
-- A real in-app browser loaded `/categories.html` from a local `dist/` server against
-  remote generation `caa0d8094e25a1ff446d`: remote data marker, 71 SVGs, zero
+- Prose check: 0 flipped claims.
+- Observable build: 55 pages and 1,436 links validated.
+- Cycle detector: 55 built pages, no cycles.
+- Full local browser sweep: all 55 routes reached zero loading cells with no
   `.observablehq--error` nodes.
-- `/categories-venues.html`: Novig rendered, remote marker, zero runtime errors.
-- `/compare-accuracy.html`: rendered “All 4 venues ... priced exactly” from live rows,
-  zero runtime errors.
-- `/parlay.html`: rendered `−$509.6M` and `−$452.1M`, zero runtime errors.
-- Built favicon returned HTTP 200 with `image/svg+xml`.
+- Real in-app browser on local `/volume.html`: 16 SVGs, no loading cells, zero runtime
+  errors; after selecting **Sports only → Fees**, 21 SVGs, Golf present, zero errors.
+- `/robinhood.html` rendered 18 SVGs with Linear selected and zero runtime errors.
 
-## VM work still required
+Producer validation:
 
-These changes live in the private `/root/KalshiData` checkout on the Contabo VM and cannot
-be made from this workspace.
+- 4 fee/partition tests and 4 leaderboard-completion tests passed locally.
+- The same eight focused tests passed in an isolated copy on the VM.
+- All four changed R scripts parsed successfully with the VM's `/usr/bin/Rscript`.
+- The existing market-P&L streaming test passed under `/root/kalshi-venv`; its log confirmed
+  `memory_limit=8GB threads=2` and both CSVs were written.
+- Changed Python files compile cleanly and the Prefect task/flow import successfully in the
+  VM environment.
 
-### 1. Fix `leaderboard_refresh` OOM and false success
+The production-sized exporter and full historical repair have intentionally not been run
+before review.
 
-The live `taker_pnl_by_market_leaderboard.csv` remained 39.9 hours old when checked at
-2026-08-24 23:11 ET (`last_write_time` 2026-08-23 07:19:16 ET), while the current
-generation itself was published at 23:07 ET. This reproduces the handoff finding; it is not
-historical noise.
+## Important VM state
 
-Required producer changes:
+`/root/KalshiData` is a heavily dirty working tree. Of the files changed by these two commits,
+only `R/near_live_update.R` is already modified on the VM. Its existing uncommitted hunk is a
+separate, plausible `fcoalesce` repair around lines 424-435; the new nonsports/parlay fix is
+around lines 450-454, so the hunks do not overlap. Preserve and review that VM change. Do not
+replace the file wholesale and do not use `git reset --hard` or a blanket stash.
 
-- find the child launched by `leaderboard_refresh` with `memory_limit=4GB threads=2` and
-  raise/remove the self-imposed 4 GB cap to a value appropriate for the 62 GB VM;
-- propagate a non-zero child exit/OOM to the parent task so the run cannot report
-  `COMPLETED` after producing nothing;
-- run the task manually and confirm it writes a fresh
-  `taker_pnl_by_market_leaderboard.csv`;
-- confirm the publish step creates a new immutable dashboard generation containing that
-  fresh file and that `/taker-pnl` loads it;
-- add a regression/health check for parent success with missing or unchanged child output.
+The isolated validation copy at `/tmp/predict-launch-validate-20260825` is disposable and
+contains no production outputs.
 
-### 2. Fix fee-component arithmetic
+## Recommended review and rollout
 
-The private producer emits
-`fees_sports_nonparlay + fees_nonsports > fees_total` on 383 of 1,881 measured days, with
-an aggregate overshoot of about 0.46%. Investigate the component definitions/joins and make
-them mutually exclusive on the same trade-date and fee-revenue basis as `fees_total`.
-
-Do not remove the dashboard's `Math.max(0, ...)` residual clamps until regenerated data proves
-the invariant over the complete history. After rebuilding, explicitly assert for every day:
-
-```text
-0 <= fees_sports_nonparlay
-0 <= fees_nonsports
-fees_sports_nonparlay + fees_nonsports <= fees_total
-```
-
-Then publish a new generation and verify `/fees`, `/volume`, and `/categories` in a browser.
-
-## Push and deployment checklist
-
-After dashboard and VM review is clean:
+### A. Dashboard integration
 
 ```bash
-git status --short
-git diff --check origin/main..HEAD
-git push origin main
+cd C:/Users/Owner/Documents/kalshi-work/dash
+git switch main
+git pull --ff-only
+git cherry-pick f540015 bfb2223
 ```
 
-Do not use a force push. After push:
+Then repeat the dashboard test/build commands above. Do not stage `LAUNCH-FOLLOWUPS.md`.
 
-1. Wait for GitHub Pages and the VM timer build.
-2. Compare each host's `<meta name="x-site-build">` with the pushed SHA.
-3. Confirm the favicon returns 200 on both hosts.
-4. Open `/categories`, `/categories-venues`, `/compare-accuracy`, `/parlay`, `/taker-pnl`,
-   and `/market-explorer` on `predict-charts.com`; require remote data markers and no
+### B. Make the producer commits visible to the VM
+
+From the clean clone, after review, push a temporary review branch rather than `master`:
+
+```bash
+cd C:/Users/Owner/Documents/kalshi-work/KalshiData-launch-fixes
+git show --stat bf3db18
+git show --stat 9d66c08
+git push origin HEAD:refs/heads/codex-launch-fixes
+```
+
+On the VM, first reconcile/commit the pre-existing `R/near_live_update.R` fcoalesce change
+with an explicit pathspec. Then cherry-pick the two reviewed commits. Re-check `git status`
+before every commit because many unrelated VM changes must remain untouched.
+
+### C. Repair history before allowing a publish
+
+From `/root/KalshiData`, run the corrected full-window repair on the VM (update `--end` if a
+new ET date has appeared):
+
+```bash
+KALSHI_DATA_ROOT=/root/KalshiData Rscript R/repair_daily_timeseries_window.R \
+  --start=2021-06-30 --end=2026-08-24
+```
+
+Then call `check_daily_component_partition(Path("output"))` from
+`cadence_v2.helpers.publish_gate`; it must return `pass` across every date. Do not weaken the
+gate and do not remove the dashboard's residual clamps yet.
+
+### D. Run the production market-P&L task
+
+Use the task wrapper so the 13 GB scheduler lease and output-refresh check are exercised:
+
+```bash
+cd /root/KalshiData
+KALSHI_DATA_ROOT=/root/KalshiData /root/kalshi-venv/bin/python -c \
+  'from cadence_v2.tasks.leaderboard_tasks import lb_build_market_pnl; print(lb_build_market_pnl.fn())'
+```
+
+Require `ok: true`, a new mtime/size for
+`output/taker_pnl_by_market_leaderboard.csv`, and no OOM. Then run the normal dashboard sync
+to create a new immutable generation.
+
+### E. Final launch verification and push
+
+Before pushing dashboard `main`:
+
+1. Confirm the new generation passes the component partition gate for all dates.
+2. Confirm `taker_pnl_by_market_leaderboard.csv` has the new source mtime/hash.
+3. Open `/fees`, `/volume` (including Sports only → Fees), `/categories`, and `/taker-pnl` in
+   a real browser; require remote-data markers, rendered charts, and zero
    `.observablehq--error` nodes.
-5. Confirm `taker_pnl_by_market_leaderboard.csv` is fresh in the served generation.
-6. Confirm the fee producer invariant above before removing or weakening the dashboard's
-   disclosure.
+4. Push dashboard `main` without force.
+5. Wait for GitHub Pages and the VM build; require both hosts' `x-site-build` stamp to equal
+   the pushed SHA.
+6. Re-run the page checks on `https://predict-charts.com`.
+
+If all six pass, no unresolved code-level launch blocker remains from this scan.
