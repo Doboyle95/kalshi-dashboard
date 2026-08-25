@@ -20,12 +20,15 @@ const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv"
 const sportsDaily = await DataAttachment("data/taker_sports_daily.csv").csv({typed: true});
 const pnlByMarket = await DataAttachment("data/taker_pnl_by_market_leaderboard.csv").csv({typed: true});
 const marketLeaderboard = await DataAttachment("data/market_leaderboard.csv").csv({typed: true});
+const calibrationCurve = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
+const calibrationClusters = await DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {buildReportTickerToCat, TAKER_GENERAL_MAP} from "./components/taker-categories.js";
 import {bestName, fmtWinner, fmtStrike, parseMarketDateFromKey} from "./components/ticker-names.js";
+import {normalizeCalibration, actualVsImplied, calibrationVerdict} from "./components/calibration.js";
 ```
 
 ```js
@@ -35,13 +38,14 @@ display(freshnessPanel({
     {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Taker-side volume", date: latestDate(takerVolumeDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
     {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"},
-    {label: "Market P&L leaderboard", date: null, value: `${pnlByMarket.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_market_leaderboard.csv"), meta: "All-time, refreshed once daily (not the settlement-cycle cadence above)", tone: "settlement"}
+    {label: "Market P&L leaderboard", date: null, value: `${pnlByMarket.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_market_leaderboard.csv"), meta: "All-time, refreshed once daily (not the settlement-cycle cadence above)", tone: "settlement"},
+    {label: "Price calibration", date: null, value: "Settlement cycle", updatedAt: fileUpdatedAt(freshness, "calibration_three_way_clusters.csv"), meta: "Event-clustered outcomes", tone: "settlement"}
   ],
   note: "Recent dates can look incomplete until markets settle. Open interest is not part of the fast window refresh because it requires full rolling position state."
 }));
 display(askPageLink({
-  question: "Explain recent taker P&L, including whether results are complete enough to interpret and which categories drove the result.",
-  context: "Taker P&L page using taker_pnl_daily.csv, maker_pnl_daily.csv, taker_notional_daily.csv, taker_pnl_by_ticker_daily.csv, taker_sports_daily.csv, and taker_pnl_by_market_leaderboard.csv."
+  question: "Explain recent taker P&L and price calibration, including whether results are complete enough to interpret and which categories drove the result.",
+  context: "Kalshi Outcomes page using settled taker and maker P&L files plus calibration_three_way.csv and its event-clustered sidecar."
 }));
 ```
 
@@ -409,6 +413,70 @@ Plot.plot({
 ```
 
 </div>
+
+```js
+// calibration_three_way.csv carries the venue-wide outcome curve; its clustered
+// sidecar supplies the contract-weighted price actually paid and the matching
+// event-clustered uncertainty. Join on the producer's stable (group, price_bin)
+// key, exactly as the cross-venue Accuracy & Outcomes page does.
+const calibrationClusterByBin = new Map(
+  calibrationClusters
+    .filter(d => d.group === "ALL")
+    .map(d => [+d.price_bin, d])
+);
+const MIN_CALIBRATION_EFFECTIVE_EVENTS = 30;
+const calibrationRows = normalizeCalibration(
+  calibrationCurve.filter(d => d.group === "ALL"),
+  {
+    bin: d => d.price_bin,
+    width: () => 5,
+    implied: d => {
+      const c = calibrationClusterByBin.get(+d.price_bin);
+      return c?.mean_price_chk == null ? null : +c.mean_price_chk / 100;
+    },
+    actual: d => {
+      const c = calibrationClusterByBin.get(+d.price_bin);
+      return c?.actual_win_rate_chk ?? d.actual_win_rate_wt;
+    },
+    // Below 30 effective events the clustered SE is itself unstable. Keep the
+    // descriptive dot, but omit its whisker and every inference based on it.
+    se: d => {
+      const c = calibrationClusterByBin.get(+d.price_bin);
+      return +(c?.n_effective ?? 0) >= MIN_CALIBRATION_EFFECTIVE_EVENTS
+        ? c.se_calib_error
+        : null;
+    },
+    contracts: d => calibrationClusterByBin.get(+d.price_bin)?.n_contracts_chk ?? d.n_contracts,
+    trades: d => calibrationClusterByBin.get(+d.price_bin)?.n_trades ?? d.n_trades,
+    events: d => calibrationClusterByBin.get(+d.price_bin)?.n_effective
+  }
+);
+const calibrationSummary = calibrationVerdict(calibrationRows, {eventNoun: "effective events"});
+```
+
+## Price Calibration
+
+<p class="section-intro">For contracts bought at each price, how often the taker's chosen side actually won. The x-axis is the contract-weighted price paid inside each 5&cent; band, not the band midpoint; the diagonal is perfect calibration.</p>
+
+<div class="instruction-line">Bars are &plusmn;2 event-clustered standard errors, because thousands of trades on markets tied to one event do not create thousands of independent outcomes. Circle area follows the effective event count, not prints or contracts.</div>
+
+<div class="plot-shell">
+
+```js
+if (calibrationRows.length) display(actualVsImplied({
+  rows: calibrationRows,
+  color: "var(--accent-kalshi)",
+  width,
+  eventNoun: "effective events"
+}));
+```
+
+</div>
+
+```js
+if (!calibrationRows.length) display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>The calibration sidecar is unavailable or does not match the curve.</strong> The chart is withheld rather than substituting bin midpoints for the prices traders actually paid.</div>`);
+if (calibrationRows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>${calibrationSummary.measurable} of ${calibrationSummary.bands}</strong> bands have enough independent outcomes for inference; <strong>${calibrationSummary.clearing}</strong> of those differ from perfect calibration by more than two clustered standard errors.${calibrationSummary.meanPaid == null ? "" : html` Across all markets, takers paid a mean <strong>${(100 * calibrationSummary.meanPaid).toFixed(2)}&cent;</strong> and their chosen side won <strong>${(100 * calibrationSummary.meanWon).toFixed(2)}%</strong> of the time over ${fmtCount(calibrationSummary.totalContracts)} contracts.`}</div>`);
+```
 
 ```js
 // ── Category classification: report_ticker -> cat, sport-by-sport instead of Kalshi's own
