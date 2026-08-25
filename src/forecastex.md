@@ -59,7 +59,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>ForecastEx volume comes from public daily price/pair files normalized into category and sports-split aggregates. Volume is pair quantity or contract count, depending on the source field. Category and sports views use the local market classification rules applied during export.</p>
-  <p>Use it as a concentration check: whether ForecastEx is riding one theme or several. The all-time breakdown shows the mix that remains after a noisy stretch is brushed out.</p>
+  <p>Use it as a concentration check: whether ForecastEx is riding one theme or several. The 2025-onward breakdown shows the mix that remains after a noisy stretch is brushed out.</p>
 </details>
 
 ```js
@@ -255,7 +255,7 @@ Plot.plot({
 })
 ```
 
-## Category breakdown (all time)
+## Category breakdown (2025 onward)
 
 ```js
 const catBar = [...catTotals.entries()]
@@ -269,7 +269,7 @@ Plot.plot({
   width,
   height: catBar.length * 28 + 40,
   marginLeft: 160,
-  x: {label: "Contracts (all time)", grid: true, tickFormat: d => fmtAxisNum(d)},
+  x: {label: "Contracts (2025 onward)", grid: true, tickFormat: d => fmtAxisNum(d)},
   y: {label: null},
   marks: [
     Plot.barX(catBar, {

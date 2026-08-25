@@ -54,7 +54,7 @@ display(sportsSplit({rows: split, width, color: ACCENT, measure: mixMeasure}));
 display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Sports is ${fmtPct(d3.sum(split, d => +d.contracts_sports || 0) / Math.max(1, d3.sum(split, d => +d.contracts_total || 0)))} of all contracts this venue has published.</div>`);
 ```
 
-## Every bucket, all time
+## Every bucket, 2025 onward
 
 ```js
 display(Inputs.table(totals, {
