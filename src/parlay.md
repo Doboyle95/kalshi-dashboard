@@ -91,7 +91,7 @@ const cashoutFlowShareKpi = totalCashoutValueKpi / (totalHandle + totalCashoutVa
   <summary>About this page</summary>
   <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors actually won and lost, settled parlays only, computed trade by trade.</p>
   <p>The headline is <em>realized</em> P&L — net of fees and after cash-outs (parlay positions sold back before settlement). The second chart shows the counterfactual where everyone held to the end; the gap between them is what cashing out did to bettors. "Staked" counts only the money bettors put in to <em>open</em> parlays — cashing out isn't counted as a new stake.</p>
-  <p>Cash-outs are <strong>inferred, not labelled</strong>. Nothing in the data says "this trade was a cash-out", so we use the shape of the market: parlays are priced on request, so the buyer takes the yes side and a no-side taker is usually someone selling a position back. Two checks remove the sales that can't be — one bigger than everything ever bought on that parlay, and one that would have to pool thousands of separate small buys. What's left is still an estimate.</p>
+  <p>Cash-outs are <strong>inferred, not labelled</strong>. Nothing in the data says "this trade was a cash-out", so we use the shape of the market: parlays are priced on request, so the buyer takes the yes side and a no-side taker is usually someone selling a position back. Two checks remove the sales that can't be — one bigger than everything ever bought on that parlay, and one that would have to pool twenty or more separate earlier buys spread over six hours or longer. What's left is still an estimate.</p>
 </details>
 
 ```js
@@ -179,7 +179,7 @@ Plot.plot({
 
 <p class="section-intro">Inferred cash-outs returned <strong>${cashReturnedPctKpi.toFixed(1)}¢ per dollar staked</strong> to parlay bettors. The trades account for ${cashoutFlowShareKpi.toFixed(1)}% of taker-side trading flow, but that flow share uses the complementary no buyer's cost — not the cash the exiting bettor received. This chart tracks whether cashing out beat holding to settlement.</p>
 
-<div class="instruction-line"><strong>How we identify a cash-out.</strong> Parlays are priced on request, so the buyer is almost always on the yes side; we count no-side takers as selling back. We exclude sales larger than everything ever bought on that parlay, and sales that would have to pool thousands of separate buys — neither can be one person cashing out. Treat what remains as an estimate.</div>
+<div class="instruction-line"><strong>How we identify a cash-out.</strong> Parlays are priced on request, so the buyer is almost always on the yes side; we count no-side takers as selling back. We exclude sales larger than everything ever bought on that parlay, and sales that would have to pool twenty or more separate earlier buys spread over six hours or longer — neither can be one person cashing out. Treat what remains as an estimate.</div>
 
 _Cumulative cash-out edge: how much bettors gained or lost by cashing out versus holding to the end. Below zero means they left money on the table — selling winners back too cheaply outweighs the busts they dodged._
 
