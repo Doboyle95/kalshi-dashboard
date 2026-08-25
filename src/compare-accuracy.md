@@ -276,7 +276,6 @@ const aggregateVenues = new Set(
 const isDoubleCounted = d => d.group === "ALL" && aggregateVenues.has(d.venue);
 const headline = rolled.filter(d => !isDoubleCounted(d));
 const kalshiAll = rolled.find(d => d.venue === "Kalshi" && d.group === "ALL");
-const parlayRows = rolled.filter(d => d.group === "PARLAY");
 
 // Derive the prose from the same rows as the table. This used to be a hardcoded
 // "two of five" claim long after both the venue set and its price bases changed.
@@ -291,40 +290,8 @@ const approximatePnlVenues = Array.from(basisByVenue.keys())
 const pricingBasisClaim = approximatePnlVenues.length === 0
   ? `All ${basisByVenue.size} venues in the served P&L comparison are priced exactly: every contract is priced at what was actually paid, contract-weighted rather than at a bin midpoint.`
   : `${exactPnlVenues.length} of ${basisByVenue.size} venues in the served P&L comparison are priced exactly (${exactPnlVenues.join(", ")}); the remaining ${approximatePnlVenues.length} (${approximatePnlVenues.join(", ")}) use the approximation disclosed on their rows.`;
-
-// The old callout hardcoded "Two venues ... they agree ... to within a fraction of a
-// cent" and the verb "lose", then interpolated two numbers underneath. Both facts moved:
-// a third parlay venue was added and Polymarket's sign went POSITIVE, so the page read
-// "Polymarket US's lose +6.63c" and called an 8.45c opposite-sign gap agreement. Every
-// word that can go stale is now derived.
-// Magnitude only. The verb ("lose"/"make") carries the direction, and fmtCents would
-// prefix a sign on top of it, rendering "bettors lose +1.82c".
-const fmtCentsMag = d => `${Math.abs(d * 100).toFixed(2)}¢`;
-const parlayBig = parlayRows.filter(d => d.contracts > 1e8);
-const parlaySpread = parlayBig.length > 1
-  ? Math.abs(Math.max(...parlayBig.map(d => d.perContract)) - Math.min(...parlayBig.map(d => d.perContract)))
-  : null;
-const parlaySentence = [
-  `${parlayRows.length} venues' parlays can be priced.`,
-  parlayRows.slice().sort((a, b) => b.contracts - a.contracts).map(d =>
-    `${d.venue} ${d.perContract < 0 ? "bettors lose" : "bettors make"} ${fmtCentsMag(d.perContract)} per contract on ${fmtCount(d.contracts)} contracts`
-  ).join("; ") + ".",
-  parlaySpread == null ? "" :
-    `The ${parlayBig.length} large books agree in direction and to within ${fmtCentsMag(parlaySpread)} per contract, across separate venues, separate pipelines and separate settlement sources — which is the strongest evidence on this page that the method measures what it claims to.`
-].filter(Boolean).join(" ");
-// Named explicitly rather than inferred: a venue days into its parlay pilot does not
-// belong in a claim about cross-venue agreement, in either direction.
-const parlaySmall = parlayRows.filter(d => d.contracts < 1e6);
-const parlayCaveat = parlaySmall.length === 0 ? "" :
-  parlaySmall.map(d =>
-    `${d.venue} is NOT part of that agreement: it carries only ${fmtCount(d.contracts)} parlay contracts, so its ${fmtCents(d.perContract)} is a pilot-sized reading and should not be ranked against the others.`
-  ).join(" ");
 const detail0 = parlayDetail[0] ?? {};
 ```
-
-<div class="instruction-line" style="border-left-color:var(--accent-polymarket)">
-${parlaySentence} ${parlayCaveat}
-</div>
 
 <details class="surface-card compact-details">
   <summary>About this page — read before quoting any number</summary>
@@ -370,8 +337,6 @@ ${parlaySentence} ${parlayCaveat}
 </details>
 
 ## What a contract costs its buyer
-
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>Kalshi and Crypto.com are both NET of fees.</strong> Crypto.com/CDNA charges $0.02 per contract per side with no settlement fee, and on a house-quoted combo the customer is the taker, so that is 2.00&cent; a contract. It is the larger part of what a Crypto.com parlay bettor loses: 1.15&cent; gross becomes <strong>3.15&cent; net</strong>. This chart previously showed the gross figure and therefore ranked Crypto.com ahead of Kalshi, which was backwards. Polymarket's bar is still gross &mdash; its taker parabola (&theta;=0.06) is about 0.5&cent; a contract at parlay prices and has not yet been applied here. <strong>Novig's single-market bar is straight-only and gross</strong>; its live-straight fee is a range, shown on the <a href="./novig-outcomes">Novig &middot; Outcomes</a> page. Every bar here is a venue whose <em>aggressor</em> is known, so the figure really is what the taker paid: Kalshi and Novig publish an aggressor flag outright, and a parlay quoted by the house on request has the customer as the buyer by construction. The DKeX and ProphetX bars this caption used to describe have been <strong>removed entirely</strong>, not redrawn &mdash; without an aggressor flag their numbers measured price bias rather than taker P&amp;L. Why each absent venue is absent is set out below.</div>
 
 ```js
 Plot.plot({

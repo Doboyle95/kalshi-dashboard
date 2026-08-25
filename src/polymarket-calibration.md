@@ -20,8 +20,7 @@ const calib = await DataAttachment("data/calibration_polymarket.csv").csv({typed
 const PM = "var(--accent-polymarket)";
 
 const GROUP_LABEL = {
-  ALL_DEEP: "All deep products",
-  ALL:      "All products, including thin ones",
+  ALL:      "All products",
   AEC:      "Match winner",
   ATC:      "Team total / moneyline",
   ASTATC:   "Player stat over-under",
@@ -29,9 +28,11 @@ const GROUP_LABEL = {
   ASC:      "Spread",
   AADC:     "To advance"
 };
-const ORDER = ["ALL_DEEP", "ALL", "AEC", "ATC", "ASTATC", "TSC", "ASC", "AADC"];
+const ORDER = ["ALL", "AEC", "ATC", "ASTATC", "TSC", "ASC", "AADC"];
+const HIDDEN_GROUPS = new Set(["ALL_DEEP"]);
 const present = Array.from(new Set(calib.map(d => d.group)));
-const groups = ORDER.filter(g => present.includes(g)).concat(present.filter(g => !ORDER.includes(g)));
+const groups = ORDER.filter(g => present.includes(g))
+  .concat(present.filter(g => !ORDER.includes(g) && !HIDDEN_GROUPS.has(g)));
 ```
 
 <div class="control-strip">
@@ -39,7 +40,7 @@ const groups = ORDER.filter(g => present.includes(g)).concat(present.filter(g =>
 ```js
 const group = view(Inputs.select(groups, {
   label: "Product",
-  value: groups.includes("ALL_DEEP") ? "ALL_DEEP" : groups[0],
+  value: groups.includes("ALL") ? "ALL" : groups[0],
   format: g => GROUP_LABEL[g] ?? g
 }));
 ```
@@ -51,8 +52,8 @@ const group = view(Inputs.select(groups, {
 // PAID -- not implied_prob, which is the bin midpoint by construction. The file's
 // own calib_error and significant columns are measured against that midpoint and
 // are therefore NOT what is drawn here; the error and the |t| below are recomputed
-// against the price paid. On ALL_DEEP bin 0 the two differ by more than 2x, and
-// that bin alone is over 850 million contracts.
+// against the price paid. In the cheapest bands the two can differ materially,
+// including in bins carrying hundreds of millions of contracts.
 //
 // sum_price_contracts was added to the producer 2026-08-21. Guard for it rather
 // than assume it: a served generation predating that change has only the midpoint,
@@ -66,7 +67,10 @@ const rows = hasPaid
       width: () => 5,
       implied: d => (+d.n_contracts > 0 ? +d.sum_price_contracts / +d.n_contracts / 100 : null),
       actual: d => d.actual_win_rate_wt,
-      se: d => d.se_wt,
+      // A clustered SE is not itself trustworthy when the producer's effective
+      // contest threshold fails. Keep the descriptive point, but suppress its
+      // whisker and exclude it from every significance count on this page.
+      se: d => +d.se_reliable === 1 ? d.se_wt : null,
       contracts: d => d.n_contracts,
       trades: d => d.n_trades,
       // n_events_eff is the Kish effective cluster count: contract weighting
@@ -91,7 +95,7 @@ if (rows.length) display(actualVsImplied({rows, color: PM, width, eventNoun: "ef
 ```
 
 ```js
-if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Circle area is proportional to independent contests, not trades &mdash; thousands of prints on one match are one observation. <strong>${verdict.clearing} of ${verdict.measurable}</strong> bands are distinguishable from a fair price.</div>`);
+if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Circle area is proportional to independent contests, not trades &mdash; thousands of prints on one match are one observation. <strong>${verdict.measurable} of ${verdict.bands}</strong> bands have enough independent contests for inference; <strong>${verdict.clearing}</strong> of those are distinguishable from a fair price. Bands without enough coverage remain visible for context but have no whisker and do not count as findings.</div>`);
 ```
 
 ## Calibration error by price
@@ -103,7 +107,7 @@ if (rows.length) display(errorByPrice({rows, width, eventNoun: "effective contes
 ```
 
 ```js
-if (rows.length && verdict.meanPaid != null) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Across this product, contracts were bought at a mean <strong>${(100 * verdict.meanPaid).toFixed(2)}&cent;</strong> and won <strong>${(100 * verdict.meanWon).toFixed(2)}%</strong> of the time &mdash; a tilt of <strong>${verdict.tilt >= 0 ? "+" : "−"}${Math.abs(100 * verdict.tilt).toFixed(2)}&cent;</strong> on ${fmtCount(verdict.totalContracts)} contracts.</div>`);
+if (rows.length && verdict.meanPaid != null) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Across this selection, contracts were bought at a mean <strong>${(100 * verdict.meanPaid).toFixed(2)}&cent;</strong> and won <strong>${(100 * verdict.meanWon).toFixed(2)}%</strong> of the time &mdash; a tilt of <strong>${verdict.tilt >= 0 ? "+" : "−"}${Math.abs(100 * verdict.tilt).toFixed(2)}&cent;</strong> on ${fmtCount(verdict.totalContracts)} contracts.</div>`);
 ```
 
 ## Which products are measurable
@@ -155,7 +159,7 @@ display(Inputs.table(byProduct, {
   <summary>About this page — read before quoting any number</summary>
   <p><strong>The x-axis is the price actually paid, not the band midpoint.</strong> A 0&ndash;5&cent; band is mostly longshots trading at one and two cents, so its mean price is nowhere near 2.5&cent;. Measured against the midpoint, that band reads &minus;0.64&cent;; against what was actually paid, &minus;0.28&cent;. The file's own <code>calib_error</code> and <code>significant</code> columns use the midpoint and are deliberately not what is drawn here.</p>
   <p><strong>One contest is one observation.</strong> Thousands of prints on a single match share one result. Every interval is a CR1 cluster-robust standard error with the contest as the cluster; treating prints as independent understates it by 26&times; to 90&times;. Dots are sized by the effective contest count, which additionally accounts for how concentrated traded volume is across them.</p>
-  <p><strong>Why "deep products" is the default.</strong> The <em>to advance</em> product carries 3.2 million trades across roughly 32 contests. Pooled into an all-products curve it was, on its own, enough to make the 50&cent; band read as significant. Products whose bands rest on too few effective contests are reported as unmeasurable rather than plotted as findings.</p>
+  <p><strong>Thin products remain in the all-products view.</strong> The <em>to advance</em> product carries 3.2 million trades across roughly 32 contests, so it can materially move a pooled curve despite resting on very few independent outcomes. Bands that fail the effective-contest threshold remain visible as descriptive context but have no uncertainty whisker and are excluded from significance claims. Use the table's measurable-bands column before treating a product-level result as durable.</p>
   <p><strong>Whose price this is.</strong> Each Polymarket US symbol is a single binary leg and the daily market report lists only that leg, so this is a leg-price curve. Time-and-sales carries no aggressor flag, so unlike Kalshi's series this is not taker-side, and small level differences between the two venues should not be over-read.</p>
   <p><strong>What is excluded.</strong> Symbols naming more than one contract cannot be attributed to an outcome and are dropped rather than guessed at; markets delisted before reaching their event are never counted as losses. In total 89.8% of trades and 89.4% of traded value reach a resolved, unambiguously attributable market.</p>
 </details>
