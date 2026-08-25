@@ -113,6 +113,10 @@ export const tradeIdentity = row => [
 export function tradeDetail(row, source) {
   if (!row) return null;
   const ranking = row.table === "small_market" ? "large relative to its market" : "largest individual prints";
+  const publishesAggressor = row.venue === "Novig";
+  const fieldNote = publishesAggressor
+    ? "Novig publishes an aggressor flag, so taker-side rankings use the side identified by the venue."
+    : `This record contains only fields ${row.venue}'s collected trade tape publishes. The venue does not publish an aggressor flag, so a taker is never inferred.`;
   return {
     crumb: `${fmtCount(row.contracts)} trade`,
     eyebrow: `Individual trade · ${row.venue}`,
@@ -136,12 +140,12 @@ export function tradeDetail(row, source) {
     ],
     // Two separate caveats, and which one applies is a property of the row, not of the
     // venue: window_left_censored is set per trade by the producer.
-    coverage: row.window_left_censored
-      ? `The ${row.venue} collection window is left-censored: this trade is real, but the file does not cover the venue's full prior history.`
-      : `This record contains only fields ${row.venue}'s collected trade tape publishes. No competitor here publishes an aggressor flag, so a taker is never inferred.`,
+    coverage: `${row.window_left_censored
+      ? `The ${row.venue} collection window is left-censored: this trade is real, but the file does not cover the venue's full prior history. `
+      : ""}${fieldNote}`,
     state: {kind: "trade", source, venue: row.venue, trade: tradeIdentity(row)},
     ask: {
-      question: `Explain why this ${fmtCount(row.contracts)}-contract trade on ${row.venue} is notable. Use its price, market share and collection-window limits, and do not infer an aggressor when the venue does not publish one.`,
+      question: `Explain why this ${fmtCount(row.contracts)}-contract trade on ${row.venue} is notable. Use its price, market share and collection-window limits, and ${publishesAggressor ? "use the venue's published aggressor flag when discussing the taker" : "do not infer an aggressor because the venue does not publish one"}.`,
       context: `Predict Charts ${row.venue} trading-behavior selection: ${row.market} · ${row.date ? String(row.date).slice(0, 10) : "unknown date"} · ${fmtPrice(row.price)}.`
     }
   };
