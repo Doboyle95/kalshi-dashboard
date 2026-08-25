@@ -15,8 +15,19 @@ Two hosts serve the same `main`:
 - **https://doboyle95.github.io/kalshi-dashboard/** — the GitHub Pages fallback,
   deployed by `.github/workflows/deploy.yml` on every push to `main`.
 
-Both are excluded from search engines (`noindex` + `src/robots.txt`); direct
-links still work.
+Both are **open to search engines** as of 2026-08-25 (`59ed416`). Three separate
+mechanisms had to be removed, and only two of them live in this repo:
+`src/robots.txt` (`Disallow: /` → `Allow: /`), the `noindex` meta tag in
+`observablehq.config.js`, and — the authoritative one — an
+`add_header X-Robots-Tag "noindex, nofollow"` in the VM gateway's
+`site-headers.conf`, which is in KalshiData, not here. A header outranks the meta
+tag and reaches CSV/JSON/JS responses a meta tag cannot, so the repo-side pair
+alone changes nothing.
+
+Because one `dist/` is served by both hosts, every page now carries
+`<link rel="canonical">` pointing at `predict-charts.com`; `head` is a function of
+`{title, data, path}` for that reason. `/dashboard-data/` keeps a `noindex` header
+(it stays crawlable so Googlebot can render the charts, but is not itself indexed).
 
 ## Stack
 
