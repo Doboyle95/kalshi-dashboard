@@ -317,7 +317,9 @@ export const LB_VENUES = {
     topHeader: "Busiest outcome",
     topIsCode: true,
     winnerIsCode: true,
-    coverage: "Since 2026-05-21 only — 78 days. \"All time\" means far less here than on any other venue.",
+    // The leaderboard has last-trade dates but no complete daily calendar, so do not
+    // publish a day count that becomes stale on every refresh.
+    coverage: "Since 2026-05-21 only. \"All time\" means far less here than on any other venue.",
     nameNote: "<strong>Rothera publishes no market name at all.</strong> <code>product</code> is a mnemonic code (<code>MWCADVNCE-26RO16ARGEGY</code>) and there is no English anywhere in the feed, so this table shows the code and stops. Filling the column would mean shipping about a thousand hand-written guesses as if they were venue data. Outcome and winner columns are the venue's own symbols, for the same reason.",
     map: r => ({
       marketKey: str(r.market_key),
@@ -379,7 +381,8 @@ export const LB_VENUES = {
     topHeader: "Busiest outcome",
     topIsCode: false,
     winnerIsCode: false,
-    coverage: "Since 2026-07-17 only — 22 days. Parlay tickets are excluded (8.45% of the venue's contracts): a bespoke basket keyed by a 19-digit hash cannot be ranked or searched against a repeatedly-traded game line.",
+    // Pages with underdog_daily.csv replace this with a derived day count and share.
+    coverage: "Since 2026-07-17 only. Parlay tickets are excluded: a bespoke basket keyed by a 19-digit hash cannot be ranked or searched against a repeatedly-traded game line.",
     nameNote: "Underdog publishes no English name — the raw feed carries a ticker and nothing else — so every name here is decoded from that ticker. Club codes are left as the venue's own two-to-four letter codes (<code>BOS</code>, <code>LAD</code>); expanding them to team names would need a hand-built lookup, which would be invention. Three of 732 markets could not be split into a club pair and keep the raw code. Underdog publishes no settlement price either, so there is no winner column.",
     map: r => {
       const nm = str(r.market_name);
@@ -882,7 +885,7 @@ export function marketLeaderboard({
       // C6: the per-venue coverage note is emitted only in single-venue mode, so
       // without this the mixed view never says it is a top slice, and a reader who
       // cannot find a mid-sized market concludes the venue never listed it.
-      bits.push(html`<span>Each venue contributes its largest markets only (top 1,000 for Kalshi, Polymarket US, Crypto.com/Nadex and DKeX; all markets for ForecastEx, Rothera and Underdog Exchange), so an absent market may simply be below that cut.</span>`);
+      bits.push(html`<span>Each venue contributes its largest markets only (top 1,000 for Kalshi, Polymarket US, Crypto.com/Nadex, DKeX and Underdog Exchange; all markets for ForecastEx and Rothera), so an absent market may simply be below that cut.</span>`);
       bits.push(html`<span>This is a searchable finder, not a cross-venue rank: ForecastEx counts matched pairs where the others count contracts, and the source histories begin on different dates. The default sort is most recently traded; sorting by volume is available but does not make the units or windows comparable.</span>`);
       bits.push(html`<span>An empty fee or outcome cell means the venue does not publish that number for that market — never that it is zero.</span>`);
     }

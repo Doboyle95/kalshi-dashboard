@@ -20,6 +20,7 @@ const kalshiDaily = await DataAttachment("data/daily_overall.csv").csv({typed: t
 const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
 const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
 const cmeDaily = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
+const underdogDaily = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
 
 const lbKalshi = await DataAttachment("data/market_leaderboard.csv").csv();
 const lbPolymarket = await DataAttachment("data/polymarket_market_leaderboard.csv").csv();
@@ -31,6 +32,19 @@ const lbUnderdog = await DataAttachment("data/underdog_market_leaderboard.csv").
 ```
 
 ```js
+const underdogTotal = d3.sum(underdogDaily, d => d.contracts || 0);
+const underdogParlay = d3.sum(underdogDaily, d => d.contracts_parlay || 0);
+const underdogDays = new Set(underdogDaily.map(d => +d.date)).size;
+const underdogStart = d3.min(underdogDaily, d => d.date);
+const underdogSpec = underdogTotal > 0 && underdogStart
+  ? {
+      ...LB_VENUES.underdog,
+      coverage: `Since ${d3.utcFormat("%Y-%m-%d")(underdogStart)} only — ${underdogDays} days. `
+        + `Parlay tickets are excluded (${(100 * underdogParlay / underdogTotal).toFixed(1)}% of the venue's contracts): `
+        + "a bespoke basket keyed by a 19-digit hash cannot be ranked or searched against a repeatedly-traded game line."
+    }
+  : LB_VENUES.underdog;
+
 const normalizedVenues = [
   {spec: LB_VENUES.kalshi, rows: normalizeLeaderboard("kalshi", lbKalshi, {nameFn: bestName, winnerFn: fmtWinner, topFn: fmtStrike})},
   {spec: LB_VENUES.polymarket, rows: normalizeLeaderboard("polymarket", lbPolymarket)},
@@ -38,7 +52,7 @@ const normalizedVenues = [
   {spec: LB_VENUES.nadex, rows: normalizeLeaderboard("nadex", lbNadex)},
   {spec: LB_VENUES.rothera, rows: normalizeLeaderboard("rothera", lbRothera)},
   {spec: LB_VENUES.dkex, rows: normalizeLeaderboard("dkex", lbDkex)},
-  {spec: LB_VENUES.underdog, rows: normalizeLeaderboard("underdog", lbUnderdog)}
+  {spec: underdogSpec, rows: normalizeLeaderboard("underdog", lbUnderdog)}
 ];
 const platformRows = buildPlatformSeries({kalshi: kalshiDaily, competitor: competitorDaily, prophetx: prophetxDaily, cme: cmeDaily});
 const venueBoard = buildVenueScoreboard(platformRows);
