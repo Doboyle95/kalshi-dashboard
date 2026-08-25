@@ -8,7 +8,7 @@ How Polymarket US parlay bettors actually do. Every contract is priced at what w
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
-const fmtUSD   = n => "$" + fmtCount(n);
+const fmtUSD   = n => ((n ?? 0) < 0 ? "−$" : "$") + fmtCount(Math.abs(n ?? 0));
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -115,7 +115,7 @@ _P&L by price bin, which separates the cheap-longshot end from everything else._
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
   x: {label: "Price bin (cents)", tickFormat: d => d + "c"},
-  y: {label: "P&L (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e3 ? (d/1e3).toFixed(0)+"k" : d)},
+  y: {label: "P&L (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
     Plot.rectY(bins, {x: "price_bin", y: "pnl", interval: 5,
                       fill: d => d.pnl < 0 ? "var(--accent-negative)" : "var(--accent-positive)", fillOpacity: 0.85}),
@@ -134,7 +134,7 @@ _Dollars staked on parlays each day; the hollow point is a day still being colle
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
   x: {type: "utc", label: null},
-  y: {label: "Staked (USD)", grid: true, tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k")},
+  y: {label: "Staked (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
     Plot.areaY(settled, {x: "date", y: "stake_usd", fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
     Plot.lineY(settled, {x: "date", y: "stake_usd", stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),

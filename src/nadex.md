@@ -48,7 +48,6 @@ display(askPageLink({
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(a)); };
-const fmtUSD   = n => "$" + fmtCount(n);
 const fmtPct   = x => (100 * (x ?? 0)).toFixed(1) + "%";
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
@@ -307,9 +306,9 @@ const kalshiSinglePer = kalshiPerContract("NON_PARLAY");
 const fmtCentsMag = d => `${Math.abs(d * 100).toFixed(2)}¢`;
 const pdParlays = d3.sum(pdSorted, d => +d.parlays_settled);
 const pdProv = pdSorted.filter(d => d.prov).length;
-const fmtM = d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(2) + "M"
-                       : Math.abs(d) >= 1e3 ? (d / 1e3).toFixed(0) + "k"
-                       : d.toFixed(0));
+const fmtM = d => (d < 0 ? "−$" : "$") + (Math.abs(d) >= 1e6 ? (Math.abs(d) / 1e6).toFixed(2) + "M"
+                       : Math.abs(d) >= 1e3 ? (Math.abs(d) / 1e3).toFixed(0) + "k"
+                       : Math.abs(d).toFixed(0));
 const nadexPnlDateSel = Mutable([d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)]);
 display(renderDateBrush({
   data: pdSorted.map(d => ({date: d.date, value: Math.abs(+d.gross_pnl) || 0})),
@@ -326,14 +325,14 @@ const pdSortedBrushed = pdSorted.filter(d => d.date >= nadexPnlFrom && d.date <=
 const pdCumulBrushed = pdCumul.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
 ```
 
-<div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(pdTotal)}</strong> gross &mdash; ${(100 * pdTotal / pdContracts).toFixed(3)}&cent; per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
+<div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(Math.abs(pdTotal))}</strong> gross &mdash; ${fmtCentsMag(pdTotal / pdContracts)} per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
 
 ```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
   x: {type: "utc", label: null},
   y: {label: "Daily parlay P&L, gross (USD)", grid: true,
-      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+      tickFormat: fmtM},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.2}),
     // Colour carries DIRECTION (did the bettor win that day), opacity carries how much
@@ -362,7 +361,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 78,
   x: {type: "utc", label: null},
   y: {label: "Cumulative parlay P&L, gross (USD)", grid: true,
-      tickFormat: d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+      tickFormat: fmtM},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.areaY(pdCumulBrushed, {x: "date", y: "cumul", fill: "var(--accent-nadex)", fillOpacity: 0.12}),
