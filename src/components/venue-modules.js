@@ -194,7 +194,7 @@ export function categoryTotals(rows) {
 
 // Sports vs everything else. Kept separate from the category chart because on most
 // of these venues it is THE structural fact and a 2-band chart states it directly.
-export function sportsSplit({rows, width, color, height = 300, measure = "Share"}) {
+export function sportsSplit({rows, width, color, height = 300, measure = "Share", sportsLabel = "Sports", secondLabel = "Everything else"}) {
   const data = rows
     .map(d => {
       const s = +d.contracts_sports || 0, n = +d.contracts_nonsports || 0, t = +d.contracts_total || (s + n);
@@ -204,8 +204,8 @@ export function sportsSplit({rows, width, color, height = 300, measure = "Share"
     .sort((a, b) => a.date - b.date);
   const share = measure === "Share";
   const long = data.flatMap(d => [
-    {date: d.date, kind: "Sports", value: share ? (d.share ?? 0) : d.sports, total: d.total, share: d.share},
-    {date: d.date, kind: "Everything else", value: share ? 1 - (d.share ?? 0) : d.nonsports, total: d.total, share: d.share}
+    {date: d.date, kind: sportsLabel, value: share ? (d.share ?? 0) : d.sports, total: d.total, share: d.share},
+    {date: d.date, kind: secondLabel, value: share ? 1 - (d.share ?? 0) : d.nonsports, total: d.total, share: d.share}
   ]);
   return Plot.plot({
     style: {fontFamily: "var(--font-sans)"},
@@ -214,12 +214,12 @@ export function sportsSplit({rows, width, color, height = 300, measure = "Share"
     y: share
       ? {label: "Share of contracts", domain: [0, 1], tickFormat: d => `${Math.round(100 * d)}%`, grid: true}
       : {label: "Contracts", grid: true, tickFormat: d => fmtCount(d)},
-    color: {legend: true, domain: ["Sports", "Everything else"], range: [color, "var(--theme-foreground-muted)"]},
+    color: {legend: true, domain: [sportsLabel, secondLabel], range: [color, "var(--theme-foreground-muted)"]},
     marks: [
       Plot.areaY(long, {
-        x: "date", y: "value", fill: "kind", order: ["Sports", "Everything else"],
+        x: "date", y: "value", fill: "kind", order: [sportsLabel, secondLabel],
         curve: "monotone-x", fillOpacity: 0.88, tip: true,
-        title: d => `${fmtDate(d.date)}\n${d.kind}\n${d.share == null ? "" : `sports ${fmtPct(d.share)} of ${fmtCount(d.total)} contracts`}`
+        title: d => `${fmtDate(d.date)}\n${d.kind}\n${d.share == null ? "" : `${sportsLabel.toLowerCase()} ${fmtPct(d.share)} of ${fmtCount(d.total)} contracts`}`
       }),
       Plot.ruleY([0])
     ]

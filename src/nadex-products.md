@@ -44,14 +44,17 @@ display(categoryMix({rows, width, measure: mixMeasure, categories: present, colo
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
 
-## Sports and everything else
+## Non-parlay sports, parlays, and everything else
 
 ```js
-display(sportsSplit({rows: split, width, color: ACCENT, measure: mixMeasure}));
+display(sportsSplit({
+  rows: split, width, color: ACCENT, measure: mixMeasure,
+  sportsLabel: "Non-parlay sports", secondLabel: "Parlays + other non-sports"
+}));
 ```
 
 ```js
-display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Sports is ${fmtPct(d3.sum(split, d => +d.contracts_sports || 0) / Math.max(1, d3.sum(split, d => +d.contracts_total || 0)))} of all contracts this venue has published.</div>`);
+display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Non-parlay sports is ${fmtPct(d3.sum(split, d => +d.contracts_sports || 0) / Math.max(1, d3.sum(split, d => +d.contracts_total || 0)))} of all contracts this venue has published; the remainder is mostly the COMBOS parlay line, plus a small non-sports tail.</div>`);
 ```
 
 ## Every bucket, all time
