@@ -150,8 +150,6 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Daily contract volume from Rothera's clearing exports (sum of per-market volume). No fee field is published in the source, so no fee is shown on this page. Any Rothera fee on the Comparison page is derived from the venue's published schedule, not reported by the venue, and rests on a daily price proxy and an assumed participant mix — read its caption before quoting it.</p>
-
 ## Sports vs. non-sports
 
 <p class="section-intro">Sports against everything else — and on Rothera, sports carries the day overwhelmingly.</p>

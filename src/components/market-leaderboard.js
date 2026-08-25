@@ -319,8 +319,8 @@ export const LB_VENUES = {
     winnerIsCode: true,
     // The leaderboard has last-trade dates but no complete daily calendar, so do not
     // publish a day count that becomes stale on every refresh.
-    coverage: "Since 2026-05-21 only. \"All time\" means far less here than on any other venue.",
-    nameNote: "<strong>Rothera publishes no market name at all.</strong> <code>product</code> is a mnemonic code (<code>MWCADVNCE-26RO16ARGEGY</code>) and there is no English anywhere in the feed, so this table shows the code and stops. Filling the column would mean shipping about a thousand hand-written guesses as if they were venue data. Outcome and winner columns are the venue's own symbols, for the same reason.",
+    coverage: "",
+    nameNote: "",
     map: r => ({
       marketKey: str(r.market_key),
       name: "",                       // there is nothing to put here. See above.
@@ -893,7 +893,7 @@ export function marketLeaderboard({
     // nested array stringifies to "[object HTMLSpanElement]".
     captionBox.append(html`<div class="lb-meta">${bits.flatMap((b, i) => i ? [" · ", b] : [b])}</div>`);
 
-    if (single) {
+    if (single && spec.nameNote) {
       captionBox.append(richNote(
         `${spec.nameNote}<br><strong>Coverage.</strong> ${spec.coverage} ` +
         "This is a ranked top slice, not the whole venue — any venue total belongs to that venue's own daily file, never to a sum of this table."

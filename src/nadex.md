@@ -5,7 +5,7 @@ title: Crypto.com/Nadex
 <div class="page-hero" data-accent="nadex">
   <div class="page-eyebrow">Crypto.com · Nadex</div>
   <h1>Crypto.com/Nadex</h1>
-  <p class="page-lead">Crypto.com's Nadex exchange is small — event binaries whose only public record is the exchange's daily bulletin. No single game dominates it: the multi-leg <strong>COMBOS</strong> parlay line is the largest product here, and it is what the busiest days are mostly made of.</p>
+  <p class="page-lead">Crypto.com's Nadex exchange trades event binaries whose only public record is the exchange's daily bulletin. No single game dominates it: the multi-leg <strong>COMBOS</strong> parlay line is the largest product here, and it is what the busiest days are mostly made of.</p>
 </div>
 
 ```js
@@ -376,8 +376,6 @@ That day: ${fmtM(+d.gross_pnl)}`,
   ]
 })
 ```
-
-<div class="instruction-line">The line goes one way, but not smoothly, and the bumps are the interesting part. <strong>The cumulative total did climb above zero on five separate days, peaking at &plus;&dollar;701k</strong> &mdash; every one of them inside the provisional opening fortnight, and driven by single days like 23 June that returned &plus;&dollar;2.0M against a typical daily swing nearer &plusmn;&dollar;300k. That is one or two large combos landing, and it is exactly the variance a parlay book is built on. Once coverage is complete the line never crosses back above zero. The shape matches Kalshi's parlay book and is the expected one: a parlay's price is the product of its legs plus the house's margin on each, so the edge compounds with every leg added. Crypto.com's buyers lose <strong>${fmtCentsMag(pdTotal / pdContracts)} per contract</strong>${kalshiParlayPer == null || kalshiSinglePer == null ? "" : ` against Kalshi parlay takers' ${fmtCentsMag(kalshiParlayPer)} and Kalshi single-market takers' ${fmtCentsMag(kalshiSinglePer)} — all three gross and contract-weighted, so they compare directly`}.</div>
 
 ## Sports vs. non-sports
 
