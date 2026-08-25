@@ -75,4 +75,36 @@ display(Inputs.table(totals, {
   <p><strong>&ldquo;Other&rdquo; is not one thing.</strong> At Underdog it is the combo bucket; at Crypto.com/Nadex and DKeX it is a genuine residual, and Nadex carries a separate explicit <em>Parlays</em> value. It is mapped per venue rather than globally.</p>
 </details>
 
+## Every category, all time
+
+<p class="section-intro">The same all-time total as the bucket table above, broken out by the individual category label instead of folded into seven buckets — enough to see NFL next to Golf next to COMBOS. "Unparsed" is bulletin rows whose product column came through blank — real volume, unknown product.</p>
+
+```js
+const allCatTotals = d3.rollup(cats, v => d3.sum(v, d => d.contracts), d => d.category);
+const catBar = [...allCatTotals.entries()]
+  .sort((a,b) => b[1] - a[1])
+  .map(([category, contracts]) => ({category, contracts}));
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: catBar.length * 28 + 40,
+  marginLeft: 160,
+  x: {label: "Contracts (all time)", grid: true, tickFormat: d => fmtCount(d)},
+  y: {label: null},
+  marks: [
+    Plot.barX(catBar, {
+      x: "contracts", y: "category",
+      sort: {y: "x", reverse: true},
+      fill: ACCENT, fillOpacity: 0.7,
+      tip: true,
+      title: d => `${d.category}: ${fmtCount(d.contracts)}`
+    }),
+    Plot.ruleX([0])
+  ]
+})
+```
+
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex">Crypto.com/Nadex &middot; Activity</a> for volume and top markets, and <a href="./categories-venues">Products across venues</a> for the comparison.</div>

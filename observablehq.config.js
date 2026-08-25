@@ -126,7 +126,12 @@ const VENUES = [
     ["Activity", "/nadex"],
     ["Products", "/nadex-products"],
     ["Economics", "/nadex-economics"],
-    ["Outcomes", "/nadex-outcomes"]
+    ["Outcomes", "/nadex-outcomes"],
+    // Parlays / Parlay outcomes mirror Kalshi's own extra tabs (see above) -- COMBOS is
+    // this venue's largest single product line and its ONLY P&L basis, which is too big
+    // to keep buried inside Activity.
+    ["Parlays", "/nadex-parlays"],
+    ["Parlay outcomes", "/nadex-parlay-outcomes"]
   ]},
   {name: "ProphetX", accent: null, tabs: [
     ["Activity", "/prophetx"],
