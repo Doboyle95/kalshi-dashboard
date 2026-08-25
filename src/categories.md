@@ -1452,22 +1452,38 @@ const tmActiveMarketRowsByTicker = d3.group(
   tooltip.style.opacity = "0";
   const rootTotal = root.value || 1;
   const metricLabel = tmMetric === "Fees" ? "Fees" : "Volume";
-  const fmtTooltipBody = d => {
+  const tooltipLine = (className, text) => {
+    const node = document.createElement("div");
+    node.className = className;
+    node.textContent = text;
+    return node;
+  };
+  const tooltipRow = (label, value) => {
+    const row = document.createElement("div");
+    row.className = "kd-tt-row";
+    const labelNode = document.createElement("span");
+    const valueNode = document.createElement("span");
+    labelNode.textContent = label;
+    valueNode.textContent = value;
+    row.append(labelNode, valueNode);
+    return row;
+  };
+  const populateTooltip = d => {
     const grp  = displayTreemapCategory(d.parent.parent.data.name);
     const cat  = displayTreemapCategory(d.parent.data.name);
     const leaf = d.data.name;
     const pct  = rootTotal ? (d.value / rootTotal * 100) : 0;
     const headline = `${cat}${leaf && leaf !== cat ? " — " + leaf : ""}`;
-    return `
-      <div class="kd-tt-title">${headline}</div>
-      <div class="kd-tt-sub">${grp}</div>
-      <div class="kd-tt-row"><span>${metricLabel}</span><span>${tmMetric === "Fees" ? "$" + fmtCount(d.value) : fmtCount(d.value) + " contracts"}</span></div>
-      <div class="kd-tt-row"><span>Share of view</span><span>${pct.toFixed(2)}%</span></div>
-    `;
+    tooltip.replaceChildren(
+      tooltipLine("kd-tt-title", headline),
+      tooltipLine("kd-tt-sub", grp),
+      tooltipRow(metricLabel, tmMetric === "Fees" ? "$" + fmtCount(d.value) : fmtCount(d.value) + " contracts"),
+      tooltipRow("Share of view", `${pct.toFixed(2)}%`)
+    );
   };
   leafSel
     .on("mouseenter.kdtt", function(event, d) {
-      tooltip.innerHTML = fmtTooltipBody(d);
+      populateTooltip(d);
       tooltip.style.opacity = "1";
     })
     .on("mousemove.kdtt", function(event) {

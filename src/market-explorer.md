@@ -109,7 +109,7 @@ marketInspector.restore("market-explorer", state => {
 
 ```js
 display(html`<table class="briefing-table">
-  <thead><tr><th>Venue</th><th>Reporting through</th><th>7-day average</th><th>Last 30 reported days</th><th>vs prior 30</th><th>Coverage</th></tr></thead>
+  <thead><tr><th>Venue</th><th>Reporting through</th><th>7-day average</th><th>Last 7 reported days</th><th>vs prior 7</th><th>Coverage</th></tr></thead>
   <tbody>${venueBoard.map(row => html`<tr>
     <td><span class="venue-dot" style="background:${VENUE_COLORS[row.venue]}"></span><strong>${row.venue}</strong></td>
     <td>${fmtDate(row.latest)}</td>

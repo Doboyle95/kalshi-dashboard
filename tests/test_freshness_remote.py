@@ -6,11 +6,12 @@ import io
 import json
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
 SCRIPT = Path(__file__).parents[1] / ".github" / "scripts" / "check_freshness.py"
+PUBLISHED_FILES_FIXTURE = Path(__file__).parent / "fixtures" / "published-freshness-files.json"
 SPEC = importlib.util.spec_from_file_location("check_freshness", SCRIPT)
 check_freshness = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
@@ -130,6 +131,36 @@ class RemoteFreshnessTests(unittest.TestCase):
                 "task_health: prod-example FAILED",
             ],
         )
+
+    def test_production_manifest_contract_is_complete_and_classified(self):
+        published = set(json.loads(PUBLISHED_FILES_FIXTURE.read_text(encoding="utf-8")))
+        monitored = set(check_freshness.THRESHOLDS)
+        unmonitored = set(check_freshness.KNOWN_UNMONITORED)
+        self.assertTrue(monitored.isdisjoint(unmonitored))
+        self.assertEqual(monitored | unmonitored, published)
+
+        now = datetime.now(timezone.utc).isoformat()
+        manifest = {
+            "files": {name: {"last_write_time_utc": now} for name in published}
+        }
+        self.assertEqual(check_freshness.check_coverage(manifest), [])
+        self.assertEqual(check_freshness.check_freshness(manifest), ([], []))
+
+    def test_deliberately_stale_file_is_the_only_alarm(self):
+        published = set(json.loads(PUBLISHED_FILES_FIXTURE.read_text(encoding="utf-8")))
+        now = datetime.now(timezone.utc)
+        manifest = {
+            "files": {
+                name: {"last_write_time_utc": now.isoformat()}
+                for name in published
+            }
+        }
+        manifest["files"]["daily_overall.csv"]["last_write_time_utc"] = (
+            now - timedelta(hours=7)
+        ).isoformat()
+        stale, missing = check_freshness.check_freshness(manifest)
+        self.assertEqual(missing, [])
+        self.assertEqual([entry["name"] for entry in stale], ["daily_overall.csv"])
 
 
 if __name__ == "__main__":

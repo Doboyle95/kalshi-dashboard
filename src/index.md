@@ -119,13 +119,8 @@ const alignedByVenue = d3.rollup(aligned7, rows => d3.sum(rows, row => row.contr
 const alignedTotal = d3.sum(alignedByVenue.values());
 const alignedKalshi = alignedByVenue.get("Kalshi") ?? 0;
 const largestCompetitor = [...alignedByVenue.entries()].filter(([venue]) => venue !== "Kalshi").sort((a, b) => b[1] - a[1])[0];
-// Week over week, on its own scoreboard: the `scoreboard` const above stays on the
-// 30-day window because the Venue scoreboard table below is labelled "Last 30 reported
-// days" / "vs prior 30". Changing the shared one would silently move that table too.
-// This also puts the KPI on the same basis as the three cards beside it, which are all
-// 7-day. Both sides of the comparison must be full weeks -- keeping the old
-// `recentDays >= 14` guard against a 7-day window disqualifies EVERY venue and renders
-// the card as "—", since recentDays now tops out at 7.
+// Week over week, on a non-sparse subset of the same complete seven-day comparison used
+// by the venue table. The explicit window keeps this KPI's basis obvious at the call site.
 // Sparse venues are excluded the same way the aligned cards above exclude them: CME
 // reports by hand-collected bulletin, so its seven most recent REPORTED days currently
 // span twelve calendar days against a prior window of eight. That is not a week over a
@@ -333,7 +328,7 @@ function sparkline(rows, value, color) {
 
 ## Venue scoreboard
 
-<p class="section-intro">A comparable recent view of scale and momentum. Each venue's latest reported day is stated; short histories are not padded into a 30-day claim.</p>
+<p class="section-intro">A comparable recent view of scale and momentum. Each venue's latest reported day is stated; the comparison is blank unless both seven-day periods are complete.</p>
 
 <div class="surface-card table-scroll">
 
@@ -344,8 +339,8 @@ display(html`<table class="briefing-table scoreboard-table">
     <th>Reporting through</th>
     <th>Latest day</th>
     <th>7-day average</th>
-    <th>Last 30 reported days</th>
-    <th>vs prior 30</th>
+    <th>Last 7 reported days</th>
+    <th>vs prior 7</th>
     <th>Coverage</th>
   </tr></thead>
   <tbody>${scoreboard.map(row => html`<tr>

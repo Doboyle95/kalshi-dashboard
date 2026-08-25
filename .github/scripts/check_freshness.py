@@ -136,7 +136,6 @@ THRESHOLDS = {
     "underdog_daily.csv": 36,
     "underdog_categories_daily.csv": 36,
     "underdog_sports_split_daily.csv": 36,
-    "underdog_market_daily.csv": 36,
     # Per-market leaderboards (2026-08-08), read by the "Individual markets"
     # table on competitors.md and on each venue page. These MUST be classified
     # here or in KNOWN_UNMONITORED: check_coverage() below alerts on any file
@@ -155,6 +154,53 @@ THRESHOLDS = {
     "dkex_market_leaderboard.csv": 36,
     "underdog_market_leaderboard.csv": 36,
     "nadex_market_leaderboard.csv": 48,
+    # Production manifest coverage completed 2026-08-24. These files all drive a
+    # dashboard page or the read-only Ask Data catalog, so a newly frozen producer must
+    # raise a real alarm instead of being buried in check_coverage() configuration noise.
+    # Thresholds remain deliberately wider than producer cadence to absorb normal
+    # overnight and weekend timing variation.
+    "bet_type_daily.csv": 36,
+    "category_daily.csv": 36,
+    "calibration_by_side.csv": 192,
+    "calibration_by_side_clusters.csv": 192,
+    "competitor_large_trades.csv": 24,
+    "competitor_pnl_by_bin.csv": 48,
+    "dkex_volume_at_price.csv": 36,
+    "fcm_comparison.csv": 192,
+    "nadex_calibration.csv": 192,
+    "nadex_parlay_calibration.csv": 192,
+    "nadex_parlay_pnl.csv": 48,
+    "nadex_parlay_pnl_daily.csv": 48,
+    "novig_calibration.csv": 192,
+    "novig_category_daily.csv": 36,
+    "novig_daily.csv": 36,
+    "novig_fees_daily.csv": 36,
+    "novig_game_leaderboard.csv": 36,
+    "novig_kalshi_same_fixture.csv": 48,
+    "novig_market_leaderboard.csv": 36,
+    "novig_parlay_daily.csv": 36,
+    "novig_pnl_daily.csv": 48,
+    "novig_pnl_summary.csv": 48,
+    "polymarket_bet_type_daily.csv": 24,
+    "polymarket_kalshi_same_fixture.csv": 48,
+    "polymarket_market_type_daily.csv": 24,
+    "polymarket_parlay_daily.csv": 24,
+    "polymarket_parlay_pnl.csv": 48,
+    "polymarket_price_distribution.csv": 24,
+    "polymarket_settlement_daily.csv": 48,
+    "prophetx_bulletin_daily.csv": 36,
+    "prophetx_calibration.csv": 192,
+    "prophetx_categories_daily.csv": 36,
+    "prophetx_daily.csv": 36,
+    "prophetx_game_leaderboard.csv": 36,
+    "prophetx_market_leaderboard.csv": 36,
+    "prophetx_parlay_legs.csv": 36,
+    "prophetx_volume_at_price.csv": 36,
+    "rh_actual_vs_estimate.csv": 192,
+    "rh_daily_filing.csv": 192,
+    "underdog_volume_at_price.csv": 36,
+    "volume_at_price_forecastex.csv": 24,
+    "volume_at_price_kalshi.csv": 12,
 }
 
 # Published files deliberately NOT threshold-monitored here: CME is hand-collected
@@ -165,6 +211,14 @@ THRESHOLDS = {
 KNOWN_UNMONITORED = {
     "cme_daily.csv", "cme_daily_distributed.csv",
     "rh_monthly_estimates.csv", "rh_weekly_estimates.csv",
+    # Legacy v1 parlay exports retained as queryable historical comparison snapshots.
+    # Their replacement v2 files are threshold-monitored above; these mtimes no longer
+    # advance by design, so treating them as current producers would create false alarms.
+    "parlay_correlation_daily_oldvsnew.csv", "parlay_pnl_daily_by_corr.csv",
+    "parlay_sportsmix_monthly.csv", "parlay_sportsmix_summary.csv",
+    # Superseded by novig_fees_daily.csv on the live Novig page and retained only as a
+    # queryable historical snapshot.
+    "novig_taker_maker_daily.csv",
 }
 
 

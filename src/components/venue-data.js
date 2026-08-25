@@ -150,7 +150,7 @@ export function latestCompleteDate(rows) {
   return dates.length ? new Date(Math.max(...dates)) : null;
 }
 
-export function buildVenueScoreboard(rows, {windowDays = 30} = {}) {
+export function buildVenueScoreboard(rows, {windowDays = 7} = {}) {
   const grouped = new Map();
   for (const row of rows ?? []) {
     if (!grouped.has(row.venue)) grouped.set(row.venue, []);
@@ -173,12 +173,13 @@ export function buildVenueScoreboard(rows, {windowDays = 30} = {}) {
       average7,
       recentTotal,
       recentDays: recent.length,
-      // Exposed so a caller can require BOTH sides of the comparison to be full.
-      // `change` alone only guarantees previousTotal > 0, so a venue with three
-      // reported days behind it can post a huge percentage off a thin base --
-      // harmless in a 30-day window, much easier to hit in a 7-day one.
+      // Exposed for coverage labels and downstream validation. The comparison itself
+      // is blank unless BOTH sides contain a full window; comparing seven days with a
+      // thin one- or two-day base produces a precise-looking but meaningless change.
       previousDays: previous.length,
-      change: previousTotal > 0 ? recentTotal / previousTotal - 1 : null,
+      change: recent.length === windowDays && previous.length === windowDays && previousTotal > 0
+        ? recentTotal / previousTotal - 1
+        : null,
       coverage: `${venueRows.length.toLocaleString()} reported day${venueRows.length === 1 ? "" : "s"}`,
       sparse: venueRows.some(row => row.sparse)
     }];

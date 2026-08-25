@@ -34,6 +34,26 @@ test("partial reports do not enter the scoreboard", () => {
   assert.equal(score.latestVolume, 100);
 });
 
+test("venue change compares two complete seven-report periods only", () => {
+  const rows = Array.from({length: 14}, (_, index) => ({
+    date: day(`2026-08-${String(index + 1).padStart(2, "0")}`),
+    venue: "Kalshi",
+    contracts: index < 7 ? 10 : 20,
+    complete: true,
+    partial: false
+  }));
+  const [complete] = buildVenueScoreboard(rows);
+  assert.equal(complete.recentDays, 7);
+  assert.equal(complete.previousDays, 7);
+  assert.equal(complete.recentTotal, 140);
+  assert.equal(complete.change, 1);
+
+  const [thinHistory] = buildVenueScoreboard(rows.slice(1));
+  assert.equal(thinHistory.recentDays, 7);
+  assert.equal(thinHistory.previousDays, 6);
+  assert.equal(thinHistory.change, null);
+});
+
 test("ProphetX falls back to excluding the newest date when completeness is absent", () => {
   const rows = [
     {date: day("2026-08-08"), contracts: 10},
