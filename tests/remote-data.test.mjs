@@ -66,6 +66,101 @@ test("loads and verifies two files from one immutable generation", async () => {
   assert.equal(mock.requests.filter(url => url.endsWith("current.json")).length, 1);
 });
 
+test("queues data transfers before starting each file timeout", async () => {
+  const endpoint = "https://bounded-data-queue.example";
+  const files = Object.fromEntries(
+    Array.from({length: 5}, (_, index) => [`file-${index}.csv`, `value\n${index}\n`])
+  );
+  const mock = transport(endpoint, files);
+  let active = 0;
+  let maxActive = 0;
+  const startedAt = new Map();
+  const fetchImpl = async (url, options = {}) => {
+    if (url.endsWith("/dashboard-data/current.json")) return mock.fetchImpl(url, options);
+    const name = decodeURIComponent(url.split("/").at(-1));
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    startedAt.set(name, performance.now());
+    try {
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 30);
+        options.signal?.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(options.signal.reason ?? new Error("aborted"));
+        }, {once: true});
+      });
+      return new Response(files[name], {status: 200});
+    } finally {
+      active -= 1;
+    }
+  };
+
+  const began = performance.now();
+  const results = await Promise.all(Object.keys(files).map(filename => loadRemoteCsv(filename, {
+    endpoint,
+    fetchImpl,
+    timeoutMs: 45,
+    parse: text => text.trim()
+  })));
+
+  assert.ok(results.every(result => result.source === "remote"));
+  assert.equal(maxActive, 4);
+  assert.ok(startedAt.get("file-4.csv") - began >= 20, "the fifth transfer should wait for a slot");
+  assert.ok(performance.now() - began >= 50, "wall time should exceed one file timeout without aborting the queued file");
+});
+
+test("manifest requests bypass a saturated data-transfer queue", async () => {
+  const blockerEndpoint = "https://manifest-bypass-blockers.example";
+  const blockerFiles = Object.fromEntries(
+    Array.from({length: 4}, (_, index) => [`block-${index}.csv`, `value\n${index}\n`])
+  );
+  const blockerMock = transport(blockerEndpoint, blockerFiles);
+  let dataStarted = 0;
+  let signalFilled;
+  const filled = new Promise(resolve => { signalFilled = resolve; });
+  let releaseData;
+  const released = new Promise(resolve => { releaseData = resolve; });
+  const blockerFetch = async (url, options = {}) => {
+    if (url.endsWith("/dashboard-data/current.json")) return blockerMock.fetchImpl(url, options);
+    dataStarted += 1;
+    if (dataStarted === 4) signalFilled();
+    await released;
+    return blockerMock.fetchImpl(url, options);
+  };
+  const blockers = Object.keys(blockerFiles).map(filename => loadRemoteCsv(filename, {
+    endpoint: blockerEndpoint,
+    fetchImpl: blockerFetch,
+    timeoutMs: 500,
+    parse: text => text
+  }));
+  await filled;
+
+  const probeEndpoint = "https://manifest-bypass-probe.example";
+  const probeMock = transport(probeEndpoint, {"probe.csv": "value\n1\n"});
+  let signalManifest;
+  const manifestSeen = new Promise(resolve => { signalManifest = resolve; });
+  const probeFetch = async (url, options = {}) => {
+    if (url.endsWith("/dashboard-data/current.json")) signalManifest();
+    return probeMock.fetchImpl(url, options);
+  };
+  const probe = loadRemoteCsv("probe.csv", {
+    endpoint: probeEndpoint,
+    fetchImpl: probeFetch,
+    timeoutMs: 500,
+    parse: text => text
+  });
+
+  try {
+    await Promise.race([
+      manifestSeen,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("manifest waited behind data queue")), 100))
+    ]);
+  } finally {
+    releaseData();
+  }
+  await Promise.all([...blockers, probe]);
+});
+
 test("hash or size mismatch falls back without returning corrupt data", async () => {
   const endpoint = "https://canary-two.example";
   const mock = transport(endpoint, {"tiny.csv": "a,b\n1,2\n"}, {corrupt: "tiny.csv"});

@@ -3,6 +3,13 @@ const GENERATION = /^[0-9a-f]{20}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 15000;
+// Browsers may queue a burst of same-origin requests behind their own connection
+// limit. Keep the queue here so a data file's abort clock starts only when that file
+// actually receives a transfer slot. Manifest requests deliberately bypass this
+// semaphore: they are tiny and every data load needs one before it can be scheduled.
+const MAX_CONCURRENT_DATA_FETCHES = 4;
+let activeDataFetches = 0;
+const dataFetchQueue = [];
 // Floor throughput assumed for a DATA file, used to scale its timeout by size.
 // 15s flat was fine for the manifest and for small CSVs, but daily_top_categories_fees.csv
 // is 10.4MB -- clearing that in 15s demands a sustained ~5.5 Mbit/s, so every slower
@@ -57,6 +64,46 @@ async function fetchBounded(fetchImpl, url, options, timeoutMs) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetchImpl(url, {...options, signal: controller.signal});
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function acquireDataFetchSlot() {
+  if (activeDataFetches < MAX_CONCURRENT_DATA_FETCHES) {
+    activeDataFetches += 1;
+    return Promise.resolve();
+  }
+  return new Promise(resolve => dataFetchQueue.push(resolve));
+}
+
+function releaseDataFetchSlot() {
+  const next = dataFetchQueue.shift();
+  if (next) next();
+  else activeDataFetches -= 1;
+}
+
+async function withDataFetchSlot(task) {
+  await acquireDataFetchSlot();
+  try {
+    return await task();
+  } finally {
+    releaseDataFetchSlot();
+  }
+}
+
+// Hold the slot, signal and timeout through body consumption. Releasing at response
+// headers would let the next queued request start while the prior CSV still occupies
+// the connection, recreating the same browser-side queue one layer lower.
+async function fetchDataBytesBounded(fetchImpl, url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, {...options, signal: controller.signal});
+    return {
+      response,
+      bytes: response.ok ? await response.arrayBuffer() : null
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -121,14 +168,13 @@ async function verifiedRemoteText(filename, options = {}) {
   }
 
   const url = `${endpoint}/dashboard-data/generations/${manifest.generation}/${encodeURIComponent(filename)}`;
-  const response = await fetchBounded(
+  const {response, bytes} = await withDataFetchSlot(() => fetchDataBytesBounded(
     fetchImpl,
     url,
     {cache: "default", credentials: "omit", mode: "cors", redirect: "error", referrerPolicy: "no-referrer"},
     dataTimeoutMs(record.size_bytes, timeoutMs)
-  );
+  ));
   if (!response.ok) throw new Error(`dashboard data file returned ${response.status}`);
-  const bytes = await response.arrayBuffer();
   if (bytes.byteLength !== record.size_bytes) throw new Error(`dashboard data size mismatch for ${filename}`);
   if ((await sha256Hex(bytes)) !== record.sha256) throw new Error(`dashboard data hash mismatch for ${filename}`);
   const text = new TextDecoder("utf-8", {fatal: true}).decode(bytes);
