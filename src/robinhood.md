@@ -342,7 +342,11 @@ Plot.plot({
 
 ## The three FCMs side by side
 
-<p class="section-intro">The same filing, line [8530], for the three firms distributing event contracts. Note the scale is logarithmic — Robinhood's book is roughly a hundred times FanDuel's.</p>
+```js
+const fcmScale = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));
+```
+
+<p class="section-intro">The same filing, line [8530], for the three firms distributing event contracts. Robinhood's book is roughly a hundred times FanDuel's; use the Scale toggle above to switch between linear and log.</p>
 
 <div class="surface-card compact-details" style="padding:0.75rem 1rem;">
   <p style="margin:0;">These firms serve different customers, so the same overnight position can correspond to very different amounts of trading at each. The shapes are comparable; the levels are not a proxy for relative volume.</p>
@@ -369,14 +373,15 @@ Plot.plot({
   width,
   x: {label: null, tickRotate: -35},
   y: {
-    type: "log",
-    label: "Open position (market value, log scale)",
+    type: fcmScale === "Log" ? "log" : "linear",
+    label: "Open position (market value)",
     grid: true,
     tickFormat: d => d >= 1e6 ? "$" + (d / 1e6) + "M" : "$" + (d / 1e3) + "k"
   },
   color: {domain: FCMS.map(f => f.label), range: FCMS.map(f => f.color), legend: true},
   marks: [
     Plot.line(fcmSeries, {x: "date", y: "value", stroke: "firm", strokeWidth: 1.5}),
+    fcmScale === "Linear" ? Plot.ruleY([0]) : null,
     Plot.tip(fcmCmp, Plot.pointerX({
       x: "date",
       y: "robinhood",
