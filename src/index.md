@@ -91,6 +91,7 @@ const pmCat = await DataAttachment("data/polymarket_categories_daily.csv").csv({
 const pxCat = await DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
 const rotheraCat = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
 const underdogCat = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
+const novigCat = await DataAttachment("data/novig_category_daily.csv").csv({typed: true});
 ```
 
 ```js
@@ -429,6 +430,7 @@ const VENUE_BUCKET = {
 // underdog_daily.contracts_parlay), while at Nadex and DKeX it is a real residual.
 const VENUE_OVERRIDE = {
   "Crypto.com/Nadex": {Parlays: "Parlay"},
+  Novig: {Parlay: "Parlay"},
   ProphetX: {"Parlay (multi-event)": "Parlay"},
   "Underdog Exchange": {Other: "Parlay"}
 };
@@ -452,6 +454,7 @@ const competitorProductRows = [
   ...normalizeProduct("Rothera", rotheraCat, "category"),
   ...normalizeProduct("DKeX", dkexCat, "category"),
   ...normalizeProduct("ProphetX", pxCat, "category"),
+  ...normalizeProduct("Novig", novigCat, "category"),
   ...normalizeProduct("Underdog Exchange", underdogCat, "category"),
   ...normalizeProduct("ForecastEx", fxCat, "category")
 ];

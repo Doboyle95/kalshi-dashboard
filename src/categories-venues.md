@@ -4,7 +4,7 @@ title: Products
 
 # Products
 
-<p class="page-lead">What each venue sells, from broad category mix to sports contract types and parlay adoption.</p>
+<p class="page-lead">What has traded at each venue, from broad category mix to sports contract types and parlay adoption.</p>
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
@@ -21,19 +21,20 @@ const pm = await DataAttachment("data/polymarket_categories_daily.csv").csv({typ
 const px = await DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
 const roth = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
 const ud = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
+const novig = await DataAttachment("data/novig_category_daily.csv").csv({typed: true});
 ```
 
 ```js
-// One window for all eight venues. Every figure on this page is inside it; nothing is
+// One window for every loaded venue. Every figure on this page is inside it; nothing is
 // all-time. That matters more than it sounds: over all time ForecastEx reads as a 36%
 // football venue, and it has listed no sport since February.
 //
 // The window is DERIVED, never pinned -- a literal here froze the page on the day it was
 // written and quietly dropped the newest week of every venue. WIN_HI is the last day EVERY
 // loaded file has reported, which is also the last day none of them is still half-collecting;
-// a per-venue max would compare eight different windows and read as a venue difference.
+// a per-venue max would compare different windows and read as a venue difference.
 const iso = d => d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
-const WIN_HI = d3.min([kCat, kParlay, dkex, fx, nadex, pm, px, roth, ud],
+const WIN_HI = d3.min([kCat, kParlay, dkex, fx, nadex, pm, px, roth, ud, novig],
   rows => d3.max(rows ?? [], r => r.date ? iso(r.date) : null)) ?? iso(new Date());
 const WIN_LO = iso(d3.utcDay.offset(new Date(WIN_HI), -29));
 const inWin = d => { const s = iso(d); return s >= WIN_LO && s <= WIN_HI; };
@@ -63,6 +64,7 @@ const RAW = [
   ["Rothera", roth, "category", "contracts"],
   ["DKeX", dkex, "category", "contracts"],
   ["ProphetX", px, "category", "contracts"],
+  ["Novig", novig, "category", "contracts"],
   ["Underdog", ud, "category", "contracts"],
   ["ForecastEx", fx, "category", "contracts"]
 ];
@@ -90,7 +92,7 @@ const order = perVenue.slice().sort((a, b) => {
 const stacked = perVenue.flatMap(d => d.shares.map(s => ({venue: d.venue, ...s, tot: d.tot})));
 const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d / 1e6).toFixed(1)}M` : d >= 1e3 ? `${(d / 1e3).toFixed(0)}k` : d3.format(",.0f")(d);
 const nonSport = v => 100 - (perVenue.find(d => d.venue === v)?.shares.filter(s => s.bucket.startsWith("Sports")).reduce((x, s) => x + s.pct, 0) ?? 0);
-// Computed, not asserted: the window moves, so a hard-coded "under 2% at five of the eight"
+// Computed, not asserted: the window moves, so a hard-coded venue-count claim
 // goes wrong the week a venue lists its first non-sport market.
 const restVenues = perVenue.map(d => d.venue).filter(v => v !== "Kalshi" && v !== "ForecastEx");
 const restNonSportMax = d3.max(restVenues, nonSport) ?? 0;
