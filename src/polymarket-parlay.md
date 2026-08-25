@@ -4,7 +4,7 @@ title: Polymarket US Parlay P&L
 
 # Polymarket US Parlay P&L
 
-How Polymarket US parlay bettors actually do. Every contract is priced at what was really paid for it, taken from the venue's own time-and-sales tape.
+How Polymarket US parlay bettors actually do.
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
