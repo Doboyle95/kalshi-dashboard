@@ -67,6 +67,12 @@ test("loads and verifies two files from one immutable generation", async () => {
 });
 
 test("queues data transfers before starting each file timeout", async () => {
+  // 5x the original 30ms/45ms pair. A tight margin here is what let real VM scheduling
+  // jitter -- not a queue bug -- abort file-4 and fail two consecutive production
+  // deploys on 2026-08-25. This test exists to prove the queue orders transfers
+  // correctly, not to double as a load-testing tool, so give it slack instead.
+  const MOCK_FETCH_MS = 150;
+  const TEST_TIMEOUT_MS = 600;
   const endpoint = "https://bounded-data-queue.example";
   const files = Object.fromEntries(
     Array.from({length: 5}, (_, index) => [`file-${index}.csv`, `value\n${index}\n`])
@@ -83,7 +89,7 @@ test("queues data transfers before starting each file timeout", async () => {
     startedAt.set(name, performance.now());
     try {
       await new Promise((resolve, reject) => {
-        const timer = setTimeout(resolve, 30);
+        const timer = setTimeout(resolve, MOCK_FETCH_MS);
         options.signal?.addEventListener("abort", () => {
           clearTimeout(timer);
           reject(options.signal.reason ?? new Error("aborted"));
@@ -99,14 +105,19 @@ test("queues data transfers before starting each file timeout", async () => {
   const results = await Promise.all(Object.keys(files).map(filename => loadRemoteCsv(filename, {
     endpoint,
     fetchImpl,
-    timeoutMs: 45,
+    timeoutMs: TEST_TIMEOUT_MS,
     parse: text => text.trim()
   })));
 
   assert.ok(results.every(result => result.source === "remote"));
   assert.equal(maxActive, 4);
-  assert.ok(startedAt.get("file-4.csv") - began >= 20, "the fifth transfer should wait for a slot");
-  assert.ok(performance.now() - began >= 50, "wall time should exceed one file timeout without aborting the queued file");
+  // Both thresholds sit well inside MOCK_FETCH_MS so a slow CI host cannot make a
+  // correct queue implementation look broken -- measured 2026-08-25: the real 30ms/45ms
+  // pair aborted file-4 on a production VM under a load average of 18 (a sibling
+  // 20GB/323%-CPU job), failing two consecutive deploys though the queue logic was
+  // sound. The fix widens the margin, not the assertions' meaning.
+  assert.ok(startedAt.get("file-4.csv") - began >= MOCK_FETCH_MS * 0.5, "the fifth transfer should wait for a slot");
+  assert.ok(performance.now() - began >= MOCK_FETCH_MS * 1.5, "wall time should exceed one file timeout without aborting the queued file");
 });
 
 test("manifest requests bypass a saturated data-transfer queue", async () => {
