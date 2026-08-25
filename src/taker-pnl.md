@@ -443,6 +443,7 @@ const pnlByTickerCatDaily = pnlByTicker.map(d => {
 
 const pnlSummaryByCat = new Map();
 for (const d of pnlByTickerCatDaily) {
+  if (d.date < startDate || d.date > endDate) continue;
   if (!(d.contracts_settled > 0)) continue;
   const acc = pnlSummaryByCat.get(d.category) || {category: d.category, gross: 0, net: 0, fees: 0, feesMaker: 0, settled: 0, days: new Set()};
   acc.gross += d.pnl_gross;
@@ -616,6 +617,8 @@ Plot.plot({
 ```
 
 </div>
+
+<p class="chart-note">Includes only markets settled since 2026-04-15 (the start of the current P&L data scope) — pre-2026 markets, including the 2024 election, have no P&L data to rank by and won't appear here.</p>
 
 <details class="surface-card compact-details secondary-section">
   <summary>Maker fee revenue by category</summary>
