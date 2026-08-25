@@ -72,6 +72,26 @@ export const MLB_TEAMS = {
   WAS:"Nationals",
   ATH:"Athletics",
 };
+// Women's pro basketball. Kalshi labels these markets by CITY and never by nickname
+// ("Dallas vs Indiana Winner?"), so these are cities -- writing in the nicknames would
+// be supplying knowledge the data does not contain.
+//
+// Derived from the markets' own titles, using ONLY titles that name a single team
+// ("Will Chicago win the 1H by over 2.5 points?", "Indiana vs Las Vegas: Indiana wins
+// the 3rd quarter"). An "A vs B" title cannot tell you which side a code belongs to,
+// which is the trap that makes positional guessing unsafe. Every entry is 69-95
+// observations with zero disagreement; CON is the rarer spelling of CONN, confirmed on
+// "Will the Connecticut win the Pro Women's Basketball Championship?".
+//
+// Deliberately absent: COO and SPN ("Team Coop", "Team Spoon") and WAS ("Team
+// Washington") are All-Star exhibition squads in KXWNBASSTARS, not franchises, and the
+// same families carry player-prop outcomes ("A'ja Wilson: 15+ points"). Those stay raw.
+export const WNBA_TEAMS = {
+  ATL:"Atlanta", CHI:"Chicago", CON:"Connecticut", CONN:"Connecticut", DAL:"Dallas",
+  GS:"Golden State", IND:"Indiana", LA:"Los Angeles", LV:"Las Vegas", MIN:"Minnesota",
+  NY:"New York", PDX:"Portland", PHX:"Phoenix", SEA:"Seattle", TOR:"Toronto",
+  WSH:"Washington",
+};
 export const NHL_TEAMS = {
   ANA:"Ducks", ARI:"Coyotes", BOS:"Bruins", BUF:"Sabres", CAR:"Hurricanes",
   CBJ:"Blue Jackets", CGY:"Flames", CHI:"Blackhawks", COL:"Avalanche",
@@ -161,6 +181,12 @@ export const CRICKET_TEAMS = {
   WI:"West Indies", AFG:"Afghanistan", IRE:"Ireland", ZIM:"Zimbabwe",
   USA:"USA", CAN:"Canada", NED:"Netherlands", NAM:"Namibia", UAE:"UAE",
   NEP:"Nepal", OMN:"Oman", SCO:"Scotland",
+  // Kalshi spells three of these a second way in its T20 tickers. Confirmed from the
+  // titles: every -SRI outcome says Sri Lanka, every -IRL says Ireland, every -OMA
+  // says Oman, with no other meaning anywhere in KXT20*/KXICC*/KXWBC*. They matter
+  // beyond their own rows because the KXT20MATCH fixture test below can only decode a
+  // match when BOTH sides are known.
+  SRI:"Sri Lanka", IRL:"Ireland", OMA:"Oman",
   // Latin American / WBC flavor
   DOM:"Dominican Rep.", VE:"Venezuela", VEN:"Venezuela", MEX:"Mexico",
   PR:"Puerto Rico", CUB:"Cuba", COL:"Colombia", ISR:"Israel",
@@ -313,6 +339,8 @@ export function getTeamsForMarket(mk) {
   if (/^KXSB-/.test(mk))                       return NFL_TEAMS;
   if (/^KXNCAAF/.test(mk))                     return CFB_TEAMS;
   if (/^KXNBA/.test(mk))                       return NBA_TEAMS;
+  // Below the MENTION branch above, which takes KXWNBAMENTION out first.
+  if (/^KXWNBA/.test(mk))                      return WNBA_TEAMS;
   if (/^KXNCAAMB|^KXNCAAWB|^KXMARMAD|^KXWMARMAD/.test(mk)) return CBB_TEAMS;
   if (/^KXMLB/.test(mk))                       return MLB_TEAMS;
   if (/^KXNHL/.test(mk))                       return NHL_TEAMS;
@@ -320,6 +348,31 @@ export function getTeamsForMarket(mk) {
   if (/^KXWCGAME|^KXWCADVANCE|^KXWCSPREAD|^KXWCSCORE/.test(mk)) return WC_TEAMS;
   // Outright winner market -- 2-letter ISO codes on top of the FIFA ones.
   if (/^KXMENWORLDCUP/.test(mk))               return WC_OUTRIGHT_TEAMS;
+  // KXT20MATCH is a single Kalshi series carrying international T20 AND several
+  // domestic franchise leagues, which reuse the same 3-letter codes: COL is Colombo CC
+  // as well as Colombia, IND is the Indore Pink Panthers as well as India, NAM is the
+  // Namo Bandra Blasters as well as Namibia, BAN is Band-E Amir Stars as well as
+  // Bangladesh, and AUS is Austria as well as Australia. A flat code lookup answered
+  // 52 of these wrongly.
+  //
+  // The market key carries BOTH sides of the fixture (KXT20MATCH-26JUN021330INDENG),
+  // so the test is whether the whole pair decomposes into two sides CRICKET_TEAMS
+  // knows -- which is what parseGame already does. "INDENG" parses, so India decodes;
+  // "INDMAL" (Indore vs Malwa), "AUSSLO" (Austria vs Slovenia) and "COLBUR" (Colombo
+  // vs Burgher) do not, so those keep their raw codes. 52 wrong -> 4.
+  //
+  // It costs some correct decodes: an international match whose OTHER side has no code
+  // here (Korea Republic vs Papua New Guinea) no longer decodes either. That is the
+  // safe direction -- a raw code, not a wrong name. The 4 it cannot catch are
+  // Panadura SC vs Colts CC, where PAN and COL both happen to be real country codes.
+  if (/^KXT20MATCH-/.test(mk)) {
+    const pair = (mk.match(/([A-Z]+)$/) ?? [])[1];
+    return pair && parseGame(pair, CRICKET_TEAMS) ? CRICKET_TEAMS : NO_DICTIONARY;
+  }
+  // Domestic Canadian franchise cricket (Brampton Wolves, Surrey Jaguars). Every code
+  // CRICKET_TEAMS answered here was wrong -- 5 of 5, BRA for the Brampton Wolves, SUR
+  // for the Surrey Jaguars -- and none were right, so there is nothing to weigh.
+  if (/^KXT20CANADAMATCH/.test(mk))            return NO_DICTIONARY;
   if (/^KXT20|^KXICC|^KXWBC/.test(mk))         return CRICKET_TEAMS;
   if (/^KXIPL/.test(mk))                       return IPL_TEAMS;
   // The women's singles families are spelled W-WOMEN / USO-WOMEN / FO-WOMEN / AO-WOMEN,

@@ -130,10 +130,13 @@ Which dict to use for a given market prefix:
 | `KXNFL…`, `KXSB-…`                          | `NFL_TEAMS`     |
 | `KXNCAAF…`                                  | `CFB_TEAMS`     |
 | `KXNBA…`                                    | `NBA_TEAMS`     |
+| `KXWNBA…`                                   | `WNBA_TEAMS` (cities, not nicknames) |
 | `KXNCAAMB…`, `KXMARMAD…`, `KXWMARMAD…`      | `CBB_TEAMS`     |
 | `KXMLB…`                                    | `MLB_TEAMS`     |
 | `KXNHL…`                                    | `NHL_TEAMS`     |
 | `KXUCL…`, `KXEPL…`, `KXLALIGA…`             | `SOCCER_TEAMS`  |
+| `KXT20MATCH-…`                              | `CRICKET_TEAMS` **only if the fixture parses** — see below |
+| `KXT20CANADAMATCH…`                         | `NO_DICTIONARY` — domestic franchises |
 | `KXT20…`, `KXICC…`, `KXWBC…`                | `CRICKET_TEAMS` |
 | `KXIPL…`                                    | `IPL_TEAMS`     |
 | `KXMENWORLDCUP…`                            | `WC_OUTRIGHT_TEAMS` (FIFA 3-letter **+** ISO 2-letter) |
@@ -180,18 +183,62 @@ published rows, where none of them appear:
   team event (USA / EU / EUR), but `KXPGARYDERTOP-25` is an ordinary player
   market, and a dashless exclusion swallows both.
 
-### Two families that look routable and are not
+### When a family's codes are ambiguous: test the whole FIXTURE
+
+`KXT20MATCH` is one Kalshi series carrying international T20 **and** several domestic
+franchise leagues, which reuse the same codes: `COL` is Colombo CC as well as Colombia,
+`IND` the Indore Pink Panthers as well as India, `NAM` the Namo Bandra Blasters as well
+as Namibia, `BAN` Band-E Amir Stars as well as Bangladesh, `AUS` **Austria** as well as
+Australia. A flat lookup got 52 of them wrong.
+
+The market key carries **both** sides (`KXT20MATCH-26JUN021330INDENG`), so the fix is to
+decode only when the whole pair decomposes into two sides `CRICKET_TEAMS` knows — which
+is exactly what `parseGame` already does:
+
+```js
+if (/^KXT20MATCH-/.test(mk)) {
+  const pair = (mk.match(/([A-Z]+)$/) ?? [])[1];
+  return pair && parseGame(pair, CRICKET_TEAMS) ? CRICKET_TEAMS : NO_DICTIONARY;
+}
+```
+
+`INDENG` parses so India decodes; `INDMAL`, `AUSSLO` and `COLBUR` do not, so those keep
+their raw codes. **52 wrong → 4.** It costs 52 correct decodes: an international match
+whose *opponent* has no code here (Turks and Caicos, Peru, Costa Rica) stops decoding
+too. That is the safe direction — a raw code, never a wrong name. The 4 it cannot catch
+are Panadura SC vs Colts CC, where `PAN` and `COL` are both real country codes.
+
+Reach for this whenever a family's codes are ambiguous but the key names the fixture.
+
+### Families that look routable and are not
 
 - **`KXITF*`** (ITF tennis) is not routed to `TENNIS_PLAYERS`. The ITF circuit is a far
   larger player pool than the tour events that map covers, and its codes abbreviate ITF
   players: `MEN` is Joao Mendes, `FON` is Oriol Font, `SHE` is Suryanshi Shekhawat.
   `TENNIS_PLAYERS` reads those as Mensik, Fonseca and Shelton — **785 wrong names**.
-- **The T20 cricket families** are not routed to `CRICKET_TEAMS`, though Test and ODI
-  are. Test and ODI are played by full-member nations, whose codes that map holds; T20
-  adds associate nations and domestic franchises, and the codes collide —
-  `KXWT20MATCH` uses `IND` for **Indonesia** in 9 events and India in 11 others.
-  (The pre-existing `^KXT20` route has this same flaw: `AUS` renders "Australia" on
-  "Slovenia vs **Austria**", `NAM` renders "Namibia" on "**Namo** Bandra Blasters".)
+- **`KXWT20*`** (women's T20) is not routed at all: it uses `IND` for **Indonesia** in 9
+  events and India in 11 others, so no dictionary keyed on the code can be right — and
+  unlike `KXT20MATCH` the fixture test does not rescue it, because the associate-nation
+  opponents have no codes here either.
+- **`KXT20CANADAMATCH`** is domestic franchise cricket. Every code `CRICKET_TEAMS`
+  answered was wrong (`BRA` for the Brampton Wolves, `SUR` for the Surrey Jaguars) and
+  none were right, so it routes to `NO_DICTIONARY`.
+- **WNBA All-Star squads.** `COO`, `SPN` and `WAS` are "Team Coop", "Team Spoon" and
+  "Team Washington" in `KXWNBASSTARS`, not franchises, and those families also carry
+  player props ("A'ja Wilson: 15+ points"). They are left out of `WNBA_TEAMS`.
+
+### Deriving a map from the data instead of from knowledge
+
+`WNBA_TEAMS` was built by reading the markets' own titles, and the method generalises.
+Use **only titles that name a single team** — "Will Chicago win the 1H by over 2.5
+points?", "Indiana vs Las Vegas: Indiana wins the 3rd quarter". An "A vs B" title cannot
+tell you which side a code belongs to, and guessing the position is how you get a map
+that is confidently backwards. Require several consistent observations per code: every
+`WNBA_TEAMS` entry has 69–95 with zero disagreement.
+
+The values are **cities**, because that is what Kalshi's titles say ("Dallas vs Indiana
+Winner?"). Writing in the nicknames would be supplying knowledge the data does not
+contain — the same move this file forbids everywhere else.
 
 An award map is scoped to its **year** (`KXOSCARPIC-26`) because a code set that
 is a nominee list gets re-minted annually; a state or ISO country map is not.
