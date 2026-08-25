@@ -42,7 +42,6 @@ const totalPnl       = d3.sum(bins, d => d.pnl);
 const totalStake     = d3.sum(bins, d => d.contracts * d.price_paid);
 const pctOfStake     = totalStake ? totalPnl / totalStake * 100 : 0;
 const meta           = bins[0] ?? {};
-const tradedContracts = d3.sum(daily, d => d.contracts);
 const provDaily       = daily.filter(d => !d.complete);
 const settled         = daily.filter(d => d.complete);
 // Read from `settled`, not `daily`. This was the ONE place on the page the provisional day
@@ -71,7 +70,7 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
   <div class="kpi-card">
     <div class="kpi-label">Resolved so far</div>
     <div class="kpi-value">${meta.pct_resolved?.toFixed(1)}%</div>
-    <div class="kpi-meta">of all parlay volume</div>
+    <div class="kpi-meta">clearing-date report basis</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Share of venue volume</div>
@@ -83,9 +82,9 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
 ```js
 // The single most important caveat on this page, so it sits directly under the KPIs.
 display(html`<div class="chart-note" style="border-left:3px solid var(--accent-negative); padding-left:.75rem;">
-  ○ Only <strong>${meta.pct_resolved?.toFixed(1)}%</strong> of parlay volume has matured, so the P&L
-  above covers ${fmtCount(totalContracts)} of ${fmtCount(tradedContracts)} contracts traded. It is a
-  real figure for the parlays that have settled, not an estimate of the eventual total.
+  ○ On the clearing-date report basis, only <strong>${meta.pct_resolved?.toFixed(1)}%</strong> of
+  parlay volume has matured. The P&L is a real figure for that settled cohort, not an estimate of
+  the eventual total; trade-date tape totals use a different date basis and are not mixed into this percentage.
 </div>`);
 ```
 
