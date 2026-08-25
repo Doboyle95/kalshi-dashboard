@@ -223,7 +223,8 @@ Plot.plot({
     ...(cumScale === "Linear" ? [Plot.areaY(feeCumulative, {x: "date", y1: 0, y2: "cumulative", fill: "venue", fillOpacity: 0.1})] : []),
     Plot.lineY(feeCumulative, {x: "date", y: "cumulative", stroke: "venue", strokeWidth: 2}),
     Plot.ruleX(rotheraStartMark, {stroke: VENUE_COLORS["Rothera"], strokeDasharray: "4,3", strokeOpacity: 0.8}),
-    Plot.text(rotheraStartMark, {x: d => d, text: () => "Rothera fee data starts", frameAnchor: "top", textAnchor: "start", dx: 5, dy: 4, fill: VENUE_COLORS["Rothera"], fontSize: 11}),
+    // Keep the annotation inside the plot when the start date is near the right edge.
+    Plot.text(rotheraStartMark, {x: d => d, text: () => "Rothera fee data starts", frameAnchor: "top", textAnchor: "end", dx: -6, dy: 4, fill: VENUE_COLORS["Rothera"], fontSize: 11}),
     Plot.ruleX(feeCumulative, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(feeCumulative, Plot.pointerX({
       x: "date", y: "cumulative",
