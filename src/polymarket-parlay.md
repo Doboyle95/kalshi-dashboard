@@ -16,8 +16,9 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const bins  = await DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true});
-const daily = await DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
+const bins     = await DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true});
+const daily    = await DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
+const dailyPnl = await DataAttachment("data/polymarket_parlay_pnl_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -25,20 +26,24 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 ```js
 display(freshnessPanel({
   items: [
-    {label: "Parlay P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "polymarket_parlay_pnl.csv"), meta: "Settlement-dependent; resolved contracts only", tone: "competitor"}
+    {label: "Parlay P&L", date: latestDate(dailyPnl), updatedAt: fileUpdatedAt(freshness, "polymarket_parlay_pnl_daily.csv"), meta: "Settlement-dependent; resolved contracts only", tone: "competitor"}
   ],
   note: "A parlay counts here only once it has matured, so recent days keep moving."
 }));
 display(askPageLink({
-  question: "Analyze Polymarket US parlay taker P&L by price bin, noting how much of the volume has actually resolved.",
-  context: "Polymarket US parlay P&L page using polymarket_parlay_pnl.csv and polymarket_parlay_daily.csv."
+  question: "Analyze Polymarket US parlay taker P&L over time and by price bin, before and after fees, noting how much of the volume has actually resolved.",
+  context: "Polymarket US parlay P&L page using polymarket_parlay_pnl.csv, polymarket_parlay_pnl_daily.csv and polymarket_parlay_daily.csv."
 }));
 ```
 
 ```js
-// Headline figures. contracts/pnl are resolved-only; the daily series is all traded volume.
+// Headline figures. contracts/pnl are resolved-only; the daily volume series (`daily`) is
+// all traded volume on its own transaction-date basis -- see the clearing-vs-transaction
+// note below before comparing dates across charts on this page.
 const totalContracts = d3.sum(bins, d => d.contracts);
-const totalPnl       = d3.sum(bins, d => d.pnl);
+const totalPnlGross  = d3.sum(bins, d => d.pnl);
+const totalFees      = d3.sum(bins, d => d.fees ?? 0);
+const totalPnl       = d3.sum(bins, d => d.pnl_net ?? d.pnl);
 const totalStake     = d3.sum(bins, d => d.contracts * d.price_paid);
 const pctOfStake     = totalStake ? totalPnl / totalStake * 100 : 0;
 const meta           = bins[0] ?? {};
@@ -55,7 +60,12 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
   <div class="kpi-card">
     <div class="kpi-label">Realized taker P&L</div>
     <div class="kpi-value">${fmtUSD(totalPnl)}</div>
-    <div class="kpi-meta">resolved parlays only</div>
+    <div class="kpi-meta">resolved parlays only, after est. fees</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Before fees</div>
+    <div class="kpi-value">${fmtUSD(totalPnlGross)}</div>
+    <div class="kpi-meta">fee drag: ${fmtUSD(totalFees)}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Return on stakes</div>
@@ -85,7 +95,55 @@ display(html`<div class="chart-note" style="border-left:3px solid var(--accent-n
   ○ On the clearing-date report basis, only <strong>${meta.pct_resolved?.toFixed(1)}%</strong> of
   parlay volume has matured. The P&L is a real figure for that settled cohort, not an estimate of
   the eventual total; trade-date tape totals use a different date basis and are not mixed into this percentage.
+  Fees are estimated at Polymarket's standard taker rate (<code>6% × p × (1−p)</code> per contract) —
+  the venue publishes no fee schedule specific to combos, so this is the general-market rate applied
+  by assumption, not a confirmed combo rate.
 </div>`);
+```
+
+## What parlay bettors realized, before and after fees
+
+_Running total of resolved parlay P&L on the clearing-date report basis — **not** the same date axis as the daily-stakes chart further down, which is transaction-dated off the tape. The lighter dashed line is before fees; the solid line is after — the gap between them is the fee drag. Settled parlays only; a day here is when outcomes were published, not when the parlay was bought._
+
+```js
+const dpSorted = dailyPnl.slice().sort((a, b) => a.date - b.date);
+let _pg = 0, _pn = 0;
+const cumDailyPnl = dpSorted.map(d => { _pg += d.pnl_gross; _pn += d.pnl_net; return {date: d.date, gross: _pg, net: _pn}; });
+```
+
+```js
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: fmtUSD},
+  marks: [
+    Plot.areaY(cumDailyPnl, {x: "date", y: "net", fill: "var(--accent-polymarket)", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumDailyPnl, {x: "date", y: "gross", stroke: "var(--accent-polymarket)", strokeOpacity: 0.5, strokeDasharray: "4,3", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.lineY(cumDailyPnl, {x: "date", y: "net", stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
+    Plot.tip(cumDailyPnl, Plot.pointerX({x: "date", y: "net",
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.gross)}\nAfter fees: ${fmtUSD(d.net)}`}))
+  ]
+}))
+```
+
+## Daily realized P&L
+
+_Each bar is that day's resolved parlay P&L, after fees — same clearing-date basis as the chart above. Green days beat the house; red days didn't._
+
+```js
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Daily realized P&L, after fees (USD)", grid: true, tickFormat: fmtUSD},
+  marks: [
+    Plot.rectY(dpSorted, {x1: "date", x2: d => new Date(d.date.getTime() + 864e5), y: "pnl_net",
+      fill: d => d.pnl_net < 0 ? "var(--accent-negative)" : "var(--accent-positive)", fillOpacity: 0.85,
+      tip: true,
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.pnl_gross)}\nAfter fees: ${fmtUSD(d.pnl_net)}\nStaked: ${fmtUSD(d.stake)}\nContracts: ${fmtCount(d.contracts)}` + (d.terminated_contracts ? `\nExcluded (early-terminated): ${fmtCount(d.terminated_contracts)} contracts` : "")}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
+  ]
+}))
 ```
 
 ## What they paid versus what they won
@@ -128,7 +186,7 @@ display(Plot.plot({
 
 ## Daily stakes
 
-_Dollars staked on parlays each day; the hollow point is a day still being collected._
+_Dollars staked on parlays each day; the hollow point is a day still being collected. Transaction-date basis (off the tape) — a different date axis from the realized-P&L charts above, which use the clearing-date report basis._
 
 ```js
 display(Plot.plot({
@@ -168,5 +226,6 @@ display(Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
-  <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is necessarily the buyer and buyer P&L is taker P&L — the same footing on which Crypto.com combos are published. Outcomes come from the daily market report; the price paid for every contract comes from the venue's own time-and-sales tape, joined on symbol, so no bin midpoint or bid-range estimate is involved (<code>basis = ${meta.basis}</code>). A parlay counts only once it has matured on a prior business day; positions closed out early are quarantined rather than scored, and are ${meta.pct_terminated?.toFixed(3)}% of matured volume.</p>
+  <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is necessarily the buyer and buyer P&L is taker P&L — the same footing on which Crypto.com combos are published. Outcomes come from the daily market report; the price paid for every contract comes from the venue's own time-and-sales tape, joined on symbol, so no bin midpoint or bid-range estimate is involved (<code>basis = ${meta.basis}</code>). Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract) since combos carry no published fee schedule of their own — treat the after-fee figures as directional, not a confirmed venue disclosure.</p>
+  <p>A parlay counts only once it has matured on a prior business day. Some positions close out early — a real trade against the house that drives the position's open interest to zero, the same underlying mechanism as a Kalshi cash-out — and those are quarantined rather than scored: ${meta.pct_terminated?.toFixed(3)}% of matured volume. Unlike Kalshi, this venue's trade tape carries no side/aggressor column, so a closing trade can't be identified directly the way a Kalshi cash-out is; only full closes that also get their maturity date backdated in the daily report are caught here, so this is a narrower net than a complete cash-out accounting would be. There is no held-to-settlement comparison on this page.</p>
 </details>
