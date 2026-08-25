@@ -428,6 +428,7 @@ export default {
     // Framework names the home page "/index" (readPages: join("/", dirname, name)), so
     // it is normalised to "/" exactly as siteHeader does.
     '<link rel="canonical" href="https://predict-charts.com' + (path === "/index" ? "/" : path) + '">',
+    '<link rel="icon" type="image/svg+xml" href="/favicon.svg">',
     // Build stamp: the commit this page was built from. A wedged deploy is then
     // detectable from anywhere by comparing this against `git ls-remote origin main`
     // -- no GitHub token needed, and it works on both hosts. Falls back to "unstamped"
