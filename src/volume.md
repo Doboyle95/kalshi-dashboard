@@ -27,6 +27,7 @@ const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
 const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
+const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
 const catLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
@@ -38,13 +39,14 @@ display(freshnessPanel({
     {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
     {label: "Trades by hour", date: latestDate(hourly), updatedAt: fileUpdatedAt(freshness, "trades_by_hour.csv"), meta: "Current-day pulse in Eastern Time"},
     {label: "Sports split", date: latestDate(sports), updatedAt: fileUpdatedAt(freshness, "daily_sports_vs_nonsports.csv"), meta: "Can be within 15 minutes locally after near-live refresh"},
-    {label: "Tracked categories", date: latestDate(topDaily), updatedAt: fileUpdatedAt(freshness, "daily_top_categories.csv"), meta: "Can be within 15 minutes locally after near-live refresh"}
+    {label: "Tracked category volume", date: latestDate(topDaily), updatedAt: fileUpdatedAt(freshness, "daily_top_categories.csv"), meta: "Can be within 15 minutes locally after near-live refresh"},
+    {label: "Tracked category fees", date: latestDate(topDailyFees), updatedAt: fileUpdatedAt(freshness, "daily_top_categories_fees.csv"), meta: "Trade-date fee allocation; daily refresh"}
   ],
   note: "Today may be partial while the local raw API collector is still running. Public GitHub Pages only updates after synced CSVs are pushed."
 }));
 display(askPageLink({
   question: "Explain the latest Kalshi volume trend, including trade count, sports share, and any recent category mix changes.",
-  context: "Kalshi Volume page using daily_overall.csv, daily_sports_vs_nonsports.csv, and daily_top_categories.csv."
+  context: "Kalshi Volume page using daily_overall.csv, daily_sports_vs_nonsports.csv, daily_top_categories.csv, and daily_top_categories_fees.csv."
 }));
 ```
 
@@ -229,6 +231,28 @@ const volWideDaily = topDaily.map(row => {
     date: row.date, ...groups, Parlay: parlay,
     "Other sports":     Math.max(0, totSports - knownSports),
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
+  };
+});
+
+// Fee-side twin of volWideDaily. The old chart allocated each day's broad sports and
+// non-sports fee totals pro rata by contracts, forcing every category to have the same
+// fee per contract. These are the fees actually reported for each ticker; residual bands
+// preserve reconciliation with the broad daily split and the parlay residual below.
+const feeWideDaily = topDailyFees.map(row => {
+  const sp = sports.find(s => +s.date === +row.date) || {};
+  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
+                  Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
+  for (const [cat, v] of Object.entries(row)) {
+    if (cat === "date") continue;
+    const wg = wideCatByReportTicker.get(cat) || volWideMap[cat];
+    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
+  }
+  const knownSports = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
+  return {
+    date: row.date, ...groups, Parlay: parlayFeesFor(sp),
+    "Other sports": Math.max(0, (+sp.fees_sports_nonparlay || 0) - knownSports),
+    "Other non-sports": Math.max(0, (+sp.fees_nonsports || 0) - knownNonSports)
   };
 });
 ```
@@ -445,29 +469,23 @@ const tidySports =
   sportsView === "Sports only"
     ? fd2.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
+        const fw = feeWideDaily.find(r => +r.date === +d.date) || {};
         const sp = fs2.find(r => +r.date === +d.date) || {};
-        // fees_sports_nonparlay carries no parlay dollars, so the pro-rata denominator
-        // must drop parlay contracts too -- including them handed the parlay band ~60%
-        // of the dollars that belong to the real sports. Parlay gets its own residual.
-        const totalContracts2 = sportsOrder.reduce((s, g) => g === "Parlay" ? s : s + (w[g] || 0), 0) || 1;
-        const totalFees2 = sp.fees_sports_nonparlay || 0;
         const parlayFees2 = parlayFeesFor(sp);
         return sportsOrder.map(g => ({
           date: d.date, category: g,
           value: sportsMetric !== "Fees" ? (w[g] || 0)
             : g === "Parlay" ? parlayFees2
-            : totalFees2 * ((w[g] || 0) / totalContracts2)
+            : (fw[g] || 0)
         }));
       })
   : sportsView === "Non-sports only"
     ? fd2.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
-        const sp = fs2.find(r => +r.date === +d.date) || {};
-        const totalContracts2 = nonSportsOrder.reduce((s, g) => s + (w[g] || 0), 0) || 1;
-        const totalFees2 = sp.fees_nonsports || 0;
+        const fw = feeWideDaily.find(r => +r.date === +d.date) || {};
         return nonSportsOrder.map(g => ({
           date: d.date, category: g,
-          value: sportsMetric === "Fees" ? totalFees2 * ((w[g] || 0) / totalContracts2) : (w[g] || 0)
+          value: sportsMetric === "Fees" ? (fw[g] || 0) : (w[g] || 0)
         }));
       })
   : fs2.flatMap(d => {
