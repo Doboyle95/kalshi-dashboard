@@ -32,7 +32,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
-  context: "Parlay P&L page using parlay_pnl_net.csv."
+  context: "Parlay P&L page using parlay_pnl_unified_daily.csv and parlay_cashout_daily.csv."
 }));
 ```
 
