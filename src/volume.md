@@ -234,6 +234,15 @@ const volWideDaily = topDaily.map(row => {
   };
 });
 
+// daily_sports_vs_nonsports.csv builds fees_sports/fees_nonsports with parlay tickets
+// excluded and carries no fees_parlay, so parlay fees are the residual against
+// daily_overall.fees_total. Define the helper in this upstream cell: feeWideDaily needs it,
+// and defining it later beside tidySports creates an Observable dependency cycle
+// (feeWideDaily -> parlayFeesFor -> feeWideDaily).
+const feesTotalByDate = new Map((daily ?? []).map(d => [+d.date, +d.fees_total || 0]));
+const parlayFeesFor = sp =>
+  Math.max(0, (feesTotalByDate.get(+sp?.date) ?? 0) - (+sp?.fees_sports_nonparlay || 0) - (+sp?.fees_nonsports || 0));
+
 // Fee-side twin of volWideDaily. The old chart allocated each day's broad sports and
 // non-sports fee totals pro rata by contracts, forcing every category to have the same
 // fee per contract. These are the fees actually reported for each ticker; residual bands
@@ -455,15 +464,6 @@ const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2);
 
 const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
 const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
-
-// daily_sports_vs_nonsports.csv builds fees_sports/fees_nonsports with parlay tickets
-// excluded and carries no fees_parlay, so parlay fees are exactly the residual against
-// daily_overall.fees_total -- confirmed by it landing at $0.00 for every pre-2025 date,
-// before parlays existed. The Parlay fee band used to be hardcoded to 0. A date missing
-// from daily_overall (or a failed load) degrades to 0 instead of throwing.
-const feesTotalByDate = new Map((daily ?? []).map(d => [+d.date, +d.fees_total || 0]));
-const parlayFeesFor = sp =>
-  Math.max(0, (feesTotalByDate.get(+sp?.date) ?? 0) - (+sp?.fees_sports_nonparlay || 0) - (+sp?.fees_nonsports || 0));
 
 const tidySports =
   sportsView === "Sports only"
