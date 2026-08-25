@@ -80,6 +80,11 @@ jobs:
           # value against `git ls-remote origin main` to detect a wedged deploy.
           KALSHI_BUILD_STAMP: ${{ github.sha }}
 
+      - name: Check emitted Observable dependency graph
+        # The Framework build validates syntax and links but does not reject cell cycles;
+        # those fail only in readers' browsers and can blank an otherwise valid section.
+        run: npm run check:observable-cycles
+
       - name: Copy static files not handled by Framework's build
         # Framework only bundles files that are part of its page/asset graph, so a
         # well-known root path like robots.txt (must be served at exactly /robots.txt)

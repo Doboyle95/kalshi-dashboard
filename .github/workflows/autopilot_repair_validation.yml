@@ -70,3 +70,6 @@ jobs:
 
       - name: Build exact repair head
         run: npm run build
+
+      - name: Check emitted Observable dependency graph
+        run: npm run check:observable-cycles
