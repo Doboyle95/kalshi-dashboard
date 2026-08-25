@@ -325,6 +325,9 @@ const feesTotalByDate = new Map(daily.map(d => [+d.date, d.fees_total || 0]));
 // asking for `d.Sports`, got undefined, and printed "Sports: $0" with a Total of $500.1M
 // on a page whose own KPI reads $1.85B -- while the band beside it drew the real $1.36bn.
 const FEE_BANDS = ["Non-sports", "Sports (excl. parlays)", "Parlays"];
+// Keep parlays in the sports family while the lighter lime shade distinguishes
+// them from straight sports fees; non-sports stays clearly blue.
+const FEE_BAND_COLORS = ["#377eb8", "#1b9e77", "#a6d854"];
 const [BAND_NONSPORT, BAND_SPORT, BAND_PARLAY] = FEE_BANDS;
 let sCum = 0, nsCum = 0, pCum = 0;
 const cumFeesSplit = fs2.flatMap(d => {
@@ -367,7 +370,7 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {legend: true, domain: FEE_BANDS, range: ["var(--accent-kalshi)", "#1a9641", "#7b1fa2"]},
+  color: {legend: true, domain: FEE_BANDS, range: FEE_BAND_COLORS},
   marks: [
     Plot.areaY(cumFeesSplit, {
       x: "date", y1: "y0", y2: "y1", fill: "category",
