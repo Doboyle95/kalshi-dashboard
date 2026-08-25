@@ -150,6 +150,10 @@ export function latestCompleteDate(rows) {
   return dates.length ? new Date(Math.max(...dates)) : null;
 }
 
+// Calendar days a row-based slice actually covers, inclusive of both ends.
+const spanDays = slice =>
+  slice.length ? Math.round((+slice.at(-1).date - +slice[0].date) / 86400000) + 1 : 0;
+
 export function buildVenueScoreboard(rows, {windowDays = 7} = {}) {
   const grouped = new Map();
   for (const row of rows ?? []) {
@@ -177,7 +181,19 @@ export function buildVenueScoreboard(rows, {windowDays = 7} = {}) {
       // is blank unless BOTH sides contain a full window; comparing seven days with a
       // thin one- or two-day base produces a precise-looking but meaningless change.
       previousDays: previous.length,
-      change: recent.length === windowDays && previous.length === windowDays && previousTotal > 0
+      // ...and unless both windows span the same number of CALENDAR days. The slices are
+      // row-based, so on a venue that does not report daily "7 reported days" is not a
+      // week. CME reports by hand-collected bulletin: measured 2026-08-25, its last 7
+      // reported days spanned 7 calendar days against a prior 7 spanning 12, which
+      // rendered as +2.8% where the per-calendar-day rate was +76.3% -- a table saying
+      // "flat" about a venue that nearly doubled. The 30-day window this replaced hid the
+      // problem (41 vs 39 days) rather than solving it; the columns say "vs prior 7", so
+      // the honest move is to publish nothing when the two periods are not comparable.
+      // Every other venue is 7-vs-7 today, so this costs one blank cell, and it reopens
+      // by itself if CME ever reports daily.
+      previousSpanDays: spanDays(previous),
+      change: recent.length === windowDays && previous.length === windowDays
+        && spanDays(recent) === spanDays(previous) && previousTotal > 0
         ? recentTotal / previousTotal - 1
         : null,
       coverage: `${venueRows.length.toLocaleString()} reported day${venueRows.length === 1 ? "" : "s"}`,

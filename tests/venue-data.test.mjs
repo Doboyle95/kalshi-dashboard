@@ -106,3 +106,32 @@ test("an unexpected completeness value keeps the day rather than dropping it", (
   assert.equal(rows[0].partial, false);
   assert.equal(rows[0].complete, true);
 });
+
+test("a venue whose two windows span unequal calendar periods gets no change figure", () => {
+  // Row-based slices mean "7 reported days" is not a week on a venue that skips days.
+  // CME reports by hand-collected bulletin: measured 2026-08-25, its last 7 reported days
+  // spanned 7 calendar days against a prior 7 spanning 12. Publishing a percentage across
+  // that is a precise-looking artefact of the reporting calendar, not a change in trading.
+  const daily = Array.from({length: 14}, (_, i) => ({
+    date: day(`2026-08-${String(i + 1).padStart(2, "0")}`),
+    venue: "Kalshi", contracts: 10, complete: true, partial: false
+  }));
+  assert.notEqual(buildVenueScoreboard(daily)[0].change, null);
+
+  // Same 14 rows, but the older week is stretched across twelve calendar days.
+  const stretched = [
+    ...[1, 3, 5, 7, 9, 11, 12].map(d => ({
+      date: day(`2026-08-${String(d).padStart(2, "0")}`),
+      venue: "Kalshi", contracts: 10, complete: true, partial: false
+    })),
+    ...[13, 14, 15, 16, 17, 18, 19].map(d => ({
+      date: day(`2026-08-${String(d).padStart(2, "0")}`),
+      venue: "Kalshi", contracts: 20, complete: true, partial: false
+    }))
+  ];
+  const [row] = buildVenueScoreboard(stretched);
+  assert.equal(row.recentDays, 7);        // seven reported days...
+  assert.equal(row.previousDays, 7);      // ...on both sides
+  assert.equal(row.previousSpanDays, 12); // ...but twelve calendar days behind
+  assert.equal(row.change, null);         // so no figure is published
+});
