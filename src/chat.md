@@ -113,7 +113,7 @@ title: Ask Data
   const formWrapper = html`<details class="chat-reply-wrapper" open>
     <summary class="chat-reply-summary">Ask a question</summary>
     <form class="chat-form">
-      <textarea id="chat-question" class="chat-question" rows="3" placeholder="What was the total volume on February 8, 2026?"></textarea>
+      <textarea id="chat-question" class="chat-question" rows="3" maxlength="2000" aria-label="Ask Predict Charts a question" placeholder="What was the total volume on February 8, 2026?"></textarea>
       <div class="chat-actions">
         <button type="submit" class="ui-button">Ask</button>
         <button type="button" class="ui-button is-subtle">Clear</button>

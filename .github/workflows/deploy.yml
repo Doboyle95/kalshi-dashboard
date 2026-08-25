@@ -71,6 +71,9 @@ jobs:
         # it is the cheap check and its failure makes the build pointless.
         run: npm run check:module-globals
 
+      - name: Test site metadata tooling
+        run: npm run test:site-output
+
       - name: Build
         run: npm run build
         env:

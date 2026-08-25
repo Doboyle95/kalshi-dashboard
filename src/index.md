@@ -1,5 +1,5 @@
 ---
-title: Briefing
+title: US Prediction Markets Today
 ---
 
 ```js

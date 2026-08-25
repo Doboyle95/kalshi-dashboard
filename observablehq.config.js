@@ -38,6 +38,11 @@ const publishedChatEndpoint = (() => {
 // chat.md uses. You cannot have same-origin data with cross-origin chat.
 const CHAT_API = process.env.KALSHI_SITE_ORIGIN || publishedChatEndpoint.api || process.env.CHAT_API_URL || "";
 const CHAT_TOKEN = publishedChatEndpoint.token || process.env.CHAT_TOKEN || "";
+const SITE_DESCRIPTION = "Independent charts and data on US prediction-market volume, products, fees, trader outcomes, and venue economics.";
+const SITE_ORIGIN = "https://predict-charts.com";
+const escapeAttribute = value => String(value).replace(/[&\"<>]/g, character => ({
+  "&": "&amp;", "\"": "&quot;", "<": "&lt;", ">": "&gt;"
+})[character]);
 const CHART_ACTIONS = readFileSync(
   new URL("./src/components/chart-actions.js", import.meta.url),
   "utf-8"
@@ -410,7 +415,11 @@ export default {
   // markdown.js getHtml): Framework calls it in NODE at BUILD TIME, once per page, so a
   // per-page tag can be emitted without a browser cell that could fail silently. A page
   // can still override it with `head:` in its own front matter.
-  head: ({path}) => [
+  head: ({path, title}) => {
+    const canonicalPath = path === "/index" ? "/" : path;
+    const canonicalUrl = SITE_ORIGIN + canonicalPath;
+    const socialTitle = title ? `${title} | Predict Charts` : "Predict Charts";
+    return [
     // 2026-08-25: the site is now INDEXABLE. The noindex meta that lived here from
     // 2026-08-13 is gone, and src/robots.txt no longer disallows crawling.
     //
@@ -432,7 +441,14 @@ export default {
     //
     // Framework names the home page "/index" (readPages: join("/", dirname, name)), so
     // it is normalised to "/" exactly as siteHeader does.
-    '<link rel="canonical" href="https://predict-charts.com' + (path === "/index" ? "/" : path) + '">',
+    '<link rel="canonical" href="' + escapeAttribute(canonicalUrl) + '">',
+    '<meta name="description" content="' + escapeAttribute(SITE_DESCRIPTION) + '">',
+    '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="Predict Charts">',
+    '<meta property="og:title" content="' + escapeAttribute(socialTitle) + '">',
+    '<meta property="og:description" content="' + escapeAttribute(SITE_DESCRIPTION) + '">',
+    '<meta property="og:url" content="' + escapeAttribute(canonicalUrl) + '">',
+    '<meta name="twitter:card" content="summary">',
     '<link rel="icon" type="image/svg+xml" href="/favicon.svg">',
     // Build stamp: the commit this page was built from. A wedged deploy is then
     // detectable from anywhere by comparing this against `git ls-remote origin main`
@@ -496,7 +512,8 @@ export default {
     // selected datum plus the next honest level of detail; the global shell owns
     // navigation history, deep links, Ask Data context and responsive behavior.
     `<script>${DATA_INSPECTOR}</script>`
-  ].join("\n"),
+    ].join("\n");
+  },
   // With the sidebar off, `pages` has exactly one consumer left: the footer pager
   // (render.js -> findLink). Deriving it from SITE_MAP means prev/next walks the
   // same order the masthead menus show, and every page gets one — before this it was built

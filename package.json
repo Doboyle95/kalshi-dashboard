@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "observable preview",
-    "build": "observable build",
+    "build": "observable build && node scripts/postprocess-site.mjs dist",
     "briefing:generate": "node scripts/generate-daily-briefing.mjs",
     "test:data-loader": "node --test tests/remote-data.test.mjs",
     "test:data-watchdog": "python3 -m unittest tests.test_freshness_remote",
     "test:data-transport": "npm run test:data-loader && npm run test:data-watchdog",
+    "test:site-output": "node --test tests/site-output.test.mjs",
     "check:module-globals": "node scripts/check-module-globals.mjs",
     "check:observable-cycles": "node scripts/check-observable-cycles.mjs",
     "clean": "rm -rf dist"

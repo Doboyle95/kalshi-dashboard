@@ -28,6 +28,8 @@
 
 import * as d3 from "npm:d3";
 
+let dateRangeControlId = 0;
+
 const fmtDay = d3.utcFormat("%Y-%m-%d");
 const toUTCDate = (s) => { const [y, m, d] = String(s).split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 
@@ -198,9 +200,18 @@ export function renderDateBrush({
     return i;
   };
   const inFrom = mkDate(), inTo = mkDate();
-  const lblFrom = document.createElement("span"); lblFrom.className = "kd-dr-lbl"; lblFrom.textContent = "From";
-  const dash = document.createElement("span"); dash.className = "kd-dr-dash"; dash.textContent = "to";
-  inputs.append(lblFrom, inFrom, dash, inTo);
+  const controlId = ++dateRangeControlId;
+  inFrom.id = `kd-date-from-${controlId}`;
+  inTo.id = `kd-date-to-${controlId}`;
+  const lblFrom = document.createElement("label");
+  lblFrom.className = "kd-dr-lbl";
+  lblFrom.htmlFor = inFrom.id;
+  lblFrom.textContent = "From";
+  const lblTo = document.createElement("label");
+  lblTo.className = "kd-dr-lbl";
+  lblTo.htmlFor = inTo.id;
+  lblTo.textContent = "To";
+  inputs.append(lblFrom, inFrom, lblTo, inTo);
 
   bar.append(seg);
   if (quickButtons.length) bar.append(quick);
