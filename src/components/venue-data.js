@@ -46,6 +46,22 @@ export function isPartialFlag(value) {
   return value === true || String(value).toUpperCase() === "TRUE" || value === 1 || value === "1";
 }
 
+// The competitor file carries `complete` (1 = settled day) where the Kalshi file carries
+// `is_partial` — OPPOSITE polarity, and mostly blank. Measured on generation
+// 2f9a29c4e22a76cee97a: 3,464 rows blank, 298 "1", and exactly ONE "0" — Polymarket US's
+// current day, the venue that actually publishes the flag.
+//
+// Blank therefore cannot mean partial: it means the producer never said, which is the case
+// for every venue that omits the column, and those days are real settled days. Only an
+// EXPLICIT falsehood marks a day partial. Tested against the literal string, not via
+// !isPartialFlag, so an unexpected value like "2" stays complete rather than silently
+// dropping a venue's newest day out of every total on the site.
+export function isIncompleteFlag(value) {
+  if (value == null || value === "") return false;
+  const flag = String(value).trim().toUpperCase();
+  return flag === "0" || flag === "FALSE" || flag === "NO";
+}
+
 function numberOrNull(value) {
   return value == null || value === "" || Number.isNaN(+value) ? null : +value;
 }
@@ -88,8 +104,11 @@ export function buildPlatformSeries({kalshi = [], competitor = [], prophetx = []
       contracts: numberOrNull(row.contracts),
       fees: numberOrNull(row.fees),
       revenue: numberOrNull(row.fees_exchange_revenue),
-      partial: false,
-      complete: true
+      // Was hardcoded false/true, which threw away the one flag the file actually sets.
+      // Polymarket US marks its current day complete=0; the homepage counted it anyway, so
+      // the lead chart drew a phantom cliff at the right edge and the fee KPI ran light.
+      partial: isIncompleteFlag(row.complete),
+      complete: !isIncompleteFlag(row.complete)
     });
   }
   for (const row of completeProphetxRows(prophetx)) {

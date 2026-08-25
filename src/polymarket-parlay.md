@@ -43,9 +43,13 @@ const totalStake     = d3.sum(bins, d => d.contracts * d.price_paid);
 const pctOfStake     = totalStake ? totalPnl / totalStake * 100 : 0;
 const meta           = bins[0] ?? {};
 const tradedContracts = d3.sum(daily, d => d.contracts);
-const latestShare     = daily.length ? daily[daily.length - 1].pct_of_venue : 0;
 const provDaily       = daily.filter(d => !d.complete);
 const settled         = daily.filter(d => d.complete);
+// Read from `settled`, not `daily`. This was the ONE place on the page the provisional day
+// was not excluded — every chart below deliberately draws those as hollow dots. A partial
+// day understates the share, because the venue total it divides into settles first, so the
+// KPI read low against the last complete day (2.0 points apart when measured 2026-08-25).
+const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venue : 0;
 ```
 
 <div class="kpi-grid">
@@ -72,7 +76,7 @@ const settled         = daily.filter(d => d.complete);
   <div class="kpi-card">
     <div class="kpi-label">Share of venue volume</div>
     <div class="kpi-value">${latestShare?.toFixed(1)}%</div>
-    <div class="kpi-meta">most recent day</div>
+    <div class="kpi-meta">most recent complete day</div>
   </div>
 </div>
 

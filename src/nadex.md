@@ -22,6 +22,12 @@ const catDaily  = await DataAttachment("data/nadex_categories_daily.csv").csv({t
 const split     = (await DataAttachment("data/nadex_sports_split_daily.csv").csv({typed: true}))
   .sort((a, b) => a.date - b.date);
 const parlayDaily = await DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
+// The Kalshi comparators below the P&L chart come from the SAME file /compare-accuracy
+// derives every venue from, so the two pages cannot drift apart. They used to be two
+// hardcoded numbers (1.82c and 1.21c) that had gone stale and, worse, inverted: parlay
+// takers were quoted as losing more per contract than single-market takers, which the
+// current data reverses.
+const kalshiPnlBins = await DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -284,6 +290,21 @@ const pdCumul = pdSorted.map(d => {
 
 const pdTotal = _c;
 const pdContracts = d3.sum(pdSorted, d => +d.contracts_settled);
+
+// Kalshi's per-contract comparators, contract-weighted over competitor_pnl_by_bin.csv.
+// GROSS, matching pdTotal/pdContracts above (which sums gross_pnl), so the three figures in
+// the callout are finally on ONE basis — the old sentence compared a gross Nadex number
+// against two net Kalshi ones and asked the reader to hold that difference in their head.
+const kalshiPerContract = group => {
+  const rows = kalshiPnlBins.filter(d => d.venue === "Kalshi" && d.group === group);
+  const c = d3.sum(rows, d => +d.contracts || 0);
+  return c ? d3.sum(rows, d => +d.pnl || 0) / c : null;
+};
+const kalshiParlayPer = kalshiPerContract("PARLAY");
+const kalshiSinglePer = kalshiPerContract("NON_PARLAY");
+// Magnitude only — the verb carries the direction, and a signed format would render
+// "lose +0.63c". Same rule, and the same reason, as compare-accuracy.md's fmtCentsMag.
+const fmtCentsMag = d => `${Math.abs(d * 100).toFixed(2)}¢`;
 const pdParlays = d3.sum(pdSorted, d => +d.parlays_settled);
 const pdProv = pdSorted.filter(d => d.prov).length;
 const fmtM = d => "$" + (Math.abs(d) >= 1e6 ? (d / 1e6).toFixed(2) + "M"
@@ -357,7 +378,7 @@ That day: ${fmtM(+d.gross_pnl)}`,
 })
 ```
 
-<div class="instruction-line">The line goes one way, but not smoothly, and the bumps are the interesting part. <strong>The cumulative total did climb above zero on five separate days, peaking at &plus;&dollar;701k</strong> &mdash; every one of them inside the provisional opening fortnight, and driven by single days like 23 June that returned &plus;&dollar;2.0M against a typical daily swing nearer &plusmn;&dollar;300k. That is one or two large combos landing, and it is exactly the variance a parlay book is built on. Once coverage is complete the line never crosses back above zero. The shape matches Kalshi's parlay book and is the expected one: a parlay's price is the product of its legs plus the house's margin on each, so the edge compounds with every leg added. Crypto.com's buyers lose <strong>${(100 * pdTotal / pdContracts).toFixed(2)}&cent; per contract</strong> against Kalshi parlay takers' 1.82&cent; and Kalshi single-market takers' 1.21&cent; &mdash; but read that gap carefully, because this figure is gross and the Kalshi ones are net of fees.</div>
+<div class="instruction-line">The line goes one way, but not smoothly, and the bumps are the interesting part. <strong>The cumulative total did climb above zero on five separate days, peaking at &plus;&dollar;701k</strong> &mdash; every one of them inside the provisional opening fortnight, and driven by single days like 23 June that returned &plus;&dollar;2.0M against a typical daily swing nearer &plusmn;&dollar;300k. That is one or two large combos landing, and it is exactly the variance a parlay book is built on. Once coverage is complete the line never crosses back above zero. The shape matches Kalshi's parlay book and is the expected one: a parlay's price is the product of its legs plus the house's margin on each, so the edge compounds with every leg added. Crypto.com's buyers lose <strong>${fmtCentsMag(pdTotal / pdContracts)} per contract</strong>${kalshiParlayPer == null || kalshiSinglePer == null ? "" : ` against Kalshi parlay takers' ${fmtCentsMag(kalshiParlayPer)} and Kalshi single-market takers' ${fmtCentsMag(kalshiSinglePer)} — all three gross and contract-weighted, so they compare directly`}.</div>
 
 ## Sports vs. non-sports
 

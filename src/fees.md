@@ -319,6 +319,13 @@ const feesTotalByDate = new Map(daily.map(d => [+d.date, d.fees_total || 0]));
 
 // The stack is built explicitly rather than left to Plot's stack transform — areaY given a
 // bare `y` stacks implicitly, which is what made this chart disagree with the KPI unnoticed.
+// One source of truth for the three band names. The stack, the colour domain and the
+// tooltip all read it, so a rename can no longer orphan one of them. That is exactly what
+// happened when "Sports" became "Sports (excl. parlays)" in 98002ae: the tooltip kept
+// asking for `d.Sports`, got undefined, and printed "Sports: $0" with a Total of $500.1M
+// on a page whose own KPI reads $1.85B -- while the band beside it drew the real $1.36bn.
+const FEE_BANDS = ["Non-sports", "Sports (excl. parlays)", "Parlays"];
+const [BAND_NONSPORT, BAND_SPORT, BAND_PARLAY] = FEE_BANDS;
 let sCum = 0, nsCum = 0, pCum = 0;
 const cumFeesSplit = fs2.flatMap(d => {
   const s  = d.fees_sports_nonparlay || 0;
@@ -329,9 +336,9 @@ const cumFeesSplit = fs2.flatMap(d => {
   // briefly put fees_sports_nonparlay + fees_nonsports above fees_total and invert the top band.
   pCum  += Math.max(0, (feesTotalByDate.get(+d.date) ?? (s + ns)) - s - ns);
   return [
-    {date: d.date, category: "Non-sports", cumul: nsCum, y0: 0,            y1: nsCum},
-    {date: d.date, category: "Sports (excl. parlays)", cumul: sCum,  y0: nsCum,        y1: nsCum + sCum},
-    {date: d.date, category: "Parlays",    cumul: pCum,  y0: nsCum + sCum, y1: nsCum + sCum + pCum}
+    {date: d.date, category: BAND_NONSPORT, cumul: nsCum, y0: 0,            y1: nsCum},
+    {date: d.date, category: BAND_SPORT,    cumul: sCum,  y0: nsCum,        y1: nsCum + sCum},
+    {date: d.date, category: BAND_PARLAY,   cumul: pCum,  y0: nsCum + sCum, y1: nsCum + sCum + pCum}
   ];
 });
 ```
@@ -360,7 +367,7 @@ Plot.plot({
     label: "Cumulative fees (USD)", grid: true,
     tickFormat: d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : (d/1e6).toFixed(0)+"M")
   },
-  color: {legend: true, domain: ["Non-sports", "Sports (excl. parlays)", "Parlays"], range: ["var(--accent-kalshi)", "#1a9641", "#7b1fa2"]},
+  color: {legend: true, domain: FEE_BANDS, range: ["var(--accent-kalshi)", "#1a9641", "#7b1fa2"]},
   marks: [
     Plot.areaY(cumFeesSplit, {
       x: "date", y1: "y0", y2: "y1", fill: "category",
@@ -371,10 +378,8 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Non-sports: $${(d["Non-sports"]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`,
-        `Sports: $${(d.Sports||0).toLocaleString(undefined,{maximumFractionDigits:0})}`,
-        `Parlays: $${(d.Parlays||0).toLocaleString(undefined,{maximumFractionDigits:0})}`,
-        `Total: $${((d["Non-sports"]||0) + (d.Sports||0) + (d.Parlays||0)).toLocaleString(undefined,{maximumFractionDigits:0})}`
+        ...FEE_BANDS.map(b => `${b}: $${(d[b]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`),
+        `Total: $${FEE_BANDS.reduce((t, b) => t + (d[b]||0), 0).toLocaleString(undefined,{maximumFractionDigits:0})}`
       ].join("\n")
     })),
     Plot.ruleY([0])
