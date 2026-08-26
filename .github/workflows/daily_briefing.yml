@@ -60,6 +60,10 @@ jobs:
             echo "stale=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify briefing request contract
+        if: steps.freshness.outputs.stale == 'true'
+        run: node --test tests/daily-briefing-request.test.mjs tests/daily-briefing-rules.test.mjs
+
       - name: Generate briefing from Ask Data
         if: steps.freshness.outputs.stale == 'true'
         # Deliberately NO env block. The script prefers process.env.CHAT_API_URL /

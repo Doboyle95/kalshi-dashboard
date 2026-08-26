@@ -1,6 +1,11 @@
 import {readFile, writeFile} from "node:fs/promises";
 
 import {wordingFaults} from "./daily-briefing-rules.mjs";
+import {
+  MAX_INSIGHTS_QUESTION_CHARS,
+  apiErrorMessage,
+  assertInsightsQuestionLength
+} from "./daily-briefing-request.mjs";
 
 const root = new URL("../", import.meta.url);
 const endpointFile = new URL("src/chat-endpoint.json", root);
@@ -31,7 +36,7 @@ async function request(path, options = {}, timeoutMs = 120_000) {
   try {
     const response = await fetch(`${api}${path}`, {...options, headers: {...headers, ...(options.headers || {})}, signal: controller.signal});
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}: ${body.error || "unknown error"}`);
+    if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}: ${apiErrorMessage(body)}`);
     if (body.error) throw new Error(`${path}: ${body.error}`);
     return body;
   } finally {
@@ -260,12 +265,18 @@ const ESCALATION = " Be concrete this time. Pick one table from the rotation -- 
 
 async function fetchInsights(correction, attemptNo = 0) {
   try {
+    const question = correction?.length
+      ? `${editorialQuestion} Your previous draft missed a binding requirement: ${correction.join(" Also, ")}. Rewrite it so every requirement is met, keeping the same plain language. Do not mention the requirement, the retry, or any gap in the data to the reader -- if you cannot satisfy it from what you have, query for something you can and write that bullet instead.${attemptNo >= 2 ? ESCALATION : ""}`
+      : editorialQuestion;
+    assertInsightsQuestionLength(question);
+    console.log(
+      `Daily briefing: /insights question ${question.length.toLocaleString("en-US")}/` +
+      `${MAX_INSIGHTS_QUESTION_CHARS.toLocaleString("en-US")} characters.`
+    );
     const deeper = await request("/insights", {
       method: "POST",
       body: JSON.stringify({
-        question: correction?.length
-          ? `${editorialQuestion} Your previous draft missed a binding requirement: ${correction.join(" Also, ")}. Rewrite it so every requirement is met, keeping the same plain language. Do not mention the requirement, the retry, or any gap in the data to the reader -- if you cannot satisfy it from what you have, query for something you can and write that bullet instead.${attemptNo >= 2 ? ESCALATION : ""}`
-          : editorialQuestion,
+        question,
         sql: anchor.sql,
         rows: normalizedAnchorRows,
         columns: anchorColumns
