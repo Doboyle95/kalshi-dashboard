@@ -3,6 +3,7 @@
 // and feed a concrete correction into the existing retry loop.
 const INTERNAL_LONG_ODDS_LABEL = /\b(?:lottery(?:-ticket)?|parlay[- ]lottery|lottery[- ]parlay|longshots?|longer[- ]odds)\b/i;
 const APPROVED_LONG_ODDS_DESCRIPTION = /\b(?:extremely long[- ]odds parlays?|parlays? with at least eight legs (?:trading|priced) below 2 cents)\b/i;
+const OTHER_VENUE_MENTION = /\b(?:Polymarket(?: US)?|ForecastEx|DKeX|Underdog(?: Exchange)?|Crypto\.com(?:\/Nadex)?|Nadex|ProphetX|Novig|Rothera|CME)\b/i;
 
 // A word such as "parlays" in the prose is not evidence that the model used Kalshi's
 // deeper tables. The Aug. 26 briefing passed the old word-only gate with a monthly parlay
@@ -20,6 +21,14 @@ export function kalshiDepthEvidenceFaults(sqls) {
     return ["the Kalshi depth query does not compare the latest day or week with a recent norm -- add an average, rank, lag, or equivalent recent comparison"];
   }
   return [];
+}
+
+export function otherVenueBulletCount(text) {
+  return String(text || "")
+    .split(/\n(?=\s*[-*])/)
+    .map((bullet) => bullet.trim())
+    .filter((bullet) => bullet && OTHER_VENUE_MENTION.test(bullet))
+    .length;
 }
 
 export function withoutExcludedPreviousInsights(text) {

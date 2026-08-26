@@ -2,6 +2,7 @@ import {readFile, writeFile} from "node:fs/promises";
 
 import {
   kalshiDepthEvidenceFaults,
+  otherVenueBulletCount,
   withoutExcludedPreviousInsights,
   wordingFaults
 } from "./daily-briefing-rules.mjs";
@@ -233,13 +234,12 @@ const editorialQuestion = [
 // mentioned Kalshi only as a volume clause. Same treatment as the ten-venue gate above --
 // check mechanically, correct once, publish whatever we end up with. This is a floor and
 // not a grader: a lenient pass costs nothing, a false fail costs one retry.
-const OTHER_VENUES = requiredVenues.filter((venue) => venue !== "Kalshi");
 const KALSHI_DEPTH = /\b(fees?|revenue|p&l|pnl|profit|loss(es)?|parlays?|sports|non-sports|settled?|settlement|accuracy|takers?|makers?|mix|categor(y|ies)|trade size|stakes?|house edge|fee rate)\b/i;
 const KALSHI_DEPTH_FAULT = "one bullet must carry Kalshi data from beyond plain volume, normally alongside its headline volume -- taker P&L, fee revenue, settlement accuracy, parlay economics, sports versus non-sports mix, or an unusually large trade -- for the latest reported day or the past week against a recent baseline, never an all-time or months-old cumulative total";
 
 function mixFaults(text) {
   const bullets = text.split(/\n(?=\s*[-*])/).map((b) => b.trim()).filter(Boolean);
-  const crossVenue = bullets.filter((b) => OTHER_VENUES.some((venue) => b.includes(venue))).length;
+  const crossVenue = otherVenueBulletCount(text);
   const faults = [];
   if (crossVenue < 2) {
     faults.push("at least two bullets must be about a venue other than Kalshi, or must compare venues against each other");

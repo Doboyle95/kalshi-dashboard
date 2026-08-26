@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   kalshiDepthEvidenceFaults,
+  otherVenueBulletCount,
   withoutExcludedPreviousInsights,
   wordingFaults
 } from "../scripts/daily-briefing-rules.mjs";
@@ -60,6 +61,16 @@ test("requires actual Kalshi depth SQL and a recent comparison", () => {
     kalshiDepthEvidenceFaults("select avg(volume) from parlay_lottery_daily"),
     []
   );
+});
+
+test("counts reader-facing venue aliases as non-Kalshi bullets", () => {
+  const text = [
+    "- **Underdog's parlay share climbed:** Volume fell while its parlay mix rose.",
+    "- **Crypto.com cooled:** Its volume fell below the weekly average.",
+    "- **Kalshi's game props rose:** Game-prop volume beat its recent norm."
+  ].join("\n\n");
+
+  assert.equal(otherVenueBulletCount(text), 2);
 });
 
 test("rejects routine venue rank as the bold finding", () => {
