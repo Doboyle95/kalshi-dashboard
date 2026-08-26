@@ -45,7 +45,7 @@ title: Ask Predict Charts
   const PREFILL_KEY = "kalshi_chat_prefill";
   const HISTORY_MAX = 10;
   const EXAMPLES = [
-    "Compare daily contract volume across Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, and DKeX for April 2026.",
+    "Which venues gained or lost contract-volume share during April 2026, and did they peak on the same days?",
     "On Kalshi, which days in April 2026 had volume rising while the fee rate fell, and what mix shift might explain it?",
     "On Kalshi, how did taker P&L in sports compare with non-sports from February through April 2026?",
     "On Kalshi, which parlay types had the largest bettor losses in April 2026?"
