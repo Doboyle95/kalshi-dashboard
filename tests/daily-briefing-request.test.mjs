@@ -8,6 +8,7 @@ import {
   apiErrorMessage,
   assertInsightsQuestionLength
 } from "../scripts/daily-briefing-request.mjs";
+import {withoutExcludedPreviousInsights} from "../scripts/daily-briefing-rules.mjs";
 
 test("FastAPI validation details survive into the workflow error", () => {
   const body = {
@@ -44,7 +45,7 @@ test("the actual daily briefing prompt fits the insights contract", async () => 
     attempt: {missing: []},
     normalizedAnchorRows: Array.from({length: 10}),
     requiredVenues: Array.from({length: 10}),
-    previousInsights: String(previous.insights || "").trim()
+    previousInsights: withoutExcludedPreviousInsights(previous.insights)
   });
 
   assert.ok(prompt.length > 2_000, "fixture must reproduce the limit regression");
@@ -52,4 +53,6 @@ test("the actual daily briefing prompt fits the insights contract", async () => 
     prompt.length <= MAX_INSIGHTS_QUESTION_CHARS,
     `briefing prompt is ${prompt.length} characters; contract allows ${MAX_INSIGHTS_QUESTION_CHARS}`
   );
+  assert.doesNotMatch(prompt, /parlay_lottery_(?:daily|summary)|BE PRECISE ABOUT LOTTERY-TICKET|Bettors shifted toward longer odds/i);
+  assert.match(prompt, /Do not use internally defined lottery-ticket or longshot parlay classifications/i);
 });

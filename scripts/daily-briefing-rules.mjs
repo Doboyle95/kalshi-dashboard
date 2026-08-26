@@ -1,6 +1,16 @@
 // Mechanical backstops for recurring editorial mistakes in the generated briefing.
 // The prompt carries the full explanation; these checks catch a draft that ignores it
 // and feed a concrete correction into the existing retry loop.
+const EXCLUDED_LOTTERY_PARLAY_ANGLE = /\b(?:lottery(?:-ticket)?|parlay[- ]lottery|longshots?|longer[- ]odds)\b/i;
+
+export function withoutExcludedPreviousInsights(text) {
+  return String(text || "")
+    .split(/\n(?=\s*[-*])/)
+    .filter((bullet) => !EXCLUDED_LOTTERY_PARLAY_ANGLE.test(bullet))
+    .join("\n")
+    .trim();
+}
+
 export function wordingFaults(text, sqls) {
   const faults = [];
 
@@ -21,10 +31,8 @@ export function wordingFaults(text, sqls) {
     faults.push('the prose says settled or settlement but no query measured settlement -- name what was actually counted, which is normally contracts traded');
   }
 
-  // Aggregate stakes / aggregate contracts is a mix measure. It cannot show that the
-  // same parlay products changed price, which is what "got cheaper" claims.
-  if (/(?:lottery(?:-ticket)?|longshot|parlay)[^\n.]{0,80}\b(?:got|became|were)\s+cheaper\b|\bcheaper\s+(?:lottery(?:-ticket)?\s+)?(?:tickets?|parlays?)\b/i.test(text)) {
-    faults.push('aggregate lottery-parlay stakes and contract volume do not show that tickets got cheaper -- say betting shifted toward lower-priced, longer-odds contracts; reserve "got cheaper" for like-for-like price changes in the same tickers');
+  if (EXCLUDED_LOTTERY_PARLAY_ANGLE.test(text)) {
+    faults.push("internally defined lottery-ticket and longshot parlay classifications are outside this briefing's scope -- replace that bullet with a different Kalshi depth angle");
   }
 
   // A routine rank hides the actual finding from anyone scanning the bold openers. Rank
