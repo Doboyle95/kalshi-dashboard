@@ -11,6 +11,7 @@ title: DKeX (DraftKings)
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {renderDateBrush} from "./components/date-brush.js";
+import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const daily      = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
@@ -146,6 +147,7 @@ const brushVolume = view(makeBrush(split, DKEX));
 ```js
 const [sV, eV] = brushVolume;
 const splitFVolume = split.filter(d => d.date >= sV && d.date <= eV);
+const volumeEvents = positionedVolumeEvents(ESTABLISHED_VOLUME_EVENTS, sV, eV, d3.max(splitFVolume, d => d.contracts_total) || 1);
 ```
 
 ```js
@@ -165,6 +167,7 @@ Plot.plot({
       tip: true,
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.contracts_total || 0)} contracts`
     }),
+    ...volumeEventMarks(Plot, volumeEvents),
     Plot.ruleY([0])
   ]
 })

@@ -153,7 +153,7 @@ display(html`<div class="top-market-grid">${normalizedVenues.map(({spec, rows}) 
 
 ## Market finder
 
-<p class="section-intro">Search names, clubs, players, categories, outcomes, or ticker fragments across every supported venue. The default order is most recently traded. There is no meaningless all-venue rank and no separate “Label” column; name provenance is available in the Market-cell tooltip.</p>
+<p class="section-intro">Search names, clubs, players, categories, outcomes, or ticker fragments across every supported venue. The default order is most recently traded.</p>
 
 ```js
 display(marketLeaderboard({
@@ -222,6 +222,7 @@ const xvLinMaxX = xvQuantile(d => d.kalshi, 0.95);
 const xvLinMaxY = xvQuantile(d => d.poly, 0.95);
 const xvOffPanel = xvRows.filter(d => d.kalshi > xvLinMaxX || d.poly > xvLinMaxY).length;
 const fmtX = n => n >= 1e9 ? `${(n / 1e9).toFixed(1)}bn` : n >= 1e6 ? `${(n / 1e6).toFixed(0)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n);
+const fmtY = n => n >= 1e9 ? `${(n / 1e9).toFixed(1)}bn` : n >= 5e5 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n);
 ```
 
 <div class="control-strip">
@@ -247,8 +248,8 @@ Plot.plot({
     ? {type: "log", label: "Kalshi contracts on that fixture →", tickFormat: fmtX}
     : {type: "linear", domain: [0, xvLinMaxX], label: "Kalshi contracts on that fixture →", tickFormat: fmtX},
   y: xvScale === "Log"
-    ? {type: "log", label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtX}
-    : {type: "linear", domain: [0, xvLinMaxY], label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtX},
+    ? {type: "log", label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtY}
+    : {type: "linear", domain: [0, xvLinMaxY], label: "↑ Polymarket US contracts on that fixture", tickFormat: fmtY},
   color: {legend: true, domain: xvLeagues, scheme: "tableau10"},
   marks: [
     // PARITY ALONE SAYS ALMOST NOTHING HERE: 811 of 817 fixtures sit on one side of it.

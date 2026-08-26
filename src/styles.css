@@ -1651,7 +1651,7 @@ form input[type="submit"]:hover {
   margin-top: var(--space-4);
   background: var(--accent-kalshi);
   border-color: var(--accent-kalshi);
-  color: #fff;
+  color: var(--theme-background);
   font-weight: 700;
   padding-left: var(--space-5);
   padding-right: var(--space-5);
@@ -1660,7 +1660,7 @@ form input[type="submit"]:hover {
 .chat-insights-btn:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent-kalshi) 85%, #000);
   border-color: color-mix(in srgb, var(--accent-kalshi) 85%, #000);
-  color: #fff;
+  color: var(--theme-background);
 }
 
 .chat-insights-btn:disabled {

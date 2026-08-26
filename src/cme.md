@@ -16,6 +16,7 @@ const cme = await DataAttachment("data/cme_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {renderDateBrush} from "./components/date-brush.js";
+import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 ```
 
 ```js
@@ -85,6 +86,7 @@ const tidy = inRange.flatMap(d => [
   {date: d.date, side: "Calls", vol: d.calls, total: d.total},
   {date: d.date, side: "Puts", vol: d.puts, total: d.total}
 ]);
+const volumeEvents = positionedVolumeEvents(ESTABLISHED_VOLUME_EVENTS, cmeDateSel[0], cmeDateSel[1], d3.max(inRange, d => d.total) || 1);
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 64,
@@ -93,6 +95,7 @@ display(Plot.plot({
   color: {legend: true, domain: ["Calls", "Puts"], range: [CME_COLORS.Calls, CME_COLORS.Puts]},
   marks: [
     Plot.rectY(tidy, {x: "date", interval: d3.utcDay, y: "vol", fill: "side", order: ["Calls", "Puts"]}),
+    ...volumeEventMarks(Plot, volumeEvents),
     Plot.ruleY([0]),
     Plot.tip(inRange, Plot.pointerX({x: "date", y: "total",
       title: d => `${fmtDate(d.date)}\nTotal: ${fmtCount(d.total)} contracts\nCalls: ${fmtCount(d.calls)}\nPuts: ${fmtCount(d.puts)}`}))

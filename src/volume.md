@@ -21,6 +21,7 @@ const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
@@ -281,9 +282,7 @@ const [s1, e1] = dr1;
 const fd1 = daily.filter(d => d.date >= s1 && d.date <= e1);
 
 const maxContracts = d3.max(fd1, d => d.contracts_total) || 1;
-const milestones = VOLUME_EVENTS
-  .filter(m => m.date >= s1 && m.date <= e1)
-  .map(m => ({...m, y: m.tier === 0 ? maxContracts : m.tier === 1 ? maxContracts * 0.75 : maxContracts * 0.48}));
+const milestones = positionedVolumeEvents(VOLUME_EVENTS, s1, e1, maxContracts);
 ```
 
 <div class="plot-shell">
@@ -334,14 +333,7 @@ Plot.plot({
         d.ma7_contracts != null ? `7-day avg: ${fmtCount(Math.round(d.ma7_contracts))} contracts` : null
       ].filter(Boolean).join("\n")
     })),
-    ...(volumeEventMode === "On" ? [
-      Plot.ruleX(milestones, {x: "date", stroke: "var(--annotation-stroke)", strokeDasharray: "3,3", strokeWidth: 1}),
-      Plot.text(milestones, {
-        x: "date", y: "y", text: "label",
-        textAnchor: "start", lineAnchor: "bottom",
-        rotate: -42, fontSize: 10, fill: "var(--annotation-text)", dx: 3, dy: -2
-      })
-    ] : []),
+    ...(volumeEventMode === "On" ? volumeEventMarks(Plot, milestones) : []),
     ...(yScaleType === "Log" ? [] : [Plot.ruleY([0])])
   ]
 })
@@ -379,9 +371,7 @@ const [sTrades, eTrades] = drTrades;
 const tradeDaily = daily.filter(d => d.date >= sTrades && d.date <= eTrades);
 const tradeMA = rollingMean7By(tradeDaily, d => d.trades || 0);
 const maxTrades = d3.max(tradeDaily, d => d.trades || 0) || 1;
-const tradeMilestones = VOLUME_EVENTS
-  .filter(m => m.date >= sTrades && m.date <= eTrades)
-  .map(m => ({...m, y: m.tier === 0 ? maxTrades : m.tier === 1 ? maxTrades * 0.75 : maxTrades * 0.48}));
+const tradeMilestones = positionedVolumeEvents(VOLUME_EVENTS, sTrades, eTrades, maxTrades);
 ```
 
 <div class="plot-shell">
@@ -415,14 +405,7 @@ Plot.plot({
         `Contracts per trade: ${((d.contracts_total || 0) / Math.max(1, d.trades || 0)).toFixed(1)}`
       ].join("\n")
     })),
-    ...(volumeEventMode === "On" ? [
-      Plot.ruleX(tradeMilestones, {x: "date", stroke: "var(--annotation-stroke)", strokeDasharray: "3,3", strokeWidth: 1}),
-      Plot.text(tradeMilestones, {
-        x: "date", y: "y", text: "label",
-        textAnchor: "start", lineAnchor: "bottom",
-        rotate: -42, fontSize: 10, fill: "var(--annotation-text)", dx: 3, dy: -2
-      })
-    ] : []),
+    ...(volumeEventMode === "On" ? volumeEventMarks(Plot, tradeMilestones) : []),
     Plot.ruleY([0])
   ]
 })
