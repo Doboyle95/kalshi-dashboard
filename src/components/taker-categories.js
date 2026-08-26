@@ -14,6 +14,68 @@ export function buildReportTickerToCat(categoryLeaderboard) {
   );
 }
 
+// The per-ticker taker export is settlement-aware, so its newest days can cover only
+// part of the all-trade daily taker total. Preserve the observed category mix while
+// putting every day on the same dollar basis as taker_notional_daily.csv.
+export function reconcileTakerCategoryRows(rows, dailyTotals) {
+  const dailyByDate = new Map(
+    dailyTotals.map(d => [+d.date, +d.notional_total || 0])
+  );
+  const sourceByDate = new Map();
+  for (const row of rows) {
+    const date = +row.date;
+    sourceByDate.set(date, (sourceByDate.get(date) || 0) + (+row.value || 0));
+  }
+
+  return rows.map(row => {
+    const sourceTotal = sourceByDate.get(+row.date) || 0;
+    const dailyTotal = dailyByDate.get(+row.date) || 0;
+    const scale = sourceTotal > 0 && dailyTotal > 0 ? dailyTotal / sourceTotal : 1;
+    return {...row, value: (+row.value || 0) * scale};
+  });
+}
+
+// Direct per-ticker taker dollars only begin on 2026-04-15. For earlier dates,
+// use the complete all-trade report-ticker contract mix as a category-share
+// proxy, then scale those shares to the authoritative daily taker-dollar total.
+// Mark the generated rows so charts can disclose the estimate in copy/tooltips.
+export function estimateHistoricalTakerCategoryRows(wideRows, reportTickerToCat, dailyTotals, beforeDate) {
+  const dailyByDate = new Map(
+    dailyTotals.map(d => [+d.date, +d.notional_total || 0])
+  );
+  const cutoff = +beforeDate;
+  const estimatedRows = [];
+
+  for (const row of wideRows) {
+    const date = +row.date;
+    const dailyTotal = dailyByDate.get(date) || 0;
+    if (!Number.isFinite(date) || date >= cutoff || dailyTotal <= 0) continue;
+
+    const byCategory = new Map();
+    let sourceTotal = 0;
+    for (const [reportTicker, rawValue] of Object.entries(row)) {
+      if (reportTicker === "date") continue;
+      const value = +rawValue || 0;
+      if (value <= 0) continue;
+      const category = reportTickerToCat.get(reportTicker) || "Uncategorized";
+      byCategory.set(category, (byCategory.get(category) || 0) + value);
+      sourceTotal += value;
+    }
+
+    if (sourceTotal <= 0) continue;
+    for (const [category, value] of byCategory) {
+      estimatedRows.push({
+        date: row.date,
+        category,
+        value: dailyTotal * value / sourceTotal,
+        estimated: true
+      });
+    }
+  }
+
+  return estimatedRows;
+}
+
 export const TAKER_DETAIL_ORDER = [
   "Other Non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
   "Other Sports", "Esports", "Racing", "Cricket", "Combat Sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",

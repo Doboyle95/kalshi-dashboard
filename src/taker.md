@@ -23,20 +23,21 @@ display(DataAttachment.marker);
 const taker = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
 const takerVolByTicker = await DataAttachment("data/taker_volume_by_ticker_daily.csv").csv({typed: true});
 const takerVolByTickerSide = await DataAttachment("data/taker_volume_by_ticker_side_daily.csv").csv({typed: true});
+const historicalCategoryMix = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {renderDateBrush} from "./components/date-brush.js";
 import {bestName, fmtStrike} from "./components/ticker-names.js";
-import {buildReportTickerToCat, TAKER_DETAIL_ORDER, TAKER_DETAIL_COLORS, TAKER_GENERAL_MAP, TAKER_GENERAL_ORDER, TAKER_GENERAL_COLORS} from "./components/taker-categories.js";
+import {buildReportTickerToCat, estimateHistoricalTakerCategoryRows, reconcileTakerCategoryRows, TAKER_DETAIL_ORDER, TAKER_DETAIL_COLORS, TAKER_GENERAL_MAP, TAKER_GENERAL_ORDER, TAKER_GENERAL_COLORS} from "./components/taker-categories.js";
 ```
 
 ```js
 display(freshnessPanel({
   items: [
     {label: "Taker-side volume", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
-    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Taker-side volume in dollars, broken out by category"},
+    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Direct taker-side categories since Apr 15, 2026; earlier category mix estimated from all trades"},
     {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
@@ -102,11 +103,28 @@ const reportTickerToCat = buildReportTickerToCat(categoryLeaderboard);
 // value = taker-side volume in DOLLARS (not contracts) - Kalshi contracts price 1-99 cents, so a
 // "taker volume" chart plotted in raw contract counts isn't comparable to this page's other
 // dollar-denominated charts and overweights categories full of cheap, high-count contracts.
-const takerCatRows = takerVolByTicker.map(d => ({
+const rawTakerCatRows = takerVolByTicker.map(d => ({
   date: d.date,
   category: reportTickerToCat.get(d.report_ticker) || "Uncategorized",
-  value: +d.notional_settled || 0
+  value: +d.notional_settled || 0,
+  estimated: false
 }));
+
+// taker_volume_by_ticker_daily.csv is settlement-aware and therefore loses an
+// increasing share of the newest, not-yet-settled trades. Reconcile its per-day
+// category mix to the all-trade daily total so the category chart cannot imply a
+// volume collapse that the page's authoritative daily series does not show.
+const takerCategoryDirectStart = d3.min(rawTakerCatRows, d => d.date);
+const historicalTakerCatRows = estimateHistoricalTakerCategoryRows(
+  historicalCategoryMix,
+  reportTickerToCat,
+  taker,
+  takerCategoryDirectStart
+);
+const takerCatRows = [
+  ...historicalTakerCatRows,
+  ...reconcileTakerCategoryRows(rawTakerCatRows, taker)
+];
 
 const takerCatDaily = Array.from(
   d3.rollup(takerCatRows, rows => d3.sum(rows, r => r.value), d => +d.date),
@@ -249,9 +267,11 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#e15759"></span>No-side takers</span>
 </div>
 
-## Volume by category
+## Taker volume by category
 
 <p class="section-intro">Which categories the aggressive (taker) money is actually flowing into, in the same taker-side volume dollars as the chart above — just broken out by category. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
+
+<p class="chart-note">Before ${fmtDate(takerCategoryDirectStart)}, category shares are estimated from Kalshi's full contract mix and scaled to the daily taker-dollar total. From that date onward, the chart uses direct taker-side category data. Daily totals match the chart above throughout.</p>
 
 ```js
 const drCat = Mutable([new Date("2025-01-01"), takerCatMaxDate]);
@@ -278,7 +298,7 @@ const activeCatColors = takerCatDetail === "Detailed" ? TAKER_DETAIL_COLORS : TA
 
 const fdCat = takerCatRows
   .filter(d => d.date >= sCat && d.date <= eCat)
-  .map(d => ({date: d.date, category: takerCatDetail === "Detailed" ? d.category : (TAKER_GENERAL_MAP[d.category] || "Uncategorized"), value: d.value}));
+  .map(d => ({date: d.date, category: takerCatDetail === "Detailed" ? d.category : (TAKER_GENERAL_MAP[d.category] || "Uncategorized"), value: d.value, estimated: d.estimated}));
 
 const catTotalsInRange = Array.from(
   d3.rollup(fdCat, rows => d3.sum(rows, r => r.value), d => d.category),
@@ -295,11 +315,12 @@ const stackedCat = [];
 for (const [t, rowsForDate] of catByDate) {
   const byCategory = new Map();
   for (const r of rowsForDate) byCategory.set(r.category, (byCategory.get(r.category) || 0) + r.value);
+  const estimated = rowsForDate.some(r => r.estimated);
   let cum = 0;
   for (const cat of activeCatOrder) {
     const v = byCategory.get(cat) || 0;
     if (v <= 0) continue;
-    stackedCat.push({date: new Date(+t), category: cat, y1: cum, y2: cum + v, value: v});
+    stackedCat.push({date: new Date(+t), category: cat, y1: cum, y2: cum + v, value: v, estimated});
     cum += v;
   }
 }
@@ -324,7 +345,7 @@ Plot.plot({
       y2: "y2",
       fill: "category",
       tip: true,
-      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtUSD(d.value)}`
+      title: d => `${fmtDate(d.date)}\n${d.category}: ${fmtUSD(d.value)}${d.estimated ? "\nEstimated category mix" : ""}`
     }),
     Plot.ruleY([0])
   ]
