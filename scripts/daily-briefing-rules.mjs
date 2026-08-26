@@ -1,12 +1,31 @@
 // Mechanical backstops for recurring editorial mistakes in the generated briefing.
 // The prompt carries the full explanation; these checks catch a draft that ignores it
 // and feed a concrete correction into the existing retry loop.
-const EXCLUDED_LOTTERY_PARLAY_ANGLE = /\b(?:lottery(?:-ticket)?|parlay[- ]lottery|longshots?|longer[- ]odds)\b/i;
+const INTERNAL_LONG_ODDS_LABEL = /\b(?:lottery(?:-ticket)?|parlay[- ]lottery|lottery[- ]parlay|longshots?|longer[- ]odds)\b/i;
+const APPROVED_LONG_ODDS_DESCRIPTION = /\b(?:extremely long[- ]odds parlays?|parlays? with at least eight legs (?:trading|priced) below 2 cents)\b/i;
+
+// A word such as "parlays" in the prose is not evidence that the model used Kalshi's
+// deeper tables. The Aug. 26 briefing passed the old word-only gate with a monthly parlay
+// share even though its returned evidence contained only a Novig category query. Require
+// both a purpose-built Kalshi table and a real recent comparison in the supporting SQL.
+const KALSHI_DEPTH_TABLE = /\b(?:taker_pnl_daily|parlay_pnl_unified_daily|parlay_pnl_daily_by_corr_v2|parlay_top_games_by_volume|parlay_popular_daily|extreme_trades_daily|trade_size_daily|parlay_trade_size_daily|daily_sports_vs_nonsports|sports_market_type_daily|taker_notional_daily|category_daily|parlay_house_edge_by_legs|parlay_lottery_daily|calibration_[a-z0-9_]+)\b/i;
+const RECENT_COMPARISON_SQL = /\b(?:avg|median|quantile|percent_rank|rank|lag)\s*\(|\binterval\b|\bbetween\b/i;
+
+export function kalshiDepthEvidenceFaults(sqls) {
+  const source = String(sqls || "");
+  if (!KALSHI_DEPTH_TABLE.test(source)) {
+    return ["the Kalshi bullet is not backed by a query over a Kalshi depth table -- run one instead of satisfying the requirement with a general parlay, sports, or monthly-share phrase"];
+  }
+  if (!RECENT_COMPARISON_SQL.test(source)) {
+    return ["the Kalshi depth query does not compare the latest day or week with a recent norm -- add an average, rank, lag, or equivalent recent comparison"];
+  }
+  return [];
+}
 
 export function withoutExcludedPreviousInsights(text) {
   return String(text || "")
     .split(/\n(?=\s*[-*])/)
-    .filter((bullet) => !EXCLUDED_LOTTERY_PARLAY_ANGLE.test(bullet))
+    .filter((bullet) => !INTERNAL_LONG_ODDS_LABEL.test(bullet))
     .join("\n")
     .trim();
 }
@@ -31,8 +50,11 @@ export function wordingFaults(text, sqls) {
     faults.push('the prose says settled or settlement but no query measured settlement -- name what was actually counted, which is normally contracts traded');
   }
 
-  if (EXCLUDED_LOTTERY_PARLAY_ANGLE.test(text)) {
-    faults.push("internally defined lottery-ticket and longshot parlay classifications are outside this briefing's scope -- replace that bullet with a different Kalshi depth angle");
+  if (INTERNAL_LONG_ODDS_LABEL.test(text)) {
+    faults.push("keep the internal lottery-ticket/parlay-lottery/longshot label out of the briefing -- say extremely long-odds parlays, or parlays with at least eight legs trading below 2 cents");
+  }
+  if (/parlay_lottery_(?:daily|summary)/i.test(sqls) && !APPROVED_LONG_ODDS_DESCRIPTION.test(text)) {
+    faults.push("a query used the internal long-odds parlay classification, so the prose must identify the subset plainly as extremely long-odds parlays or parlays with at least eight legs trading below 2 cents -- never as parlays generally");
   }
 
   // A routine rank hides the actual finding from anyone scanning the bold openers. Rank

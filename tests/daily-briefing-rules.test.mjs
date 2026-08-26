@@ -2,15 +2,32 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  kalshiDepthEvidenceFaults,
   withoutExcludedPreviousInsights,
   wordingFaults
 } from "../scripts/daily-briefing-rules.mjs";
 
-test("rejects lottery-ticket parlay angles entirely", () => {
+test("rejects internal lottery-ticket and parlay-lottery wording", () => {
   const text = "- **Bettors shifted toward longer odds:** Lottery-parlay contracts rose while total stakes fell.";
   const faults = wordingFaults(text, "select sum(stakes) / sum(volume) from parlay_lottery_daily");
 
-  assert.ok(faults.some((fault) => fault.includes("outside this briefing's scope")));
+  assert.ok(faults.some((fault) => fault.includes("internal lottery-ticket")));
+});
+
+test("allows reader-facing extremely long-odds parlay wording", () => {
+  const text = "- **Extremely long-odds parlays accelerated:** Parlays with at least eight legs trading below 2 cents ran above their monthly norm.";
+
+  assert.deepEqual(
+    wordingFaults(text, "select avg(volume) from parlay_lottery_daily"),
+    []
+  );
+});
+
+test("requires subset wording when the long-odds table is used", () => {
+  const text = "- **Kalshi's parlays accelerated:** Parlay activity ran above its monthly norm.";
+  const faults = wordingFaults(text, "select avg(volume) from parlay_lottery_daily");
+
+  assert.ok(faults.some((fault) => fault.includes("must identify the subset plainly")));
 });
 
 test("removes excluded angles from yesterday's briefing context", () => {
@@ -30,6 +47,19 @@ test("allows ordinary parlay-share context", () => {
   const text = "- **Kalshi's product mix shifted:** Parlays reached 44% of activity.";
 
   assert.deepEqual(wordingFaults(text, "select share_parlay from daily_sports_vs_nonsports"), []);
+});
+
+test("requires actual Kalshi depth SQL and a recent comparison", () => {
+  assert.equal(kalshiDepthEvidenceFaults("select * from daily_overall").length, 1);
+  assert.equal(kalshiDepthEvidenceFaults("select volume from taker_pnl_daily").length, 1);
+  assert.deepEqual(
+    kalshiDepthEvidenceFaults("select avg(pnl) from taker_pnl_daily where date >= max_date - interval 30 day"),
+    []
+  );
+  assert.deepEqual(
+    kalshiDepthEvidenceFaults("select avg(volume) from parlay_lottery_daily"),
+    []
+  );
 });
 
 test("rejects routine venue rank as the bold finding", () => {

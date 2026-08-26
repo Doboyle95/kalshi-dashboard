@@ -53,6 +53,8 @@ test("the actual daily briefing prompt fits the insights contract", async () => 
     prompt.length <= MAX_INSIGHTS_QUESTION_CHARS,
     `briefing prompt is ${prompt.length} characters; contract allows ${MAX_INSIGHTS_QUESTION_CHARS}`
   );
-  assert.doesNotMatch(prompt, /parlay_lottery_(?:daily|summary)|BE PRECISE ABOUT LOTTERY-TICKET|Bettors shifted toward longer odds/i);
-  assert.match(prompt, /Do not use internally defined lottery-ticket or longshot parlay classifications/i);
+  assert.match(prompt, /parlay_lottery_daily/);
+  assert.match(prompt, /parlays with at least eight legs trading below 2 cents/);
+  assert.match(prompt, /Never write lottery ticket, parlay-lottery, lottery volume, longshot, or longer-odds/i);
+  assert.match(prompt, /MUST run at least one new supporting query over one of the named Kalshi depth tables/i);
 });
