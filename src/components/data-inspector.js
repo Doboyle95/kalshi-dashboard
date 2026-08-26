@@ -91,7 +91,7 @@
 
     const body = element("div", "data-inspector-body");
     const actions = element("footer", "data-inspector-actions");
-    const ask = element("button", "data-inspector-ask", "Ask Data about this selection");
+    const ask = element("button", "data-inspector-ask", "Ask Predict Charts about this selection");
     ask.type = "button";
     ask.addEventListener("click", () => current() && saveAsk(current()));
     const copy = element("button", "data-inspector-copy", "Copy selection link");

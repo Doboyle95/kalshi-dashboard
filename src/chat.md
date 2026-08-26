@@ -1,5 +1,5 @@
 ---
-title: Ask Data
+title: Ask Predict Charts
 ---
 
 <div class="page-hero">
@@ -45,10 +45,10 @@ title: Ask Data
   const PREFILL_KEY = "kalshi_chat_prefill";
   const HISTORY_MAX = 10;
   const EXAMPLES = [
-    "What changed across US prediction markets on each venue's latest complete reported day?",
-    "Find days where volume rose but fee rate fell, and explain the likely mix shift",
-    "Compare taker P&L in sports vs non-sports since February 2026",
-    "Which markets drove the biggest parlay loss days in April 2026?"
+    "Compare daily contract volume across Kalshi, Polymarket US, ForecastEx, Crypto.com/Nadex, and DKeX for April 2026.",
+    "On Kalshi, which days in April 2026 had volume rising while the fee rate fell, and what mix shift might explain it?",
+    "On Kalshi, how did taker P&L in sports compare with non-sports from February through April 2026?",
+    "On Kalshi, which parlay types had the largest bettor losses in April 2026?"
   ];
 
   function sanitizeMarkdown(markdown, inline = false) {

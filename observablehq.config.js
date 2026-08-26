@@ -181,7 +181,7 @@ const escapeHtml = (v) =>
 // Venue modules are NOT repeated here; they are read from VENUES above, so a
 // venue's tabs are declared once and the desktop/mobile/context menus cannot drift.
 const SITE_MAP = [
-  {label: "Overview", links: [["Briefing", "/"], ["Ask Data", "/chat"]]},
+  {label: "Overview", links: [["Briefing", "/"], ["Ask Predict Charts", "/chat"]]},
   {label: "Compare venues", links: [
     ["Overview", "/compare"],
     ["Scale & liquidity", "/compare-scale"],
@@ -370,7 +370,7 @@ function siteHeader({path}) {
     '</a>' +
     '<nav class="masthead-primary" aria-label="Primary navigation">' + primary + '</nav>' +
     '<div class="masthead-actions">' +
-      link("Ask Data", "/chat", here === "/chat", "masthead-ask") +
+      link("Ask Predict Charts", "/chat", here === "/chat", "masthead-ask") +
       '<details class="masthead-more' + (isMore ? ' is-active' : '') + '">' +
         '<summary>More</summary><div class="masthead-menu">' +
           link("Methodology & coverage", "/methodology", here === "/methodology") +
@@ -383,7 +383,7 @@ function siteHeader({path}) {
       '<div class="masthead-mobile-panel">' +
         link("Briefing", "/", here === "/") +
         link("Markets & trades", "/market-explorer", here === "/market-explorer") +
-        link("Ask Data", "/chat", here === "/chat", "masthead-mobile-ask") +
+        link("Ask Predict Charts", "/chat", here === "/chat", "masthead-mobile-ask") +
         '<div class="masthead-mobile-group"><span>Compare venues</span>' + compareMobile + '</div>' +
         // Same reasoning as the desktop dropdown: list the venues rather than sending the
         // reader to the empty directory page. The drawer already groups Compare this way.
