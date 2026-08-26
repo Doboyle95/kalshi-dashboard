@@ -1,10 +1,10 @@
 {
   "status": "ready",
-  "generated_at": "2026-08-26T13:43:59.992Z",
+  "generated_at": "2026-08-26T20:33:42.583Z",
   "data_through": "2026-08-25",
   "service_through": "2026-08-26",
   "title": "What changed in prediction markets",
-  "insights": "- **Kalshi’s parlay mix surged:** Kalshi traded 1.34B contracts on Aug. 25, up 1.05% from its 1.33B seven-day average, while parlays reached 667.2M contracts, or 49.75% of activity versus 41.98% across earlier August days.\n\n- **Underdog’s parlay share climbed as volume fell:** Underdog traded 12.6M contracts on Aug. 25, down 22.54% from its seven-day average, but parlays rose to 55.28% of activity from 51.65%, giving it about a 0.8% market share.\n\n- **ProphetX leaned harder into parlays:** Its Aug. 25 volume slipped 4.66% to 5.3M contracts, while parlay activity reached 1.2M contracts and 22.09% of trading, up from 13.88% over the prior seven days; it held roughly 0.4% of the market.\n\n- **Kalshi’s game props bucked the broader mix:** Game-prop contracts rose 25.26% to 23.7M on Aug. 25 against the prior seven-day average, while spreads fell 34.68% and correlated parlays declined 27.43%.",
+  "insights": "- **Kalshi fees softened on steady volume:** Kalshi traded 1.34B contracts on Aug. 25, 1.05% above its seven-day average, but fees fell to $9.1M from $9.7M and the blended fee rate declined to 0.67% from 0.73%.\n- **Polymarket US pushed parlays higher:** On Aug. 24, parlays reached 22.9M contracts and 20.61% of activity, up from 15.04%, even as total volume fell 10.54% to 111.1M contracts.\n- **Novig’s parlay mix accelerated:** Novig traded 25.7M contracts on Aug. 25, 7.40% above its seven-day average, while parlay volume rose to 9.9M contracts and 38.61% of activity from 34.18%.",
   "coverage": {
     "venues_expected": 10,
     "venues_covered": 10,
@@ -12,26 +12,26 @@
     "degraded": true
   },
   "notes": [
-    "briefing checks unmet after retry: at least two bullets must be about a venue other than Kalshi, or must compare venues against each other"
+    "briefing checks unmet after retry: the Kalshi bullet is not backed by a query over a Kalshi depth table -- run one instead of satisfying the requirement with a general parlay, sports, or monthly-share phrase"
   ],
   "evidence": [
     {
       "label": "Additional context 1",
       "source": "llm_generated",
-      "summary": "report_date            total_contracts    parlay_contracts    parlay_share_pct    prior_august_avg_parlay_contracts    prior_august_avg_parlay_share_pct    sports_nonparlay_contracts    nonsports_contracts\n-------------------  -----------------  ------------------  ------------------  -----------------------------------  -----------------------------------  ----------------------------  ---------------------\n2026-08-25 00:00:00      1,341,134,496         667,242,921               49.75                       522,739,690.17                                41.98                   372,745,964            301,145,611",
-      "sql": "SELECT\n    MAX(date) AS report_date,\n    MAX(contracts_nonsports + contracts_sports_nonparlay + contracts_parlay)\n        FILTER (WHERE date = (SELECT MAX(date) FROM daily_sports_vs_nonsports WHERE date <= DATE '2026-08-25')) AS total_contracts,\n    MAX(contracts_parlay) FILTER (WHERE date = (SELECT MAX(date) FROM daily_sports_vs_nonsports WHERE date <= DATE '2026-08-25')) AS parlay_contracts,\n    MAX(share_parlay) FILTER (WHERE date = (SELECT MAX(date) FROM daily_sports_vs_nonsports WHERE date <= DATE '2026-08-25')) * 100 AS parlay_share_pct,\n    AVG(contracts_parlay) FILTER (\n        WHERE date >= DATE '2026-08-01' AND date < DATE '2026-08-25'\n    ) AS prior_august_avg_parlay_contracts,\n    AVG(share_parlay) FILTER (\n        WHERE date >= DATE '2026-08-01' AND date < DATE '2026-08-25'\n    ) * 100 AS prior_august_avg_parlay_share_pct,\n    MAX(contracts_sports_nonparlay) FILTER (WHERE date = (SELECT MAX(date) FROM daily_sports_vs_nonsports WHERE date <= DATE '2026-08-25')) AS sports_nonparlay_contracts,\n    MAX(contracts_nonsports) FILTER (WHERE date = (SELECT MAX(date) FROM daily_sports_vs_nonsports WHERE date <= DATE '2026-08-25')) AS nonsports_contracts\nFROM daily_sports_vs_nonsports\nWHERE date <= DATE '2026-08-25';"
+      "summary": "report_date            contracts_total    fees_total    fee_rate_pct    prior_seven_day_avg_contracts    prior_seven_day_avg_fees    prior_seven_day_avg_fee_rate_pct\n-------------------  -----------------  ------------  --------------  -------------------------------  --------------------------  ----------------------------------\n2026-08-25 00:00:00      1,359,344,715  9,093,351.08            0.67                 1,327,201,406.14                9,704,052.65                                0.73",
+      "sql": "WITH latest AS (\n    SELECT MAX(date) AS report_date\n    FROM daily_overall\n    WHERE COALESCE(is_partial, FALSE) = FALSE\n      AND date <= DATE '2026-08-25'\n)\nSELECT\n    d.date AS report_date,\n    d.contracts_total,\n    d.fees_total,\n    d.fees_total / NULLIF(d.contracts_total, 0) * 100 AS fee_rate_pct,\n    AVG(p.contracts_total) AS prior_seven_day_avg_contracts,\n    AVG(p.fees_total) AS prior_seven_day_avg_fees,\n    AVG(p.fees_total / NULLIF(p.contracts_total, 0) * 100) AS prior_seven_day_avg_fee_rate_pct\nFROM daily_overall d\nCROSS JOIN latest l\nLEFT JOIN daily_overall p\n    ON p.date >= l.report_date - INTERVAL 7 DAY\n   AND p.date < l.report_date\n   AND COALESCE(p.is_partial, FALSE) = FALSE\nWHERE d.date = l.report_date\nGROUP BY d.date, d.contracts_total, d.fees_total;"
     },
     {
       "label": "Additional context 2",
       "source": "llm_generated",
-      "summary": "market_type             latest_contracts    prior_seven_day_avg    percent_change\n--------------------  ------------------  ---------------------  ----------------\nGame Prop                  23,713,608.00          18,932,249.29             25.26\nCricket                     1,374,131.00           1,299,887.29              5.71\nMoneyline                 276,916,291.00         290,552,744.29             -4.69\nPlayer Prop                 5,820,938.00           6,274,013.29             -7.22\nParlay (independent)      370,183,158.00         426,125,193.00            -13.13\nOver/Under                 33,065,589.00          42,514,717.29            -22.23\nParlay (correlated)       115,926,548.00         159,753,029.43            -27.43\nSpread                     13,129,729.00          20,102,006.86            -34.68\nOther                       6,182,588.00          12,482,041.14            -50.47\nMotorsport                    553,314.00           1,343,586.57            -58.82",
-      "sql": "WITH ranked_days AS (\n    SELECT\n        date,\n        ROW_NUMBER() OVER (ORDER BY date DESC) AS day_rank\n    FROM (\n        SELECT DISTINCT date\n        FROM sports_market_type_daily\n        WHERE date <= DATE '2026-08-25'\n    )\n),\nlatest AS (\n    SELECT market_type, SUM(contracts) AS latest_contracts\n    FROM sports_market_type_daily\n    WHERE date = (SELECT MIN(date) FROM ranked_days WHERE day_rank = 1)\n    GROUP BY market_type\n),\nprior AS (\n    SELECT market_type, AVG(daily_contracts) AS prior_seven_day_avg\n    FROM (\n        SELECT market_type, date, SUM(contracts) AS daily_contracts\n        FROM sports_market_type_daily\n        WHERE date IN (SELECT date FROM ranked_days WHERE day_rank BETWEEN 2 AND 8)\n        GROUP BY market_type, date\n    )\n    GROUP BY market_type\n)\nSELECT\n    COALESCE(l.market_type, p.market_type) AS market_type,\n    COALESCE(l.latest_contracts, 0) AS latest_contracts,\n    p.prior_seven_day_avg,\n    (COALESCE(l.latest_contracts, 0) - p.prior_seven_day_avg)\n        / NULLIF(p.prior_seven_day_avg, 0) * 100 AS percent_change\nFROM latest l\nFULL OUTER JOIN prior p USING (market_type)\nORDER BY percent_change DESC NULLS LAST;"
+      "summary": "report_date            parlay_contracts    parlay_stake    parlay_share_pct    prior_seven_day_avg_parlay_contracts    prior_seven_day_avg_parlay_stake    prior_seven_day_avg_parlay_share_pct\n-------------------  ------------------  --------------  ------------------  --------------------------------------  ----------------------------------  --------------------------------------\n2026-08-24 00:00:00       22,905,339.07    2,472,977.53               20.61                           19,824,949.51                        2,421,205.92                                   15.04",
+      "sql": "WITH latest AS (\n    SELECT MAX(date) AS report_date\n    FROM polymarket_parlay_daily\n    WHERE COALESCE(complete, TRUE) = TRUE\n      AND date <= DATE '2026-08-25'\n),\ndaily AS (\n    SELECT\n        date,\n        SUM(contracts) AS parlay_contracts,\n        SUM(stake_usd) AS parlay_stake,\n        AVG(pct_of_venue) AS parlay_share_pct\n    FROM polymarket_parlay_daily\n    WHERE COALESCE(complete, TRUE) = TRUE\n      AND date <= DATE '2026-08-25'\n    GROUP BY date\n)\nSELECT\n    d.date AS report_date,\n    d.parlay_contracts,\n    d.parlay_stake,\n    d.parlay_share_pct,\n    AVG(p.parlay_contracts) AS prior_seven_day_avg_parlay_contracts,\n    AVG(p.parlay_stake) AS prior_seven_day_avg_parlay_stake,\n    AVG(p.parlay_share_pct) AS prior_seven_day_avg_parlay_share_pct\nFROM daily d\nCROSS JOIN latest l\nLEFT JOIN daily p\n    ON p.date >= l.report_date - INTERVAL 7 DAY\n   AND p.date < l.report_date\nWHERE d.date = l.report_date\nGROUP BY d.date, d.parlay_contracts, d.parlay_stake, d.parlay_share_pct;"
     },
     {
       "label": "Additional context 3",
       "source": "llm_generated",
-      "summary": "venue              report_date            latest_contracts    latest_parlay_contracts    latest_parlay_share_pct    prior_seven_day_avg_contracts    prior_seven_day_avg_parlay_contracts    prior_seven_day_avg_parlay_share_pct\n-----------------  -------------------  ------------------  -------------------------  -------------------------  -------------------------------  --------------------------------------  --------------------------------------\nNovig              2026-08-25 00:00:00        9,927,373.29               9,927,373.29                       5.45                     8,294,609.45                            8,294,609.45                                    4.94\nProphetX           2026-08-25 00:00:00        5,291,518.95               1,168,876.49                      22.09                     5,674,027.40                              772,925.23                                   13.88\nUnderdog Exchange  2026-08-25 00:00:00       12,631,632.80               6,982,432.72                      55.28                    16,306,348.92                            8,407,655.68                                   51.65",
-      "sql": "WITH venue_days AS (\n    SELECT\n        'ProphetX' AS venue,\n        date,\n        contracts,\n        contracts_parlay,\n        contracts_parlay * 100.0 / NULLIF(contracts, 0) AS parlay_share_pct\n    FROM prophetx_daily\n    WHERE date <= DATE '2026-08-25'\n      AND COALESCE(complete, TRUE) = TRUE\n    UNION ALL\n    SELECT\n        'Underdog Exchange' AS venue,\n        date,\n        contracts,\n        contracts_parlay,\n        contracts_parlay * 100.0 / NULLIF(contracts, 0) AS parlay_share_pct\n    FROM underdog_daily\n    WHERE date <= DATE '2026-08-25'\n    UNION ALL\n    SELECT\n        'Novig' AS venue,\n        date,\n        SUM(contracts) AS contracts,\n        SUM(contracts) AS contracts_parlay,\n        SUM(pct_of_day * contracts) / NULLIF(SUM(contracts), 0) AS parlay_share_pct\n    FROM novig_parlay_daily\n    WHERE date <= DATE '2026-08-25'\n    GROUP BY date\n),\nranked AS (\n    SELECT\n        *,\n        ROW_NUMBER() OVER (PARTITION BY venue ORDER BY date DESC) AS day_rank\n    FROM venue_days\n)\nSELECT\n    venue,\n    MAX(date) FILTER (WHERE day_rank = 1) AS report_date,\n    MAX(contracts) FILTER (WHERE day_rank = 1) AS latest_contracts,\n    MAX(contracts_parlay) FILTER (WHERE day_rank = 1) AS latest_parlay_contracts,\n    MAX(parlay_share_pct) FILTER (WHERE day_rank = 1) AS latest_parlay_share_pct,\n    AVG(contracts) FILTER (WHERE day_rank BETWEEN 2 AND 8) AS prior_seven_day_avg_contracts,\n    AVG(contracts_parlay) FILTER (WHERE day_rank BETWEEN 2 AND 8) AS prior_seven_day_avg_parlay_contracts,\n    AVG(parlay_share_pct) FILTER (WHERE day_rank BETWEEN 2 AND 8) AS prior_seven_day_avg_parlay_share_pct\nFROM ranked\nGROUP BY venue\nORDER BY venue;"
+      "summary": "report_date            total_contracts    parlay_contracts    parlay_share_pct    prior_seven_day_avg_total_contracts    prior_seven_day_avg_parlay_contracts    prior_seven_day_avg_parlay_share_pct\n-------------------  -----------------  ------------------  ------------------  -------------------------------------  --------------------------------------  --------------------------------------\n2026-08-25 00:00:00      25,712,632.31        9,927,373.29               38.61                          23,941,432.45                            8,294,609.45                                   34.18",
+      "sql": "WITH daily_parlays AS (\n    SELECT\n        date,\n        SUM(contracts) AS parlay_contracts\n    FROM novig_parlay_daily\n    WHERE date <= DATE '2026-08-25'\n    GROUP BY date\n),\ndaily AS (\n    SELECT\n        n.date,\n        n.contracts AS total_contracts,\n        COALESCE(p.parlay_contracts, 0) AS parlay_contracts,\n        COALESCE(p.parlay_contracts, 0) / NULLIF(n.contracts, 0) * 100 AS parlay_share_pct\n    FROM novig_daily n\n    LEFT JOIN daily_parlays p USING (date)\n    WHERE n.date <= DATE '2026-08-25'\n),\nlatest AS (\n    SELECT MAX(date) AS report_date\n    FROM daily\n)\nSELECT\n    d.date AS report_date,\n    d.total_contracts,\n    d.parlay_contracts,\n    d.parlay_share_pct,\n    AVG(p.total_contracts) AS prior_seven_day_avg_total_contracts,\n    AVG(p.parlay_contracts) AS prior_seven_day_avg_parlay_contracts,\n    AVG(p.parlay_share_pct) AS prior_seven_day_avg_parlay_share_pct\nFROM daily d\nCROSS JOIN latest l\nLEFT JOIN daily p\n    ON p.date >= l.report_date - INTERVAL 7 DAY\n   AND p.date < l.report_date\nWHERE d.date = l.report_date\nGROUP BY d.date, d.total_contracts, d.parlay_contracts, d.parlay_share_pct;"
     }
   ],
   "anchor": {
@@ -47,7 +47,7 @@
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 86.837
+        "approx_market_share_pct": 86.844
       },
       {
         "venue": "Polymarket US",
@@ -58,7 +58,7 @@
         "reporting_density": "regular",
         "days_behind_newest_venue": 1,
         "reporting_recency": "1 day behind — normal reporting lag",
-        "approx_market_share_pct": 7.196
+        "approx_market_share_pct": 7.197
       },
       {
         "venue": "ForecastEx",
@@ -107,13 +107,13 @@
       {
         "venue": "ProphetX",
         "report_date": "2026-08-25T00:00:00",
-        "reported_contract_volume": 5409834,
+        "reported_contract_volume": 5291518.95,
         "prior_seven_day_average": 5674027.401428572,
-        "percent_change_vs_prior_seven": -4.656188325104932,
+        "percent_change_vs_prior_seven": -6.74139238968543,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 0.35
+        "approx_market_share_pct": 0.343
       },
       {
         "venue": "Novig",
