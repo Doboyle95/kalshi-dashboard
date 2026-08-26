@@ -1,5 +1,5 @@
 ---
-title: Ask Data
+title: Ask Predict Charts
 ---
 
 <div class="page-hero">
