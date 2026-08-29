@@ -22,16 +22,34 @@ const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
+import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+```
+
+```js
+// Everything the charts need. Deliberately EXCLUDES daily_top_categories_fees.csv --
+// see the cell below. Splitting the loader out of this cell is what lets the two run
+// concurrently: both depend only on the DataAttachment cell above, so neither waits
+// on the other.
 const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
 const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
-const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
 const catLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
-import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+```
+
+```js
+// daily_top_categories_fees.csv is 10.6 MB -- over HALF this page's ~20.4 MB payload --
+// and only two things read it: the optional Fees metric view, and one freshness row.
+// While it shared a cell with the loads above, no chart on the page could paint until
+// it had fully landed, which is what put /volume at 10-20s to first chart and over the
+// render probe's budget whenever the box was under load (2026-08-28 render_broken).
+//
+// Its OWN cell, depending only on the DataAttachment cell, so it is fetched in parallel
+// and only its two consumers wait for it. Do NOT fold this back into the cell above.
+const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
 ```
 
 ```js
