@@ -1,31 +1,29 @@
 {
   "status": "ready",
-  "generated_at": "2026-08-29T01:53:32.504Z",
-  "data_through": "2026-08-27",
-  "service_through": "2026-08-28",
+  "generated_at": "2026-08-29T21:06:45.459Z",
+  "data_through": "2026-08-28",
+  "service_through": "2026-08-29",
   "title": "What changed in prediction markets",
-  "insights": "- **Kalshi’s pace eased, but same-game sports parlays surged:** 1.21B contracts traded Aug. 27, down 10.30% from the prior seven-day average of 1.34B, while same-game sports parlays reached 160.5M contracts, 20.22% above their 30-day average, with stake up 17.91%.\n\n- **DKeX broke out at small scale:** 10.0M contracts traded Aug. 27 versus a 30-day average of 966,293, a 936.92% jump, though it represented about 0.7% of the market.\n\n- **Rothera accelerated meaningfully:** Its 23.5M contracts were 35.70% above the prior 30-day average, giving Robinhood’s exchange about 1.6% of the market.\n\n- **Polymarket US kept gaining ground:** Its 141.9M contracts on Aug. 26 were 16.22% above the prior 30 reported-day average and represented roughly 9.8% of the market.",
+  "insights": "- **Kalshi had a busy day with a parlay mix shift:** 1.57B contracts traded Aug. 28, 16.18% above its prior seven-day average of 1.35B, while pending parlays reached 84.7M contracts versus an 11.8M 30-day average.\n\n- **Polymarket US suffered a sharp pullback:** 68.0M contracts traded Aug. 27, down 48.23% from its prior seven-day average of 131.4M, leaving it with about a 3.9% market share.\n\n- **Underdog expanded well beyond its recent range:** Its 18.4M contracts on Aug. 28 were 17.56% above the prior seven-day average and 86.34% above the 30-day average, for about a 1.1% market share.\n\n- **Crypto.com/Nadex also cooled materially:** Its 19.8M contracts on Aug. 28 were 40.61% below the prior seven-day average of 33.3M, representing roughly 1.1% of the market.",
   "coverage": {
     "venues_expected": 10,
     "venues_covered": 10,
     "venues_missing": [],
-    "degraded": true
+    "degraded": false
   },
-  "notes": [
-    "briefing checks unmet after retry: the Kalshi bullet is not backed by a query over a Kalshi depth table -- run one instead of satisfying the requirement with a general parlay, sports, or monthly-share phrase"
-  ],
+  "notes": [],
   "evidence": [
     {
       "label": "Additional context 2",
       "source": "llm_generated",
-      "summary": "platform           latest_date            latest_contracts    prior_30_reported_day_avg_contracts    prior_30_reported_day_high_contracts    prior_30_reported_day_low_contracts    latest_fees    prior_30_reported_day_avg_fees    percent_change_vs_prior_30_reported_days\n-----------------  -------------------  ------------------  -------------------------------------  --------------------------------------  -------------------------------------  -------------  --------------------------------  ------------------------------------------\nDKeX               2026-08-27 00:00:00       10,019,705.00                             966,292.63                            2,655,016.00                             315,621.00      98,832.93                          9,625.16                                      936.92\nRothera            2026-08-27 00:00:00       23,537,141.00                          17,344,733.00                           34,090,206.00                           4,563,661.00         nan                            56,913.79                                       35.70\nUnderdog Exchange  2026-08-27 00:00:00       12,817,612.18                           9,481,415.52                           25,842,716.60                           1,238,736.57     131,802.82                         96,120.26                                       35.19\nForecastEx         2026-08-27 00:00:00          989,643.00                             809,719.47                            1,130,484.00                             552,961.00       9,896.43                          8,097.19                                       22.22\nPolymarket_US      2026-08-26 00:00:00      141,851,675.89                         122,049,380.37                          155,188,036.73                          88,914,705.52   1,164,137.19                      1,122,110.94                                       16.22\nCrypto.com/Nadex   2026-08-27 00:00:00       28,857,306.00                          30,946,888.03                           45,469,278.00                          14,484,653.00     577,146.12                        618,937.76                                       -6.75\nNovig              2026-08-27 00:00:00       18,973,251.97                          21,571,430.42                           34,454,101.03                          15,826,632.35         nan                               nan                                         -12.04",
-      "sql": "WITH ranked AS (\n    SELECT\n        platform,\n        date,\n        contracts,\n        fees,\n        ROW_NUMBER() OVER (\n            PARTITION BY platform\n            ORDER BY date DESC\n        ) AS report_rank\n    FROM competitor_daily\n    WHERE platform <> 'Kalshi'\n      AND COALESCE(complete, TRUE)\n      AND date <= DATE '2026-08-27'\n)\nSELECT\n    platform,\n    MAX(date) FILTER (WHERE report_rank = 1) AS latest_date,\n    MAX(contracts) FILTER (WHERE report_rank = 1) AS latest_contracts,\n    AVG(contracts) FILTER (WHERE report_rank BETWEEN 2 AND 31) AS prior_30_reported_day_avg_contracts,\n    MAX(contracts) FILTER (WHERE report_rank BETWEEN 2 AND 31) AS prior_30_reported_day_high_contracts,\n    MIN(contracts) FILTER (WHERE report_rank BETWEEN 2 AND 31) AS prior_30_reported_day_low_contracts,\n    MAX(fees) FILTER (WHERE report_rank = 1) AS latest_fees,\n    AVG(fees) FILTER (WHERE report_rank BETWEEN 2 AND 31) AS prior_30_reported_day_avg_fees,\n    (MAX(contracts) FILTER (WHERE report_rank = 1) - AVG(contracts) FILTER (WHERE report_rank BETWEEN 2 AND 31))\n        / NULLIF(AVG(contracts) FILTER (WHERE report_rank BETWEEN 2 AND 31), 0) * 100 AS percent_change_vs_prior_30_reported_days\nFROM ranked\nGROUP BY platform\nORDER BY percent_change_vs_prior_30_reported_days DESC;"
+      "summary": "market_type             latest_contracts    prior_30_reported_day_avg    latest_share_pct\n--------------------  ------------------  ---------------------------  ------------------\nParlay (independent)      535,314,835.00               389,318,607.47               42.70\nMoneyline                 306,439,303.00               303,707,839.77               24.44\nParlay (correlated)       179,721,497.00               137,178,557.13               14.34\nParlay (pending)           84,657,490.00                11,752,976.63                6.75\nOver/Under                 49,373,976.00                43,082,776.83                3.94\nSpread                     27,151,427.00                19,079,479.00                2.17\nFutures/Award              18,701,280.00                20,589,379.43                1.49\nOther                      14,235,245.00                10,408,922.27                1.14\nEsports                    13,115,286.00                12,582,593.93                1.05\nGame Prop                  12,988,769.00                19,817,040.70                1.04",
+      "sql": "WITH ranked_types AS (\n    SELECT\n        date,\n        market_type,\n        contracts,\n        ROW_NUMBER() OVER (\n            PARTITION BY market_type\n            ORDER BY date DESC\n        ) AS rn\n    FROM sports_market_type_daily\n    WHERE date <= DATE '2026-08-28'\n),\nlatest_date AS (\n    SELECT MAX(date) AS date\n    FROM sports_market_type_daily\n    WHERE date <= DATE '2026-08-28'\n)\nSELECT\n    r.market_type,\n    SUM(r.contracts) FILTER (WHERE r.date = l.date) AS latest_contracts,\n    AVG(r.contracts) FILTER (WHERE r.rn BETWEEN 2 AND 31) AS prior_30_reported_day_avg,\n    SUM(r.contracts) FILTER (WHERE r.date = l.date)\n        / NULLIF(SUM(SUM(r.contracts) FILTER (WHERE r.date = l.date)) OVER (), 0) * 100\n        AS latest_share_pct\nFROM ranked_types r\nCROSS JOIN latest_date l\nGROUP BY r.market_type\nORDER BY latest_contracts DESC;"
     },
     {
       "label": "Additional context 3",
       "source": "llm_generated",
-      "summary": "latest_date          parlay_class                 sportmix         latest_contracts    prior_30_day_avg_contracts    latest_taker_yes_stake    prior_30_day_avg_taker_yes_stake    contracts_change_pct    stake_change_pct\n-------------------  ---------------------------  -------------  ------------------  ----------------------------  ------------------------  ----------------------------------  ----------------------  ------------------\n2026-08-27 00:00:00  unclassified (pending legs)  unknown             13,560,861.00                    104,715.63                690,677.34                           18,131.96               12,850.18            3,709.17\n2026-08-27 00:00:00  multi-game (independent)     all-nonsports           67,601.00                      5,575.80                 12,359.86                            1,299.83                1,112.40              850.89\n2026-08-27 00:00:00  same-game (correlated)       mixed                2,321,577.00                  1,593,471.47                 26,796.46                           31,845.61                   45.69              -15.86\n2026-08-27 00:00:00  multi-game (independent)     mixed                1,013,555.00                    796,504.30                 44,541.13                           55,378.09                   27.25              -19.57\n2026-08-27 00:00:00  same-game (correlated)       all-sports         160,484,314.00                133,488,888.90              6,704,818.89                        5,686,446.61                   20.22               17.91\n2026-08-27 00:00:00  same-game (correlated)       all-nonsports        1,762,620.00                  1,545,582.63                413,308.38                          311,582.62                   14.04               32.65\n2026-08-27 00:00:00  multi-game (independent)     all-sports         358,965,725.00                385,986,699.03             16,613,474.07                       20,789,782.58                   -7.00              -20.09",
-      "sql": "WITH ranked AS (\n    SELECT\n        date,\n        parlay_class,\n        sportmix,\n        SUM(contracts) AS contracts,\n        SUM(taker_yes_stake) AS taker_yes_stake,\n        ROW_NUMBER() OVER (PARTITION BY date ORDER BY date DESC) AS day_rank\n    FROM parlay_volume_by_type_daily\n    WHERE date <= DATE '2026-08-27'\n    GROUP BY date, parlay_class, sportmix\n),\nlatest_date AS (\n    SELECT MAX(date) AS date\n    FROM parlay_volume_by_type_daily\n    WHERE date <= DATE '2026-08-27'\n),\nlatest AS (\n    SELECT\n        parlay_class,\n        sportmix,\n        contracts,\n        taker_yes_stake\n    FROM ranked\n    WHERE date = (SELECT date FROM latest_date)\n),\nprior AS (\n    SELECT\n        parlay_class,\n        sportmix,\n        AVG(contracts) AS avg_contracts,\n        AVG(taker_yes_stake) AS avg_taker_yes_stake\n    FROM ranked\n    WHERE date < (SELECT date FROM latest_date)\n      AND date >= (SELECT date - INTERVAL 30 DAY FROM latest_date)\n    GROUP BY parlay_class, sportmix\n)\nSELECT\n    (SELECT date FROM latest_date) AS latest_date,\n    l.parlay_class,\n    l.sportmix,\n    l.contracts AS latest_contracts,\n    p.avg_contracts AS prior_30_day_avg_contracts,\n    l.taker_yes_stake AS latest_taker_yes_stake,\n    p.avg_taker_yes_stake AS prior_30_day_avg_taker_yes_stake,\n    (l.contracts - p.avg_contracts) / NULLIF(p.avg_contracts, 0) * 100 AS contracts_change_pct,\n    (l.taker_yes_stake - p.avg_taker_yes_stake) / NULLIF(p.avg_taker_yes_stake, 0) * 100 AS stake_change_pct\nFROM latest l\nLEFT JOIN prior p USING (parlay_class, sportmix)\nORDER BY contracts_change_pct DESC NULLS LAST;"
+      "summary": "platform           latest_report_date      latest_contracts    latest_fees    prior_30_reported_day_avg_contracts    prior_30_reported_day_avg_fees    contracts_change_pct    fees_change_pct\n-----------------  --------------------  ------------------  -------------  -------------------------------------  --------------------------------  ----------------------  -----------------\nPolymarket_US      2026-08-27 00:00:00        68,033,288.11     531,829.60                         123,121,030.26                      1,125,553.57                  -44.74             -52.75\nNovig              2026-08-28 00:00:00        28,162,072.11         nan                             21,463,172.98                            nan                      31.21             nan\nCrypto.com/Nadex   2026-08-28 00:00:00        19,764,413.00     395,288.26                          30,992,726.50                        619,854.53                  -36.23             -36.23\nUnderdog Exchange  2026-08-28 00:00:00        18,364,586.31     156,037.04                           9,855,305.28                         99,753.59                   86.34              56.42\nRothera            2026-08-28 00:00:00        15,601,449.00         nan                             17,912,225.23                         58,254.01                  -12.90             nan\nDKeX               2026-08-28 00:00:00        13,404,753.00     130,496.11                           1,283,298.97                         12,749.86                  944.55             923.51\nForecastEx         2026-08-28 00:00:00           691,766.00       6,917.66                             818,964.37                          8,189.64                  -15.53             -15.53",
+      "sql": "WITH ranked_venues AS (\n    SELECT\n        platform,\n        date,\n        contracts,\n        fees,\n        ROW_NUMBER() OVER (\n            PARTITION BY platform\n            ORDER BY date DESC\n        ) AS rn\n    FROM competitor_daily\n    WHERE platform <> 'Kalshi'\n      AND COALESCE(complete, TRUE)\n      AND date <= DATE '2026-08-29'\n)\nSELECT\n    platform,\n    MAX(date) FILTER (WHERE rn = 1) AS latest_report_date,\n    MAX(contracts) FILTER (WHERE rn = 1) AS latest_contracts,\n    MAX(fees) FILTER (WHERE rn = 1) AS latest_fees,\n    AVG(contracts) FILTER (WHERE rn BETWEEN 2 AND 31) AS prior_30_reported_day_avg_contracts,\n    AVG(fees) FILTER (WHERE rn BETWEEN 2 AND 31) AS prior_30_reported_day_avg_fees,\n    (\n        MAX(contracts) FILTER (WHERE rn = 1)\n        - AVG(contracts) FILTER (WHERE rn BETWEEN 2 AND 31)\n    ) / NULLIF(AVG(contracts) FILTER (WHERE rn BETWEEN 2 AND 31), 0) * 100\n        AS contracts_change_pct,\n    (\n        MAX(fees) FILTER (WHERE rn = 1)\n        - AVG(fees) FILTER (WHERE rn BETWEEN 2 AND 31)\n    ) / NULLIF(AVG(fees) FILTER (WHERE rn BETWEEN 2 AND 31), 0) * 100\n        AS fees_change_pct\nFROM ranked_venues\nGROUP BY platform\nORDER BY latest_contracts DESC;"
     }
   ],
   "anchor": {
@@ -34,102 +32,102 @@
     "rows": [
       {
         "venue": "Kalshi",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 1205468479,
-        "prior_seven_day_average": 1343842850.857143,
-        "percent_change_vs_prior_seven": -10.296916173560296,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 1573684642,
+        "prior_seven_day_average": 1354498363.2857144,
+        "percent_change_vs_prior_seven": 16.182099931268134,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 82.908
+        "approx_market_share_pct": 89.976
       },
       {
         "venue": "Polymarket US",
-        "report_date": "2026-08-26T00:00:00",
-        "reported_contract_volume": 141851675.89,
-        "prior_seven_day_average": 129319918.18857145,
-        "percent_change_vs_prior_seven": 9.690508528744195,
+        "report_date": "2026-08-27T00:00:00",
+        "reported_contract_volume": 68033288.11,
+        "prior_seven_day_average": 131416851.75285716,
+        "percent_change_vs_prior_seven": -48.23092533220659,
         "reporting_density": "regular",
         "days_behind_newest_venue": 1,
         "reporting_recency": "1 day behind — normal reporting lag",
-        "approx_market_share_pct": 9.756
+        "approx_market_share_pct": 3.89
       },
       {
         "venue": "ForecastEx",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 989643,
-        "prior_seven_day_average": 777799.7142857143,
-        "percent_change_vs_prior_seven": 27.236225704817873,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 691766,
+        "prior_seven_day_average": 804086.4285714285,
+        "percent_change_vs_prior_seven": -13.968700948103477,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 0.068
+        "approx_market_share_pct": 0.04
       },
       {
         "venue": "DKeX",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 10019705,
-        "prior_seven_day_average": 1232014.4285714286,
-        "percent_change_vs_prior_seven": 713.2782187963707,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 13404753,
+        "prior_seven_day_average": 2535422.5714285714,
+        "percent_change_vs_prior_seven": 428.6989691997243,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 0.689
+        "approx_market_share_pct": 0.766
       },
       {
         "venue": "Underdog Exchange",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 12817612.18,
-        "prior_seven_day_average": 15758265.808571428,
-        "percent_change_vs_prior_seven": -18.661023137278924,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 18364586.31,
+        "prior_seven_day_average": 15622113.575714286,
+        "percent_change_vs_prior_seven": 17.555068467490123,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 0.882
+        "approx_market_share_pct": 1.05
       },
       {
         "venue": "Crypto.com/Nadex",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 28857306,
-        "prior_seven_day_average": 33678840.571428575,
-        "percent_change_vs_prior_seven": -14.316213057283573,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 19764413,
+        "prior_seven_day_average": 33279604.85714286,
+        "percent_change_vs_prior_seven": -40.61103464166303,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 1.985
+        "approx_market_share_pct": 1.13
       },
       {
         "venue": "ProphetX",
         "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 4912324.3,
+        "reported_contract_volume": 4737265.62,
         "prior_seven_day_average": 5368863.912857143,
-        "percent_change_vs_prior_seven": -8.503467777677143,
+        "percent_change_vs_prior_seven": -11.764095777220511,
         "reporting_density": "regular",
-        "days_behind_newest_venue": 0,
-        "reporting_recency": "current",
-        "approx_market_share_pct": 0.338
+        "days_behind_newest_venue": 1,
+        "reporting_recency": "1 day behind — normal reporting lag",
+        "approx_market_share_pct": 0.271
       },
       {
         "venue": "Novig",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 18973251.97,
-        "prior_seven_day_average": 25110342.825714286,
-        "percent_change_vs_prior_seven": -24.44049011321976,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 28162072.11,
+        "prior_seven_day_average": 25040769.405714292,
+        "percent_change_vs_prior_seven": 12.464883381632145,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 1.305
+        "approx_market_share_pct": 1.61
       },
       {
         "venue": "Rothera",
-        "report_date": "2026-08-27T00:00:00",
-        "reported_contract_volume": 23537141,
-        "prior_seven_day_average": 18549926.285714287,
-        "percent_change_vs_prior_seven": 26.88536136192885,
+        "report_date": "2026-08-28T00:00:00",
+        "reported_contract_volume": 15601449,
+        "prior_seven_day_average": 18328229.14285714,
+        "percent_change_vs_prior_seven": -14.877488281074989,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 1.619
+        "approx_market_share_pct": 0.892
       },
       {
         "venue": "CME",
@@ -138,9 +136,9 @@
         "prior_seven_day_average": 3564217.4285714286,
         "percent_change_vs_prior_seven": 84.0091164872818,
         "reporting_density": "sparse bulletin",
-        "days_behind_newest_venue": 2,
-        "reporting_recency": "2 days behind — normal reporting lag",
-        "approx_market_share_pct": 0.451
+        "days_behind_newest_venue": 3,
+        "reporting_recency": "3 days behind — normal reporting lag",
+        "approx_market_share_pct": 0.375
       }
     ],
     "columns": [
