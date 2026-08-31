@@ -52,17 +52,21 @@ const WX = new Set(["Weather", "Climate and Weather"]);
 const CRYPTO = new Set(["Crypto"]);
 
 // ⚠ "Other" is NOT one thing. At Underdog it is the combo/parlay bucket -- verified
-// to three decimals against underdog_daily.contracts_parlay. At Nadex and DKeX it is
-// a genuine residual, and Nadex carries a SEPARATE explicit "Parlays" value. Mapping
-// "Other" globally would move a third of Underdog's book into the wrong bucket.
+// to three decimals against underdog_daily.contracts_parlay. At Nadex it is a genuine
+// residual, and Nadex carries a SEPARATE explicit "Parlays" value. Mapping "Other"
+// globally would move a third of Underdog's book into the wrong bucket.
 //
 // ⚠ And the parlay VALUE itself is spelled differently on every venue that has one --
 // "Parlays" at Nadex, "Parlay" at Novig, "Parlay (multi-event)" at ProphetX, "Other"
 // at Underdog. A shared string match would have to guess; each venue naming its own
 // value is what keeps a rename on one feed from silently re-bucketing another's book.
 // Novig was missing here until 2026-08-24 and 34.6% of its contracts -- every parlay
-// it has ever published -- were being drawn as grey unclassified "Other".
+// it has ever published -- were being drawn as grey unclassified "Other". DKeX was the
+// same story a week later: it launched combos on 2026-08-26 and by 08-28 they were 44%
+// of the day's contracts, all landing in the grey bucket until the feed learned the
+// COMBO prefix on 08-31. When a venue ships a parlay book, it needs a line HERE too.
 const PARLAY_VALUE = {
+  "DKeX": new Set(["Parlays"]),
   "Nadex": new Set(["Parlays"]),
   "Novig": new Set(["Parlay"]),
   "ProphetX": new Set(["Parlay (multi-event)"]),

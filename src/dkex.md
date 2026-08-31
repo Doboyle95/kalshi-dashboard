@@ -225,7 +225,7 @@ Plot.plot({
 display(leagueGrand
   ? html`<p class="section-intro">Share of the selected window: ${leagueTotals
       .map(t => `${t.label} ${(100 * t.value / leagueGrand).toFixed(1)}%`)
-      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - today NWSL, NASCAR, INDYCAR and club friendlies.</p>`
+      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - college football, WNBA, ten soccer leagues, NASCAR, INDYCAR, and the multi-leg combos DKeX launched on Aug 26, which are not a league at all.</p>`
   : html`<p class="section-intro">League columns arrive with the next competitor data refresh (~6h); this chart fills in then.</p>`);
 ```
 
