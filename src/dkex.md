@@ -173,7 +173,67 @@ Plot.plot({
 })
 ```
 
+```js
+// ── Bands: one palette and one tooltip for BOTH charts on this page ─────────
+// The league chart and the category chart draw overlapping series (Parlays,
+// Soccer, Football...). Two palettes meant one band was two colours on one
+// screen. Sport colours match categories.md so a sport keeps its colour across
+// the site; MLB/NPB/KBO keep the accents this page already used for them.
+const BAND_COLOR = {
+  "MLB": DKEX, "NPB (Japan)": "var(--accent-kalshi)", "KBO (Korea)": "#7C6CF0",
+  "Other baseball": "#C5B8F7", "Baseball": "#880e4f",
+  "Parlays": "#7b1fa2",
+  "Football": "var(--cat-football)",
+  "Basketball (pro)": "var(--cat-basketball)", "Basketball (college)": "#90caf9",
+  "Basketball": "var(--cat-basketball)",
+  "Soccer": "#827717", "Golf": "#33691e", "Tennis": "#4a148c", "Hockey": "#006064",
+  "Combat sports": "#6d4c41", "Cricket": "#00695c", "Esports": "#5c6bc0",
+  "Motorsport": "#546e7a",
+  "Other": "var(--pc-unclassified)"
+};
+const bandColor = b => BAND_COLOR[b] ?? "var(--pc-unclassified)";
+
+// Fixed stacking order so a band does not jump when the window changes. Anything
+// unlisted is APPENDED rather than dropped -- a category this page has never seen
+// must still be drawn, which is the whole lesson of the "Other" spike.
+const BAND_ORDER = ["MLB", "NPB (Japan)", "KBO (Korea)", "Other baseball", "Baseball",
+  "Basketball (pro)", "Basketball (college)", "Basketball", "Football", "Soccer",
+  "Golf", "Tennis", "Hockey", "Cricket", "Esports", "Combat sports", "Motorsport",
+  "Parlays", "Other"];
+
+// One row per (date, band). Plot.areaY does not aggregate; duplicates render as
+// sails. Every band series on this page goes through here.
+const tidyBands = rows => [...d3.rollup(rows, rs => d3.sum(rs, r => r.value),
+                                        r => +r.date, r => r.band)]
+  .flatMap(([t, m]) => [...m].map(([band, value]) => ({date: new Date(t), band, value})));
+
+const bandsPresent = tidy => {
+  const seen = new Set(tidy.filter(r => r.value > 0).map(r => r.band));
+  return [...BAND_ORDER.filter(b => seen.has(b)),
+          ...[...seen].filter(b => !BAND_ORDER.includes(b)).sort()];
+};
+
+// Per-date wide rows: pointerX needs ONE row per x, or the tip quotes a single
+// series instead of the whole stack.
+const wideByDate = (tidy, bands) => {
+  const m = d3.rollup(tidy, rs => d3.sum(rs, r => r.value), r => +r.date, r => r.band);
+  return [...m].sort((a, b) => a[0] - b[0]).map(([t, byBand]) => {
+    const o = {date: new Date(t)};
+    for (const b of bands) o[b] = byBand.get(b) ?? 0;
+    o.total = d3.sum(bands, b => o[b]);
+    return o;
+  });
+};
+
+const bandTip = (d, bands) => [`${fmtDate(d.date)}  ${fmtCount(d.total)} contracts`]
+  .concat(bands.filter(b => d[b] > 0).sort((a, b) => d[b] - d[a])
+    .map(b => `${b}: ${fmtCount(d[b])}  (${(100 * d[b] / d.total).toFixed(1)}%)`))
+  .join("\n");
+```
+
 ## League mix
+
+<p class="section-intro">Baseball split by its three leagues, everything else by category &mdash; the whole book, with nothing left unnamed.</p>
 
 ```js
 const brushLeague = view(makeBrush(split, DKEX));
@@ -182,17 +242,48 @@ const brushLeague = view(makeBrush(split, DKEX));
 ```js
 const [sL, eL] = brushLeague;
 const splitFLeague = split.filter(d => d.date >= sL && d.date <= eL);
-const LEAGUE_SERIES = [
-  {key: "contracts_mlb", label: "MLB", color: DKEX},
-  {key: "contracts_npb", label: "NPB (Japan)", color: "var(--accent-kalshi)"},
-  {key: "contracts_kbo", label: "KBO (Korea)", color: "#7C6CF0"},
-  {key: "contracts_other_leagues", label: "Other leagues", color: "#94A3B8"}
-];
-const leagueOrder = LEAGUE_SERIES.map(s => s.label);
-const tidyLeague = splitFLeague.flatMap(d => LEAGUE_SERIES.map(s => ({
-  date: d.date, league: s.label, value: d[s.key] || 0
-})));
-const leagueTotals = LEAGUE_SERIES.map(s => ({label: s.label, value: d3.sum(splitFLeague, d => d[s.key] || 0)}));
+const catFLeague = catDaily.filter(d => d.date >= sL && d.date <= eL);
+
+// The chart used to be MLB / NPB / KBO / "Other leagues", and that residual grew
+// into the biggest thing on the page it could not name: by 2026-08-29 it held the
+// COMBO parlay book (21% of contracts), college football, WNBA and eleven soccer
+// leagues. Rather than widen dkex_sports_split_daily.csv with a hand-kept league
+// list -- the same kind of list that had just gone stale in CATEGORY_MAP -- the
+// bands now come from the CATEGORY feed, which classifies itself, with only the
+// baseball split taken from the league columns.
+//
+// That works because "Baseball" IS exactly MLB + NPB + KBO: those three prefixes
+// are the only ones CATEGORY_MAP sends to Baseball. Verified across all 82
+// published days -- 0 mismatches, and the spliced bands reconcile to
+// contracts_total to the contract on every day.
+//
+// Should a FOURTH baseball league appear, the identity breaks in the safe
+// direction: the remainder surfaces as its own "Other baseball" band instead of
+// silently unbalancing the stack.
+const leagueRows = (() => {
+  const bal = new Map(splitFLeague.map(d => [+d.date, d]));
+  const out = [];
+  for (const r of catFLeague) {
+    const t = +r.date, v = +r.contracts || 0;
+    if (r.category !== "Baseball") { out.push({date: t, band: r.category, value: v}); continue; }
+    const b = bal.get(t);
+    if (!b) { out.push({date: t, band: "Baseball", value: v}); continue; }
+    const mlb = +b.contracts_mlb || 0, npb = +b.contracts_npb || 0, kbo = +b.contracts_kbo || 0;
+    out.push({date: t, band: "MLB", value: mlb},
+             {date: t, band: "NPB (Japan)", value: npb},
+             {date: t, band: "KBO (Korea)", value: kbo},
+             {date: t, band: "Other baseball", value: Math.max(0, v - mlb - npb - kbo)});
+  }
+  return out;
+})();
+
+// ⚠ Re-aggregate after the splice. Plot.areaY does NOT sum rows sharing an
+// (x, fill) -- it gives each its own sub-band and draws the path through all of
+// them, which renders as sails. One row per (date, band), always.
+const tidyLeague = tidyBands(leagueRows);
+const leagueOrder = bandsPresent(tidyLeague);
+const leagueWide = wideByDate(tidyLeague, leagueOrder);
+const leagueTotals = leagueOrder.map(b => ({label: b, value: d3.sum(tidyLeague.filter(r => r.band === b), r => r.value)}));
 const leagueGrand = d3.sum(leagueTotals, t => t.value);
 ```
 
@@ -204,18 +295,15 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: leagueOrder, range: LEAGUE_SERIES.map(s => s.color)},
+  color: {legend: true, columns: 4, domain: leagueOrder, range: leagueOrder.map(bandColor)},
   marks: [
     Plot.areaY(tidyLeague, {
-      x: "date", y: "value", fill: "league",
+      x: "date", y: "value", fill: "band",
       order: leagueOrder.slice().reverse(),
       curve: "monotone-x", fillOpacity: 0.85
     }),
-    Plot.ruleX(splitFLeague, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(splitFLeague, Plot.pointerX({
-      x: "date",
-      title: d => [fmtDate(d.date)].concat(LEAGUE_SERIES.map(s => `${s.label}: ${fmtCount(d[s.key] || 0)}`)).join("\n")
-    })),
+    Plot.ruleX(leagueWide, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(leagueWide, Plot.pointerX({x: "date", title: d => bandTip(d, leagueOrder)})),
     Plot.ruleY([0])
   ]
 })
@@ -224,8 +312,9 @@ Plot.plot({
 ```js
 display(leagueGrand
   ? html`<p class="section-intro">Share of the selected window: ${leagueTotals
+      .filter(t => t.value > 0)
       .map(t => `${t.label} ${(100 * t.value / leagueGrand).toFixed(1)}%`)
-      .join(" / ")}. "Other leagues" is everything outside MLB, NPB and KBO - college football, WNBA, ten soccer leagues, NASCAR, INDYCAR, and the multi-leg combos DKeX launched on Aug 26, which are not a league at all.</p>`
+      .join(" / ")}. Baseball is split by league; everything else is its own category, so no volume is left unnamed.</p>`
   : html`<p class="section-intro">League columns arrive with the next competitor data refresh (~6h); this chart fills in then.</p>`);
 ```
 
@@ -241,8 +330,9 @@ const brushCats = view(makeBrush(split, DKEX));
 const [sC, eC] = brushCats;
 const catDailyF = catDaily.filter(d => d.date >= sC && d.date <= eC);
 const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => d.category);
-const topCats = [...catTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(d => d[0]);
-const catFiltered = catDailyF.filter(d => topCats.includes(d.category));
+const catFiltered = tidyBands(catDailyF.map(d => ({date: +d.date, band: d.category, value: +d.contracts || 0})));
+const topCats = bandsPresent(catFiltered);
+const catWide = wideByDate(catFiltered, topCats);
 ```
 
 ```js
@@ -253,13 +343,18 @@ Plot.plot({
   marginLeft: 70,
   x: {type: "utc", label: null},
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
+  // Was scheme:"tableau10" over a domain sorted by all-time volume, so a
+  // category's colour moved whenever the ranking did, and disagreed with the
+  // league chart directly above it. The shared map pins each band.
+  color: {legend: true, columns: 4, domain: topCats, range: topCats.map(bandColor)},
   marks: [
     Plot.areaY(catFiltered, {
-      x: "date", y: "contracts", fill: "category",
+      x: "date", y: "value", fill: "band",
       order: topCats.slice().reverse(),
       curve: "monotone-x", fillOpacity: 0.85
     }),
+    Plot.ruleX(catWide, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(catWide, Plot.pointerX({x: "date", title: d => bandTip(d, topCats)})),
     Plot.ruleY([0])
   ]
 })
