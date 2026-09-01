@@ -427,9 +427,17 @@ const VENUE_BUCKET = {
 };
 // "Other" means a different thing at each venue, so it is never mapped globally:
 // Underdog's "Other" is its combo/parlay bucket (verified against
-// underdog_daily.contracts_parlay), while at Nadex and DKeX it is a real residual.
+// underdog_daily.contracts_parlay), while at Nadex it is a real residual.
+// DKeX has no "Other" at all -- since 2026-08-31 every prefix it publishes is
+// mapped, and its seven category values are Baseball, Basketball (pro), Football,
+// Golf, Motorsport, Parlays, Soccer.
 const VENUE_OVERRIDE = {
   "Crypto.com/Nadex": {Parlays: "Parlay"},
+  // DKeX combos, launched 2026-08-26. Without this line productBucket falls through
+  // to VENUE_BUCKET, which has no "Parlays" key, and 21% of the venue rendered as
+  // grey Unclassified on the product-mix chart -- its August sports share read 79.4%
+  // against 100% in June and July. Same plural spelling as Nadex above.
+  "DKeX": {Parlays: "Parlay"},
   Novig: {Parlay: "Parlay"},
   ProphetX: {"Parlay (multi-event)": "Parlay"},
   "Underdog Exchange": {Other: "Parlay"}

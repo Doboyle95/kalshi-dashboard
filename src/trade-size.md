@@ -855,7 +855,11 @@ const PRICE_SPECS = [
   {name: "Kalshi", color: "var(--accent-kalshi)", rows: priceFiles[0], keep: d => d.leg == null || d.leg === "taker"},
   {name: "Polymarket US", color: "var(--accent-polymarket)", rows: priceFiles[1], keep: d => (d.period == null || d.period === "all") && (d.group == null || d.group === "LEG_PRICE")},
   {name: "ForecastEx", color: "var(--accent-forecastex)", rows: priceFiles[2], keep: d => d.leg == null || d.leg === "yes"},
-  {name: "DKeX", color: "var(--accent-dkex)", rows: priceFiles[3], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "ALL")},
+  // SINGLE, not ALL. DKeX combos are 49.3% of their own price distribution below
+  // 10c, and leaving them in this series put the venue's 0-9c share at 12.69%
+  // against 5.32% for its single markets -- while the note below said only
+  // Underdog parlays were excluded. Same group name Underdog uses on the next line.
+  {name: "DKeX", color: "var(--accent-dkex)", rows: priceFiles[3], keep: d => (d.bin_width == null || +d.bin_width === 5) && d.group === "SINGLE"},
   {name: "Underdog Exchange", color: "var(--accent-underdog)", rows: priceFiles[4], keep: d => d.group == null || d.group === "SINGLE"},
   {name: "ProphetX", color: "#DB2777", rows: priceFiles[5], keep: d => (d.bin_width == null || +d.bin_width === 5) && (d.group == null || d.group === "HOME")}
 ];
@@ -916,4 +920,4 @@ display(Plot.plot({
 }));
 ```
 
-<p class="chart-note">Coverage differs by venue. Kalshi uses the taker's side; ForecastEx uses the yes leg; DKeX, Polymarket US, and Underdog use the named leg; ProphetX uses its published home-side price. Underdog parlays are excluded because a combination price is not a single-market probability.</p>
+<p class="chart-note">Coverage differs by venue. Kalshi uses the taker's side; ForecastEx uses the yes leg; DKeX, Polymarket US, and Underdog use the named leg; ProphetX uses its published home-side price. DKeX and Underdog parlays are both excluded, because a combination price is the price of a whole basket rather than one market&rsquo;s probability; DKeX&rsquo;s are on <a href="./dkex-parlays">DKeX &middot; Parlays</a>.</p>

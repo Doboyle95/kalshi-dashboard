@@ -13,7 +13,7 @@
     volume: {depth: "Deepest", best: "Market structure and participant economics", available: "Activity · Products · Behavior · Economics · Outcomes · Parlays", limit: "The depth is not yet available for most competitors."},
     polymarket: {depth: "Moderate", best: "Sports mix, products, and settled outcomes", available: "Activity · Products · Top markets · Calibration", limit: "Daily totals cannot support trade-by-trade analysis."},
     forecastex: {depth: "Moderate", best: "Concentration and category evolution", available: "Activity · Categories · Top products", limit: "Public files are better for mix than microstructure."},
-    dkex: {depth: "Moderate", best: "A young exchange with public trade prints", available: "Activity · Products · Open interest · Settlements", limit: "Short history and very small scale make trends noisy."},
+    dkex: {depth: "Moderate", best: "A young exchange with public trade prints", available: "Activity · Products · Parlays · Open interest · Settlements", limit: "Short history and very small scale make trends noisy."},
     underdog: {depth: "Moderate", best: "Sports products, parlays, and bet types", available: "Activity · Product mix · Bet types · Top markets", limit: "Outcome and participant-identity evidence is limited."},
     nadex: {depth: "Moderate", best: "Crypto.com/Nadex products and parlay outcomes", available: "Activity · Products · Parlay P&L · Top events", limit: "The source does not expose every market-structure field."},
     prophetx: {depth: "Trade-level", best: "Trade size, prices, parlays, and calibration", available: "Activity · Price distribution · Parlays · Outcomes", limit: "History and scale are narrower than Kalshi's."},

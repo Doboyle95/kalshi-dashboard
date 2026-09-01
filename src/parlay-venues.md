@@ -18,13 +18,16 @@ const nvParlay = await DataAttachment("data/novig_parlay_daily.csv").csv({typed:
 const pmParlay = await DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
 const udDaily = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
 const nadexCats = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
+const dkexCats = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const dkParlay = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
 ```
 
 ```js
 // Venue colour is the site-wide mapping and follows the entity, never the rank.
 const C = {
   "Kalshi": "var(--accent-kalshi)", "ProphetX": "#DB2777", "Novig": "#6366F1",
-  "Polymarket US": "var(--accent-polymarket)", "Underdog": "var(--accent-underdog)", "Crypto.com/Nadex": "var(--accent-nadex)"
+  "Polymarket US": "var(--accent-polymarket)", "Underdog": "var(--accent-underdog)", "Crypto.com/Nadex": "var(--accent-nadex)",
+  "DKeX": "var(--accent-dkex)"
 };
 const fmtPct = d => `${d.toFixed(1)}%`;
 const fmtCount = d => d >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : d >= 1e6 ? `${(d / 1e6).toFixed(1)}M` : d >= 1e3 ? `${(d / 1e3).toFixed(0)}k` : d3.format(",.0f")(d);
@@ -95,7 +98,20 @@ const ndShare = Array.from(ndByDay, ([date, o]) => o.tot > 0
   .filter(Boolean).sort((a, b) => a.date - b.date);
 const ndLaunch = (ndShare.find(d => d.parlay > 0) ?? {}).date ?? null;
 
-const series = [...kShare, ...pxShare, ...nvShare, ...pmShare, ...udShare, ...ndShare];
+// DKeX, launched 2026-08-26 -- the newest parlay book on the page and the only one
+// whose share is read off a CATEGORY feed rather than a dedicated parlay file. Its
+// combos are a category value ("Parlays") in dkex_categories_daily.csv exactly as
+// Nadex's are, so the same two-line shape works.
+const dkByDay = d3.rollup(dkexCats, v => ({
+  parlay: d3.sum(v.filter(x => x.category === "Parlays"), x => x.contracts),
+  tot: d3.sum(v, x => x.contracts)
+}), d => iso(d.date));
+const dkShare = Array.from(dkByDay, ([date, o]) => o.tot > 0
+  ? {venue: "DKeX", date: new Date(date), share: 100 * o.parlay / o.tot,
+     parlay: o.parlay, tot: o.tot} : null)
+  .filter(Boolean).sort((a, b) => a.date - b.date);
+
+const series = [...kShare, ...pxShare, ...nvShare, ...pmShare, ...udShare, ...ndShare, ...dkShare];
 
 // Headline is volume-weighted over each venue's own coverage, not a mean of daily shares:
 // a mean of percentages lets a near-zero day count as much as the venue's busiest.
@@ -270,9 +286,14 @@ const kDist = (() => {
   return BUCKETS.map(b => ({venue: "Kalshi", bucket: b, pct: tot > 0 ? 100 * (agg.get(b) ?? 0) / tot : 0, contracts: agg.get(b) ?? 0}));
 })();
 
+// DKeX publishes a real leg count per combo, recovered from the settlement
+// report's market name, so it belongs in this chart rather than in the
+// no-breakdown note below. dist() aggregates internally, which matters because
+// dkex_parlay_daily.csv is at date x legs x sport-set grain, not one row per leg.
 const legDist = [...kDist, ...dist("ProphetX", pxLegs, "legs", "contracts"),
-                 ...dist("Novig", nvParlay.filter(d => d.legs > 1), "legs", "contracts")];
-const legVenues = ["Kalshi", "ProphetX", "Novig"];
+                 ...dist("Novig", nvParlay.filter(d => d.legs > 1), "legs", "contracts"),
+                 ...dist("DKeX", dkParlay, "legs", "contracts")];
+const legVenues = ["Kalshi", "ProphetX", "Novig", "DKeX"];
 ```
 
 ```js
@@ -303,4 +324,4 @@ Plot.plot({
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Crypto.com/Nadex, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Crypto.com/Nadex, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero. DKeX publishes none either, but its settlement report names every leg, so the count is recovered rather than reported.</div>

@@ -348,8 +348,8 @@ export const LB_VENUES = {
     topHeader: "Busiest outcome",
     topIsCode: false,
     winnerIsCode: false,
-    coverage: "Since 2026-06-11.",
-    nameNote: "DKeX publishes an English name per <em>outcome</em> in its daily settlement report, never per market. Each name here is <strong>composed</strong> from that published text: the two clubs' own published outcome names, the market type, and the published settlement date — which is not the same as the report's maturity, since DKeX stamps a placeholder maturity on races. Five race markets have no club pair to compose from and fall back to a ticker decode.",
+    coverage: "Since 2026-06-11. COMBO parlay tickets are excluded (~16.8% of the venue's contracts): a bespoke basket keyed by a 20-digit id has no event to rank it against. They are on the Parlays tab.",
+    nameNote: "DKeX publishes an English name per <em>outcome</em> in its daily settlement report, never per market. Each name here is <strong>composed</strong> from that published text: the two clubs' own published outcome names, the market type, and the published settlement date — which is not the same as the report's maturity, since DKeX stamps a placeholder maturity on races. 64 markets have no club pair to compose from and fall back to a ticker decode &mdash; 47 of them total-goals markets on the soccer leagues DKeX added in August, plus 8 races.",
     map: r => {
       const nm = str(r.market_name);
       const src = str(r.name_source);

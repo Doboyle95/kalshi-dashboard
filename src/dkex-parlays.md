@@ -19,6 +19,7 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const rows = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
+const pnlBins = await DataAttachment("data/dkex_parlay_pnl.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -60,6 +61,15 @@ const withRates = o => ({
 });
 
 const ALL = withRates(total(rows));
+// NET of DKeX's taker fee, and the clustered CI, both from dkex_parlay_pnl.csv.
+// The gross figure alone is NOT comparable to the numbers other venues publish:
+// Kalshi's -0.01823 and Polymarket's -0.01961 are both NET, and DKeX charges
+// $106,580 of taker fees on this book -- nearly as much again as the gross loss.
+const netPnl = d3.sum(pnlBins, d => +d.pnl || 0);
+const netContracts = d3.sum(pnlBins, d => +d.contracts || 0);
+const netPerContract = netContracts ? netPnl / netContracts : null;
+const ciLo = pnlBins.length ? +pnlBins[0].ci_lo_pct : null;
+const ciHi = pnlBins.length ? +pnlBins[0].ci_hi_pct : null;
 // ⚠ r.date is a Date OBJECT (remote-data.js autotypes ISO columns), so it is
 // keyed on epoch ms and rebuilt with new Date(t). String(date).slice(0,10) gives
 // "Wed Aug 26" here, which survives being used as a key and then silently fails
@@ -87,7 +97,7 @@ const settledShare = ALL.contracts ? ALL.settled_contracts / ALL.contracts : 0;
   <div class="kpi-card" data-accent="negative">
     <div class="kpi-label">Buyer P&amp;L</div>
     <div class="kpi-value" title="${ALL.pnl.toFixed(2)}">${fmtUSD(ALL.pnl)}</div>
-    <div class="kpi-meta">${pct(ALL.pnlPctStake, 2)} of stake · ${ALL.pnlPerContract.toFixed(5)}/contract</div>
+    <div class="kpi-meta">${pct(ALL.pnlPctStake, 2)} of stake gross · ${netPerContract != null ? netPerContract.toFixed(5) : "—"}/contract after fees</div>
   </div>
 </div>
 
@@ -97,6 +107,8 @@ const settledShare = ALL.contracts ? ALL.settled_contracts / ALL.contracts : 0;
   <p><strong>Stake is taker-YES.</strong> A parlay is quoted by RFQ, so the buyer lifts the quote and is the taker; taker-NO flow is a cash-out counterparty exiting rather than a new stake. Same basis as every other venue's parlay series here.</p>
   <p><strong>Legs and sports come from the settlement report's market name</strong>, which spells the whole combo out &mdash; <em>"Yes - DET Tigers -0.5 - Spread - 1st 5 Innings / Yes - Over 3.5 - Total Runs - 1st 5 Innings"</em>. Each leg is matched back to the single-leg market of the same name to recover its sport, which resolves <strong>99.0%</strong> of legs; a combo with any unresolved leg is counted but left out of the sport split rather than guessed.</p>
   <p><strong>Everything is dated by TRADE date, not settlement date.</strong> A row says how much of the stake placed that day has resolved so far, so the newest days are the least settled. ${pct(settledShare, 1)} of all parlay contracts have resolved. Voided ($0.50) and pro-rated settlements are excluded from P&amp;L and reported separately, so the drop is auditable.</p>
+  <p><strong>Two figures, and the fee one is the comparable.</strong> Buyers are down ${fmtUSD(ALL.pnl)} before DKeX&rsquo;s taker fee and ${fmtUSD(netPnl)} after it &mdash; ${netPerContract != null ? netPerContract.toFixed(5) : "—"} per contract, which is the basis Kalshi (&minus;0.01823) and Polymarket US (&minus;0.01961) publish on. Quoting the gross figure against theirs understates DKeX by nearly half. The clustered 95% interval on the gross return per contract runs ${ciLo != null ? ciLo.toFixed(2) : "—"}% to ${ciHi != null ? ciHi.toFixed(2) : "—"}% &mdash; it <strong>includes zero</strong>, so over six days the gross edge is a point estimate rather than a distinguishable one. The interval is clustered on the combo, because every print of one combo shares a single settlement.</p>
+  <p>⚠ <strong>This page covers the combos that reached the tape, which is about two thirds of them.</strong> DKeX&rsquo;s daily market report accounts for 16,594,228 combo contracts; its time-and-sales report carries 11,304,853 of them, and 26,558 settled combos with report volume appear in no tape file at all. That is DKeX&rsquo;s own publication, not a gap in collection &mdash; the files were re-downloaded from the source and match. P&amp;L needs an executed price and only the tape carries one, so every level on this page (stake, contracts) is a floor rather than the venue total. The rates &mdash; price paid, win rate, return on stake &mdash; are measured on 11.2M contracts and are not affected by the missing third unless it trades differently, which cannot be checked.</p>
   <p><strong>The settlement-as-mark trap does not apply here, and it was checked.</strong> On Polymarket a settlement price is a running mark until the contract matured on a prior day, and treating same-day rows as final reports parlay buyers <em>profiting</em>. Every one of DKeX's combo tickers appears in the settlement reports exactly once, so no price ever moves, and 99.6% land on $0.00 or $1.00.</p>
 </details>
 

@@ -12,7 +12,7 @@ title: Venues
   <a href="./volume"><strong>Kalshi</strong><span>Activity · Products · Trading behavior · Economics · Outcomes · Parlays</span></a>
   <a href="./polymarket"><strong>Polymarket US</strong><span>Activity · Products · Top markets · Calibration summary</span></a>
   <a href="./forecastex"><strong>ForecastEx</strong><span>Activity · Category evolution · Top products</span></a>
-  <a href="./dkex"><strong>DKeX / DraftKings</strong><span>Activity · Products · Settlements · Top markets</span></a>
+  <a href="./dkex"><strong>DKeX / DraftKings</strong><span>Activity · Products · Parlays · Settlements · Top markets</span></a>
   <a href="./underdog"><strong>Underdog Exchange</strong><span>Activity · Product and bet-type mix · Top markets</span></a>
   <a href="./nadex"><strong>Crypto.com / Nadex</strong><span>Activity · Products · Parlay P&amp;L · Top events</span></a>
   <a href="./prophetx"><strong>ProphetX</strong><span>Activity · Probability distribution · Parlays · Calibration summary</span></a>
