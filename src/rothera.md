@@ -15,6 +15,9 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const catDaily  = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
 const split     = await DataAttachment("data/rothera_sports_split_daily.csv").csv({typed: true});
+// Open interest is published in the shared competitor file, not in Rothera's own
+// exports -- it is the same series /compare-scale draws this venue's line from.
+const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
@@ -23,7 +26,8 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "rothera_categories_daily.csv"), meta: "Rothera daily clearing files", tone: "competitor"},
-    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "rothera_sports_split_daily.csv"), meta: "Derived from mapped product prefixes", tone: "competitor"}
+    {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "rothera_sports_split_daily.csv"), meta: "Derived from mapped product prefixes", tone: "competitor"},
+    {label: "Open interest", date: latestDate(oiRows), updatedAt: fileUpdatedAt(freshness, "competitor_daily.csv"), meta: "Contracts outstanding at each day's close", tone: "competitor"}
   ],
   note: "Rothera updates when the daily clearing CSVs are downloaded and rebuilt; this is end-of-day market data, not a trade-level feed."
 }));
@@ -42,6 +46,15 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```js
 const totalContracts = d3.sum(split, d => d.contracts_total);
 const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_total ? d : best, split[0]);
+// OPEN INTEREST IS A STOCK, NOT A FLOW -- the contracts outstanding at a day's
+// close. It is never summed over a range anywhere on this site; the KPI below
+// reads the LAST value, and the chart draws the path.
+const oiRows = competitorDaily
+  .filter(d => d.platform === "Rothera" && d.open_interest != null && d.open_interest !== "" && +d.open_interest > 0)
+  .map(d => ({date: d.date instanceof Date ? d.date : new Date(`${String(d.date).slice(0, 10)}T00:00:00Z`), oi: +d.open_interest}))
+  .sort((a, b) => a.date - b.date);
+const latestOi = oiRows[oiRows.length - 1];
+const peakOi = oiRows.reduce((best, d) => (best && best.oi >= d.oi ? best : d), oiRows[0]);
 ```
 
 <div class="kpi-grid">
@@ -55,12 +68,17 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
     <div class="kpi-value">${fmtCount(peakDay?.contracts_total)}</div>
     <div class="kpi-meta">${fmtDate(peakDay?.date)} · contracts</div>
   </div>
+  <div class="kpi-card" data-accent="positive">
+    <div class="kpi-label">Latest open interest</div>
+    <div class="kpi-value">${fmtCount(latestOi?.oi)}</div>
+    <div class="kpi-meta">${fmtDate(latestOi?.date)} · contracts outstanding</div>
+  </div>
 </div>
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
   <p>Rothera is Robinhood's own regulated event-contract exchange — distinct from the Robinhood brokerage business covered on the <a href="./robinhood">Robinhood (FCM)</a> page, which estimates how much Robinhood trades <em>on Kalshi</em>. This page reads Rothera's daily clearing exports directly.</p>
-  <p>Volume is contract count (one settled contract per unit), summed by day. Categories come from each market's product prefix (e.g. <code>MWC*</code> = World Cup soccer, <code>MLB*</code> = baseball, <code>EC*</code> = economics); the sports split sums sport prefixes against everything else. The exports carry no fee field, so no fee series is shown here; the Comparison page instead derives Rothera's exchange fee from the venue's published schedule, which depends on price, so it must stand a daily price in for each trade's price and assume a mix of retail and professional participants (professionals pay six times retail). Because this is end-of-day market data rather than trade prints, the page is best for scale and category mix rather than microstructure.</p>
+  <p>Volume is contract count (one settled contract per unit), summed by day. Categories come from each market's product prefix (e.g. <code>MWC*</code> = World Cup soccer, <code>MLB*</code> = baseball, <code>EC*</code> = economics); the sports split sums sport prefixes against everything else. The exports carry no fee field, so fees are computed per fill from Rothera's trade tape against its published schedule &mdash; see <a href="./rothera-economics">Economics</a>, which is why that series starts later than this one. Because <em>this</em> page is end-of-day market data rather than trade prints, it is best for scale and category mix; <a href="./rothera-behavior">Trading behavior</a> covers microstructure over the shorter window the tape reaches.</p>
 </details>
 
 ```js
@@ -153,150 +171,48 @@ Plot.plot({
 })
 ```
 
-## Sports vs. non-sports
+## Open interest
 
-<p class="section-intro">Sports against everything else — and on Rothera, sports carries the day overwhelmingly.</p>
-
-```js
-const brushSports = view(makeBrush(split, "var(--accent-rothera)"));
-```
-
-```js
-const [sS, eS] = brushSports;
-const splitFSports = split.filter(d => d.date >= sS && d.date <= eS);
-const tidySplit = splitFSports.flatMap(d => [
-  {date: d.date, category: "Sports",     value: d.contracts_sports    || 0},
-  {date: d.date, category: "Non-sports", value: d.contracts_nonsports || 0}
-]);
-```
+<p class="section-intro">Contracts still outstanding at each day's close — the standing capital on the book, as opposed to the volume that passed through it.</p>
 
 ```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
-  height: 240,
+  height: 260,
   marginLeft: 70,
   x: {type: "utc", label: null},
-  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, domain: ["Sports", "Non-sports"], range: ["#1a9641", "var(--accent-kalshi)"]},
+  y: {label: "Open interest (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
-    Plot.areaY(tidySplit, {
-      x: "date", y: "value", fill: "category",
-      order: ["Non-sports", "Sports"],
-      curve: "monotone-x", fillOpacity: 0.85
-    }),
-    Plot.ruleX(splitFSports, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(splitFSports, Plot.pointerX({
-      x: "date",
-      title: d => `${fmtDate(d.date)}\nSports: ${fmtCount(d.contracts_sports||0)}\nNon-sports: ${fmtCount(d.contracts_nonsports||0)}`
+    Plot.areaY(oiRows, {x: "date", y: "oi", fill: "var(--accent-rothera)", fillOpacity: 0.2, curve: "monotone-x"}),
+    Plot.line(oiRows, {x: "date", y: "oi", stroke: "var(--accent-rothera)", strokeWidth: 1.8, curve: "monotone-x"}),
+    Plot.tip(oiRows, Plot.pointerX({
+      x: "date", y: "oi",
+      title: d => `${fmtDate(d.date)}\n${fmtCount(d.oi)} contracts outstanding`
     })),
     Plot.ruleY([0])
   ]
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Non-sports is Economics (<code>EC*</code> — CPI, unemployment) plus any non-sport product; everything with a sport prefix counts as sports.</p>
-
-## Volume by category
-
-<p class="section-intro">Where the action concentrates, category by category, over time.</p>
-
 ```js
-const brushCats = view(makeBrush(split, "var(--accent-rothera)"));
-```
-
-```js
-const [sC, eC] = brushCats;
-const catDailyFCats = catDaily.filter(d => d.date >= sC && d.date <= eC);
-const catTotals = d3.rollup(catDaily, v => d3.sum(v, d => d.contracts), d => d.category);
-const topCats = [...catTotals.entries()].sort((a,b) => b[1] - a[1]).slice(0, 8).map(d => d[0]);
-const catFiltered = catDailyFCats.filter(d => topCats.includes(d.category));
-```
-
-```js
-// Per-date pivot for single combined tooltip (avoids overlapping bubbles)
-const catTipData = Array.from(
-  d3.rollup(catFiltered, rs => {
-    const o = {date: rs[0].date};
-    for (const r of rs) o[r.category] = r.contracts || 0;
-    return o;
-  }, d => d.date.getTime())
-).map(([, v]) => v).sort((a, b) => a.date - b.date);
-```
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 280,
-  marginLeft: 70,
-  x: {type: "utc", label: null},
-  y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  color: {legend: true, columns: 4, scheme: "tableau10", domain: topCats},
-  marks: [
-    Plot.areaY(catFiltered, {
-      x: "date", y: "contracts", fill: "category",
-      order: topCats.slice().reverse(),
-      curve: "monotone-x", fillOpacity: 0.85
-    }),
-    Plot.ruleX(catTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(catTipData, Plot.pointerX({
-      x: "date",
-      title: d => [fmtDate(d.date), ...topCats.map(c => d[c] > 0 ? `${c}: ${fmtCount(d[c])}` : null).filter(Boolean)].join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
+display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Peaked at ${fmtCount(peakOi?.oi)} on ${fmtDate(peakOi?.date)}. This is a <strong>stock, not a flow</strong> — it is never summed over a date range, unlike the volume above it. <a href="./compare-scale">Scale across venues</a> puts the same series beside every other exchange.</div>`);
 ```
 
 ## Why there is no calibration curve on this page
 
-<p class="section-intro"><a href="./compare-accuracy">Accuracy &amp; Outcomes</a> asks the sharpest question available: do prices actually predict outcomes? Rothera carries <code>settlement_price</code> and <code>contracts_delivered</code>, so it looks like it should support the same chart. It does not. The measurement is published here so the gap is a documented result rather than a silent omission.</p>
+<p class="section-intro"><a href="./compare-accuracy">Accuracy &amp; Outcomes</a> asks the sharpest question available: do prices actually predict outcomes? Rothera carries <code>settlement_price</code> and <code>contracts_delivered</code>, and since 2026-07-28 a tape of the prices actually paid, so it looks like it should support the same chart. It is closer than it was, and still not there &mdash; for a different reason than before. The measurement is published here so the gap is a documented result rather than a silent omission.</p>
 
 <details class="surface-card compact-details">
   <summary>What was measured, and what it ruled out</summary>
-  <p><strong>The outcome side is fine.</strong> 2,229 contracts carry a clean binary settlement (a delivery row with <code>settlement_price</code> of exactly 0 or 1), spanning 2026-05-23 to 2026-08-06.</p>
-  <p><strong>The price side is not.</strong> <code>mkt_eod</code> is end-of-day market data with no trade prints. The <code>trades_eod</code> tape starts 2026-07-27 — anything earlier is permanently 403 — so a full-history x-axis would have to be a daily OHLC-derived proxy rather than a traded price.</p>
-  <p><strong>The proxy turns out to be the smaller problem.</strong> Against the 10 sessions where real prints and daily bars overlap (3,494 contract-days, with the tape's quantity matching the bar's volume on all 3,494), the best proxy — OHLC/4 — sits 0.46¢ from the true volume-weighted traded price on average and drops 6.8% of observations into the wrong 5-cent bin. The daily close and the daily settlement mark are worse: 1.50¢ and 1.56¢, about 10% misbinned. Usable, if that were the only obstacle.</p>
-  <p><strong>The binding constraint is independent events, and it is not close.</strong> Trades cluster on games: thousands of prints on one match share one outcome, so they are one observation. Counting events instead of prints:</p>
-  <ul>
-    <li><strong>Real prints:</strong> 298,529 prints land on a settled contract, but they are <strong>70 baseball games plus one inflation release — 71 independent events</strong>. Soccer is about 92% of Rothera's all-time volume and that World Cup settled before the tape begins, so it contributes zero usable prints. Per 5-cent bin the effective event count is 22–51 — an order of magnitude short of what the comparable DKeX measurement rests on (424–654 independent games per decile), and the one large block is a single tournament.</li>
-    <li><strong>Daily proxy:</strong> 307 events across 77 days, but <strong>94.4% of the weight is the one World Cup and 25.8% of all weight is a single cluster</strong> — the tournament-winner market, where 48 team contracts resolve off one tournament. The curve that falls out is incoherent (−25.9¢ at 40¢, +20.3¢ at 45¢, +24.6¢ at 70¢, −13.2¢ at 90¢), and about half its bins would be flagged "significant" because the distortion is systematic rather than random. Clustering cannot rescue a biased axis.</li>
-  </ul>
-  <p><strong>One more trap.</strong> On the delivery day the daily close is 0.01 or 0.99 — the outcome itself. Any proxy curve built without excluding settlement-day bars measures its own leakage and will look beautifully calibrated at both ends.</p>
-  <p><strong>What would change the answer.</strong> The comparable DKeX measurement rests on 424–654 independent games per decile. Rothera currently offers 22–51 effective events per 5-cent bin, an order of magnitude short, and its one large block is a single tournament. Continuous <code>trades_eod</code> collection across a broader set of leagues — months of it, not weeks — is the prerequisite. Until then a curve here would imply precision the sample cannot carry.</p>
+  <p><strong>The outcome side is fine.</strong> 3,063 contracts carry a clean binary settlement (a delivery row with <code>settlement_price</code> of exactly 0 or 1), spanning 2026-05-23 to 2026-08-31.</p>
+  <p><strong>The price side used to be the problem and no longer is.</strong> <code>mkt_eod</code> is end-of-day market data with no trade prints, so a full-history axis would have to be an OHLC-derived proxy. But the <code>trades_eod</code> tape now runs from 2026-07-28 to the present, and <strong>92.3% of its 1,657,858 prints land on a contract that has since settled</strong> — over that window the x-axis is the price actually paid, not a proxy.</p>
+  <p><strong>The event count no longer blocks it either — this is what changed.</strong> Measured at ten sessions of tape, the prints were <strong>71 independent events</strong> and 22–51 per 5-cent bin, with 94.4% of the weight on a single World Cup. Re-measured on 35 sessions: <strong>409 independent settled events, 361–405 in every one of the 20 bins, and the three largest events are only 4.6% of settled contracts.</strong> The concentration that made the old curve incoherent is gone, and a curve rebuilt on real prints comes out monotone — 2.16% realised at the bottom band against 95.73% at the top, with a volume-weighted mean error of −1.36¢ and only two bins beyond two standard errors.</p>
+  <p><strong>What still blocks it is breadth, not size.</strong> 399 of those 409 events are MLB games; the rest are three PGA Tour events, three unemployment-claims releases, two inflation releases and two tennis tournaments. A curve drawn on that would be a one-league, one-month measurement wearing a venue's name, and it would say nothing about the soccer that is most of what Rothera has ever traded. The prerequisite is unchanged: continuous tape collection across more leagues, months of it. The counting argument that used to sit here is retired; the breadth argument is what the page now rests on.</p>
+  <p><strong>One trap survives regardless.</strong> On the delivery day the daily close is 0.01 or 0.99 — the outcome itself. Any proxy curve built without excluding settlement-day bars measures its own leakage and will look beautifully calibrated at both ends.</p>
 </details>
 
-## Category breakdown (all time)
-
-<p class="section-intro">Every category ranked by all-time volume.</p>
-
-```js
-const catBar = [...catTotals.entries()]
-  .sort((a,b) => b[1] - a[1])
-  .map(([category, contracts]) => ({category, contracts}));
-```
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: catBar.length * 28 + 40,
-  marginLeft: 160,
-  x: {label: "Contracts (all time)", grid: true, tickFormat: d => fmtAxisNum(d)},
-  y: {label: null},
-  marks: [
-    Plot.barX(catBar, {
-      x: "contracts", y: "category",
-      sort: {y: "x", reverse: true},
-      fill: "var(--accent-rothera)", fillOpacity: 0.7,
-      tip: true,
-      title: d => `${d.category}: ${fmtCount(d.contracts)}`
-    }),
-    Plot.ruleX([0])
-  ]
-})
-```
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Measured 2026-09-01. The numbers above move every week the tape grows; re-run before citing them.</div>
 
 ## Individual markets
 

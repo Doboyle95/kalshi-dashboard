@@ -90,7 +90,12 @@ const VENUES = [
   //   Nadex      no Trading behavior -- no trade-size or volume-at-price series
   //   ProphetX   no Economics -- publishes no fees at all
   //   Novig      no Economics, no volume-at-price -- same
-  //   Rothera    Products only -- end-of-day market data, no tape
+  //   Rothera    no Outcomes -- settled outcomes exist and the tape now carries
+  //              enough independent events, but 399 of 409 are MLB; the breadth
+  //              precondition on /rothera is not met yet. It gained Trading
+  //              behavior and Economics on 2026-09-01: the "no tape" that stood
+  //              here was stale, a fill-level feed had been collected since
+  //              2026-07-28 and read only to bill fees.
   //   CME        Activity only -- a combined FanDuel/DraftKings bulletin
   // /polymarket-calibration is Polymarket's Outcomes module rather than an
   // orphaned page. Every built page has an intentional home in SITE_MAP below.
@@ -153,7 +158,9 @@ const VENUES = [
   ]},
   {name: "Rothera", accent: "rothera", tabs: [
     ["Activity", "/rothera"],
-    ["Products", "/rothera-products"]
+    ["Products", "/rothera-products"],
+    ["Trading behavior", "/rothera-behavior"],
+    ["Economics", "/rothera-economics"]
   ]},
   {name: "CME", accent: "cme", tabs: [["Activity", "/cme"]]}
 ];
