@@ -143,8 +143,14 @@ if (rows.length) display(realizedRate({rows, width, color: ACCENT}));
 // happened. It is the exact mirror of the failure that helper's own comment warns
 // about: ForecastEx has 98 distinct rates that are really two levels, and Rothera has
 // three apparent levels that are really one continuous distribution too narrow for the
-// grid to resolve. A contiguity guard fixes Rothera and breaks DKeX (0.95/1.00, also
-// adjacent, genuinely a posted flat rate), so the helper is left alone.
+// grid to resolve.
+//
+// A contiguity guard, or a spread gate, was considered and rejected 2026-09-01: either
+// one also reclassifies DKeX (0.95/1.00, likewise adjacent) as a FLAT 1.00c rate, and
+// that is wrong too -- DKeX's filed schedule is BANDED, $0.0100 at 3-98c but $0.0050 at
+// 1c/99c and $0.0085 at 2c, so its sub-1.00c days are the posted schedule working as
+// filed rather than noise around one level. dkex-economics.md now states what it knows
+// for the same reason this page does, and the helper is left alone.
 //
 // None of that heuristic is needed here anyway: this venue's fee is not reported, it is
 // COMPUTED by us from a published schedule with a fixed coefficient. Whether the
