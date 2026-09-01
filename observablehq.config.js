@@ -119,7 +119,8 @@ const VENUES = [
     ["Products", "/dkex-products"],
     ["Trading behavior", "/dkex-behavior"],
     ["Economics", "/dkex-economics"],
-    ["Outcomes", "/dkex-outcomes"]
+    ["Outcomes", "/dkex-outcomes"],
+    ["Parlays", "/dkex-parlays"]
   ]},
   {name: "Underdog Exchange", accent: "underdog", tabs: [
     ["Activity", "/underdog"],
