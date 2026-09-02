@@ -44,7 +44,10 @@ const tradeCell = (value, index, data) => html`<button type="button" class="insp
 // venue did. Stating that span once, from the data, keeps every chart below honest
 // about what window it describes -- and it is a much shorter window than the Activity
 // and Products pages, which read end-of-day market data back to 2026-05-21.
-const tapeDays = Array.from(new Set(size.map(d => String(d.date).slice(0, 10)))).sort();
+// ISO day, not String(date).slice(0, 10): the typed loader hands back Date objects, and
+// String(Date) starts "Fri Aug 07 2026", so the old key was blank-dated and miscounted.
+const isoDay = d => d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+const tapeDays = Array.from(new Set(size.map(d => isoDay(d.date)))).sort();
 const tapeFirst = tapeDays[0];
 const tapeLast = tapeDays[tapeDays.length - 1];
 const tapePrints = d3.sum(size, d => +d.trade_count || 0);

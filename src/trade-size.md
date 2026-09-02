@@ -222,16 +222,19 @@ const selectedSegmentKey = segmentOptions.includes(rawSegmentKey) ? rawSegmentKe
 ```js
 const [selectedSegmentType, selectedSegment] = selectedSegmentKey.split("|");
 const selectedRowsAllTime = platformRows.filter(d => d.segment_type === selectedSegmentType && d.segment === selectedSegment);
-const selectedTotalContracts = d3.sum(selectedRowsAllTime, d => d.contracts);
-const selectedTotalTrades = d3.sum(selectedRowsAllTime, d => d.trade_count);
-const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
+// The cards follow the brush like every chart beneath them. selectedRows is the
+// brushed subset (defined with the brush below); selectedRowsAllTime feeds the brush
+// itself so the date extent is the segment's full history.
+const selectedTotalContracts = d3.sum(selectedRows, d => d.contracts);
+const selectedTotalTrades = d3.sum(selectedRows, d => d.trade_count);
+const selectedMaxTrade = d3.max(selectedRows, d => d.max_trade_size);
 ```
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Selected contracts</div>
     <div class="kpi-value" title="${(selectedTotalContracts ?? 0).toLocaleString()} contracts">${fmtCount(selectedTotalContracts)}</div>
-    <div class="kpi-meta">${optionLabel(selectedSegmentKey)}</div>
+    <div class="kpi-meta">${optionLabel(selectedSegmentKey)} &middot; ${dateWindowLabel}</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Trades</div>
@@ -241,7 +244,7 @@ const selectedMaxTrade = d3.max(selectedRowsAllTime, d => d.max_trade_size);
   <div class="kpi-card" data-accent="warning">
     <div class="kpi-label">Largest trade</div>
     <div class="kpi-value" title="${(selectedMaxTrade ?? 0).toLocaleString()} contracts">${fmtCount(selectedMaxTrade)}</div>
-    <div class="kpi-meta">Single print in selected segment</div>
+    <div class="kpi-meta">Single print in the selected segment and window</div>
   </div>
 </div>
 
