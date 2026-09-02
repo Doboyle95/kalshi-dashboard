@@ -294,13 +294,13 @@ const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
   : 0;
 ```
 
-<div class="chart-note"><strong>Maker fees are ${(100 * makerAllTime / (splitTotal || 1)).toFixed(2)}% of all-time fee revenue</strong> (${fmtUSD(makerAllTime)} of ${fmtUSD(splitTotal)}), and ${makerShare2026.toFixed(2)}% in 2026, spread across roughly 95 report tickers. The two bands add to the daily total on the chart above them, so this decomposes the headline rather than restating it.</div>
+<div class="chart-note"><strong>Maker fees are ${(100 * makerAllTime / (splitTotal || 1)).toFixed(2)}% of all-time fee revenue</strong> (${fmtUSD(makerAllTime)} of ${fmtUSD(splitTotal)}), and ${makerShare2026.toFixed(2)}% in 2026, spread across a small set of report tickers. The two bands add to the daily total on the chart above them, so this decomposes the headline rather than restating it.</div>
 
 <div class="chart-note"><strong>This page reports total fee revenue — everything Kalshi collects, from both sides.</strong> The Kalshi series on <a href="./compare-fees">Fees &amp; Economics</a> answers a different question: what <em>one trader</em> pays to execute. That number is the taker band alone, ${fmtUSD(takerAllTime)} against ${fmtUSD(splitTotal)} here, because a like-for-like comparison against venues that bill both sides has to count one side at each of them. The gap between the two pages is this maker band, and both figures are correct.</div>
 
 ## Cumulative fee revenue
 
-<p class="section-intro">Reported non-sports and sports fees, plus a non-negative parlay residual. The source components sometimes exceed the headline fee total, so treat the bands as an attribution view rather than an exact decomposition until the producer is reconciled.</p>
+<p class="section-intro">Reported non-sports and sports fees, plus the parlay residual. The published components are mutually exclusive and add up to the headline fee total, so the bands are an exact decomposition of the chart above.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> watch the slope, not just the height — a steeper stretch means Kalshi was collecting fees faster in that period.</div>
 
@@ -335,8 +335,9 @@ const cumFeesSplit = fs2.flatMap(d => {
   const ns = d.fees_nonsports || 0;
   nsCum += ns;
   sCum  += s;
-  // Keep the residual non-negative. The published components sometimes exceed fees_total;
-  // the cause is a producer-side arithmetic issue, not assumed to be a refresh race here.
+  // Keep the residual non-negative as a guard only. Since the producer made the components
+  // mutually exclusive (KalshiData f7063f0, 2026-08-24) they never exceed fees_total --
+  // 0 of 1,890 dates on 2026-09-02 -- so this clamps nothing in practice.
   pCum  += Math.max(0, (feesTotalByDate.get(+d.date) ?? (s + ns)) - s - ns);
   return [
     {date: d.date, category: BAND_NONSPORT, cumul: nsCum, y0: 0,            y1: nsCum},
