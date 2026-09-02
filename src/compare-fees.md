@@ -5,7 +5,7 @@ title: Fees & Economics
 <div class="page-hero">
   <div class="page-eyebrow">Compare</div>
   <h1>Fees & Economics</h1>
-  <p class="page-lead">What one side pays to trade, how that cost changes with price, and which realized fee series can be measured from public venue files.</p>
+  <p class="page-lead">What one side pays to trade, including a broker charge where public data can support it, how that cost changes with price, and which realized fee series can be measured from public venue files.</p>
 </div>
 
 ```js
@@ -26,9 +26,9 @@ const fmtUsd = d => d == null ? "—"
   : "$" + d.toFixed(0);
 ```
 
-## Fee revenue by day
+## Fees by day
 
-<p class="section-intro">What each venue actually collected, in dollars, day by day.</p>
+<p class="section-intro">Modeled one-side customer cost or exchange revenue, in dollars, day by day. Use the measure toggle to keep those two questions separate.</p>
 
 ```js
 // PARTIAL DAYS. Kalshi's newest row is a still-filling day and prints far below a real
@@ -65,9 +65,9 @@ const rotheraUncovered = d3.sum(rotheraRows.filter(d => d.date < rotheraFeeStart
 
 ```js
 // Customer cost and exchange revenue are DIFFERENT QUESTIONS and the ratio between them
-// is not a constant: Kalshi keeps 1.12x what one trader pays, ForecastEx/Crypto.com/
-// Underdog 2.00x because they charge both sides, and Polymarket 0.77x because it pays
-// makers a rebate. Switching measures genuinely reorders the field.
+// is not a constant: some exchanges charge both sides, Polymarket rebates makers,
+// and DraftKings' introducing-broker commission is customer cost but not DKeX
+// exchange revenue. Switching measures genuinely reorders the field.
 const feeMeasure = view(Inputs.radio(["Fee cost (one side)", "Exchange revenue (all charged sides)"], {
   label: "Measure",
   value: "Fee cost (one side)"
@@ -139,9 +139,9 @@ Plot.plot({
 
 </div>
 
-<p class="chart-note">Every venue here is read from one file on one lineage, so the bars are comparable across the row. Kalshi's own <a href="./fees">fee revenue page</a> counts both charged sides and will therefore print a larger all-time number than "fee cost" does here — that gap is the maker side, and it is real rather than a discrepancy. <strong>Two venues are absent rather than zero, and a third is mostly absent.</strong> Novig publishes its straight-book fee as a bounded range rather than a point estimate, so it has no single defensible daily number to rank against the others. ProphetX charges on a trader's net gains per market rather than per contract, so a daily fee cannot be derived from its tape at all. Rothera's fee estimate only starts ${fmtDate(rotheraFeeStart)}, so the ${(100 * rotheraUncovered).toFixed(0)}% of its contracts traded before that carry no fee and are not drawn.</p>
+<p class="chart-note">Every venue here is read from one file on one lineage. For DKeX, "fee cost" adds DraftKings Predictions' introducing-broker commission to the DKeX taker fee from the retail launch on June 26, 2026; "exchange revenue" remains DKeX's filed taker-plus-maker charge and excludes the broker. Before that launch, the public DKeX tape carries exchange fees only. Crypto.com/Nadex remains the standard direct-member exchange benchmark: Crypto.com's app changed to a 1–1.75¢ taker range on June 30, but the daily bulletin has neither prices nor member roles needed to reconstruct a retail point. <strong>Two venues are absent rather than zero, and a third is mostly absent.</strong> Novig publishes its straight-book fee as a bounded range rather than a point estimate, so it has no single defensible daily number to rank against the others. ProphetX charges on a trader's net gains per market rather than per contract, so a daily fee cannot be derived from its tape at all. Rothera's fee estimate only starts ${fmtDate(rotheraFeeStart)}, so the ${(100 * rotheraUncovered).toFixed(0)}% of its contracts traded before that carry no fee and are not drawn.</p>
 
-## Cumulative fee revenue
+## Cumulative fees
 
 <p class="section-intro">The same series, accumulated over the window you pick below. Kalshi is roughly an order of magnitude above the field, so untick it — or switch to a log scale — to read the competitors against each other.</p>
 
@@ -240,9 +240,36 @@ Plot.plot({
 
 ## Published fee schedules
 
-<p class="section-intro">Fee per contract for one side of a $1 binary at each price, before order-level rounding and broker commissions.</p>
+<p class="section-intro">Published fee per contract for one side of a $1 binary at each price, before order-level rounding. The current DraftKings-on-DKeX line includes both its broker commission and DKeX's exchange fee.</p>
 
 ```js
+const dkBrokerFeeCents = p => {
+  const c = Math.round(p * 100);
+  if (c === 1) return 0.08;
+  if (c === 2) return 0.16;
+  if (c === 3) return 0.24;
+  if (c === 4) return 0.31;
+  if (c === 5) return 0.39;
+  if (c === 6) return 0.47;
+  if (c === 7) return 0.54;
+  if (c === 8) return 0.61;
+  if (c === 9) return 0.69;
+  if (c === 10) return 0.76;
+  if (c <= 13) return 0.90;
+  if (c <= 16) return 1.10;
+  if (c <= 19) return 1.30;
+  if (c <= 22) return 1.49;
+  if (c <= 25) return 1.67;
+  if (c <= 29) return 1.86;
+  if (c <= 94) return 2.00;
+  if (c <= 96) return 1.50;
+  if (c <= 98) return 0.88;
+  return 0.50;
+};
+const dkexExchangeFeeCents = p => {
+  const c = Math.round(p * 100);
+  return (c === 1 || c === 99) ? 0.50 : c === 2 ? 0.85 : 1.00;
+};
 const feeCurves = [
   {name: "Kalshi", f: p => 7 * p * (1 - p)},
   {name: "Underdog Exchange", f: p => 7 * p * (1 - p), dash: "5,4"},
@@ -250,8 +277,11 @@ const feeCurves = [
   {name: "Novig · parlay", f: p => 10 * p * (1 - p), color: "#6366F1"},
   {name: "Novig · live straight", f: p => 3 * p * (1 - p), color: "#A5B4FC", dash: "5,4"},
   {name: "Rothera", f: p => 2 * p * (1 - p)},
-  {name: "DKeX", f: p => { const c = Math.round(p * 100); return (c === 1 || c === 99) ? 0.5 : c === 2 ? 0.85 : 1; }, curve: "step"},
-  {name: "Crypto.com/Nadex", f: () => 2},
+  {name: "DraftKings on DKeX", f: p => dkBrokerFeeCents(p) + dkexExchangeFeeCents(p), color: VENUE_COLORS["DKeX"], curve: "step"},
+  {name: "DKeX exchange only", f: dkexExchangeFeeCents, color: "#9CA3AF", dash: "5,4", curve: "step"},
+  {name: "Nadex direct member", f: () => 2, color: VENUE_COLORS["Crypto.com/Nadex"]},
+  {name: "Crypto.com app · max", f: () => 1.75, color: "#38BDF8", dash: "5,4"},
+  {name: "Crypto.com app · min", f: () => 1.00, color: "#7DD3FC", dash: "2,3"},
   {name: "ForecastEx", f: () => 1},
   {name: "CME", f: () => 1, dash: "2,3"}
 ];
@@ -267,7 +297,7 @@ Plot.plot({
   height: 340,
   marginLeft: 70,
   x: {label: "Contract price (¢)", domain: [1, 99], grid: true},
-  y: {label: "Fee per contract, one side (¢)", domain: [0, 2.6], grid: true},
+  y: {label: "Fee per contract, one side (¢)", domain: [0, 3.25], grid: true},
   color: {legend: true, domain: feeNames, range: feeColors},
   marks: feeCurves.map(curve => Plot.lineY(
     feePrices.map(d => ({...d, fee: curve.f(d.p), venue: curve.name})),
@@ -276,11 +306,11 @@ Plot.plot({
 })
 ```
 
-<p class="chart-note">Kalshi and Underdog have the same one-side curve, but Underdog charges both sides. ProphetX is absent because its published charge is based on a trader's net gains per market, not contract price. Novig pre-game straight trades are free and are stated here rather than drawn as a zero line.</p>
+<p class="chart-note"><a href="https://www.draftkings.com/predictions-terms">DraftKings Predictions</a> is an introducing broker, not an FCM. Its current DKeX customer line is the broker's <a href="https://myaccount.draftkings.com/documents/fee-disclosure?product=predict">disclosed price ladder</a> plus DKeX's <a href="https://www.cftc.gov/filings/orgrules/rules0515263470.pdf">separately filed exchange fee</a>; DKeX exchange revenue is still the gray exchange-only line. The DraftKings HTML currently prints 8.80¢ at 97–98¢, a tenfold break in an otherwise descending tail that would make a winning 98¢ contract cost more than its $1 payout. This chart treats it as the evident missing-zero typo, 0.88¢, until DraftKings corrects or confirms it. <a href="https://help.crypto.com/en/articles/11373970-prediction-trading">Crypto.com's app</a> publishes only a 1–1.75¢ range, so both bounds are drawn rather than an invented curve; the separate 2¢ line is <a href="https://www.nadex.com/pricing/">Nadex's standard direct-member exchange fee</a>. Kalshi and Underdog have the same one-side curve, but Underdog charges both sides. ProphetX is absent because its published charge is based on a trader's net gains per market, not contract price. Novig pre-game straight trades are free and are stated here rather than drawn as a zero line.</p>
 
 ## Realized fee per contract
 
-<p class="section-intro">Reported one-side fees divided by reported contracts, with Crypto.com/Nadex restated per $1 of contract because it redenominated twice. This changes with the venue's actual price mix; venues without a defensible daily numerator are absent, not zero.</p>
+<p class="section-intro">Modeled one-side fees divided by reported contracts, with Crypto.com/Nadex restated per $1 of contract because it redenominated twice. DKeX includes the DraftKings broker charge from the retail launch; Crypto.com/Nadex is the direct-member exchange benchmark, not the app's newer retail range. Venues without a defensible daily numerator are absent, not zero.</p>
 
 ```js
 // Crypto.com/Nadex REDENOMINATED TWICE ($100 -> $10 -> $1) and competitor_daily.csv

@@ -315,10 +315,12 @@ const detail0 = parlayDetail[0] ?? {};
   side lost 1.19&cent; per contract, the other side gained 1.19&cent;. That is a real and
   interesting quantity, but it belongs to the calibration curve above, where all four removed
   venues are drawn.</p>
-  <p><strong>DKeX</strong> &mdash; no aggressor flag (its tape is date, symbol, timestamp, price,
-  quantity), and fees reversed the sign outright: +$104,461 gross against roughly $226,986 of
-  fees at a cent per contract per side, so those traders were down $122,525. The published
-  figure stated the opposite of what a trader experienced.
+  <p><strong>DKeX single markets</strong> &mdash; no aggressor flag (its tape is date, symbol,
+  timestamp, price, quantity), so the named-side result is price bias rather than what the
+  taker earned. Fees can reverse that result's sign, and customer cost now includes both the
+  DKeX exchange charge and DraftKings Predictions' applicable introducing-broker commission;
+  neither fact supplies the missing aggressor identity. DKeX parlays are different: they are
+  RFQ-quoted, so their buyer is the taker, and that separate net series remains on the chart.
   <strong>ProphetX</strong> &mdash; no aggressor flag; its single-market number was the priced
   home side against its own settled outcome, which is price bias by another name.
   <strong>Polymarket US single markets</strong> and <strong>ForecastEx</strong> &mdash; neither
@@ -343,6 +345,7 @@ const detail0 = parlayDetail[0] ?? {};
 
 ## What a contract costs its buyer
 
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX's RFQ-parlay row is net of both the DKeX taker charge and DraftKings Predictions' applicable introducing-broker commission.</strong> Crypto.com is net of Nadex's standard $0.02 direct-member exchange benchmark, not an exact reconstruction of the app's retail fee: the app changed on June 30, 2026 to a published 1–1.75&cent; taker range with maker and settlement fees at zero, while the historical bulletin cannot identify which point in that range applied. The precise fee, side and price-basis treatment for every row is disclosed above and in its tooltip.</div>
 ```js
 Plot.plot({
   width,
