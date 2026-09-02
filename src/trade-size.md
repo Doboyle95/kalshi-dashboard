@@ -222,6 +222,12 @@ const selectedSegmentKey = segmentOptions.includes(rawSegmentKey) ? rawSegmentKe
 ```js
 const [selectedSegmentType, selectedSegment] = selectedSegmentKey.split("|");
 const selectedRowsAllTime = platformRows.filter(d => d.segment_type === selectedSegmentType && d.segment === selectedSegment);
+```
+
+```js
+// Own cell on purpose: it consumes selectedRows, which comes from the brush, and the
+// brush takes selectedRowsAllTime from the cell above. In one cell that is a circular
+// definition (check-observable-cycles fails the deploy) and the cards never resolve.
 // The cards follow the brush like every chart beneath them. selectedRows is the
 // brushed subset (defined with the brush below); selectedRowsAllTime feeds the brush
 // itself so the date extent is the segment's full history.
