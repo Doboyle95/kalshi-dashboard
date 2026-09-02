@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import test from "node:test";
 import {addDocumentLanguage, sitemapXml} from "../scripts/postprocess-site.mjs";
 
@@ -23,4 +24,10 @@ test("sitemapXml sorts, deduplicates, and XML-escapes canonical URLs", () => {
   assert.match(sitemap, /<loc>https:\/\/predict-charts\.com\/</);
   assert.match(sitemap, /view=a&amp;mode=b/);
   assert.equal((sitemap.match(/<url>/g) || []).length, 2);
+});
+
+test("compare-accuracy closes prose before its Observable chart fence", () => {
+  const source = readFileSync(new URL("../src/compare-accuracy.md", import.meta.url), "utf8");
+  assert.match(source, /<\/div>\r?\n\r?\n```js\r?\nPlot\.plot\(\{/);
+  assert.doesNotMatch(source, /<\/div>\r?\n```js\r?\nPlot\.plot\(\{/);
 });
