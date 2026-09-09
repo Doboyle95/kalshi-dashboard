@@ -613,8 +613,8 @@ const popTop = Array.from(popAgg, ([pid, a]) => {
   const m = popMetaById.get(pid) ?? {};
   return {trades: a.trades, ct: a.ct, yn: a.yn,
           avg_c: a.yc > 0 ? 100 * a.yn / a.yc : null,
-          n_legs: m.n_legs, result: m.result, family: m.family, kind: m.kind,
-          label: String(m.label ?? "").trim(), ticker: String(m.ticker ?? "")};
+          n_legs: m.n_legs, result: m.result, kind: m.kind,
+          label: String(m.label ?? "").trim(), pid};
 }).sort((a, b) => b.trades - a.trades).slice(0, 30).map((d, i) => ({...d, rank: i + 1}));
 ```
 
@@ -625,7 +625,7 @@ const popResult = r => r === "hit" ? html`<span style="color:var(--accent-positi
   : html`<span style="color:var(--theme-foreground-muted, #999);">pending</span>`;
 const popLabel = d => {
   let s = d.label;
-  if (!s) s = (d.family ? d.family + " · " : "") + d.ticker.split("-").slice(1).join("-");
+  if (!s) s = `Parlay ${d.pid}`;
   return s.length > 90 ? s.slice(0, 90) + "…" : s;
 };
 // Chip = the AUDITED leg-level correlation verdict (same classifier as every other

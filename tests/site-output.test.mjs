@@ -31,3 +31,15 @@ test("compare-accuracy closes prose before its Observable chart fence", () => {
   assert.match(source, /<\/div>\r?\n\r?\n```js\r?\nPlot\.plot\(\{/);
   assert.doesNotMatch(source, /<\/div>\r?\n```js\r?\nPlot\.plot\(\{/);
 });
+
+test("DKeX page does not load the unbounded market-day history", () => {
+  const source = readFileSync(new URL("../src/dkex.md", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /dkex_market_daily\.csv/);
+  assert.match(source, /latestDate\(daily\)/);
+});
+
+test("popular-parlay table consumes the compact metadata contract", () => {
+  const source = readFileSync(new URL("../src/parlay-analytics.md", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /m\.family|m\.ticker/);
+  assert.match(source, /Parlay \$\{d\.pid\}/);
+});

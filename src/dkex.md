@@ -17,7 +17,6 @@ display(DataAttachment.marker);
 const daily      = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
 const catDaily   = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
 const split      = await DataAttachment("data/dkex_sports_split_daily.csv").csv({typed: true});
-const market     = await DataAttachment("data/dkex_market_daily.csv").csv({typed: true});
 const settlement = await DataAttachment("data/dkex_settlement_daily.csv").csv({typed: true});
 const freshness  = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
@@ -27,14 +26,14 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 display(freshnessPanel({
   items: [
     {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "dkex_daily.csv"), meta: "Public DKeX time-and-sales reports", tone: "competitor"},
-    {label: "Market report", date: latestDate(market), updatedAt: fileUpdatedAt(freshness, "dkex_market_daily.csv"), meta: "Trade volume, prices, and open interest", tone: "competitor"},
+    {label: "Market report", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "dkex_daily.csv"), meta: "Daily volume and open interest rolled up from the public market report", tone: "competitor"},
     {label: "Settlements", date: latestDate(settlement), updatedAt: fileUpdatedAt(freshness, "dkex_settlement_daily.csv"), meta: "Public DKeX daily settlement reports", tone: "competitor"}
   ],
   note: "DKeX reports are published by the DraftKings/Railbird site and generally lag the trading day. Fees are not published in these files."
 }));
 display(askPageLink({
   question: "Summarize recent DKeX volume, category mix, open interest, and settlement activity.",
-  context: "DKeX page using dkex_daily.csv, dkex_categories_daily.csv, dkex_market_daily.csv, and dkex_settlement_daily.csv."
+  context: "DKeX page using the bounded daily, category, sports-split, settlement, and market-leaderboard datasets."
 }));
 ```
 

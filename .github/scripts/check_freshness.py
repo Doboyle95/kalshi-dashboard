@@ -126,7 +126,6 @@ THRESHOLDS = {
     "dkex_daily.csv": 36,
     "dkex_categories_daily.csv": 36,
     "dkex_sports_split_daily.csv": 36,
-    "dkex_market_daily.csv": 36,
     "dkex_settlement_daily.csv": 36,
     "dkex_calibration.csv": 36,
     # Underdog Exchange (build_underdog_daily.py). Same 36h/lag-1d treatment as DKeX.
