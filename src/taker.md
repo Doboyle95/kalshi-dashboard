@@ -464,6 +464,10 @@ function largeTradeRows(table, metricLabel) {
       contracts: +d.contracts_traded || 0,
       price: d.price,
       taker_side: d.taker_side || "-",
+      // Kalshi's own flag, captured at ingest from 2026-08-24 plus a backfill of the window
+      // the trades API still serves. The file writes an unknown as "", which autoType turns
+      // into null -- so null must NOT be rendered as "No".
+      is_block_trade: d.is_block_trade,
       one_party_stake: d.one_party_stake,
       taker_stake: d.taker_stake,
       // "contracts" is the metric NAME, not a column: the count lives in contracts_traded.
@@ -503,6 +507,7 @@ function tradeDetail(row) {
     {label: "Contracts", value: fmtCount(row.contracts)},
     {label: "Price", value: fmtPrice(row.price)},
     {label: "Taker side", value: row.taker_side === "-" ? "Not published" : row.taker_side},
+    {label: "Block trade", value: row.is_block_trade == null ? "Not known" : row.is_block_trade ? "Yes" : "No"},
     {label: "% of market", value: row.pct_of_market == null ? "Not in this ranking" : fmtPct(row.pct_of_market)}
   ];
   if (row.one_party_stake != null) facts.push({label: "One-party stake", value: fmtUSD(row.one_party_stake)});
@@ -522,7 +527,7 @@ function tradeDetail(row) {
         {label: "Compare against other venues", description: "The same rankings on every venue that publishes a tape", value: "→", href: "./trade-size"}
       ]}
     ],
-    coverage: "Taker side is Kalshi's own aggressor flag. Market and outcome names are decoded from the ticker here rather than published by the exchange, so an unrecognised series falls back to its raw code.",
+    coverage: "Taker side and block trade are both Kalshi's own flags, but the block flag is only recoverable for trades from mid-2026 onward, so \"Not known\" is a gap in coverage rather than a denial. Market and outcome names are decoded from the ticker here rather than published by the exchange, so an unrecognised series falls back to its raw code.",
     state: {kind: "trade", source: "taker", venue: "Kalshi", trade: tradeIdentity(row)},
     ask: {
       question: `Explain why this ${fmtCount(row.contracts)}-contract Kalshi trade is notable. Use its price, taker side and share of the market it traded in.`,
@@ -543,6 +548,10 @@ tradeInspector.restore("taker", state => {
 });
 
 const marketCell = (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTradeDetail(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`;
+
+// An em dash is "we cannot tell", not "No": most of this leaderboard predates the flag, and a
+// blank cell would read as Kalshi denying it was a block.
+const fmtBlockTrade = value => value == null ? "—" : value ? "Yes" : "No";
 ```
 
 <div class="control-strip">
@@ -557,14 +566,16 @@ const overallMetric = view(Inputs.radio(ltMetrics, {label: "Rank by", value: "Co
 const overallRows = largeTradeRows("overall", overallMetric);
 display(overallRows.length
   ? Inputs.table(overallRows, {
-      columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value"],
-      header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", metric_value: overallMetric},
-      format: {date: fmtDate, market: marketCell, contracts: fmtCount, price: fmtPrice, metric_value: overallMetric === "Contracts" ? fmtCount : fmtUSD},
+      columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "is_block_trade", "metric_value"],
+      header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", is_block_trade: "Block trade", metric_value: overallMetric},
+      format: {date: fmtDate, market: marketCell, contracts: fmtCount, price: fmtPrice, is_block_trade: fmtBlockTrade, metric_value: overallMetric === "Contracts" ? fmtCount : fmtUSD},
       align: {contracts: "right", metric_value: "right"},
       rows: 15
     })
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">No large-trade rows are being served.</div>`);
 ```
+
+<p class="chart-note"><strong>Block trade</strong> is Kalshi's own flag for privately negotiated size printed to the tape; an em dash means we cannot tell, not that it was ordinary, because the flag is only recoverable for trades from mid-2026 onward.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices, where one side risks close to the full dollar and the other almost nothing. Click any market name to open the trade.</div>
 
@@ -584,14 +595,16 @@ const smallMarketMetric = view(Inputs.radio(ltMetrics, {label: "Rank by", value:
 const smallMarketRows = largeTradeRows("small_market", smallMarketMetric);
 display(smallMarketRows.length
   ? Inputs.table(smallMarketRows, {
-      columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "metric_value", "pct_of_market"],
-      header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", metric_value: smallMarketMetric, pct_of_market: "% of market"},
-      format: {date: fmtDate, market: marketCell, contracts: fmtCount, price: fmtPrice, metric_value: smallMarketMetric === "Contracts" ? fmtCount : fmtUSD, pct_of_market: d => d == null ? "-" : fmtPct(d)},
+      columns: ["date", "category", "market", "outcome", "contracts", "price", "taker_side", "is_block_trade", "metric_value", "pct_of_market"],
+      header: {date: "Date", category: "Category", market: "Market", outcome: "Outcome", contracts: "Contracts", price: "Price", taker_side: "Taker side", is_block_trade: "Block trade", metric_value: smallMarketMetric, pct_of_market: "% of market"},
+      format: {date: fmtDate, market: marketCell, contracts: fmtCount, price: fmtPrice, is_block_trade: fmtBlockTrade, metric_value: smallMarketMetric === "Contracts" ? fmtCount : fmtUSD, pct_of_market: d => d == null ? "-" : fmtPct(d)},
       align: {contracts: "right", metric_value: "right", pct_of_market: "right"},
       rows: 15
     })
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">No small-market rows are being served.</div>`);
 ```
+
+<p class="chart-note">Every row here already clears Kalshi's 25,000-contract block minimum, so each one <em>could</em> have been a block &mdash; which makes an em dash in that column a gap in coverage rather than evidence either way.</p>
 
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
