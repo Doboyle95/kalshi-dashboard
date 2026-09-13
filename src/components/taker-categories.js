@@ -14,9 +14,10 @@ export function buildReportTickerToCat(categoryLeaderboard) {
   );
 }
 
-// The per-ticker taker export is settlement-aware, so its newest days can cover only
-// part of the all-trade daily taker total. Preserve the observed category mix while
-// putting every day on the same dollar basis as taker_notional_daily.csv.
+// The per-ticker taker export is refreshed 4-hourly from the trade aggregate (all
+// trades since 2026-09-13; settled-only before that), so its newest day trails the
+// near-live daily total. Preserve the observed category mix while putting every day
+// on the same dollar basis as taker_notional_daily.csv.
 export function reconcileTakerCategoryRows(rows, dailyTotals) {
   const dailyByDate = new Map(
     dailyTotals.map(d => [+d.date, +d.notional_total || 0])

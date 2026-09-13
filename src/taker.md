@@ -110,10 +110,11 @@ const rawTakerCatRows = takerVolByTicker.map(d => ({
   estimated: false
 }));
 
-// taker_volume_by_ticker_daily.csv is settlement-aware and therefore loses an
-// increasing share of the newest, not-yet-settled trades. Reconcile its per-day
-// category mix to the all-trade daily total so the category chart cannot imply a
-// volume collapse that the page's authoritative daily series does not show.
+// taker_volume_by_ticker_daily.csv is built from the trade aggregate (ALL trades,
+// refreshed 4-hourly) since 2026-09-13 -- before that it came from the SETTLED-only
+// P&L fact, which under-counted busy sports markets. Reconcile its per-day category
+// mix to the near-live all-trade daily total so the two charts agree on every day,
+// including today's still-partial one.
 const takerCategoryDirectStart = d3.min(rawTakerCatRows, d => d.date);
 const historicalTakerCatRows = estimateHistoricalTakerCategoryRows(
   historicalCategoryMix,
