@@ -21,8 +21,7 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const taker = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
-const takerVolByTicker = await DataAttachment("data/taker_volume_by_ticker_daily.csv").csv({typed: true});
-const takerVolByTickerSide = await DataAttachment("data/taker_volume_by_ticker_side_daily.csv").csv({typed: true});
+const takerVolByCategory = await DataAttachment("data/taker_volume_by_category_daily.csv").csv({typed: true});
 const historicalCategoryMix = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
@@ -37,7 +36,7 @@ import {buildReportTickerToCat, estimateHistoricalTakerCategoryRows, reconcileTa
 display(freshnessPanel({
   items: [
     {label: "Taker-side volume", date: latestDate(taker), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Recent-window refreshable; can be within minutes locally"},
-    {label: "Taker volume by category", date: latestDate(takerVolByTicker), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_ticker_daily.csv"), meta: "Direct taker-side categories since Apr 15, 2026; earlier category mix estimated from all trades"},
+    {label: "Taker volume by category", date: latestDate(takerVolByCategory), updatedAt: fileUpdatedAt(freshness, "taker_volume_by_category_daily.csv"), meta: "Every trade, no settlement needed; direct taker-side categories since Apr 15, 2026, earlier mix estimated"},
     {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"}
   ],
   note: "This page can update more frequently than settlement-based P&L because it does not need final outcomes."
@@ -99,22 +98,23 @@ const takerMaxDate = d3.max(taker, d => d.date);
 // components/taker-categories.js for the order/color/general-map definitions.
 const reportTickerToCat = buildReportTickerToCat(categoryLeaderboard);
 
-// Reclassify the per-ticker daily volume rows into detailed categories once, up front.
-// value = taker-side volume in DOLLARS (not contracts) - Kalshi contracts price 1-99 cents, so a
-// "taker volume" chart plotted in raw contract counts isn't comparable to this page's other
-// dollar-denominated charts and overweights categories full of cheap, high-count contracts.
-const rawTakerCatRows = takerVolByTicker.map(d => ({
+// taker_volume_by_category_daily.csv: taker-side dollars per day x detailed category x side, from
+// EVERY trade (the trade aggregate), rebuilt right after each aggregate refresh. It needs no
+// settlement and does not wait on the settlement or P&L jobs. The producer applies this page's own
+// report_ticker -> cat lookup from category_leaderboard.csv (unmapped = "Uncategorized"), so the
+// page loads ~200 KB instead of two per-series files (the by-side one had outgrown the 15 MiB
+// publishing budget). value = taker-side volume in DOLLARS (not contracts) - Kalshi contracts price
+// 1-99 cents, so contract counts would overweight categories full of cheap, high-count contracts.
+const rawTakerCatRows = takerVolByCategory.map(d => ({
   date: d.date,
-  category: reportTickerToCat.get(d.report_ticker) || "Uncategorized",
-  value: +d.notional_settled || 0,
+  category: d.category || "Uncategorized",
+  value: (+d.taker_yes_usd || 0) + (+d.taker_no_usd || 0),
   estimated: false
 }));
 
-// taker_volume_by_ticker_daily.csv is built from the trade aggregate (ALL trades,
-// refreshed 4-hourly) since 2026-09-13 -- before that it came from the SETTLED-only
-// P&L fact, which under-counted busy sports markets. Reconcile its per-day category
-// mix to the near-live all-trade daily total so the two charts agree on every day,
-// including today's still-partial one.
+// The category file follows the 4-hourly trade aggregate, so its newest day trails the near-live
+// daily total. Reconcile each day's category mix to that total so the two charts agree on every
+// day, including today's still-partial one.
 const takerCategoryDirectStart = d3.min(rawTakerCatRows, d => d.date);
 const historicalTakerCatRows = estimateHistoricalTakerCategoryRows(
   historicalCategoryMix,
@@ -362,14 +362,12 @@ Plot.plot({
 <p class="section-intro">Which categories takers only want to bet one way on. A category near 50/50 means the aggressive money is split; a category leaning hard to one side means takers overwhelmingly buy Yes (or fade to No) there. Same brushed window and General/Detailed toggle as the chart above.</p>
 
 ```js
-// Same per-ticker classification and brushed window (sCat/eCat) as "Volume by category" above,
-// just from the side-preserving sibling export instead of the side-collapsed one.
-const takerSideRows = takerVolByTickerSide.map(d => ({
-  date: d.date,
-  category: reportTickerToCat.get(d.report_ticker) || "Uncategorized",
-  side: d.side,
-  value: +d.notional_settled || 0
-}));
+// Same file, categories and brushed window (sCat/eCat) as "Taker volume by category" above,
+// split by taker side instead of summed.
+const takerSideRows = takerVolByCategory.flatMap(d => [
+  {date: d.date, category: d.category || "Uncategorized", side: "yes", value: +d.taker_yes_usd || 0},
+  {date: d.date, category: d.category || "Uncategorized", side: "no",  value: +d.taker_no_usd || 0}
+]);
 
 const fdCatSide = takerSideRows
   .filter(d => d.date >= sCat && d.date <= eCat)
