@@ -23,6 +23,42 @@ export function kalshiDepthEvidenceFaults(sqls) {
   return [];
 }
 
+// On Kalshi's biggest day on record, the record is the headline and the figure after it has
+// to explain that day. The Sept. 12, 2026 card opened "Kalshi cleared another
+// two-billion-contract day" on a record 2.43B contracts, then spent its second half on
+// Economics at 4.8M contracts -- 0.2% of the day. `standing` comes from the generator's
+// ranking lookup ({volume, rank, earlierDay, earlierContracts}) and is null when it failed.
+const RECORD_WORDING = /\b(?:records?|biggest|largest|busiest|most active|all-time|ever|new high|single-day high)\b/i;
+const CONTRACT_FIGURE = /(\d[\d,]*(?:\.\d+)?)\s*(billion|million|thousand|[bmk])?\s+contracts\b/gi;
+const CONTRACT_SCALE = {billion: 1e9, b: 1e9, million: 1e6, m: 1e6, thousand: 1e3, k: 1e3};
+const SLIVER_OF_RECORD_DAY = 0.02;
+
+export function contractFigures(text) {
+  return [...String(text || "").matchAll(CONTRACT_FIGURE)]
+    .map(([, number, unit]) => Math.round(Number(number.replace(/,/g, "")) * (unit ? CONTRACT_SCALE[unit.toLowerCase()] : 1)))
+    .filter((value) => Number.isFinite(value) && value > 0);
+}
+
+export function kalshiRecordDayFaults(text, standing) {
+  if (standing?.rank !== 1 || !(standing.volume > 0)) return [];
+  const bullet = String(text || "")
+    .split(/\n(?=\s*[-*])/)
+    .map((item) => item.trim())
+    .find((item) => /kalshi/i.test(item) && !OTHER_VENUE_MENTION.test(item));
+  if (!bullet) return [];
+
+  const faults = [];
+  const opener = bullet.match(/\*\*([^*]+)\*\*/)?.[1] ?? bullet;
+  if (!RECORD_WORDING.test(opener)) {
+    faults.push(`Kalshi's latest day was its biggest on record, above the previous high of ${standing.earlierContracts.toLocaleString("en-US")} contracts on ${standing.earlierDay} -- say so plainly in the Kalshi bullet's bold opening phrase`);
+  }
+  const sliver = contractFigures(bullet).find((value) => value < standing.volume * SLIVER_OF_RECORD_DAY);
+  if (sliver != null) {
+    faults.push(`on Kalshi's record day its bullet spends a figure on ${sliver.toLocaleString("en-US")} contracts, under 2% of the day's ${standing.volume.toLocaleString("en-US")} -- replace it with the part of the market that carried the record, from that same day, sized against the day's total`);
+  }
+  return faults;
+}
+
 export function otherVenueBulletCount(text) {
   return String(text || "")
     .split(/\n(?=\s*[-*])/)
@@ -48,6 +84,11 @@ export function wordingFaults(text, sqls) {
   // The site calls this market share everywhere else.
   if (/measured\s+(venue\s+)?volume/i.test(text)) {
     faults.push('the phrase "measured volume" says nothing about what was measured -- call it market share, the term the rest of the site uses');
+  }
+  // Lifted from the model's own supporting-query columns (prior_30_report_average_contracts):
+  // the Sept. 12 card said "645.8% above its prior 30-report average".
+  if (/\b(?:\d+|seven|thirty)[- ]report\b/i.test(text)) {
+    faults.push('"N-report average" is internal wording -- say its recent average, or its average over the past week or month');
   }
   if (/\bnotional\b/i.test(text)) {
     faults.push('the word "notional" must never appear in the prose -- say taker-side volume or yes-side volume');

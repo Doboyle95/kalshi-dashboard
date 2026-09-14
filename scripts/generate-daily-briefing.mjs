@@ -2,6 +2,7 @@ import {readFile, writeFile} from "node:fs/promises";
 
 import {
   kalshiDepthEvidenceFaults,
+  kalshiRecordDayFaults,
   otherVenueBulletCount,
   withoutExcludedPreviousInsights,
   wordingFaults
@@ -189,18 +190,64 @@ const normalizedAnchorRows = attempt.rows.map((row) => {
       : null
   };
 });
+// Where Kalshi's latest day ranks among all its days. The rows above carry only the latest
+// day and a one-week average, and in football season that average cannot tell a record from
+// a routine Saturday: every Saturday from Aug. 15 to Sept. 12 ran 34-40% above its week. On
+// Sept. 12 Kalshi traded 2,426,117,598 contracts, the most on record (Sept. 5's 2,293,019,261
+// was the previous high), and the card called it "another two-billion-contract day" -- the
+// model had nothing that could show a record. Kalshi only: its tape here runs from its first
+// trades, while the other venues' histories start wherever our collection did, so a "record"
+// there could just be the start of our data. A failed or inconsistent lookup is a note.
+const kalshiRow = normalizedAnchorRows.find((row) => row.venue === "Kalshi");
+let kalshiStanding = null;
+if (kalshiRow) {
+  const reportDay = String(kalshiRow.report_date || "").slice(0, 10);
+  const volume = anchorVolume(kalshiRow);
+  try {
+    const ranking = await request("/ask", {
+      method: "POST",
+      body: JSON.stringify({question: `From daily_overall, excluding rows where is_partial is true, return the five dates on or before ${reportDay} with the highest contracts_total: date and contracts_total, highest first.`})
+    });
+    const days = (Array.isArray(ranking.rows) ? ranking.rows : [])
+      .map((row) => ({
+        day: String(row[Object.keys(row).find((key) => /date/i.test(key))] ?? "").slice(0, 10),
+        contracts: anchorVolume(row)
+      }))
+      .filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.day) && entry.day <= reportDay && entry.contracts != null)
+      .sort((a, b) => b.contracts - a.contracts);
+    const own = days.find((entry) => entry.day === reportDay);
+    const earlier = days.find((entry) => entry.day !== reportDay);
+    // The latest day must either appear at the volume the venue figures report, or be
+    // smaller than everything listed; anything else means the query measured something else.
+    const consistent = volume != null && earlier != null && (own
+      ? Math.abs(own.contracts - volume) <= volume * 0.001
+      : volume < days[days.length - 1].contracts);
+    if (consistent) {
+      kalshiStanding = {volume, rank: own ? days.indexOf(own) + 1 : null, earlierDay: earlier.day, earlierContracts: earlier.contracts};
+      kalshiRow.all_time_rank = kalshiStanding.rank ?? `below its ${days.length} biggest days`;
+      kalshiRow.highest_earlier_day = kalshiStanding.earlierDay;
+      kalshiRow.highest_earlier_day_contracts = kalshiStanding.earlierContracts;
+    } else {
+      notes.push(`Kalshi record lookup returned an unusable ranking (${days.length} usable rows)`);
+    }
+  } catch (error) {
+    notes.push(`Kalshi record lookup failed: ${error.message}`);
+  }
+}
+
 // anchor.columns describes the model-written SELECT, so the fields added here are absent
 // from it and would be dropped from the row summary /insights builds.
 const anchorColumns = [
   ...(Array.isArray(anchor.columns) ? anchor.columns : []),
-  ...["reporting_density", "days_behind_newest_venue", "reporting_recency", "approx_market_share_pct"]
+  ...["reporting_density", "days_behind_newest_venue", "reporting_recency", "approx_market_share_pct"],
+  ...(kalshiStanding ? ["all_time_rank", "highest_earlier_day", "highest_earlier_day_contracts"] : [])
 ].filter((name, index, all) => all.indexOf(name) === index);
 if (attempt.fault) notes.push(attempt.fault);
 if (attempt.omittedSources?.length) notes.push(`anchor SQL did not read ${attempt.omittedSources.join(", ")}`);
 if (attempt.missing.length) notes.push(`anchor covered ${normalizedAnchorRows.length} of ${requiredVenues.length} venues; missing ${attempt.missing.join(", ")}`);
 
 const editorialQuestion = [
-  "Write today's Predict Charts briefing: three to five short bullets on what actually moved in prediction markets, for readers who follow the space and its overlap with sports betting. The briefing has a required shape. One bullet is Kalshi's: it normally leads with the headline -- how much traded that day against a recent baseline -- and then carries a beyond-volume figure in the same bullet, where the money went and what it did. At least two are about a venue other than Kalshi, or compare venues against each other. Choose those two kinds of bullet first, then fill the rest.",
+  "Write today's Predict Charts briefing: three to five short bullets on what actually moved in prediction markets, for readers who follow the space and its overlap with sports betting. The briefing has a required shape. One bullet is Kalshi's: it normally leads with the headline -- how much traded that day against a recent baseline -- and then carries a beyond-volume figure in the same bullet, where the money went and what it did. Kalshi's row in the venue figures also says where that day ranks among all its days. When it is Kalshi's biggest day on record, that is the headline: say so in the bold phrase and name the high it beat, then make the beyond-volume figure explain the record -- which part of the market carried it, on that same day, sized against the day's total. A small corner of the market that happened to move a lot does not explain a record. At least two are about a venue other than Kalshi, or compare venues against each other. Choose those two kinds of bullet first, then fill the rest.",
   `The broad data service is currently updated through ${health.aggregate_through || health.raw_trades_through || "the latest available date"}.`,
   attempt.missing.length
     ? `The venue-volume figures below carry a one-week average for each venue they cover, but this run covers only ${normalizedAnchorRows.length} of ${requiredVenues.length} venues -- ${attempt.missing.join(", ")} are absent. Write from what is there and do not guess at the rest. End with one plain sentence naming the venues missing today; that is the only closing sentence allowed. Never describe a partial field as the whole industry.`
@@ -219,7 +266,7 @@ const editorialQuestion = [
     ? `YESTERDAY'S BRIEFING IS BELOW. Do not reuse its Kalshi angle unless today's figure for that same measure is clearly the strongest story available -- pick a different one from the rotation instead. A reader seeing the same measure every morning learns nothing new, and parlay taker losses in particular have been over-used. Do not refer to yesterday, compare against it, or mention that you have seen it; it is here only so you can choose a different angle. YESTERDAY: ${previousInsights}`
     : "",
   "Return three to five bullets, no more than 150 words in total. One sentence per bullet, two at the very most. Lead each with a short bold phrase naming the finding, then give the numbers against a sensible recent baseline. Bold only that opening phrase -- leave the figures themselves unbolded. The bold phrase must say WHY the item is here: a reader scanning only those phrases should still know what changed or was surprising. An ordinary standing is not a finding. Do not write \"Polymarket led the challengers\", \"X was the largest competitor\", \"X held second place\" or similar unless the rank itself changed or the gap became genuinely remarkable; when growth is the story, put the growth in the opening phrase instead. Do not force a topic when nothing notable happened there. Kalshi's headline contract count is rarely the most interesting figure available to you; do not open with it unless the move is genuinely unusual. Before you finish, check the draft against the two mix requirements above and rewrite a bullet if either is unmet.",
-  "SIGNIFICANCE IS NOT PERCENTAGE CHANGE, and ranking by percentage is the most common way this briefing goes wrong. Every row carries approx_market_share_pct, that venue's rough share of the ten venues together. Call it market share in plain words -- \"about a 1.3% market share\", \"roughly 7% of the market\" -- which is the term the rest of the site uses. Never write \"measured venue volume\", \"measured volume\", or any similar construction; it does not tell a reader what is being measured. The same percentage means very different things at different venues: the smaller and mid-sized ones routinely swing 30-40% in a day, while the largest rarely move more than 25%, so a big percentage is often an ordinary day. Weigh two separate things before calling any move notable -- whether it is unusual for THAT venue, judged against its own recent range, and whether it is large enough to matter at industry scale. One query over that venue's last thirty reported days settles the first. These rules decide which venue MOVES are worth reporting; they do not replace the required shape stated at the top. The Kalshi bullet from beyond plain volume is still required, and Kalshi's scale means it always clears the materiality bar -- but a bullet about Kalshi's SIZE or share is not that bullet, and does not satisfy it.",
+  "SIGNIFICANCE IS NOT PERCENTAGE CHANGE, and ranking by percentage is the most common way this briefing goes wrong. Every row carries approx_market_share_pct, that venue's rough share of the ten venues together. Call it market share in plain words -- \"about a 1.3% market share\", \"roughly 7% of the market\" -- which is the term the rest of the site uses. Never write \"measured venue volume\", \"measured volume\", or any similar construction; it does not tell a reader what is being measured. The same percentage means very different things at different venues: the smaller and mid-sized ones routinely swing 30-40% in a day, while the largest rarely move more than 25%, so a big percentage is often an ordinary day. Weigh two separate things before calling any move notable -- whether it is unusual for THAT venue, judged against its own recent range, and whether it is large enough to matter at industry scale. One query over that venue's last thirty reported days settles the first. These rules decide which venue MOVES are worth reporting; they do not replace the required shape stated at the top. The Kalshi bullet from beyond plain volume is still required -- but a bullet about Kalshi's SIZE or share is not that bullet, and does not satisfy it. Kalshi's scale does not carry over to a slice of it: a category or product that is a small part of Kalshi's day faces the same materiality bar as a small venue, so never report one on its percentage move alone -- give its contracts against Kalshi's total for the day.",
   "The LEAD bullet must clear both bars. A venue holding well under 1% of measured volume does not open the briefing on a percentage alone -- at that size even a huge percentage is a few hundred thousand contracts against billions elsewhere. This is NOT licence to fall back on the two largest venues: a smaller venue whose move is genuinely unusual FOR IT is more interesting than an ordinary day at a big one, and it still earns a bullet further down the list. When you report a small venue, give the absolute figure and round its share so the reader can size it, and never call it the sharpest move in the industry without that context. That share is APPROXIMATE -- each venue contributes its own latest reported day, so the days do not all match -- and must be written as a rounded approximation, at most one decimal and always hedged: \"about 0.2%\", \"roughly a fifth\", \"under 1% of measured volume\". Never quote it to two or more decimals, and never present it as an exact or measured market share.",
   "A Kalshi depth figure has to be judged against what is NORMAL FOR THAT MEASURE, not against yesterday, or you will report the baseline as though it were news. Parlay bettors lose money on the large majority of days, so a losing day is the expected outcome and a PROFITABLE one is the story; taker P&L, fee rates, category mix and settlement accuracy all need the same treatment. One query over that measure's last thirty to sixty days gives you its normal range and tells you whether the latest value sits inside it. If it sits inside, that measure is not today's story -- pick a different one, or let the Kalshi bullet be volume plus a plainly-stated figure without claiming significance it does not have.",
   "YOUR VERB MUST MATCH THE DATA. Do not write returned, rebounded, reversed, resumed, snapped back or any other word implying a turn unless the series actually changed direction. If it did turn, cite the days that show the turn -- not adjacent days that merely continue the trend, which describes a reversal while proving the opposite.",
@@ -259,7 +306,7 @@ function draftFaults(result) {
     ...(Array.isArray(result.deeper?.evidence) ? result.deeper.evidence.map((item) => item?.sql || "") : []),
     anchor.sql || ""
   ].join("\n").toLowerCase();
-  return [...mixFaults(text), ...kalshiDepthEvidenceFaults(sqls), ...wordingFaults(text, sqls)];
+  return [...mixFaults(text), ...kalshiDepthEvidenceFaults(sqls), ...kalshiRecordDayFaults(text, kalshiStanding), ...wordingFaults(text, sqls)];
 }
 
 // The SECOND correction is deliberately more concrete than the first. Restating the rule
