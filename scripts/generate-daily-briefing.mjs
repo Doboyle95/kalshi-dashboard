@@ -77,7 +77,10 @@ try {
   notes.push(`health check failed: ${error.message}`);
 }
 
-const requiredVenues = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange", "Crypto.com/Nadex", "ProphetX", "Novig", "Rothera", "CME"];
+const requiredVenues = ["Kalshi", "Polymarket US", "ForecastEx", "DKeX", "Underdog Exchange", "OG/Crypto.com", "ProphetX", "Novig", "Rothera", "CME"];
+// Reader-facing names for venues the data stores under another key. The site renamed
+// Crypto.com/Nadex to OG/Crypto.com on 2026-09-14; the platform value in the data did not change.
+const VENUE_DISPLAY_NAMES = {Polymarket_US: "Polymarket US", "Crypto.com/Nadex": "OG/Crypto.com", Nadex: "OG/Crypto.com"};
 
 const anchorQuestion = [
   "Build the anchor table for today's Predict Charts industry briefing.",
@@ -96,7 +99,7 @@ const anchorQuestion = [
   // newest date on the board. A single global MAX(date) filter silently deletes exactly
   // those venues, which is not the same thing as their having no data.
   "Resolve the latest complete reported day SEPARATELY FOR EACH VENUE. Do not filter the whole result to one shared calendar date, and do not require a venue to have a row on the newest date any venue reported: a venue whose most recent complete day is a few days old is reporting normally and still belongs in the table, on its own date. Each venue's prior-seven-day baseline is its own prior seven REPORTED days, which for an irregular reporter spans more than seven calendar days.",
-  `Every one of these ten venues must appear in the result: ${requiredVenues.join(", ")}.`
+  `Every one of these ten venues must appear in the result: ${requiredVenues.join(", ")}. OG/Crypto.com is the platform stored as 'Crypto.com/Nadex'.`
 ].join(" ");
 
 // The anchor SQL is model-written, so it varies run to run: the same prompt produced
@@ -118,7 +121,7 @@ async function fetchAnchor(correction) {
   }
   const rows = (Array.isArray(anchor.rows) ? anchor.rows : []).map((row) => ({
     ...row,
-    venue: row.venue === "Polymarket_US" ? "Polymarket US" : row.venue,
+    venue: VENUE_DISPLAY_NAMES[row.venue] ?? row.venue,
     reporting_density: row.venue === "CME" ? "sparse bulletin" : "regular"
   }));
   const returned = new Set(rows.map((row) => row.venue));
@@ -367,7 +370,8 @@ if (written.insights.length < 120 || faults.length) {
 }
 if (faults.length) notes.push(`briefing checks unmet after retry: ${faults.join("; ")}`);
 const deeper = written.deeper;
-const insights = written.insights;
+// The venue's old name can still reach the prose through query results; the card uses the new one.
+const insights = written.insights.replaceAll("Crypto.com/Nadex", "OG/Crypto.com");
 if (written.fault) notes.push(written.fault);
 else if (insights.length < 120) notes.push(`briefing prose came back unusually short (${insights.length} characters)`);
 

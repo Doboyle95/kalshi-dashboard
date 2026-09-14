@@ -16,12 +16,13 @@ test("platform series normalizes venue names and preserves missing economics", (
     kalshi: [{date: day("2026-08-10"), contracts_total: 100, fees_total: 7, is_partial: false}],
     competitor: [
       {date: day("2026-08-10"), platform: "Polymarket_US", contracts: 40, fees: 2, fees_exchange_revenue: 1},
+      {date: day("2026-08-10"), platform: "Crypto.com/Nadex", contracts: 30, fees: 0.6, fees_exchange_revenue: 0.6},
       {date: day("2026-08-10"), platform: "Underdog", contracts: 25, fees: "", fees_exchange_revenue: ""}
     ]
   });
 
-  assert.deepEqual(rows.map(row => row.venue), ["Kalshi", "Polymarket US", "Underdog Exchange"]);
-  assert.equal(rows.at(-1).revenue, null);
+  assert.deepEqual(rows.map(row => row.venue), ["Kalshi", "Polymarket US", "Underdog Exchange", "OG/Crypto.com"]);
+  assert.equal(rows.find(row => row.venue === "Underdog Exchange").revenue, null);
 });
 
 test("partial reports do not enter the scoreboard", () => {

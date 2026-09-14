@@ -133,7 +133,7 @@ const VENUES = [
     ["Trading behavior", "/underdog-behavior"],
     ["Economics", "/underdog-economics"]
   ]},
-  {name: "Crypto.com/Nadex", accent: "nadex", tabs: [
+  {name: "OG/Crypto.com", accent: "nadex", tabs: [
     ["Activity", "/nadex"],
     ["Products", "/nadex-products"],
     ["Economics", "/nadex-economics"],

@@ -1,11 +1,11 @@
 ---
-title: Crypto.com/Nadex · Parlays
+title: OG/Crypto.com · Parlays
 ---
 
 <div class="page-hero" data-accent="nadex">
-  <div class="page-eyebrow">Crypto.com/Nadex</div>
+  <div class="page-eyebrow">OG/Crypto.com</div>
   <h1>How big is the parlay book?</h1>
-  <p class="page-lead">COMBOS &mdash; Crypto.com/Nadex's multi-leg parlay product &mdash; is the exchange's largest single product line. Adoption over time and volume in contracts; the win/loss question lives on <a href="./nadex-parlay-outcomes">Parlay outcomes</a>.</p>
+  <p class="page-lead">COMBOS &mdash; OG/Crypto.com's multi-leg parlay product &mdash; is the exchange's largest single product line. Adoption over time and volume in contracts; the win/loss question lives on <a href="./nadex-parlay-outcomes">Parlay outcomes</a>.</p>
 </div>
 
 ```js
@@ -112,4 +112,4 @@ display(parlayChart({
 }));
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex-parlay-outcomes">Parlay outcomes</a> for the win/loss P&amp;L, <a href="./nadex">Crypto.com/Nadex &middot; Activity</a> for overall volume, and <a href="./parlay-venues">Parlays across venues</a> for the comparison.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex-parlay-outcomes">Parlay outcomes</a> for the win/loss P&amp;L, <a href="./nadex">OG/Crypto.com &middot; Activity</a> for overall volume, and <a href="./parlay-venues">Parlays across venues</a> for the comparison.</div>

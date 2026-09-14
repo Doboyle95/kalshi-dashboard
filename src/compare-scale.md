@@ -10,7 +10,7 @@ title: Scale & Liquidity
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard} from "./components/venue-data.js";
+import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard, normalizeVenueName} from "./components/venue-data.js";
 import {renderDateBrush} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -151,7 +151,7 @@ const oiAll = [
   // renders the reversal as a long smooth sweep across the panel -- which read as a
   // trend line for Kalshi that nobody had written and no other venue had. It was an
   // artefact of the duplicate, not a fitted series.
-  ...competitor.filter(d => +d.open_interest > 0 && d.platform !== "Kalshi").map(d => ({date: d.date, venue: d.platform === "Polymarket_US" ? "Polymarket US" : d.platform === "Nadex" ? "Crypto.com/Nadex" : d.platform, openInterest: +d.open_interest}))
+  ...competitor.filter(d => +d.open_interest > 0 && d.platform !== "Kalshi").map(d => ({date: d.date, venue: normalizeVenueName(d.platform), openInterest: +d.open_interest}))
 ].filter(d => d.date && d.openInterest > 0);
 // Split for the same reason as the chart above: the Mutable must not live in a cell
 // that reads oiExclude, or ticking the box throws away the brushed window.

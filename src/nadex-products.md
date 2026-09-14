@@ -1,11 +1,11 @@
 ---
-title: Crypto.com/Nadex · Products
+title: OG/Crypto.com · Products
 ---
 
 <div class="page-hero" data-accent="nadex">
-  <div class="page-eyebrow">Crypto.com/Nadex</div>
+  <div class="page-eyebrow">OG/Crypto.com</div>
   <h1>What trades here</h1>
-  <p class="page-lead">The mix of contract categories Crypto.com/Nadex lists, day by day.</p>
+  <p class="page-lead">The mix of contract categories OG/Crypto.com lists, day by day.</p>
 </div>
 
 ```js
@@ -72,7 +72,7 @@ display(Inputs.table(totals, {
 <details class="surface-card compact-details">
   <summary>How the buckets are built</summary>
   <p>Categories are rolled into seven shared buckets so venues can be read side by side. The taxonomy is broad because the broadest venue sets the ceiling &mdash; Kalshi publishes one <em>Sports</em> value where others name the sport, and inventing a split for it would be fabrication.</p>
-  <p><strong>&ldquo;Other&rdquo; is not one thing.</strong> At Underdog it is the combo bucket; at Crypto.com/Nadex and DKeX it is a genuine residual, and Nadex carries a separate explicit <em>Parlays</em> value. It is mapped per venue rather than globally.</p>
+  <p><strong>&ldquo;Other&rdquo; is not one thing.</strong> At Underdog it is the combo bucket; at OG/Crypto.com and DKeX it is a genuine residual, and OG/Crypto.com carries a separate explicit <em>Parlays</em> value. It is mapped per venue rather than globally.</p>
 </details>
 
 ## Every category, all time
@@ -107,4 +107,4 @@ Plot.plot({
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex">Crypto.com/Nadex &middot; Activity</a> for volume and top markets, and <a href="./categories-venues">Products across venues</a> for the comparison.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex">OG/Crypto.com &middot; Activity</a> for volume and top markets, and <a href="./categories-venues">Products across venues</a> for the comparison.</div>

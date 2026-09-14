@@ -29,7 +29,7 @@ export const VENUE_COLORS = Object.freeze({
   ProphetX: "#DB2777",
   Novig: "#6366F1",
   Rothera: "var(--accent-rothera)",
-  "Crypto.com/Nadex": "var(--accent-nadex)",
+  "OG/Crypto.com": "var(--accent-nadex)",
   CME: "#64748B"
 });
 
@@ -38,7 +38,8 @@ export const VENUE_ORDER = Object.freeze(Object.keys(VENUE_COLORS));
 export function normalizeVenueName(value) {
   if (value === "Polymarket_US") return "Polymarket US";
   if (value === "Underdog") return "Underdog Exchange";
-  if (value === "Nadex") return "Crypto.com/Nadex";
+  // The data still stores this venue under its former names.
+  if (value === "Nadex" || value === "Crypto.com/Nadex") return "OG/Crypto.com";
   return value;
 }
 

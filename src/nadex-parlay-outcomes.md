@@ -1,9 +1,9 @@
 ---
-title: Crypto.com/Nadex · Parlay outcomes
+title: OG/Crypto.com · Parlay outcomes
 ---
 
 <div class="page-hero" data-accent="nadex">
-  <div class="page-eyebrow">Crypto.com/Nadex</div>
+  <div class="page-eyebrow">OG/Crypto.com</div>
   <h1>Do parlay buyers win?</h1>
   <p class="page-lead">Every settled COMBO, in dollars: what buyers staked, what they got back, and the gap between the two. Parlays only &mdash; the whole-suite price calibration lives on <a href="./nadex-outcomes">Outcomes</a>.</p>
 </div>
@@ -129,4 +129,4 @@ That day: ${fmtM(+d.gross_pnl)}`,
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex-parlays">Parlays</a> for adoption and volume, <a href="./nadex-outcomes">Crypto.com/Nadex &middot; Outcomes</a> for whole-suite price calibration, and <a href="./nadex">Crypto.com/Nadex &middot; Activity</a>.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex-parlays">Parlays</a> for adoption and volume, <a href="./nadex-outcomes">OG/Crypto.com &middot; Outcomes</a> for whole-suite price calibration, and <a href="./nadex">OG/Crypto.com &middot; Activity</a>.</div>

@@ -104,10 +104,11 @@ test("counts reader-facing venue aliases as non-Kalshi bullets", () => {
   const text = [
     "- **Underdog's parlay share climbed:** Volume fell while its parlay mix rose.",
     "- **Crypto.com cooled:** Its volume fell below the weekly average.",
+    "- **OG slowed:** Its parlay volume fell for a third day.",
     "- **Kalshi's game props rose:** Game-prop volume beat its recent norm."
   ].join("\n\n");
 
-  assert.equal(otherVenueBulletCount(text), 2);
+  assert.equal(otherVenueBulletCount(text), 3);
 });
 
 test("rejects routine venue rank as the bold finding", () => {

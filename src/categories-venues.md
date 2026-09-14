@@ -57,10 +57,11 @@ function roll(venue, rows, catCol, volCol) {
   return agg;
 }
 
+// An optional fifth field is the name shown on the page when it differs from the bucketOf key.
 const RAW = [
   ["Kalshi", kCat, "kalshi_category", "contracts"],
   ["Polymarket US", pm, "category", "contracts"],
-  ["Nadex", nadex, "category", "contracts"],
+  ["Nadex", nadex, "category", "contracts", "OG/Crypto.com"],
   ["Rothera", roth, "category", "contracts"],
   ["DKeX", dkex, "category", "contracts"],
   ["ProphetX", px, "category", "contracts"],
@@ -69,8 +70,8 @@ const RAW = [
   ["ForecastEx", fx, "category", "contracts"]
 ];
 
-const perVenue = RAW.map(([venue, rows, c, v]) => {
-  const agg = roll(venue, rows, c, v);
+const perVenue = RAW.map(([key, rows, c, v, venue = key]) => {
+  const agg = roll(key, rows, c, v);
   // Kalshi books parlays INSIDE Sports, so its band is carved out rather than mapped.
   // Every other venue publishes the parlay bucket separately and needs no adjustment.
   if (venue === "Kalshi") {

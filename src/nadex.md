@@ -1,11 +1,11 @@
 ---
-title: Crypto.com/Nadex
+title: OG/Crypto.com
 ---
 
 <div class="page-hero" data-accent="nadex">
-  <div class="page-eyebrow">Crypto.com · Nadex</div>
-  <h1>Crypto.com/Nadex</h1>
-  <p class="page-lead">Crypto.com's Nadex exchange trades event binaries whose only public record is the exchange's daily bulletin. No single game dominates it: the multi-leg <strong>COMBOS</strong> parlay line is the largest product here, and it is what the busiest days are mostly made of.</p>
+  <div class="page-eyebrow">OG/Crypto.com</div>
+  <h1>OG/Crypto.com</h1>
+  <p class="page-lead">OG/Crypto.com trades event binaries whose only public record is the exchange's daily bulletin. No single game dominates it: the multi-leg <strong>COMBOS</strong> parlay line is the largest product here, and it is what the busiest days are mostly made of.</p>
 </div>
 
 ```js
@@ -29,14 +29,14 @@ import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./componen
 ```js
 display(freshnessPanel({
   items: [
-    {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "nadex_categories_daily.csv"), meta: "CFTC/Nadex bulletin scrape", tone: "competitor"},
+    {label: "Category data", date: latestDate(catDaily), updatedAt: fileUpdatedAt(freshness, "nadex_categories_daily.csv"), meta: "OG/Crypto.com bulletin scrape", tone: "competitor"},
     {label: "Sports split", date: latestDate(split), updatedAt: fileUpdatedAt(freshness, "nadex_sports_split_daily.csv"), meta: "Derived from mapped bulletin categories", tone: "competitor"}
   ],
-  note: "Crypto.com/Nadex updates when daily bulletins are scraped and rebuilt; this is not a trade-level feed."
+  note: "OG/Crypto.com updates when daily bulletins are scraped and rebuilt; this is not a trade-level feed."
 }));
 display(askPageLink({
-  question: "Summarize recent Crypto.com/Nadex event-contract activity and category mix.",
-  context: "Crypto.com/Nadex page using nadex_categories_daily.csv and nadex_sports_split_daily.csv."
+  question: "Summarize recent OG/Crypto.com event-contract activity and category mix.",
+  context: "OG/Crypto.com page using nadex_categories_daily.csv and nadex_sports_split_daily.csv."
 }));
 ```
 
@@ -74,7 +74,7 @@ const parlayTotal = d3.sum(catDaily.filter(d => d.category === "Parlays"), d => 
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>Crypto.com/Nadex views use daily event/category exports rather than trade-level prints. Volume is normalized contract count by day; sports and category splits come from local classification of event names and categories in the Nadex export.</p>
+  <p>OG/Crypto.com views use daily event/category exports rather than trade-level prints. Volume is normalized contract count by day; sports and category splits come from local classification of event names and categories in the OG/Crypto.com export.</p>
   <p>Built from daily bulletin totals, not trade-level prints, so this is a read on scale and category mix rather than microstructure.</p>
   <p>Rows whose bulletin line was a venue name containing "Events Center" (a scraper artifact — the volume column on those lines holds an expiry date, not a contract count) are excluded from every number on this page. Before 2026-08-06 they were counted as college basketball and added 322,088,514 phantom contracts.</p>
 </details>
@@ -134,7 +134,7 @@ function makeBrush(data, color) {
 
 ## Daily volume
 
-<p class="section-intro">Daily event-contract volume since Nadex event contracts started appearing in the exchange's daily bulletins.</p>
+<p class="section-intro">Daily event-contract volume since OG/Crypto.com event contracts started appearing in the exchange's daily bulletins.</p>
 
 ```js
 const brushVolume = view(makeBrush(split, "var(--accent-nadex)"));
@@ -169,11 +169,11 @@ Plot.plot({
 })
 ```
 
-<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of Nadex's own daily bulletins. Nadex redenominated twice — contracts were $100 through May 12, 2025, $10 through Aug 4, 2025 and $1 since — so a contract count is not comparable across those dates. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
+<p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of OG/Crypto.com's own daily bulletins. OG/Crypto.com redenominated twice — contracts were $100 through May 12, 2025, $10 through Aug 4, 2025 and $1 since — so a contract count is not comparable across those dates. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
 
 ## Top sport events (all time)
 
-_The biggest individual sports events on Nadex by all-time contract volume, from the daily bulletin events feed._
+_The biggest individual sports events on OG/Crypto.com by all-time contract volume, from the daily bulletin events feed._
 
 ```js
 // Bulletin lines whose venue name contains "Events Center" survive the scraper's
@@ -280,7 +280,7 @@ Plot.plot({
 
 ## Top markets
 
-<p class="section-intro">Crypto.com/Nadex's individual markets, ranked by volume — the daily bulletin publishes a ticker and a volume, and nothing that identifies a fixture.</p>
+<p class="section-intro">OG/Crypto.com's individual markets, ranked by volume — the daily bulletin publishes a ticker and a volume, and nothing that identifies a fixture.</p>
 
 ```js
 // Untyped on purpose — see the note in components/market-leaderboard.js: reading

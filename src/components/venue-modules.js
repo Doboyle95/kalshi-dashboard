@@ -350,7 +350,7 @@ export function largeTradeRows(largeTrades, {venue, table, metricLabel}) {
 // draw at 100c per contract against Kalshi's 0.84c -- a 119x cost gap that never
 // existed, since $1.00 on a $100 contract is the same ~1%.
 export const contractDollars = (venue, date) => {
-  if (venue !== "Crypto.com/Nadex") return 1;
+  if (venue !== "OG/Crypto.com") return 1;
   const t = +asDate(date);
   return t < Date.UTC(2025, 4, 13) ? 100 : t < Date.UTC(2025, 7, 5) ? 10 : 1;
 };

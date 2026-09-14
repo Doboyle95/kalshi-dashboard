@@ -102,7 +102,7 @@ const normalized = [
   // print dozens of times and every print shares a single settlement.
   // COVERAGE: only ~64% of Nadex contracts reach a matched settlement in this file, and the
   // missing third is mostly COMBOS (parlays) -- flagged in the intro under the first chart.
-  ...nd.filter(d => d.group === "ALL" && (d.bin_width == null || +d.bin_width === 5)).map(d => ({venue: "Crypto.com/Nadex", bin: +d.price_bin, implied: number(d.implied), actual: number(d.actual), error: number(d.calib_error), se: number(d.se_calib_error), events: number(d.n_eff), contracts: number(d.contracts)})),
+  ...nd.filter(d => d.group === "ALL" && (d.bin_width == null || +d.bin_width === 5)).map(d => ({venue: "OG/Crypto.com", bin: +d.price_bin, implied: number(d.implied), actual: number(d.actual), error: number(d.calib_error), se: number(d.se_calib_error), events: number(d.n_eff), contracts: number(d.contracts)})),
   // Novig STRAIGHT contracts only -- parlays never resolve in this feed. As on DKeX and
   // ProphetX, x is the CONTRACT-WEIGHTED PRICE ACTUALLY PAID (sum_price_contracts / contracts),
   // not the bin midpoint, so the error is the true miscalibration and not a midpoint artefact.
@@ -127,7 +127,7 @@ display(freshnessPanel({
     {label: "Novig", value: "Daily", updatedAt: fileUpdatedAt(freshness, "novig_calibration.csv"), tone: "competitor"},
     // nadex_calibration.csv is served but is NOT a key in freshness_manifest.json, so this
     // card shows no timestamp until the producer adds it; do not substitute a sibling file.
-    {label: "Crypto.com/Nadex", value: "Bulletin rebuild", updatedAt: fileUpdatedAt(freshness, "nadex_calibration.csv"), tone: "competitor"},
+    {label: "OG/Crypto.com", value: "Bulletin rebuild", updatedAt: fileUpdatedAt(freshness, "nadex_calibration.csv"), tone: "competitor"},
     {label: "Polymarket US", value: "Hand-built", updatedAt: fileUpdatedAt(freshness, "calibration_polymarket.csv"), tone: "local"},
     {label: "ForecastEx", value: "Hand-built", updatedAt: fileUpdatedAt(freshness, "forecastex_calibration.csv"), tone: "local"}
   ],
@@ -149,7 +149,7 @@ const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.ve
 
 ## Actual vs implied win rate
 
-<p class="section-intro">Every venue sits at the contract-weighted price actually paid; Crypto.com/Nadex covers the ~64% of its contracts that match a settlement here, the missing third mostly combos, and the DKeX bar is single markets only &mdash; its combos carry no event key and are excluded by construction.</p>
+<p class="section-intro">Every venue sits at the contract-weighted price actually paid; OG/Crypto.com covers the ~64% of its contracts that match a settlement here, the missing third mostly combos, and the DKeX bar is single markets only &mdash; its combos carry no event key and are excluded by construction.</p>
 
 ```js
 Plot.plot({
@@ -328,13 +328,13 @@ const detail0 = parlayDetail[0] ?? {};
   taker concept. Both were carried as <code>named</code>, which is the pipeline stating in its
   own schema that it does not know who traded.</p>
   <p><strong>Why the venues with big parlay books are still only partly here.</strong> Underdog, Novig,
-  Crypto.com/Nadex and ProphetX all run substantial parlay volume, and request-for-quote pricing
+  OG/Crypto.com and ProphetX all run substantial parlay volume, and request-for-quote pricing
   would settle who paid. For most of them the missing half is <em>what happened</em>. Underdog
   gives a closing price and a status that only ever reads &ldquo;Finalized&rdquo; &mdash;
   across 4,972 tickers not one ends at a settled 0 or 1, and of 282 two-sided game-win
   pairs, where exactly one side must win, none shows one winner and one loser. ProphetX carries
   no event date on any of its parlay contracts, so the maturity rule that makes its single
-  markets safe cannot be applied. Nadex publishes a daily bulletin with no traded price and no
+  markets safe cannot be applied. OG/Crypto.com publishes a daily bulletin with no traded price and no
   per-contract settlement. <strong>Novig is the exception:</strong> its single markets now settle
   to WIN/LOSS in the public GraphQL snapshot and are the taker bar on the chart above; only its
   parlays stay out, because 0 of its COMBO markets ever resolve.</p>
@@ -345,7 +345,7 @@ const detail0 = parlayDetail[0] ?? {};
 
 ## What a contract costs its buyer
 
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX's RFQ-parlay row is net of both the DKeX taker charge and DraftKings Predictions' applicable introducing-broker commission.</strong> Crypto.com is net of Nadex's standard $0.02 direct-member exchange benchmark, not an exact reconstruction of the app's retail fee: the app changed on June 30, 2026 to a published 1–1.75&cent; taker range with maker and settlement fees at zero, while the historical bulletin cannot identify which point in that range applied. The precise fee, side and price-basis treatment for every row is disclosed above and in its tooltip.</div>
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX's RFQ-parlay row is net of both the DKeX taker charge and DraftKings Predictions' applicable introducing-broker commission.</strong> Crypto.com is net of its standard $0.02 direct-member exchange benchmark, not an exact reconstruction of the app's retail fee: the app changed on June 30, 2026 to a published 1–1.75&cent; taker range with maker and settlement fees at zero, while the historical bulletin cannot identify which point in that range applied. The precise fee, side and price-basis treatment for every row is disclosed above and in its tooltip.</div>
 
 ```js
 Plot.plot({

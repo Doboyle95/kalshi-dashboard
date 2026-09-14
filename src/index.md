@@ -432,7 +432,7 @@ const VENUE_BUCKET = {
 // mapped, and its seven category values are Baseball, Basketball (pro), Football,
 // Golf, Motorsport, Parlays, Soccer.
 const VENUE_OVERRIDE = {
-  "Crypto.com/Nadex": {Parlays: "Parlay"},
+  "OG/Crypto.com": {Parlays: "Parlay"},
   // DKeX combos, launched 2026-08-26. Without this line productBucket falls through
   // to VENUE_BUCKET, which has no "Parlays" key, and 21% of the venue rendered as
   // grey Unclassified on the product-mix chart -- its August sports share read 79.4%
@@ -458,7 +458,7 @@ function normalizeProduct(venue, rows, categoryColumn, valueColumn = "contracts"
 
 const competitorProductRows = [
   ...normalizeProduct("Polymarket US", pmCat, "category"),
-  ...normalizeProduct("Crypto.com/Nadex", nadexCat, "category"),
+  ...normalizeProduct("OG/Crypto.com", nadexCat, "category"),
   ...normalizeProduct("Rothera", rotheraCat, "category"),
   ...normalizeProduct("DKeX", dkexCat, "category"),
   ...normalizeProduct("ProphetX", pxCat, "category"),
@@ -520,7 +520,7 @@ const monthlySports = Array.from(d3.rollup(trendRows, rows => {
 const INSPECTOR = window.PredictChartsInspector;
 const VENUE_ROUTES = new Map([
   ["Kalshi", "./volume"], ["Polymarket US", "./polymarket"], ["ForecastEx", "./forecastex"],
-  ["DKeX", "./dkex"], ["Underdog Exchange", "./underdog"], ["Crypto.com/Nadex", "./nadex"],
+  ["DKeX", "./dkex"], ["Underdog Exchange", "./underdog"], ["OG/Crypto.com", "./nadex"],
   ["ProphetX", "./prophetx"], ["Novig", "./novig"], ["Rothera", "./rothera"], ["CME", "./cme"]
 ]);
 const isoDay = date => new Date(date).toISOString().slice(0, 10);

@@ -44,7 +44,7 @@ display(freshnessPanel({
   items: [
     {label: "Trade-size mix", date: latestDate(tradeSizeRaw), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Kalshi can be within 15 minutes locally; competitors follow public files"},
     {label: "Largest trades", value: "All-time leaderboard", updatedAt: fileUpdatedAt(freshness, "large_trades.csv"), meta: "Settlement-dependent; refreshes every ~4h"},
-    {label: "Supported platforms", value: platformOptions.join(", "), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "Crypto.com/Nadex and Rothera omitted: the size producer does not cover them", tone: "competitor"}
+    {label: "Supported platforms", value: platformOptions.join(", "), updatedAt: fileUpdatedAt(freshness, "trade_size_daily.csv"), meta: "OG/Crypto.com and Rothera omitted: the size producer does not cover them", tone: "competitor"}
   ],
   note: "Competitor rows update when their public trade files are downloaded and rebuilt."
 }));
@@ -256,7 +256,7 @@ const selectedMaxTrade = d3.max(selectedRows, d => d.max_trade_size);
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>The top chart counts only the contracts from trades at or above the threshold you pick; the ribbon below shows the full size mix for the same window. Crypto.com/Nadex isn't shown here — only daily totals are available for it, not individual trades.</p>
+  <p>The top chart counts only the contracts from trades at or above the threshold you pick; the ribbon below shows the full size mix for the same window. OG/Crypto.com isn't shown here — only daily totals are available for it, not individual trades.</p>
 </details>
 
 ```js

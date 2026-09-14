@@ -26,7 +26,7 @@ const dkParlay = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: 
 // Venue colour is the site-wide mapping and follows the entity, never the rank.
 const C = {
   "Kalshi": "var(--accent-kalshi)", "ProphetX": "#DB2777", "Novig": "#6366F1",
-  "Polymarket US": "var(--accent-polymarket)", "Underdog": "var(--accent-underdog)", "Crypto.com/Nadex": "var(--accent-nadex)",
+  "Polymarket US": "var(--accent-polymarket)", "Underdog": "var(--accent-underdog)", "OG/Crypto.com": "var(--accent-nadex)",
   "DKeX": "var(--accent-dkex)"
 };
 const fmtPct = d => `${d.toFixed(1)}%`;
@@ -93,7 +93,7 @@ const ndByDay = d3.rollup(nadexCats, v => ({
   tot: d3.sum(v, x => x.contracts)
 }), d => iso(d.date));
 const ndShare = Array.from(ndByDay, ([date, o]) => o.tot > 0
-  ? {venue: "Crypto.com/Nadex", date: new Date(date), share: 100 * o.parlay / o.tot,
+  ? {venue: "OG/Crypto.com", date: new Date(date), share: 100 * o.parlay / o.tot,
      parlay: o.parlay, tot: o.tot} : null)
   .filter(Boolean).sort((a, b) => a.date - b.date);
 const ndLaunch = (ndShare.find(d => d.parlay > 0) ?? {}).date ?? null;
@@ -238,7 +238,7 @@ Plot.plot({
     ndLaunch ? Plot.text([ndLaunch], {
       x: d => d, frameAnchor: "top", textAnchor: "start", dx: 5, dy: 4, fontSize: 11,
       fill: "var(--theme-foreground-muted)",
-      text: () => `Nadex parlays begin ${iso(ndLaunch)}`
+      text: () => `OG/Crypto.com parlays begin ${iso(ndLaunch)}`
     }) : null,
     Plot.line(overTimeBrushed, {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
     Plot.dot(overTimeBrushed, {
@@ -324,4 +324,4 @@ Plot.plot({
 })
 ```
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Crypto.com/Nadex, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero. DKeX publishes none either, but its settlement report names every leg, so the count is recovered rather than reported.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">OG/Crypto.com, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero. DKeX publishes none either, but its settlement report names every leg, so the count is recovered rather than reported.</div>

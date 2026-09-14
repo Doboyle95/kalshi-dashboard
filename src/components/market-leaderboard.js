@@ -242,8 +242,7 @@ export const LB_VENUES = {
 
   nadex: {
     key: "nadex",
-    label: "Crypto.com/Nadex",
-    shortLabel: "Nadex",
+    label: "OG/Crypto.com",
     file: "nadex_market_leaderboard.csv",
     accent: "var(--accent-nadex)",
     unit: "contracts",
@@ -251,7 +250,7 @@ export const LB_VENUES = {
     outcomesHeader: null,      // the bulletin has no outcome grain at all
     topHeader: null,
     coverage: "Since 2024-12-23.",
-    nameNote: "Nadex publishes no market name — only a ticker such as <code>NFL-00001-260208-M</code>, in which the five-digit number is a within-day counter, not a fixture id. Every name here is decoded from that ticker and carries no team, player or event identity, because none is published. This is the least readable venue on the site and the table does not pretend otherwise.",
+    nameNote: "OG/Crypto.com publishes no market name — only a ticker such as <code>NFL-00001-260208-M</code>, in which the five-digit number is a within-day counter, not a fixture id. Every name here is decoded from that ticker and carries no team, player or event identity, because none is published. This is the least readable venue on the site and the table does not pretend otherwise.",
     map: r => {
       const nm = str(r.market_name);
       return {
@@ -885,7 +884,7 @@ export function marketLeaderboard({
       // C6: the per-venue coverage note is emitted only in single-venue mode, so
       // without this the mixed view never says it is a top slice, and a reader who
       // cannot find a mid-sized market concludes the venue never listed it.
-      bits.push(html`<span>Each venue contributes its largest markets only (top 1,000 for Kalshi, Polymarket US, Crypto.com/Nadex, DKeX and Underdog Exchange; all markets for ForecastEx and Rothera), so an absent market may simply be below that cut.</span>`);
+      bits.push(html`<span>Each venue contributes its largest markets only (top 1,000 for Kalshi, Polymarket US, OG/Crypto.com, DKeX and Underdog Exchange; all markets for ForecastEx and Rothera), so an absent market may simply be below that cut.</span>`);
       bits.push(html`<span>This is a searchable finder, not a cross-venue rank: ForecastEx counts matched pairs where the others count contracts, and the source histories begin on different dates. The default sort is most recently traded; sorting by volume is available but does not make the units or windows comparable.</span>`);
       bits.push(html`<span>An empty fee or outcome cell means the venue does not publish that number for that market — never that it is zero.</span>`);
     }

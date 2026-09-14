@@ -14,7 +14,7 @@ title: Venues
   <a href="./forecastex"><strong>ForecastEx</strong><span>Activity · Category evolution · Top products</span></a>
   <a href="./dkex"><strong>DKeX / DraftKings</strong><span>Activity · Products · Parlays · Settlements · Top markets</span></a>
   <a href="./underdog"><strong>Underdog Exchange</strong><span>Activity · Product and bet-type mix · Top markets</span></a>
-  <a href="./nadex"><strong>Crypto.com / Nadex</strong><span>Activity · Products · Parlay P&amp;L · Top events</span></a>
+  <a href="./nadex"><strong>OG/Crypto.com</strong><span>Activity · Products · Parlay P&amp;L · Top events</span></a>
   <a href="./prophetx"><strong>ProphetX</strong><span>Activity · Probability distribution · Parlays · Calibration summary</span></a>
   <a href="./novig"><strong>Novig</strong><span>Activity · Fee regimes · Parlays · Top markets</span></a>
   <a href="./rothera"><strong>Rothera / Robinhood</strong><span>Activity · Products · Top markets</span></a>
