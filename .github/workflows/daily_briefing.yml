@@ -42,19 +42,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          today="$(date -u +%F)"
           # This used to test whether the COMMITTED briefing was dated today, which is a
           # different question and gets the wrong answer whenever a card was published by
           # hand: on 2026-08-23 a hand-published briefing carried today's date and would
           # have suppressed this backstop had the 18:30 run failed. Ask the real question.
           # A failed lookup yields "", which floors to 0 and generates -- failing toward
           # one extra model call rather than toward a missing day.
+          #
+          # "Already succeeded" means within the last 12 hours, NOT on today's UTC date.
+          # GitHub starts both crons hours late (18:30 ran at 20:48, 21:03 and 21:56 UTC on
+          # Sept. 12-14; 22:30 ran at 00:09 and 00:22), so this run lands after midnight UTC,
+          # a date check has already rolled over, and it regenerated every night, replacing
+          # each afternoon's card. On Sept. 14 at 00:22 that swapped a sound card for one that
+          # spent Kalshi's record day on a 4.8M-contract Economics clause. The crons are 4h
+          # apart and the next 18:30 is ~20h away, so 12h tolerates ~8h of delay either way.
           succeeded="$(gh run list --workflow=daily_briefing.yml --limit 40 \
             --json conclusion,createdAt,event \
-            --jq "[.[] | select(.event == \"schedule\" and .conclusion == \"success\" and (.createdAt | startswith(\"$today\")))] | length")"
-          echo "successful_scheduled_runs_today=${succeeded:-unknown} today=$today event=${{ github.event_name }} schedule=${{ github.event.schedule }}"
+            --jq '[.[] | select(.event == "schedule" and .conclusion == "success" and ((.createdAt | fromdateiso8601) > (now - 43200)))] | length')"
+          echo "successful_scheduled_runs_last_12h=${succeeded:-unknown} event=${{ github.event_name }} schedule=${{ github.event.schedule }}"
           if [ "${{ github.event.schedule }}" = "30 22 * * *" ] && [ "${succeeded:-0}" -gt 0 ]; then
-            echo "A scheduled run already succeeded today; skipping the late attempt."
+            echo "A scheduled run already succeeded in the last 12 hours; skipping the late attempt."
             echo "stale=false" >> "$GITHUB_OUTPUT"
           else
             echo "stale=true" >> "$GITHUB_OUTPUT"
