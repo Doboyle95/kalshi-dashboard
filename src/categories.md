@@ -897,10 +897,14 @@ function reportTickerLabel(ticker) {
     KXGOVCA: "California governor",
     KXMVESPORTSMULTIGAMEEXTENDED: "Sports multi-game parlays",
     KXMVECROSSCATEGORY: "Cross-category parlays",
+    // Kalshi's second cross-category series (from 2026-08-20): same title and
+    // contract terms, but its fee type is plain quadratic: no combo maker fee.
+    KXMVECROSSCATEGORY0: "Cross-category parlays (no maker fees)",
     KXMVENFLSINGLEGAME: "NFL same-game parlays",
     KXMVENFLMULTIGAMEEXTENDED: "NFL multi-game parlays",
     KXMVENBASINGLEGAME: "NBA same-game parlays",
     KXMVECBCHAMPIONSHIP: "College basketball championship parlays",
+    KXMVEOSCARS: "Oscars parlays",
     PRES: "Presidency"
   };
   const grandSlam = String(ticker || "").match(/^(KXATPGRANDSLAM|KXWTAGRANDSLAM|KXATPGRANDSLAMFIELD|KXUSOPEN|KXUSO|KXUSOMENSINGLES|KXUSOWOMENSINGLES|KXWIMBLEDON|KXAUSTRALIAN|KXFOMENSINGLES|KXFOWOMENSINGLES|KXWMENSINGLES|KXWWOMENSINGLES|KXWMEN|KXWWOMEN|KXIWMEN|KXIWWOMEN|KXAOMEN|KXAOWOMEN|KXTENNISEX|KXSIXKINGSSLAM)/);
@@ -908,6 +912,9 @@ function reportTickerLabel(ticker) {
   const tourEvent = String(ticker || "").match(/^(KXATPMATCH|KXATPCHALLENGERMATCH|KXWTAMATCH|KXWTACHALLENGERMATCH|KXATPSETWINNER|KXATPDOUBLES|KXATPEXACTMATCH|KXATPTOTALSETS|KXATPFINALS|KXATPIT|KXWTAIT|KXATPMIA|KXWTAFINALS|KXWTAMIA|KXATPGSPREAD|KXATPGAMETOTAL)/);
   if (tourEvent) return "ATP/WTA tour";
   if (known[ticker]) return known[ticker];
+  // A later numbered cross-category series reads as the original until its fee
+  // terms are checked and it gets its own entry above; never as a raw code.
+  if (/^KXMVECROSSCATEGORY\d+$/.test(String(ticker || ""))) return "Cross-category parlays";
   const cityNames = {
     NY: "New York", NYC: "New York", LAX: "Los Angeles", CHI: "Chicago", MIA: "Miami",
     AUS: "Austin", DEN: "Denver", PHIL: "Philadelphia", DC: "Washington DC",
