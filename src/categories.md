@@ -496,7 +496,6 @@ const tmTrackedMeta = topDailyCols.map(report_ticker => {
 });
 
 const tmSelectedCategory = Mutable(null);
-const tmHoveredCategory = Mutable(null);
 const tmPinnedCategories = Mutable([]);
 
 function setSelectedCategory(category) {
@@ -1401,7 +1400,6 @@ const tmActiveMarketRowsByTicker = d3.group(
   };
 
   const getFill = cat => CAT_COLOR[cat] || "#888";
-  const activeCategory = tmHoveredCategory || tmActiveCategory;
   const pinnedSet = new Set(tmPinnedCategories);
   const shortLabel = (text, max = 34) => {
     const s = String(text ?? "");
@@ -1436,7 +1434,6 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("width",  d => Math.max(0, d.x1 - d.x0))
     .attr("height", d => Math.max(0, d.y1 - d.y0))
     .attr("fill", d => getFill(isZoomed ? tmActiveCategory : d.parent.data.name))
-    .attr("fill-opacity", d => !activeCategory || isZoomed || d.parent.data.name === activeCategory ? 0.96 : 0.24)
     .attr("stroke", d =>
       d.parent.data.name === tmActiveCategory ? "rgba(255,255,255,0.70)"
       : pinnedSet.has(d.parent.data.name) ? "rgba(255,255,255,0.56)"
@@ -1444,8 +1441,6 @@ const tmActiveMarketRowsByTicker = d3.group(
     )
     .attr("stroke-width", d => d.parent.data.name === tmActiveCategory ? 1.05 : pinnedSet.has(d.parent.data.name) ? 0.85 : 0.5)
     .style("cursor", isZoomed ? "zoom-out" : "pointer")
-    .on("mouseenter.hover", (_, d) => { tmHoveredCategory.value = isZoomed ? null : d.parent.data.name; })
-    .on("mouseleave.hover", () => { tmHoveredCategory.value = null; })
     .on("click", (_, d) => {
       if (isZoomed) setSelectedCategory(null);
       else setSelectedCategory(d.parent.data.name);
@@ -1552,7 +1547,6 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("paint-order","stroke")
     .attr("stroke","rgba(0,0,0,0.4)")
     .attr("stroke-width", 3)
-    .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 0.98 : 0.45)
     .attr("pointer-events", "none")
     .text(d => {
       const w = d.x1 - d.x0, h = d.y1 - d.y0;
@@ -1572,7 +1566,6 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("text-anchor","middle")
     .attr("dominant-baseline","middle")
     .attr("fill","rgba(255,255,255,0.65)")
-    .attr("fill-opacity", d => !activeCategory || isZoomed || d.data.name === activeCategory ? 1 : 0.45)
     .attr("font-size","10px")
     .attr("pointer-events", "none")
     .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? (tmMetric === "Fees" ? `$${fmtCount(d.value)}` : `${fmtCount(d.value)}`) : "");
@@ -1596,7 +1589,6 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("paint-order","stroke")
     .attr("stroke","rgba(0,0,0,0.3)")
     .attr("stroke-width", 2)
-    .attr("fill-opacity", d => !activeCategory || isZoomed || d.parent.data.name === activeCategory ? 1 : 0.32)
     .attr("pointer-events", "none")
     .text(d => {
       const w = d.x1 - d.x0, h = d.y1 - d.y0;
@@ -1605,6 +1597,36 @@ const tmActiveMarketRowsByTicker = d3.group(
       if (SKIP_LABEL.has(label)) return "";
       return isZoomed ? shortLabel(label, w > 150 ? 38 : 24) : label;
     });
+
+  // -- Category focus: dim all but the focused category ----------------------
+  // Hovering a tile focuses its category by updating these attributes in place,
+  // so a hover re-renders nothing. It used to assign a Mutable declared in
+  // another cell, which here is only its plain value (null), so every hover
+  // threw; routing it through a working Mutable would instead re-run this cell
+  // (replacing the SVG under the pointer) and every chart below that reads it.
+  const applyCategoryFocus = focus => {
+    const full = name => !focus || isZoomed || name === focus;
+    leafSel.attr("fill-opacity", d => full(d.parent.data.name) ? 0.96 : 0.24);
+    svg.selectAll("text.cname").attr("fill-opacity", d => full(d.data.name) ? 0.98 : 0.45);
+    svg.selectAll("text.cvol").attr("fill-opacity", d => full(d.data.name) ? 1 : 0.45);
+    svg.selectAll("text.mtype").attr("fill-opacity", d => full(d.parent.data.name) ? 1 : 0.32);
+  };
+  applyCategoryFocus(tmActiveCategory);
+  if (!isZoomed) {
+    let hoveredCategory = null;
+    leafSel.on("mouseenter.hover", (_, d) => {
+      if (d.parent.data.name === hoveredCategory) return;
+      hoveredCategory = d.parent.data.name;
+      applyCategoryFocus(hoveredCategory);
+    });
+    // Restore when the pointer leaves the map rather than each tile, so crossing
+    // the gaps between tiles does not flash every category back to full strength.
+    svg.on("mouseleave.hover", () => {
+      if (hoveredCategory === null) return;
+      hoveredCategory = null;
+      applyCategoryFocus(tmActiveCategory);
+    });
+  }
 
   // -- Group labels (Sports / Non-sports) ------------------------------------
   svg.selectAll("text.grp")
@@ -1911,7 +1933,7 @@ const generalColors = {
   "Soccer": "#827717", "Basketball": "#1565c0", "Football": "var(--cat-football)", "Parlay": "#7b1fa2"
 };
 
-const hasCategoryFocus = !!(tmActiveCategory || tmHoveredCategory || tmPinnedCategories.length);
+const hasCategoryFocus = !!(tmActiveCategory || tmPinnedCategories.length);
 const effectiveChartDetail = hasCategoryFocus ? "Detailed" : chartDetail;
 
 const activeOrder    = effectiveChartDetail === "Detailed" ? wideOrder    : generalOrder;
@@ -1961,10 +1983,9 @@ const mapCategoryForCurrentDetail = category => effectiveChartDetail === "Detail
 const mapCategoryForComparison = category => normalizeTreemapCategory(category);
 
 const monthlyPrimaryFocus = tmActiveCategory ? mapCategoryForCurrentDetail(tmActiveCategory) : null;
-const monthlyHoverFocus = tmHoveredCategory ? mapCategoryForCurrentDetail(tmHoveredCategory) : null;
 const monthlyPinned = tmPinnedCategories.map(mapCategoryForCurrentDetail);
 
-const monthlyFocusSet = new Set([monthlyHoverFocus || monthlyPrimaryFocus, ...monthlyPinned].filter(Boolean));
+const monthlyFocusSet = new Set([monthlyPrimaryFocus, ...monthlyPinned].filter(Boolean));
 // Detailed view splits "Parlay" into three leg-based buckets; expand a treemap "Parlay" focus to all three.
 if (monthlyFocusSet.has("Parlay")) {
   monthlyFocusSet.add("Parlay (correlated)");
