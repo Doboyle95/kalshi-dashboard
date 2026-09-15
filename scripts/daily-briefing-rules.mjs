@@ -23,20 +23,28 @@ export function kalshiDepthEvidenceFaults(sqls) {
   return [];
 }
 
-// On Kalshi's biggest day on record, the record is the headline and the figure after it has
-// to explain that day. The Sept. 12, 2026 card opened "Kalshi cleared another
-// two-billion-contract day" on a record 2.43B contracts, then spent its second half on
-// Economics at 4.8M contracts -- 0.2% of the day. `standing` comes from the generator's
-// ranking lookup ({volume, rank, earlierDay, earlierContracts}) and is null when it failed.
+// On Kalshi's biggest day on record, the record is the headline and the bullet has to say
+// which part of the market carried it. The Sept. 12, 2026 card did neither: it opened
+// "Kalshi cleared another two-billion-contract day" on a record 2.43B contracts, and the only
+// figure after it was Economics at 4.8M contracts -- 0.2% of the day, explaining nothing.
+// A small figure BESIDE an explanation is fine. A draft that gave sports' 2.19B and added
+// "the biggest parlay in the week drew 35.9M YES contracts" is a reasonable bullet (Daniel,
+// 2026-09-15), and an earlier version of this check, which faulted every figure under 2% of
+// the day, stamped it out. So this asks for one figure that sizes a real part of the day and
+// says nothing about what else rides along. `standing` comes from the generator's ranking
+// lookup ({volume, rank, earlierDay, earlierContracts}) and is null when it failed.
 const RECORD_WORDING = /\b(?:records?|biggest|largest|busiest|most active|all-time|ever|new high|single-day high)\b/i;
-// One optional word may sit before "contracts": a draft slipped "35.9M YES contracts" past a
-// pattern that wanted the unit right against the noun.
-const CONTRACT_FIGURE = /(\d[\d,]*(?:\.\d+)?)\s*(billion|million|thousand|[bmk])?\s+(?:[a-z-]+\s+)?contracts\b/gi;
-// "trades of at least 50,000 contracts" is a size cutoff, not a slice of the day; counting it
-// sent a sound record-day bullet through two pointless retries.
+// A count: a number with a unit (2.19B, 35.9M), or any number followed by "contracts",
+// allowing one word between (35.9M YES contracts; 2,188,554,985 contracts).
+const MAGNITUDE = /(\$)?\b(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?:\s*(billion|million|thousand|[bmk])\b|(?=\s+(?:[a-z-]+\s+)?contracts\b))/gi;
+const MAGNITUDE_SCALE = {billion: 1e9, b: 1e9, million: 1e6, m: 1e6, thousand: 1e3, k: 1e3};
+// Figures that size nothing: a cutoff ("trades of at least 50,000 contracts"), or a baseline
+// ("a daily average of 1.75B", "its 185.7M seven-day average").
 const THRESHOLD_BEFORE = /(?:at least|more than|fewer than|less than|over|above|under|below|up to)\s*$/i;
-const CONTRACT_SCALE = {billion: 1e9, b: 1e9, million: 1e6, m: 1e6, thousand: 1e3, k: 1e3};
-const SLIVER_OF_RECORD_DAY = 0.02;
+const AVERAGE_BEFORE = /\baverage\s+(?:of\s+)?$/i;
+const AVERAGE_AFTER = /^\s*(?:[a-z0-9-]+\s+)?average\b/i;
+// A share of the day also sizes a part of it: "parlays made up 61% of the day".
+const SHARE_OF_DAY = /\b(\d{1,2}(?:\.\d+)?)%\s+of\s+(?:the\s+day|the\s+total|all\s+(?:volume|contracts|trading)|its\s+(?:volume|total)|kalshi['’]s\s+(?:volume|total|day))/gi;
 
 function roughContracts(value) {
   if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
@@ -45,12 +53,21 @@ function roughContracts(value) {
   return String(value);
 }
 
-export function contractFigures(text) {
-  const source = String(text || "");
-  return [...source.matchAll(CONTRACT_FIGURE)]
-    .filter((match) => !THRESHOLD_BEFORE.test(source.slice(Math.max(0, match.index - 14), match.index)))
-    .map(([, number, unit]) => Math.round(Number(number.replace(/,/g, "")) * (unit ? CONTRACT_SCALE[unit.toLowerCase()] : 1)))
-    .filter((value) => Number.isFinite(value) && value > 0);
+// True when the bullet sizes some part of the record day between 2% and 97% of it. The
+// headline itself (at or near the day's total) and the old record it beat do not count.
+function sizesPartOfRecordDay(bullet, standing) {
+  for (const match of bullet.matchAll(MAGNITUDE)) {
+    const [whole, money, number, unit] = match;
+    if (money) continue;
+    const before = bullet.slice(Math.max(0, match.index - 20), match.index);
+    const after = bullet.slice(match.index + whole.length, match.index + whole.length + 30);
+    if (THRESHOLD_BEFORE.test(before) || AVERAGE_BEFORE.test(before) || AVERAGE_AFTER.test(after)) continue;
+    const value = Number(number.replace(/,/g, "")) * (unit ? MAGNITUDE_SCALE[unit.toLowerCase()] : 1);
+    if (Math.abs(value - standing.earlierContracts) <= standing.earlierContracts * 0.015) continue;
+    const share = value / standing.volume;
+    if (share >= 0.02 && share < 0.97) return true;
+  }
+  return [...bullet.matchAll(SHARE_OF_DAY)].some(([, percent]) => Number(percent) >= 2 && Number(percent) < 97);
 }
 
 export function kalshiRecordDayFaults(text, standing) {
@@ -66,9 +83,8 @@ export function kalshiRecordDayFaults(text, standing) {
   if (!RECORD_WORDING.test(opener)) {
     faults.push(`Kalshi's latest day was its biggest on record, above the previous high of ${roughContracts(standing.earlierContracts)} contracts on ${standing.earlierDay} -- say so plainly in the Kalshi bullet's bold opening phrase`);
   }
-  const sliver = contractFigures(bullet).find((value) => value < standing.volume * SLIVER_OF_RECORD_DAY);
-  if (sliver != null) {
-    faults.push(`on Kalshi's record day its bullet spends a figure on ${roughContracts(sliver)} contracts, under 2% of the day's ${roughContracts(standing.volume)} -- replace it with the part of the market that carried the record, from that same day, sized against the day's total`);
+  if (!sizesPartOfRecordDay(bullet, standing)) {
+    faults.push(`on Kalshi's record day its bullet never says which part of the market carried the ${roughContracts(standing.volume)} contracts -- add sports, parlays or whichever segment did, from that same day, sized against the day's total`);
   }
   return faults;
 }

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  contractFigures,
   kalshiDepthEvidenceFaults,
   kalshiRecordDayFaults,
   otherVenueBulletCount,
@@ -67,7 +66,7 @@ test("requires actual Kalshi depth SQL and a recent comparison", () => {
 
 const SEPT_12_STANDING = {volume: 2_426_117_598, rank: 1, earlierDay: "2026-09-05", earlierContracts: 2_293_019_261};
 
-test("a record Kalshi day must lead with the record and not spend its figure on a sliver", () => {
+test("a record Kalshi day must lead with the record and say what carried it", () => {
   // The Kalshi bullet published for Sept. 12, 2026, verbatim.
   const text = [
     "- **Kalshi cleared another two-billion-contract day:** It traded 2.43B contracts on Sept. 12, 40.4% above its seven-day average; Economics reached 4.8M contracts on Sept. 10, up 104.7%, with fees rising 183.0% to $63,763.",
@@ -77,7 +76,7 @@ test("a record Kalshi day must lead with the record and not spend its figure on 
 
   assert.equal(faults.length, 2);
   assert.ok(faults[0].includes("biggest on record"));
-  assert.ok(faults[1].includes("4.8M contracts"));
+  assert.ok(faults[1].includes("which part of the market carried"));
 });
 
 test("a record Kalshi bullet that leads with the record and explains it passes", () => {
@@ -93,24 +92,28 @@ test("the record-day checks stay out of ordinary days and failed lookups", () =>
   assert.deepEqual(kalshiRecordDayFaults(text, null), []);
 });
 
-test("record-day sliver check: catches a trivial aside, ignores a size cutoff", () => {
-  const standing = {volume: 2_460_211_509, rank: 1, earlierDay: "2026-09-12", earlierContracts: 2_426_117_598};
-  // Both from test drafts on 2026-09-15, verbatim.
+const SEPT_13_STANDING = {volume: 2_460_211_509, rank: 1, earlierDay: "2026-09-12", earlierContracts: 2_426_117_598};
+
+test("a small figure beside the explanation is fine on a record day", () => {
+  // Verbatim: the card published for Sept. 13 (a comma-written figure explains it) and two
+  // test drafts on 2026-09-15 -- one with a parlay aside Daniel judged relevant, one whose
+  // "at least 50,000 contracts" is a size cutoff rather than a figure.
+  const published = "- **Kalshi set a daily record:** It traded 2,460,211,509 contracts on Sept. 13, 40.85% above its seven-day average and above the previous high of 2,426,117,598; Sports supplied 2,188,554,985 contracts, versus 1,229,285,435 over the prior 30 reported days.";
   const aside = "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, up from a daily average of 1.75B over the past week and beating Sept. 12's 2.43B; sports supplied 2.19B of the total, while the biggest parlay in the week drew 35.9M YES contracts and missed.";
   const cutoff = "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, beating Sept. 12's 2.43B; sports supplied 2.19B, while 142.0M contracts came in trades of at least 50,000 contracts.";
+  const share = "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, beating Sept. 12's 2.43B, with parlays making up 61% of the day.";
 
-  const faults = kalshiRecordDayFaults(aside, standing);
-  assert.equal(faults.length, 1);
-  assert.ok(faults[0].includes("35.9M contracts"));
-  assert.deepEqual(kalshiRecordDayFaults(cutoff, standing), []);
-  assert.deepEqual(contractFigures(cutoff), [2_460_000_000, 142_000_000]);
+  for (const text of [published, aside, cutoff, share]) {
+    assert.deepEqual(kalshiRecordDayFaults(text, SEPT_13_STANDING), []);
+  }
 });
 
-test("reads contract figures in the forms the briefing writes them", () => {
-  assert.deepEqual(
-    contractFigures("2.43B contracts, 4,784,044 contracts, 108.0M contracts, 2.1 billion contracts and 40.4% above"),
-    [2_430_000_000, 4_784_044, 108_000_000, 2_100_000_000]
-  );
+test("a record bullet whose figures are only the headline, a baseline, the old high and a sliver fails", () => {
+  const text = "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, up from a daily average of 1.75B over the past week and beating Sept. 12's 2.43B contracts; Economics rose to 4.3M contracts and fees hit $16.0M.";
+  const faults = kalshiRecordDayFaults(text, SEPT_13_STANDING);
+
+  assert.equal(faults.length, 1);
+  assert.ok(faults[0].includes("2.46B contracts"));
 });
 
 test("counts reader-facing venue aliases as non-Kalshi bullets", () => {
