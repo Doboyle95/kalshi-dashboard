@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  formatFaults,
+  kalshiCategoryFaults,
   kalshiDepthEvidenceFaults,
   kalshiRecordDayFaults,
   otherVenueBulletCount,
@@ -116,6 +118,46 @@ test("a record bullet whose figures are only the headline, a baseline, the old h
   assert.ok(faults[0].includes("2.46B contracts"));
 });
 
+test("a small category is not news on growth alone", () => {
+  // The Kalshi bullet published for Sept. 12, 2026, verbatim: Economics was 0.2% of the day.
+  const sept12 = "- **Kalshi cleared another two-billion-contract day:** It traded 2.43B contracts on Sept. 12, 40.4% above its seven-day average; Economics reached 4.8M contracts on Sept. 10, up 104.7%, with fees rising 183.0% to $63,763.";
+  const faults = kalshiCategoryFaults(sept12, 2_426_117_598);
+
+  assert.equal(faults.length, 1);
+  assert.ok(faults[0].includes('"Economics" is a whole category at 4.8M contracts'));
+  assert.equal(kalshiCategoryFaults("- **Kalshi's elections markets doubled:** Elections contracts rose 104% to 7.6M on Sept. 9, while Kalshi traded 1.90B overall.", 1_900_757_552).length, 1);
+});
+
+test("a single market can be named at a volume no category could", () => {
+  const volume = 2_460_211_509;
+  const texts = [
+    // Daniel, 2026-09-15: the biggest market within the biggest category is worth naming.
+    "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, beating Sept. 12's 2.43B; sports supplied 2.19B, and its biggest single market, the Bills-Ravens game, drew 41.2M contracts.",
+    "- **Kalshi's Fed market stood out:** The biggest economics market, the September rate decision, drew 3.1M contracts on Sept. 13.",
+    "- **Kalshi's politics trading:** The top market in politics drew 1.2M contracts on Sept. 13.",
+    "- **Kalshi's crypto trade cooled:** crypto fell to 214.4M contracts on Sept. 13, against a daily average of 259.9M over the past month.",
+    // Other venues' categories are not Kalshi's to judge.
+    "- **Novig's weekend jumped:** Novig traded 69.1M contracts, with economics at 0.2M contracts."
+  ];
+
+  for (const text of texts) {
+    assert.deepEqual(kalshiCategoryFaults(text, volume), [], text);
+  }
+  assert.deepEqual(kalshiCategoryFaults("- **Kalshi slipped:** Economics reached 4.8M contracts.", null), []);
+});
+
+test("the card is bullets only", () => {
+  const bullets = [
+    "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, beating Sept. 12's 2.43B; parlays supplied 1.49B, or 61% of the day.",
+    "- **OG/Crypto.com pushed into nine figures:** It reached 99.0M contracts on Sept. 13."
+  ].join("\n\n");
+  // The closing paragraph from a test draft on 2026-09-15, verbatim.
+  const withParagraph = `${bullets}\n\nKalshi's record was broad-based rather than a narrow category spike: parlays alone accounted for more than half of all contracts.`;
+
+  assert.deepEqual(formatFaults(bullets), []);
+  assert.equal(formatFaults(withParagraph).length, 1);
+});
+
 test("counts reader-facing venue aliases as non-Kalshi bullets", () => {
   const text = [
     "- **Underdog's parlay share climbed:** Volume fell while its parlay mix rose.",
@@ -146,6 +188,7 @@ test("rejects report-count averages lifted from query columns", () => {
   assert.equal(faults("- **DKeX surged:** 108.0M contracts, 645.8% above its prior 30-report average.").length, 1);
   assert.equal(faults("- **DKeX surged:** 108.0M contracts, up 160.78% from its recent seven-report average.").length, 1);
   assert.equal(faults("- **DKeX surged:** 139.8M contracts, 674.46% above its previous 30 reported-day average.").length, 1);
+  assert.equal(faults("- **DKeX broke far above its normal range:** 139.8M contracts, versus an 18.1M average over its past 30 reports.").length, 1);
   assert.deepEqual(faults("- **DKeX surged:** 108.0M contracts, 160.8% above its average over the past week."), []);
 });
 

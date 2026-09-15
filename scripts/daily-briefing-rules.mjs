@@ -53,21 +53,78 @@ function roughContracts(value) {
   return String(value);
 }
 
+// The counts in a bullet that size something, with their positions. Money, cutoffs and
+// baselines are dropped.
+function countsIn(bullet) {
+  const counts = [];
+  for (const match of bullet.matchAll(MAGNITUDE)) {
+    const [whole, money, number, unit] = match;
+    const start = match.index;
+    const end = start + whole.length;
+    const before = bullet.slice(Math.max(0, start - 20), start);
+    if (money || THRESHOLD_BEFORE.test(before) || AVERAGE_BEFORE.test(before) || AVERAGE_AFTER.test(bullet.slice(end, end + 30))) continue;
+    counts.push({start, end, value: Number(number.replace(/,/g, "")) * (unit ? MAGNITUDE_SCALE[unit.toLowerCase()] : 1)});
+  }
+  return counts;
+}
+
 // True when the bullet sizes some part of the record day between 2% and 97% of it. The
 // headline itself (at or near the day's total) and the old record it beat do not count.
 function sizesPartOfRecordDay(bullet, standing) {
-  for (const match of bullet.matchAll(MAGNITUDE)) {
-    const [whole, money, number, unit] = match;
-    if (money) continue;
-    const before = bullet.slice(Math.max(0, match.index - 20), match.index);
-    const after = bullet.slice(match.index + whole.length, match.index + whole.length + 30);
-    if (THRESHOLD_BEFORE.test(before) || AVERAGE_BEFORE.test(before) || AVERAGE_AFTER.test(after)) continue;
-    const value = Number(number.replace(/,/g, "")) * (unit ? MAGNITUDE_SCALE[unit.toLowerCase()] : 1);
-    if (Math.abs(value - standing.earlierContracts) <= standing.earlierContracts * 0.015) continue;
-    const share = value / standing.volume;
-    if (share >= 0.02 && share < 0.97) return true;
+  const sized = countsIn(bullet).some(({value}) =>
+    Math.abs(value - standing.earlierContracts) > standing.earlierContracts * 0.015
+    && value / standing.volume >= 0.02
+    && value / standing.volume < 0.97);
+  return sized || [...bullet.matchAll(SHARE_OF_DAY)].some(([, percent]) => Number(percent) >= 2 && Number(percent) < 97);
+}
+
+// The bar for naming a slice of Kalshi depends on what the slice is (Daniel, 2026-09-15). A
+// CATEGORY is judged by size: "it doesn't make much sense to flag a tiny category that may
+// have had some decent growth" -- the Sept. 12 card's "Economics reached 4.8M contracts", 0.2%
+// of the day. A SINGLE market or trade is judged by standing out: "very reasonable to flag the
+// biggest market within the biggest category", like a draft's 35.9M-contract parlay. Over the
+// 60 days to Sept. 13, sports and crypto held at least 1% of Kalshi's day on every day,
+// commodities on 23, elections on 5, economics and mentions on one each, and every other
+// category on none. So a category named with a count under 1% of the day is sent back, and
+// anything phrased as one market, event, game, trade or parlay is left alone. Plural names
+// only: "elections" is the category, "the mayoral election" is one event.
+const KALSHI_CATEGORY = /\b(?:economics|elections|politics|financials|crypto|entertainment|commodities|mentions|companies|climate and weather|weather|science and technology|transportation)\b/gi;
+const SINGLE_ITEM_AFTER = /^\s*(?:[a-z-]+\s+)?(?:market|event|game|trade|parlay|bet)\b/i;
+const SINGLE_ITEM_BEFORE = /\b(?:market|event|game|trade|parlay|bet)\s+(?:in|within|among)\s+(?:the\s+)?$/i;
+const SINGLE_ITEM = /\b(?:market|event|game|trade|parlay|bet)\b/gi;
+const CATEGORY_SHARE_FLOOR = 0.01;
+
+export function kalshiCategoryFaults(text, kalshiVolume) {
+  if (!(kalshiVolume > 0)) return [];
+  const faults = [];
+  const kalshiBullets = String(text || "")
+    .split(/\n(?=\s*[-*])/)
+    .map((item) => item.trim())
+    .filter((item) => item && !OTHER_VENUE_MENTION.test(item));
+  for (const bullet of kalshiBullets) {
+    const counts = countsIn(bullet);
+    const names = [...bullet.matchAll(KALSHI_CATEGORY)];
+    const singles = [...bullet.matchAll(SINGLE_ITEM)].map((item) => item.index);
+    for (const [position, match] of names.entries()) {
+      const start = match.index;
+      const end = start + match[0].length;
+      if (SINGLE_ITEM_AFTER.test(bullet.slice(end, end + 20)) || SINGLE_ITEM_BEFORE.test(bullet.slice(Math.max(0, start - 20), start))) continue;
+      // Its count is the first one after the name, before the clause ends and before the next
+      // category or single market takes over the sentence ("**Kalshi's politics trading:** The
+      // top market in politics drew 1.2M" -- that 1.2M is the market's). Else one right before it.
+      const stop = Math.min(
+        end + 45,
+        ...[bullet.indexOf(";", end), names[position + 1]?.index ?? -1, singles.find((index) => index >= end) ?? -1]
+          .filter((index) => index >= end)
+      );
+      const count = counts.find((item) => item.start >= end && item.start <= stop)
+        ?? counts.find((item) => item.end <= start && /^\s{1,3}$/.test(bullet.slice(item.end, start)));
+      if (count && count.value < kalshiVolume * CATEGORY_SHARE_FLOOR) {
+        faults.push(`"${match[0]}" is a whole category at ${roughContracts(count.value)} contracts, under 1% of Kalshi's ${roughContracts(kalshiVolume)}-contract day -- growth in a category that small is not news; leave it out, or name a single market or trade that stood out instead`);
+      }
+    }
   }
-  return [...bullet.matchAll(SHARE_OF_DAY)].some(([, percent]) => Number(percent) >= 2 && Number(percent) < 97);
+  return faults;
 }
 
 export function kalshiRecordDayFaults(text, standing) {
@@ -87,6 +144,16 @@ export function kalshiRecordDayFaults(text, standing) {
     faults.push(`on Kalshi's record day its bullet never says which part of the market carried the ${roughContracts(standing.volume)} contracts -- add sports, parlays or whichever segment did, from that same day, sized against the day's total`);
   }
   return faults;
+}
+
+// The card is bullets and nothing else. A test draft on 2026-09-15 closed with a paragraph
+// ("Kalshi's record was broad-based rather than a narrow category spike: ...") that the page
+// would have rendered under the list.
+export function formatFaults(text) {
+  const stray = String(text || "").split("\n").find((line) => line.trim() && !/^\s*[-*]\s/.test(line));
+  return stray
+    ? [`return only the bullets -- no paragraph before, between or after them (found: "${stray.trim().slice(0, 60)}...")`]
+    : [];
 }
 
 export function otherVenueBulletCount(text) {
@@ -135,8 +202,9 @@ export function wordingFaults(text, sqls) {
 
   // Lifted from the model's own supporting-query columns (prior_30_report_average_contracts):
   // the Sept. 12 card said "645.8% above its prior 30-report average".
-  // Same source, other spellings: "its previous 30 reported-day average", "the prior 30 reported days".
-  if (/\b(?:\d+|seven|thirty)[- ]report(?:ed)?\b/i.test(text)) {
+  // Same source, other spellings: "its previous 30 reported-day average", "the prior 30 reported
+  // days", "an 18.1M average over its past 30 reports".
+  if (/\b(?:\d+|seven|thirty)[- ]report(?:s|ed)?\b/i.test(text)) {
     faults.push('counting reports ("30-report average", "30 reported days") is internal wording -- say its recent average, or its average over the past week or month');
   }
   if (/\bnotional\b/i.test(text)) {
