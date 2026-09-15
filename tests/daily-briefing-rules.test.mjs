@@ -77,7 +77,7 @@ test("a record Kalshi day must lead with the record and not spend its figure on 
 
   assert.equal(faults.length, 2);
   assert.ok(faults[0].includes("biggest on record"));
-  assert.ok(faults[1].includes("4,800,000 contracts"));
+  assert.ok(faults[1].includes("4.8M contracts"));
 });
 
 test("a record Kalshi bullet that leads with the record and explains it passes", () => {
@@ -91,6 +91,19 @@ test("the record-day checks stay out of ordinary days and failed lookups", () =>
 
   assert.deepEqual(kalshiRecordDayFaults(text, {...SEPT_12_STANDING, rank: 2}), []);
   assert.deepEqual(kalshiRecordDayFaults(text, null), []);
+});
+
+test("record-day sliver check: catches a trivial aside, ignores a size cutoff", () => {
+  const standing = {volume: 2_460_211_509, rank: 1, earlierDay: "2026-09-12", earlierContracts: 2_426_117_598};
+  // Both from test drafts on 2026-09-15, verbatim.
+  const aside = "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, up from a daily average of 1.75B over the past week and beating Sept. 12's 2.43B; sports supplied 2.19B of the total, while the biggest parlay in the week drew 35.9M YES contracts and missed.";
+  const cutoff = "- **Kalshi set a new daily record:** It traded 2.46B contracts on Sept. 13, beating Sept. 12's 2.43B; sports supplied 2.19B, while 142.0M contracts came in trades of at least 50,000 contracts.";
+
+  const faults = kalshiRecordDayFaults(aside, standing);
+  assert.equal(faults.length, 1);
+  assert.ok(faults[0].includes("35.9M contracts"));
+  assert.deepEqual(kalshiRecordDayFaults(cutoff, standing), []);
+  assert.deepEqual(contractFigures(cutoff), [2_460_000_000, 142_000_000]);
 });
 
 test("reads contract figures in the forms the briefing writes them", () => {
@@ -129,7 +142,36 @@ test("rejects report-count averages lifted from query columns", () => {
 
   assert.equal(faults("- **DKeX surged:** 108.0M contracts, 645.8% above its prior 30-report average.").length, 1);
   assert.equal(faults("- **DKeX surged:** 108.0M contracts, up 160.78% from its recent seven-report average.").length, 1);
+  assert.equal(faults("- **DKeX surged:** 139.8M contracts, 674.46% above its previous 30 reported-day average.").length, 1);
   assert.deepEqual(faults("- **DKeX surged:** 108.0M contracts, 160.8% above its average over the past week."), []);
+});
+
+test("rejects unrounded figures and a window figure that does not say it is an average", () => {
+  // The Kalshi bullet published for Sept. 13, 2026, verbatim.
+  const text = "- **Kalshi set a daily record:** It traded 2,460,211,509 contracts on Sept. 13, 40.85% above its seven-day average and above the previous high of 2,426,117,598; Sports supplied 2,188,554,985 contracts, versus 1,229,285,435 over the prior 30 reported days.";
+  const faults = wordingFaults(text, "select avg(contracts) from category_daily");
+
+  assert.equal(faults.length, 3);
+  assert.ok(faults[0].includes("not 2,460,211,509"));
+  assert.ok(faults[1].includes("does not say what that figure is"));
+  assert.ok(faults[2].includes("counting reports"));
+});
+
+test("rejects a comparison figure with no name at all", () => {
+  const sql = "select avg(fees) from competitor_daily";
+
+  // From a test draft on 2026-09-15.
+  assert.equal(wordingFaults("- **DKeX's surge widened:** 139.8M contracts on Sept. 13, with $2.64M in fees versus $383,700.", sql).length, 1);
+  assert.deepEqual(wordingFaults("- **DKeX's surge widened:** $2.64M in fees, compared with 2.43B on Sept. 12 and a 4.3% share versus 3.6%.", sql), []);
+});
+
+test("allows rounded figures and a comparison that names its average", () => {
+  const text = [
+    "- **Kalshi set a daily record:** It traded 2.46B contracts on Sept. 13, above Sept. 12's previous high of 2.43B; sports supplied 2.19B, against a daily average of 1.23B over the past month.",
+    "- **OG/Crypto.com jumped:** 99.0M contracts, up from its 36.7M seven-day average, with $1.6M in fees; ForecastEx traded 371,143 contracts."
+  ].join("\n\n");
+
+  assert.deepEqual(wordingFaults(text, "select avg(contracts) from category_daily"), []);
 });
 
 test("preserves the existing measured-volume, notional, and settlement checks", () => {

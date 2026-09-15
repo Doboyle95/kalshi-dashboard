@@ -29,12 +29,26 @@ export function kalshiDepthEvidenceFaults(sqls) {
 // Economics at 4.8M contracts -- 0.2% of the day. `standing` comes from the generator's
 // ranking lookup ({volume, rank, earlierDay, earlierContracts}) and is null when it failed.
 const RECORD_WORDING = /\b(?:records?|biggest|largest|busiest|most active|all-time|ever|new high|single-day high)\b/i;
-const CONTRACT_FIGURE = /(\d[\d,]*(?:\.\d+)?)\s*(billion|million|thousand|[bmk])?\s+contracts\b/gi;
+// One optional word may sit before "contracts": a draft slipped "35.9M YES contracts" past a
+// pattern that wanted the unit right against the noun.
+const CONTRACT_FIGURE = /(\d[\d,]*(?:\.\d+)?)\s*(billion|million|thousand|[bmk])?\s+(?:[a-z-]+\s+)?contracts\b/gi;
+// "trades of at least 50,000 contracts" is a size cutoff, not a slice of the day; counting it
+// sent a sound record-day bullet through two pointless retries.
+const THRESHOLD_BEFORE = /(?:at least|more than|fewer than|less than|over|above|under|below|up to)\s*$/i;
 const CONTRACT_SCALE = {billion: 1e9, b: 1e9, million: 1e6, m: 1e6, thousand: 1e3, k: 1e3};
 const SLIVER_OF_RECORD_DAY = 0.02;
 
+function roughContracts(value) {
+  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
+  return String(value);
+}
+
 export function contractFigures(text) {
-  return [...String(text || "").matchAll(CONTRACT_FIGURE)]
+  const source = String(text || "");
+  return [...source.matchAll(CONTRACT_FIGURE)]
+    .filter((match) => !THRESHOLD_BEFORE.test(source.slice(Math.max(0, match.index - 14), match.index)))
     .map(([, number, unit]) => Math.round(Number(number.replace(/,/g, "")) * (unit ? CONTRACT_SCALE[unit.toLowerCase()] : 1)))
     .filter((value) => Number.isFinite(value) && value > 0);
 }
@@ -50,11 +64,11 @@ export function kalshiRecordDayFaults(text, standing) {
   const faults = [];
   const opener = bullet.match(/\*\*([^*]+)\*\*/)?.[1] ?? bullet;
   if (!RECORD_WORDING.test(opener)) {
-    faults.push(`Kalshi's latest day was its biggest on record, above the previous high of ${standing.earlierContracts.toLocaleString("en-US")} contracts on ${standing.earlierDay} -- say so plainly in the Kalshi bullet's bold opening phrase`);
+    faults.push(`Kalshi's latest day was its biggest on record, above the previous high of ${roughContracts(standing.earlierContracts)} contracts on ${standing.earlierDay} -- say so plainly in the Kalshi bullet's bold opening phrase`);
   }
   const sliver = contractFigures(bullet).find((value) => value < standing.volume * SLIVER_OF_RECORD_DAY);
   if (sliver != null) {
-    faults.push(`on Kalshi's record day its bullet spends a figure on ${sliver.toLocaleString("en-US")} contracts, under 2% of the day's ${standing.volume.toLocaleString("en-US")} -- replace it with the part of the market that carried the record, from that same day, sized against the day's total`);
+    faults.push(`on Kalshi's record day its bullet spends a figure on ${roughContracts(sliver)} contracts, under 2% of the day's ${roughContracts(standing.volume)} -- replace it with the part of the market that carried the record, from that same day, sized against the day's total`);
   }
   return faults;
 }
@@ -85,10 +99,29 @@ export function wordingFaults(text, sqls) {
   if (/measured\s+(venue\s+)?volume/i.test(text)) {
     faults.push('the phrase "measured volume" says nothing about what was measured -- call it market share, the term the rest of the site uses');
   }
+  // A figure the reader has to count digits in. The Sept. 13 card printed "2,460,211,509
+  // contracts" and "the previous high of 2,426,117,598" while its other bullets wrote 346.8M:
+  // the exact values arrive in the rows, and the model sometimes copies them.
+  const unrounded = text.match(/\$?\b\d{1,3}(?:,\d{3}){2,}(?:\.\d+)?\b/);
+  if (unrounded) {
+    faults.push(`round large figures the way the rest of the card does -- 2.46B contracts, 346.8M, $16.0M -- not ${unrounded[0]}`);
+  }
+
+  // The same card set one day against "1,229,285,435 over the prior 30 reported days": a DAILY
+  // AVERAGE that reads as a 30-day total. A figure compared over a window must say which it is.
+  // A comparison figure with no name at all is the same fault: a draft wrote "$2.64M in fees
+  // versus $383,700." and left the reader to guess what the second number was.
+  const bareWindow = text.match(/\b(?:versus|vs\.?|against|compared (?:with|to)|from)\s+\$?\d(?:[\d,.]*\d)?\s*(?:billion|million|thousand|[bmk])?\s+(?:contracts\s+)?(?:over|across|in|during)\s+the\s+(?:prior|past|previous|last)\s+(?:\d+|seven|thirty|week|month)\b/i)
+    || text.match(/\b(?:versus|vs\.?|against|compared (?:with|to))\s+\$?\d(?:[\d,.]*\d)?\s*(?:billion|million|thousand|[bmk])?(?=\s*(?:[;,)]|\.(?:\s|$)|$)|\s+(?:and|while|with)\b)/im);
+  if (bareWindow) {
+    faults.push(`"${bareWindow[0]}" does not say what that figure is -- name it, as in "a daily average of 1.23B over the past month", or call it a total`);
+  }
+
   // Lifted from the model's own supporting-query columns (prior_30_report_average_contracts):
   // the Sept. 12 card said "645.8% above its prior 30-report average".
-  if (/\b(?:\d+|seven|thirty)[- ]report\b/i.test(text)) {
-    faults.push('"N-report average" is internal wording -- say its recent average, or its average over the past week or month');
+  // Same source, other spellings: "its previous 30 reported-day average", "the prior 30 reported days".
+  if (/\b(?:\d+|seven|thirty)[- ]report(?:ed)?\b/i.test(text)) {
+    faults.push('counting reports ("30-report average", "30 reported days") is internal wording -- say its recent average, or its average over the past week or month');
   }
   if (/\bnotional\b/i.test(text)) {
     faults.push('the word "notional" must never appear in the prose -- say taker-side volume or yes-side volume');
