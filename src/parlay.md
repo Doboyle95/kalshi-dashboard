@@ -175,6 +175,77 @@ Plot.plot({
 })
 ```
 
+## The other side of the trade
+
+```js
+// Loaded inside this section's own block on purpose: build_chart_catalog.py credits a series
+// to the nearest ## heading PRECEDING the DataAttachment call, not to the chart that renders
+// it, so a load parked in the page's shared loader block gets filed under the wrong section.
+const pmk = await DataAttachment("data/parlay_maker_pnl_daily.csv").csv({typed: true});
+```
+
+```js
+// Cumulative maker P&L, before and after maker fees. Maker gross is -(taker gross) by
+// construction upstream, so before fees this is the exact mirror of the bettor line above.
+const pmkSorted = pmk.slice().sort((a, b) => a.date - b.date);
+let _mkG = 0, _mkN = 0;
+const cumMaker = pmkSorted.map(d => {
+  _mkG += d.maker_gross_pnl; _mkN += d.maker_net_pnl;
+  return {date: d.date, gross: _mkG, net: _mkN, fees: d.fees_maker, takerNet: d.taker_net_pnl};
+});
+// Kalshi started charging parlay makers at 05:00 ET on 2026-08-20. Read the date OFF THE DATA
+// rather than hardcoding it, so the annotation follows any later restatement of the fee model.
+const makerFeeStart = d3.min(pmkSorted.filter(d => d.fees_maker > 0), d => d.date);
+const mkFrom     = d3.min(pmkSorted, d => d.date);
+const mkGrossTot = d3.sum(pmkSorted, d => d.maker_gross_pnl);
+const mkFeesTot  = d3.sum(pmkSorted, d => d.fees_maker);
+const mkNetTot   = d3.sum(pmkSorted, d => d.maker_net_pnl);
+const tkNetTot   = d3.sum(pmkSorted, d => d.taker_net_pnl);
+// Both sides pay, so the two no longer cancel: this gap IS the exchange's total fee take.
+const mkFeeWedge = -(mkNetTot + tkNetTot);
+```
+
+_The same parlays seen from the other side of the trade — the market makers who sold them. **Before fees** this is the exact mirror of what bettors made: every dollar a bettor loses is a dollar the counterparty wins, so the two lines below are a single line until **${fmtDate(makerFeeStart)}**, when Kalshi began charging parlay makers. **After fees** it stops being a mirror. The exchange bills both sides, so bettors' losses and makers' gains no longer cancel._
+
+<div class="instruction-line"><strong>Why this isn't just the bettor chart flipped.</strong> Over this window makers made <strong>${fmtUSD(mkGrossTot)}</strong> before fees and <strong>${fmtUSD(mkNetTot)}</strong> after, while bettors lost <strong>${fmtUSD(tkNetTot)}</strong> on the same settled parlays. Those two figures no longer sum to zero — the <strong>${fmtUSD(mkFeeWedge)}</strong> difference is what Kalshi took from both sides together.</div>
+
+<p class="chart-note">Settled parlays on a trade-date basis, from ${fmtDate(mkFrom)} — a shorter window than the bettor charts above, which run on the trade-level cash-out engine and reach back further. Maker fees are ${fmtUSD(mkFeesTot)} of the gap; the rest is the takers' own fees.</p>
+
+```js
+const cumMakerVis = cumMaker.filter(inParlayPnlRange);
+const mkLast = cumMakerVis[cumMakerVis.length - 1];
+display(cumMakerVis.length ? Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76, marginRight: 96,
+  x: {type: "utc", label: null},
+  y: {label: "Cumulative maker P&L (USD)", grid: true, tickFormat: fmtUSD},
+  color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
+  marks: [
+    Plot.lineY(cumMakerVis.flatMap(d => [
+      {date: d.date, v: d.gross, s: "Before fees"},
+      {date: d.date, v: d.net,   s: "After fees"}
+    ]), {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
+    // The instant the two series stop being one line.
+    Plot.ruleX(makerFeeStart && inParlayPnlRange({date: makerFeeStart}) ? [makerFeeStart] : [],
+      {stroke: "var(--theme-foreground-faint)", strokeDasharray: "3,3"}),
+    Plot.text(makerFeeStart && inParlayPnlRange({date: makerFeeStart}) ? [makerFeeStart] : [],
+      // Bottom-left of the rule: the series climb into the TOP-right corner by this date,
+      // so a top-anchored label collides with both lines (seen in the render probe).
+      {x: d => d, frameAnchor: "bottom", dy: -8, dx: -6, textAnchor: "end",
+       text: () => `maker fees start ${fmtDate(makerFeeStart)}`,
+       fill: "var(--theme-foreground-muted)", fontSize: 11}),
+    // Direct labels: the pale "Before fees" stroke is under 3:1 against a white page, so the
+    // series must stay identifiable without relying on its colour alone. Text keeps text ink.
+    Plot.text(mkLast ? [{date: mkLast.date, v: mkLast.gross, s: "Before fees"},
+                        {date: mkLast.date, v: mkLast.net,   s: "After fees"}] : [],
+      {x: "date", y: "v", text: "s", dx: 7, textAnchor: "start",
+       fill: "var(--theme-foreground-muted)", fontSize: 11}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
+    Plot.tip(cumMakerVis, Plot.pointerX({x: "date", y: "net", title: d =>
+      `${fmtDate(d.date)}\nMakers before fees: ${fmtUSD(d.gross)}\nMakers after fees: ${fmtUSD(d.net)}\nMaker fees that day: ${fmtUSD(d.fees)}\nBettors after fees: ${fmtUSD(d.takerNet)}`}))
+  ]
+}) : html`<p class="chart-note">No settled parlay days in the selected range — this series starts ${fmtDate(mkFrom)}.</p>`);
+```
+
 ## Cash-outs
 
 <p class="section-intro">Inferred cash-outs returned <strong>${cashReturnedPctKpi.toFixed(1)}¢ per dollar staked</strong> to parlay bettors. The trades account for ${cashoutFlowShareKpi.toFixed(1)}% of taker-side trading flow, but that flow share uses the complementary no buyer's cost — not the cash the exiting bettor received. This chart tracks whether cashing out beat holding to settlement.</p>
