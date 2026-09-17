@@ -185,22 +185,33 @@ const pmk = await DataAttachment("data/parlay_maker_pnl_daily.csv").csv({typed: 
 ```
 
 ```js
-// Cumulative maker P&L, before and after maker fees. Maker gross is -(taker gross) by
-// construction upstream, so before fees this is the exact mirror of the bettor line above.
-const pmkSorted = pmk.slice().sort((a, b) => a.date - b.date);
+// Cumulative maker P&L, before and after maker fees.
+// GROSS comes from `uni` -- the same trade-level engine as the bettor charts above -- not from
+// the settled-fact rollup, for two reasons: it reaches back to the page's own start (364 days
+// vs 156), and maker gross is then the EXACT negation of the bettor line rather than its
+// mirror to within a 0.09% basis difference. The two sources were compared over their 156-day
+// overlap before this was changed: -$323.99M vs -$323.71M of taker gross.
+// FEES come from the fact rollup, the only per-day source. It starts 2026-04-15, and dates
+// before it default to 0 -- which is EXACT, not an approximation: Kalshi's first parlay maker
+// fee is 2026-08-20, four months inside the fact window. (If that default ever silently
+// swallowed a real fee, gross and net would coincide and the render probe would catch it.)
+const mkFeeByDate = new Map(pmk.map(d => [+d.date, d.fees_maker]));
+const pmkSorted = uni.slice().sort((a, b) => a.date - b.date);
 let _mkG = 0, _mkN = 0;
 const cumMaker = pmkSorted.map(d => {
-  _mkG += d.maker_gross_pnl; _mkN += d.maker_net_pnl;
-  return {date: d.date, gross: _mkG, net: _mkN, fees: d.fees_maker, takerNet: d.taker_net_pnl};
+  const gross = -(d.realized_net + d.fees_total);
+  const fees = mkFeeByDate.get(+d.date) || 0;
+  _mkG += gross; _mkN += gross - fees;
+  return {date: d.date, gross: _mkG, net: _mkN, fees, takerNet: d.realized_net, prov: isProv(d)};
 });
 // Kalshi started charging parlay makers at 05:00 ET on 2026-08-20. Read the date OFF THE DATA
 // rather than hardcoding it, so the annotation follows any later restatement of the fee model.
-const makerFeeStart = d3.min(pmkSorted.filter(d => d.fees_maker > 0), d => d.date);
+const makerFeeStart = d3.min(pmk.filter(d => d.fees_maker > 0), d => d.date);
 const mkFrom     = d3.min(pmkSorted, d => d.date);
-const mkGrossTot = d3.sum(pmkSorted, d => d.maker_gross_pnl);
-const mkFeesTot  = d3.sum(pmkSorted, d => d.fees_maker);
-const mkNetTot   = d3.sum(pmkSorted, d => d.maker_net_pnl);
-const tkNetTot   = d3.sum(pmkSorted, d => d.taker_net_pnl);
+const mkGrossTot = d3.sum(pmkSorted, d => -(d.realized_net + d.fees_total));
+const mkFeesTot  = d3.sum(pmk, d => d.fees_maker);
+const mkNetTot   = mkGrossTot - mkFeesTot;
+const tkNetTot   = d3.sum(pmkSorted, d => d.realized_net);
 // Both sides pay, so the two no longer cancel: this gap IS the exchange's total fee take.
 const mkFeeWedge = -(mkNetTot + tkNetTot);
 ```
@@ -209,7 +220,7 @@ _The same parlays seen from the other side of the trade — the market makers wh
 
 <div class="instruction-line"><strong>Why this isn't just the bettor chart flipped.</strong> Over this window makers made <strong>${fmtUSD(mkGrossTot)}</strong> before fees and <strong>${fmtUSD(mkNetTot)}</strong> after, while bettors lost <strong>${fmtUSD(tkNetTot)}</strong> on the same settled parlays. Those two figures no longer sum to zero — the <strong>${fmtUSD(mkFeeWedge)}</strong> difference is what Kalshi took from both sides together.</div>
 
-<p class="chart-note">Settled parlays on a trade-date basis, from ${fmtDate(mkFrom)} — a shorter window than the bettor charts above, which run on the trade-level cash-out engine and reach back further. Maker fees are ${fmtUSD(mkFeesTot)} of the gap; the rest is the takers' own fees.</p>
+<p class="chart-note">Same trade-level engine, same settled parlays and the same window as the bettor charts above (from ${fmtDate(mkFrom)}), so before fees this line is their exact mirror. Of the gap, ${fmtUSD(mkFeesTot)} is maker fees — all of it since ${fmtDate(makerFeeStart)} — and the rest is the takers' own fees.</p>
 
 ```js
 const cumMakerVis = cumMaker.filter(inParlayPnlRange);
@@ -241,7 +252,7 @@ display(cumMakerVis.length ? Plot.plot({
        fill: "var(--theme-foreground-muted)", fontSize: 11}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
     Plot.tip(cumMakerVis, Plot.pointerX({x: "date", y: "net", title: d =>
-      `${fmtDate(d.date)}\nMakers before fees: ${fmtUSD(d.gross)}\nMakers after fees: ${fmtUSD(d.net)}\nMaker fees that day: ${fmtUSD(d.fees)}\nBettors after fees: ${fmtUSD(d.takerNet)}`}))
+      `${fmtDate(d.date)}\nMakers before fees: ${fmtUSD(d.gross)}\nMakers after fees: ${fmtUSD(d.net)}\nMaker fees that day: ${fmtUSD(d.fees)}\nBettors after fees: ${fmtUSD(d.takerNet)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 }) : html`<p class="chart-note">No settled parlay days in the selected range — this series starts ${fmtDate(mkFrom)}.</p>`);
 ```
