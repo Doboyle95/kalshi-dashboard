@@ -79,7 +79,8 @@ display(freshnessPanel({
     {label: "Parlay P&L (by correlation)", date: latestDate(pnlRaw), updatedAt: fileUpdatedAt(freshness, "parlay_pnl_daily_by_corr_v2.csv"), meta: "Settlement-dependent — a parlay only counts once its markets settle", tone: "settlement"},
     {label: "Parlay volume by type", date: latestDate(volTypeRaw), updatedAt: fileUpdatedAt(freshness, "parlay_volume_by_type_daily.csv"), meta: "Classified from actual legs; very recent tickers can show as \"unclassified\" until leg-mapping catches up"},
     {label: "Games / house edge / legs-mix / mispricing", value: gamesMaxDate ? `Most recent game: ${fmtFreshDate(gamesMaxDate)}` + (gamesStaleDays > 3 ? ` — ${gamesStaleDays}d behind today` : "") : "n/a", updatedAt: gamesFileUpdatedAt, meta: gamesPipelineStuck ? "Shared source (trade-level facts) for the 4 charts below. The file itself hasn't rebuilt recently either — that combination means the pipeline is genuinely stuck, not just a quiet stretch." : "Shared source (trade-level facts) for the 4 charts below. \"Most recent game\" ranks by all-time VOLUME, not recency — it can sit behind today for weeks with no new game topping the bar a big event set, even though the pipeline is rebuilding on schedule (see its own \"Updated\" timestamp above).", tone: "local"},
-    {label: "Lottery ticket parlays", date: latestDate(lotteryRaw, d => d.date), updatedAt: fileUpdatedAt(freshness, "parlay_lottery_daily.csv"), meta: "Refreshes every ~30min alongside the most-popular-parlays table above"}
+    {label: "Lottery ticket parlays", date: latestDate(lotteryRaw, d => d.date), updatedAt: fileUpdatedAt(freshness, "parlay_lottery_daily.csv"), meta: "Refreshes every ~30min alongside the most-popular-parlays table above"},
+    {label: "Parlay price vs its legs", date: latestDate(pvlDailyRaw, d => d.date), updatedAt: fileUpdatedAt(freshness, "parlay_vs_legs_daily.csv"), meta: "Complete trading days only, so the newest row is yesterday by design"}
   ],
   note: "Recent days are still filling in for the P&L and volume-by-type figures above — a parlay only counts once its markets settle, and brand-new tickers may briefly show as \"unclassified\" until leg-mapping catches up (normal lag, clears within a day or two). The games/house-edge/mispricing group ranks by all-time volume, so its \"most recent game\" naturally lags during quiet periods — check its card above (both the game date AND the file's own rebuild time) before assuming it's stuck."
 }));
@@ -772,6 +773,207 @@ Plot.plot({
   ]
 })
 ```
+
+## What a parlay costs vs. multiplying its legs
+
+_A non-correlated parlay is worth exactly the product of its legs: three independent
+legs at 77¢, 66¢ and 74¢ are worth 37.6¢ together. These charts price **every leg at the
+instant its parlay traded** — the leg market's last print at or before that moment — and
+compare that product with what the parlay actually cost. The gap is what a bettor pays
+over assembling the same bet out of its parts, before fees. Same-game tickets are shown
+for contrast only: their gap holds real correlation as well as markup, which is exactly
+why multiplying legs is the wrong way to price them._
+
+```js
+const pvlDailyRaw   = await DataAttachment("data/parlay_vs_legs_daily.csv").csv({typed: true});
+const pvlProfileRaw = await DataAttachment("data/parlay_vs_legs_profile.csv").csv({typed: true});
+```
+
+```js
+// The producer emits kind as independent/correlated/pending. The page's shared colour
+// scale is keyed on the long display strings, so map onto those and drop 'pending'
+// (tickers whose legs are not mapped yet — their share is in the method card below).
+const PVL_KIND = {independent: "multi-game(independent)", correlated: "same-game(correlated)"};
+const pvlProfile = pvlProfileRaw.filter(d => PVL_KIND[d.kind]).map(d => ({...d, kindLabel: PVL_KIND[d.kind]}));
+// Thin bands are dropped from the two cross-sections rather than drawn as noise: at the
+// deep end a band can hold a few hundred trades out of ~2m.
+const pvlPrice = pvlProfile.filter(d => d.dim === "price" && d.n_trades >= 500 && d.avg_indep_cents > 0);
+const pvlLegs  = pvlProfile.filter(d => d.dim === "legs"  && d.n_trades >= 500);
+const pvlLegOrder = [...new Set(pvlLegs.map(d => d.bucket_label))].sort((a, b) => parseInt(a) - parseInt(b));
+const pvlDays  = pvlDailyRaw.filter(d => PVL_KIND[d.kind]).map(d => ({...d, kindLabel: PVL_KIND[d.kind]}));
+const pvlIndep = pvlDays.filter(d => d.kind === "independent");
+const pvlIndepStake = d3.sum(pvlIndep, d => d.stake_usd);
+const pvlIndepFair  = d3.sum(pvlIndep, d => d.indep_stake_usd);
+const pvlMarkup = 100 * (pvlIndepStake / pvlIndepFair - 1);
+const pvlFrom = d3.min(pvlDays, d => d.date), pvlTo = d3.max(pvlDays, d => d.date);
+// One row per date (coverage is a per-date property, repeated on each kind's row).
+const pvlCovDays = Array.from(d3.group(pvlDailyRaw, d => +d.date), ([, rows]) => rows[0]);
+const pvlCents = v => v >= 1 ? v.toFixed(0) + "¢" : v >= 0.01 ? v.toFixed(2) + "¢" : v.toExponential(0) + "¢";
+// Priced, but not on either line: the ticket's correlation class is not mapped yet.
+const pvlPendingShare = 100 * d3.sum(pvlDailyRaw.filter(d => d.kind === "pending"), d => d.stake_usd)
+  / d3.sum(pvlDailyRaw, d => d.stake_usd);
+const pvlMarkupFmt = d => (d > 0 ? "+" : "") + d.toFixed(1) + "%";
+// Kalshi began charging a maker fee on combos at 05:00 ET on 2026-08-20 — double its
+// standard maker rate — and exempted combos made entirely of independent NFL legs, which
+// are created under their own series. fee_group carries that split.
+const PVL_COMBO_MAKER_START = new Date("2026-08-20");
+const PVL_FEE_GROUPS = new Map([
+  ["All parlays", null],
+  ["Maker-fee combo series", "combo_maker"],
+  ["Fee-exempt NFL combos", "nfl_no_maker"]
+]);
+```
+
+```js
+display(html`<div class="surface-card compact-details" style="font-size:13px;padding:12px 16px;margin:6px 0 18px 0;">
+Over ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo)}, non-correlated parlays cost
+<strong>${pvlMarkup.toFixed(1)}% more</strong> than the product of their own legs —
+${fmtUSD(pvlIndepStake)} staked against ${fmtUSD(pvlIndepFair)} of independence-implied
+value. That average hides the shape: the markup is close to nothing on ordinary prices
+and grows steeply as a parlay gets longer and cheaper.
+</div>`);
+```
+
+_Each dot is one price band. Both axes are logarithmic, and both cover the **whole
+window** — the date selector above does not apply to this chart or the next. A dot on the
+dashed line was priced exactly at its legs' product; above it, the bettor paid more. Dot
+size = number of trades._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 380, marginLeft: 64,
+  x: {type: "log", label: "Legs multiplied together", grid: true, tickFormat: pvlCents},
+  y: {type: "log", label: "Price actually paid", grid: true, tickFormat: pvlCents},
+  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
+  // r is PRE-SQRT-ED below, so the scale must be identity — see the calibration chart
+  // above for what feeding an already-rooted value to Plot's own sqrt scale costs.
+  r: {type: "identity"},
+  marks: [
+    Plot.line([[0.001, 0.001], [100, 100]], {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
+    Plot.dot(pvlPrice, {x: "avg_indep_cents", y: "avg_traded_cents", fill: "kindLabel",
+      r: d => Math.sqrt(d.n_trades) / 90 + 3, fillOpacity: 0.75, stroke: "var(--theme-background)",
+      tip: true, title: d => `${kindShort(d.kindLabel)} · band ${d.bucket_label}\n`
+        + `Legs multiply to: ${pvlCents(d.avg_indep_cents)}\n`
+        + `Actually paid: ${pvlCents(d.avg_traded_cents)}\n`
+        + `Markup: ${pvlMarkupFmt(d.markup_pct)}\n`
+        + `Trades: ${d.n_trades.toLocaleString()} · staked ${fmtUSD(d.stake_usd)}`})
+  ]
+})
+```
+
+_Markup by number of legs, whole window. A two-leg ticket is priced almost exactly at its
+parts; the gap widens with every leg added, and by the double-digit tickets the parlay
+costs a multiple of what its legs imply._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 320, marginLeft: 64, marginBottom: 48,
+  x: {label: "Legs in the parlay", domain: pvlLegOrder},
+  y: {label: "Markup over the leg product (%)", grid: true, tickFormat: d => d + "%"},
+  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
+  fx: {label: null},
+  marks: [
+    Plot.barY(pvlLegs, {x: "bucket_label", y: "markup_pct", fill: "kindLabel", fx: "kindLabel",
+      tip: true, title: d => `${kindShort(d.kindLabel)} · ${d.bucket_label} legs\n`
+        + `Legs multiply to: ${pvlCents(d.avg_indep_cents)}\n`
+        + `Actually paid: ${pvlCents(d.avg_traded_cents)}\n`
+        + `Markup: ${pvlMarkupFmt(d.markup_pct)}\n`
+        + `Trades: ${d.n_trades.toLocaleString()} · staked ${fmtUSD(d.stake_usd)}`}),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+_Daily markup, money-weighted across every priced trade that day — and the one chart in this
+section that follows the date selector above. **On 20 August 2026 Kalshi started charging a
+maker fee on combos**, at double its standard maker rate, and exempted combos built entirely
+of independent NFL legs, which trade under their own series. Switching between those two
+below is a sanity check rather than a controlled experiment: the exempt bucket carries
+well under 1% of the money, so its daily figure is volatile. What does hold up is that the
+step survives holding the ticket mix fixed — most of it is a repricing of 2-to-6-leg
+tickets, not a shift in what people were buying._
+
+<div class="control-strip">
+
+```js
+const pvlFeeChoice = view(Inputs.radio([...PVL_FEE_GROUPS.keys()], {value: "All parlays", label: "Series"}));
+```
+
+</div>
+
+```js
+// The daily file is one row per date x kind x fee_group; markup is a ratio of sums, so a
+// group is dropped by filtering rows and re-dividing — never by averaging its markups.
+const pvlSeries = Array.from(
+  d3.group(
+    PVL_FEE_GROUPS.get(pvlFeeChoice) == null
+      ? pvlDays
+      : pvlDays.filter(d => d.fee_group === PVL_FEE_GROUPS.get(pvlFeeChoice)),
+    d => `${+d.date}|${d.kind}`),
+  ([, g]) => {
+    const stake = d3.sum(g, d => d.stake_usd), fair = d3.sum(g, d => d.indep_stake_usd);
+    return {date: g[0].date, kindLabel: g[0].kindLabel, stake_usd: stake,
+            markup_pct: fair > 0 ? 100 * (stake / fair - 1) : null,
+            n_trades: d3.sum(g, d => d.n_trades), leg_coverage_pct: g[0].leg_coverage_pct};
+  }).filter(d => d.markup_pct != null && inParlayRange(d));
+```
+
+```js
+display(Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 300, marginLeft: 64,
+  x: {type: "utc", label: null},
+  y: {label: "Markup over the leg product (%)", grid: true, tickFormat: d => d + "%"},
+  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
+  marks: [
+    Plot.ruleX([PVL_COMBO_MAKER_START], {stroke: "var(--theme-foreground-fainter)", strokeDasharray: "3,3"}),
+    Plot.text([{date: PVL_COMBO_MAKER_START}], {x: "date", y: () => 0, text: () => "Combo maker fee starts",
+      fontSize: 10, fill: "var(--theme-foreground-muted, #888)", frameAnchor: "top", textAnchor: "start", dx: 4}),
+    Plot.line(pvlSeries, {x: "date", y: "markup_pct", stroke: "kindLabel", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.ruleX(pvlSeries, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(pvlSeries, Plot.pointerX({x: "date", y: "markup_pct", stroke: "kindLabel",
+      title: d => `${d.date.toISOString().slice(0, 10)} · ${kindShort(d.kindLabel)}\n`
+        + `Markup: ${pvlMarkupFmt(d.markup_pct)}\n`
+        + `Priced trades: ${d.n_trades.toLocaleString()} · staked ${fmtUSD(d.stake_usd)}\n`
+        + `Legs priced at trade time: ${d.leg_coverage_pct}%`})),
+    Plot.ruleY([0])
+  ]
+}))
+```
+
+<details class="surface-card compact-details">
+  <summary>How this is measured, and what it misses</summary>
+  <p><strong>Leg prices are taken at the instant the parlay traded</strong> — the last
+  print in that leg's own market at or before the parlay's timestamp. Both trade in the
+  same tape, so the two are directly comparable. This is not a detail: pricing the same
+  legs at their <em>daily average</em> instead makes parlays look <em>cheaper</em> than
+  their own legs, because a leg's daily average absorbs moves that happened after the
+  parlay printed, and the error compounds with every leg.</p>
+  <p><strong>A trade counts only if every one of its legs had traded that day</strong>
+  before it — ${d3.mean(pvlCovDays, d => d.leg_coverage_pct).toFixed(0)}% of them do. A leg
+  priced in an earlier session is deliberately <em>not</em> carried forward: yesterday's
+  price is not a quote for today. Separately, we hold the leg list for
+  ${d3.mean(pvlCovDays, d => d.legs_known_pct).toFixed(0)}% of parlay trades; the remainder
+  are mostly PREPACK/COMBO tickets, whose legs Kalshi does not publish in the feed that
+  carries them. And ${pvlPendingShare.toFixed(1)}% of the money that IS priced sits on
+  tickets whose correlation class has not been mapped yet, so it appears on neither line
+  above — that backlog normally clears within a day or two.</p>
+  <p><strong>Markup is money-weighted</strong>: total paid ÷ total independence-implied
+  value − 1, over the trades in the band. It is not an average of per-trade ratios — a
+  fifteen-leg ticket's legs multiply out to a number so small that individual ratios run
+  into the millions and any average of them is meaningless.</p>
+  <p><strong>Below about 0.1¢ the price stops being a probability.</strong> The traded
+  price flattens out down there while the product of the legs keeps falling, which is what
+  drives the enormous markups at the cheap end of the first chart. Read that band as a
+  minimum-price effect, not as a judgement about those parlays' odds.</p>
+  <p><strong>Window.</strong> From June 25, 2026 — the first day our leg snapshot covers
+  the tickets that traded, and safely after the June 7 switch to sub-cent price collection,
+  before which a cheap parlay's price was rounded to whole cents and this comparison would
+  be noise. Prices are yes-side taker trades only, which for parlays is nearly all of the
+  flow: they are quoted on request, so the customer is the yes buyer.</p>
+</details>
 
 <details class="surface-card compact-details">
   <summary>About this page &amp; method</summary>
