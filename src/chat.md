@@ -37,6 +37,7 @@ title: Ask Predict Charts
   // Server-assigned conversation id, echoed back so follow-ups keep context.
   let sessionId = null;
   const apiUrl = `${API_BASE}/ask`;
+  const streamUrl = `${API_BASE}/ask/stream`;
   const resetUrl = `${API_BASE}/reset`;
   const healthUrl = `${API_BASE}/health`;
   const authHeader = API_TOKEN ? {"Authorization": `Bearer ${API_TOKEN}`} : {};
@@ -331,6 +332,209 @@ title: Ask Predict Charts
     historySection.append(wrapper);
   }
 
+  // ---------------------------------------------------------------------
+  // Live progress (2026-09-17)
+  //
+  // /ask is one POST covering 9-70s of mostly-LLM work, and this panel used to
+  // show a single static line for all of it. /ask/stream runs the SAME pipeline
+  // and narrates it: received -> plan -> sql -> query -> interpret. Every line
+  // below is a server event about work that actually happened -- never a timer
+  // guessing -- so the list cannot drift from what the server is doing.
+  //
+  // Measured on the VM 2026-09-17: an easy question is ~10s (2.3s setup, 3.5s
+  // query plan, 2.1s SQL, 0.8s DuckDB, 1.6s interpretation) and a badly-routed
+  // one sat on DuckDB for the full 60s timeout and then failed -- the case the
+  // old single "Asking..." line gave no signal for at all.
+  //
+  // Unknown stage names are ignored on purpose: the server's list is expected
+  // to grow, and a cached page must not break on an event it has never seen.
+  // ---------------------------------------------------------------------
+  const PROGRESS_LABELS = {
+    received: "Reading the question",
+    plan: "Working out what you're asking for",
+    sql: "Writing the SQL",
+    query: "Running the query",
+    interpret: "Reading the results"
+  };
+
+  function createProgress() {
+    const root = html`<div class="chat-progress"></div>`;
+    const list = html`<ol class="chat-progress-steps" role="status" aria-live="polite"></ol>`;
+    root.append(list);
+    const steps = new Map();
+    let active = null;
+    let timer = null;
+
+    function secondsSince(t) { return (Date.now() - t) / 1000; }
+
+    function tick() {
+      if (!active) return;
+      const secs = secondsSince(active.startedAt);
+      // Below ~1.5s the counter is just flicker; the step is already gone.
+      active.timeEl.textContent = secs >= 1.5 ? `${secs.toFixed(1)}s` : "";
+    }
+
+    // Only follow the list if the user is already watching it. block:"nearest"
+    // alone is not enough: the composer is sticky, so "in view" and "not hidden
+    // behind the composer" are different questions.
+    function followIfWatching(el) {
+      try {
+        const box = list.getBoundingClientRect();
+        const watching = box.bottom > 0 && box.top < window.innerHeight;
+        if (watching) el.scrollIntoView({block: "nearest", behavior: "smooth"});
+      } catch {}
+    }
+
+    function makeStep(cls) {
+      const li = html`<li class="chat-progress-step ${cls}"><span class="chat-progress-marker" aria-hidden="true"></span><span class="chat-progress-text"><span class="chat-progress-label"></span><span class="chat-progress-detail"></span></span><span class="chat-progress-time" aria-hidden="true"></span></li>`;
+      list.append(li);
+      followIfWatching(li);
+      return {
+        li,
+        labelEl: li.querySelector(".chat-progress-label"),
+        detailEl: li.querySelector(".chat-progress-detail"),
+        textEl: li.querySelector(".chat-progress-text"),
+        timeEl: li.querySelector(".chat-progress-time"),
+        startedAt: Date.now()
+      };
+    }
+
+    function open(key, label) {
+      if (active && active.key !== key) close(active.key);
+      let s = steps.get(key);
+      if (!s) {
+        s = makeStep("is-active");
+        s.key = key;
+        steps.set(key, s);
+      } else {
+        // Re-opened by a retry: restart its clock and drop the stale detail.
+        s.startedAt = Date.now();
+        s.detailEl.textContent = "";
+      }
+      s.labelEl.textContent = label;
+      s.li.classList.add("is-active");
+      s.li.classList.remove("is-done");
+      active = s;
+      if (timer === null) timer = window.setInterval(tick, 200);
+      return s;
+    }
+
+    function close(key, detail) {
+      const s = steps.get(key);
+      if (!s) return;
+      s.li.classList.remove("is-active");
+      s.li.classList.add("is-done");
+      const secs = secondsSince(s.startedAt);
+      s.timeEl.textContent = secs >= 0.15 ? `${secs.toFixed(1)}s` : "";
+      if (detail) s.detailEl.textContent = detail;
+      if (active === s) active = null;
+    }
+
+    function apply(ev) {
+      const name = ev?.name;
+      if (!name) return;
+      if (name === "received") {
+        open("received", PROGRESS_LABELS.received);
+      } else if (name === "plan") {
+        const s = open("plan", PROGRESS_LABELS.plan);
+        if (ev.cached) s.detailEl.textContent = "reusing an earlier plan";
+      } else if (name === "plan_done") {
+        const c = ev.contract || {};
+        const bits = [
+          c.metric,
+          c.date_range,
+          c.grouping?.length ? `by ${c.grouping.join(", ")}` : null
+        ].filter(Boolean);
+        close("plan", bits.join(" · "));
+      } else if (name === "sql") {
+        open("sql", ev.attempt > 1
+          ? `Rewriting the SQL (attempt ${ev.attempt} of 3)`
+          : PROGRESS_LABELS.sql);
+      } else if (name === "sql_ready") {
+        // The cached-SQL path skips the "sql" event, so open it here too.
+        const s = open("sql", ev.attempt > 1
+          ? `Rewrote the SQL (attempt ${ev.attempt} of 3)`
+          : PROGRESS_LABELS.sql);
+        close("sql", ev.cached ? "reused a query from an earlier identical question" : "");
+        if (ev.sql) {
+          const pre = html`<pre class="chat-progress-sql"><code></code></pre>`;
+          pre.querySelector("code").textContent = ev.sql;
+          s.textEl.append(pre);
+          followIfWatching(s.li);
+        }
+      } else if (name === "query") {
+        const s = open("query", PROGRESS_LABELS.query);
+        const tables = Array.isArray(ev.tables) ? ev.tables.filter(Boolean) : [];
+        if (tables.length) s.detailEl.textContent = `scanning ${tables.join(", ")}`;
+      } else if (name === "query_done") {
+        const rows = Number(ev.row_count ?? 0);
+        close("query", `${rows.toLocaleString()} ${rows === 1 ? "row" : "rows"}`);
+      } else if (name === "interpret") {
+        open("interpret", PROGRESS_LABELS.interpret);
+      } else if (name === "retry") {
+        close("query");
+        const s = makeStep("is-warn");
+        s.labelEl.textContent = `That query failed — fixing it (attempt ${ev.attempt} of 3)`;
+        if (ev.error) s.detailEl.textContent = String(ev.error);
+      }
+    }
+
+    function stop() {
+      if (active) close(active.key);
+      if (timer !== null) { window.clearInterval(timer); timer = null; }
+    }
+
+    function fallback() {
+      stop();
+      root.append(html`<div class="chart-note chat-progress-fallback">Working on it — step-by-step progress is unavailable for this request.</div>`);
+    }
+
+    return {root, apply, stop, fallback};
+  }
+
+  // Reads the /ask/stream SSE body, feeding stage events to the progress list
+  // and returning the final AskResponse. Throws on any stream failure so the
+  // caller can fall back to the plain /ask POST -- the reader deliberately does
+  // NOT invent a result, because a half-read stream is not an answer.
+  async function askStreaming(body, progress) {
+    const resp = await fetch(streamUrl, {
+      method: "POST",
+      headers: {...authHeader, "Content-Type": "application/json"},
+      body
+    });
+    if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "", result = null, streamErr = null;
+    for (;;) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        let event = "message", payload = "";
+        for (const line of chunk.split("\n")) {
+          // ": keepalive" comment frames fall through both tests and are dropped.
+          if (line.startsWith("event: ")) event = line.slice(7).trim();
+          else if (line.startsWith("data: ")) payload += line.slice(6);
+        }
+        if (!payload || payload === "[DONE]") continue;
+        if (event === "stage") {
+          try { progress.apply(JSON.parse(payload)); } catch {}
+        } else if (event === "result") {
+          try { result = JSON.parse(payload); } catch (err) { streamErr = err; }
+        } else if (event === "error") {
+          try { streamErr = new Error(JSON.parse(payload).error || "stream error"); }
+          catch { streamErr = new Error("stream error"); }
+        }
+      }
+    }
+    if (result) return result;
+    throw streamErr || new Error("Stream ended without a result");
+  }
+
   async function runQuestion(rawQuestion) {
     const question = rawQuestion.trim();
     if (!question) return;
@@ -338,23 +542,43 @@ title: Ask Predict Charts
     setBusy(true);
 
     // Create a pending turn card and append it to the thread immediately
+    const progress = createProgress();
     const pendingTurn = html`<div class="chat-turn is-pending">
       <div class="chat-turn-question"></div>
-      <div class="chat-turn-answer"><div class="chart-note">Asking the local API...</div></div>
+      <div class="chat-turn-answer"></div>
     </div>`;
     pendingTurn.querySelector(".chat-turn-question").textContent = question;
+    pendingTurn.querySelector(".chat-turn-answer").append(progress.root);
     thread.append(pendingTurn);
-    pendingTurn.scrollIntoView({behavior: "smooth", block: "nearest"});
+    // Collapse the composer NOW, not when the answer lands. It is sticky with
+    // z-index 10 and open by default, so on a phone it covers almost the whole
+    // viewport -- which would hide the progress list for the entire wait, i.e.
+    // exactly the audience this change exists for. Both the success and error
+    // paths already collapse it at the end; this only moves it earlier.
+    formWrapper.removeAttribute("open");
+    thread.scrollIntoView({behavior: "smooth", block: "nearest"});
 
     try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {...authHeader, "Content-Type": "application/json"},
-        body: JSON.stringify(sessionId ? {question, session_id: sessionId} : {question})
-      });
-
-      if (!response.ok) throw new Error(`API returned HTTP ${response.status}`);
-      const data = await response.json();
+      const body = JSON.stringify(sessionId ? {question, session_id: sessionId} : {question});
+      let data;
+      try {
+        data = await askStreaming(body, progress);
+      } catch {
+        // Older server, a proxy that buffers SSE, or a mid-stream failure: fall
+        // back to the one-shot POST. The reader never returns a partial result,
+        // so this costs the step list, never the answer. It is a second request
+        // against the rate limiter, which is why it is a fallback and not the
+        // default.
+        progress.fallback();
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {...authHeader, "Content-Type": "application/json"},
+          body
+        });
+        if (!response.ok) throw new Error(`API returned HTTP ${response.status}`);
+        data = await response.json();
+      }
+      progress.stop();
       // 2026-08-01: echo the server-assigned session id back on the next turn.
       // Without this, _get_or_create_session(None) minted a fresh uuid per request so
       // _history_turns() always returned [] -- multi-turn context was silently dead.
