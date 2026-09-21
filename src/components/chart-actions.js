@@ -39,6 +39,31 @@
       .at(-1) ?? null;
   }
 
+  // The section a Link or Embed points at: the last h2/h3 WITH an id before the chart,
+  // in document order. currentHeading() is positional, and a Plot `title` is an id-less
+  // <h2> INSIDE the figure, level with its top edge -- it would win and give no anchor.
+  function anchorHeading(root) {
+    const main = document.querySelector(ROOT_SELECTOR);
+    if (!main) return null;
+    return Array.from(main.querySelectorAll("h2[id], h3[id]"))
+      .filter((h) => !root.contains(h) && (h.compareDocumentPosition(root) & Node.DOCUMENT_POSITION_FOLLOWING))
+      .at(-1) ?? null;
+  }
+
+  // The chart's own <svg>: the tallest one. A Plot figure with a legend puts 15px swatch
+  // <svg>s BEFORE the chart, so "the first svg" was a swatch: enhance() judged the whole
+  // chart too small and skipped it (93 charts site-wide had no toolbar at all), and a
+  // PNG taken from such a root would have exported the swatch.
+  function mainSvg(root) {
+    if (root.matches("svg")) return root;
+    let best = null, bestHeight = 0;
+    for (const svg of root.querySelectorAll("svg")) {
+      const height = +(svg.getAttribute("height") || 0) || svg.getBoundingClientRect().height;
+      if (height > bestHeight) { best = svg; bestHeight = height; }
+    }
+    return best;
+  }
+
   function contextFor(root) {
     const pageTitle = text(document.querySelector("h1")?.textContent || document.title);
     const heading = currentHeading(root);
@@ -75,9 +100,9 @@
   }
 
   async function copyLink(root, button) {
-    const {heading} = contextFor(root);
+    const heading = anchorHeading(root);
     const url = new URL(location.href);
-    if (heading?.id) url.hash = heading.id;
+    if (heading) url.hash = heading.id;
     try {
       await navigator.clipboard.writeText(url.href);
       setButtonStatus(button, "Copied");
@@ -164,7 +189,7 @@
   }
 
   async function downloadPng(root, button) {
-    const svg = root.matches("svg") ? root : root.querySelector("svg");
+    const svg = mainSvg(root);
     if (!svg) return setButtonStatus(button, "Unavailable");
     const box = svg.getBoundingClientRect();
     if (!box.width || !box.height) return setButtonStatus(button, "Unavailable");
@@ -222,7 +247,7 @@
 
   function enhance(root) {
     if (!root || root.dataset.chartActions === "true" || root.closest(SKIP_SELECTOR)) return;
-    const svg = root.matches("svg") ? root : root.querySelector("svg");
+    const svg = mainSvg(root);
     if (!svg) return;
     const height = +(svg.getAttribute("height") || 0) || svg.getBoundingClientRect().height;
     if (height < 180) return;
