@@ -13,7 +13,7 @@
 <predict-chart data-pc-chart="kalshi-parlay-taker-pnl-20260920" style="display:block"></predict-chart>
 <script type="module">
 import * as Plot from "./lib/plot-0.6.17.js";
-const S = {"slug":"kalshi-parlay-taker-pnl-20260920","title":"Kalshi parlay taker P&L by day","subtitle":"Profit or loss of all parlay taker trades each day, after fees, on parlays that have settled. May 1 – Sep 20, 2026.","unit":"usd","axisLabel":"P&L after fees ($)","totalLabel":"","diverging":true,"signs":["Profitable day","Losing day"],"series":[{"key":"v","name":"P&L after fees","tipLabel":"after fees","column":"P&L after fees (USD)","mark":"bar"}],"light":["#008a75","#d9381e"],"dark":["#1fa89c","#e0442a"],"start":"2026-05-01","source":"Source: Kalshi trade data via"};
+const S = {"slug":"kalshi-parlay-taker-pnl-20260920","title":"Kalshi parlay taker P&L by day","subtitle":"Profit or loss of all parlay taker trades each day, after fees, on parlays that have settled. May 1 –⁠ Sep 20, 2026.","unit":"usd","axisLabel":"P&L after fees ($)","totalLabel":"","diverging":true,"signs":["Profitable day","Losing day"],"series":[{"key":"v","name":"P&L after fees","tipLabel":"after fees","column":"P&L after fees (USD)","mark":"bar"}],"light":["#008a75","#d9381e"],"dark":["#1fa89c","#e0442a"],"start":"2026-05-01","source":"Source: Kalshi trade data via"};
 const D = {"n":143,"values":{"v":[-1390699,1880107,1557328,-2820334,-1640969,-870425,372156,-1974701,-920255,-3681574,-2922025,15738,-3065201,-420967,124088,-2233235,-1461568,-115780,2814846,61688,-2014894,-4041335,-1038248,-5266404,-2263447,142296,1616967,-2097085,2085407,-2285467,1257840,-3482341,-2640771,-4340465,-2413380,-1267363,-705763,-406409,1666643,96555,-4700157,-446327,-4860831,-17174665,-12713239,-4414915,10327102,21251,-6228888,-3046119,-11012743,-3270979,20969366,-20684102,-6385698,-26382324,-5255338,-14940316,-9048614,-2937521,39898829,-2281143,6866536,-8101917,-13800242,-5316176,-24150368,-13322256,-1724821,2235033,-7753148,-24658669,-6705247,-4558604,-14691141,-4961939,-3911718,-4770054,-7828816,-18929014,-1701838,-1311265,-2448976,-4507261,-3318277,383695,-4503813,-9625907,-3629902,-5388363,1859860,-7266288,-4081555,-1482475,-5088294,-2548852,-3525976,-916906,-6563928,-1551977,11141762,-40161,-5923035,-7882864,-6437079,-6219595,-10680582,-3628508,2424907,-2694157,-7678704,-4515198,3588835,-9501653,924128,-2790239,-8071524,-1448140,-4641589,-543740,-5839125,-813587,-3751847,-7217909,-7817972,-4819856,-4315129,-16778728,426442,891642,10015947,3662330,-9667382,-2910193,-12632710,-1930592,-626243,-4781740,-9944636,5578105,-6740291,-22741889,-22786831]}};
 function renderPredictChart(Plot, S, D) {
   const host = [...document.querySelectorAll(`[data-pc-chart="${S.slug}"]`)].find((el) => !el.dataset.pcDone);
@@ -57,7 +57,8 @@ function renderPredictChart(Plot, S, D) {
   const full = (v, unit) => v == null || Number.isNaN(v) ? "" : sign(v) + (unit === "usd" ? "$" : "") + Math.round(Math.abs(v)).toLocaleString("en-US");
   const dayLong = (d) => d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
   const bars = S.series.filter((s) => s.mark === "bar");
-  const line = S.series.find((s) => s.mark === "line");
+  const lines = S.series.filter((s) => s.mark === "line");
+  const line = S.multiline ? null : lines[0];
   const color = (s) => T.colors[S.series.indexOf(s)];
   const signColor = (v) => T.colors[v < 0 ? 1 : 0];
   const unitOf = (s) => s.unit || S.unit;
@@ -165,7 +166,7 @@ function renderPredictChart(Plot, S, D) {
     plotDpr = dpr;
     const H = Math.round(Math.max(250, Math.min(400, W * 0.52)));
     let max = Math.max(...Array.from({length: N}, (_, i) => barTotal(i)));
-    if (line) max = Math.max(max, ...D.values[line.key].filter((v) => v != null));
+    for (const s of S.multiline ? lines : line ? [line] : []) max = Math.max(max, ...D.values[s.key].filter((v) => v != null));
     const min = S.diverging ? Math.min(0, ...Array.from({length: N}, (_, i) => barTotal(i))) : 0;
     max = Math.max(max, 0);
     const step = niceStep(max - min, S.diverging ? 6 : 5), top = Math.ceil(max / step) * step, bottom = Math.floor(min / step) * step, yt = ticksTo(top, step, bottom);
@@ -175,6 +176,10 @@ function renderPredictChart(Plot, S, D) {
       const pts = dates.map((d, i) => ({x: new Date(+d + DAY / 2), y: D.values[line.key][i] == null ? NaN : D.values[line.key][i]}));
       marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: T.bg, strokeWidth: 7, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
       marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: color(line), strokeWidth: 3, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
+    }
+    if (S.multiline) for (const s of lines) {
+      const pts = dates.map((d, i) => ({x: new Date(+d + DAY / 2), y: D.values[s.key][i]})).filter((p) => p.y != null);
+      marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: color(s), strokeWidth: 2, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
     }
     marks.push(Plot.axisY(yt, {anchor: "left", tickFormat: (v) => compact(v), label: S.axisLabel, labelAnchor: "top", tickSize: 0, tickPadding: 6}));
     marks.push(Plot.axisX({ticks: "month", tickFormat: (d) => d.toLocaleDateString("en-US", {month: "short", timeZone: "UTC"}), tickSize: 4, stroke: T.tick, label: null}));
@@ -260,6 +265,8 @@ function renderPredictChart(Plot, S, D) {
     }
     for (const s of [...bars].reverse()) tip.append(row(S.diverging ? signColor(D.values[s.key][i] || 0) : color(s), fmt(D.values[s.key][i], unitOf(s)), s.tipLabel || s.name));
     if (line) tip.append(row(color(line), fmt(D.values[line.key][i], unitOf(line)), line.tipLabel || line.name));
+    if (S.multiline) for (const r of lines.map((s) => ({s, v: D.values[s.key][i]})).filter((r) => r.v != null).sort((a, b) => b.v - a.v))
+      tip.append(row(color(r.s), fmt(r.v, unitOf(r.s)), r.s.tipLabel || r.s.name));
     tip.style.display = "block";
     const tw = tip.offsetWidth;
     tip.style.left = `${mid + 12 + tw <= geom.W ? mid + 12 : Math.max(0, mid - 12 - tw)}px`;
