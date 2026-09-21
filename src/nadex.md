@@ -24,6 +24,7 @@ const split     = (await DataAttachment("data/nadex_sports_split_daily.csv").csv
   .sort((a, b) => a.date - b.date);
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrushFromUrl} from "./components/url-range.js";
 ```
 
 ```js
@@ -128,7 +129,7 @@ function makeBrush(data, color) {
   svg.selectAll(".handle").style("display", "block").style("fill", color).style("fill-opacity", 0.9);
   svg.selectAll(".selection").style("stroke", color).style("stroke-width", "2px").style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
-  return svg.node();
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
 

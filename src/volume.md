@@ -23,6 +23,7 @@ const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrushFromUrl} from "./components/url-range.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 ```
@@ -155,7 +156,7 @@ function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "var
   brushG.call(brush).call(brush.move, [brushStart, defaultEnd].map(x));
   svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
   svg.property("value", [brushStart, defaultEnd]);
-  return svg.node();
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
 

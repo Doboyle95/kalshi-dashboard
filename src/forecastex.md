@@ -16,6 +16,7 @@ const catDaily  = await DataAttachment("data/forecastex_categories_daily.csv").c
 const split     = await DataAttachment("data/forecastex_sports_split_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrushFromUrl} from "./components/url-range.js";
 ```
 
 ```js
@@ -120,7 +121,7 @@ function makeBrush(data, color, defaultStart) {
     .style("stroke", color).style("stroke-width", "2px")
     .style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
-  return svg.node();
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
 

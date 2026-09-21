@@ -27,6 +27,7 @@
 // not per keystroke, for the same reason.
 
 import * as d3 from "npm:d3";
+import {pushInitialRange, tagDateBrush, urlDateRange} from "./url-range.js";
 
 let dateRangeControlId = 0;
 
@@ -127,6 +128,13 @@ export function renderDateBrush({
   if (defStart < domainStart) defStart = domainStart;
   if (defEnd > domainEnd) defEnd = domainEnd;
   if (defStart >= defEnd) { defStart = domainStart; defEnd = domainEnd; }
+
+  // A from/to/days window in the page URL (embed and shared links; see
+  // components/url-range.js) replaces the page default. The page's own Mutable still
+  // holds that default, so the URL window is pushed through onSelect once, below.
+  const pageDefault = [defStart, defEnd];
+  const urlRange = urlDateRange(pageDefault, xDomain);
+  [defStart, defEnd] = urlRange;
 
   // Shared current range; both modes read/write through applyRange().
   let curStart = defStart, curEnd = defEnd;
@@ -269,5 +277,12 @@ export function renderDateBrush({
 
   setMode("brush");
   syncQuickButtons();
+  tagDateBrush(container, () => ({
+    range: [curStart, curEnd],
+    domain: xDomain,
+    defaultRange: pageDefault,
+    quickDays: quickButtons.find(({button}) => button.classList.contains("active"))?.item.days ?? null
+  }));
+  if (urlRange !== pageDefault) pushInitialRange(onSelect, urlRange);
   return container;
 }

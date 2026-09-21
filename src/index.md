@@ -160,7 +160,7 @@ if (briefingSettled && briefingNarrated && Math.abs(briefingSettled.contracts / 
 }
 ```
 
-<h2 class="briefing-scale-title">Volume across exchanges</h2>
+<h2 class="briefing-scale-title" id="volume-across-exchanges">Volume across exchanges</h2>
 
 <p class="section-intro">Reported daily contracts across every venue with a usable series. Linear preserves the real scale gap; log makes smaller venues readable.</p>
 

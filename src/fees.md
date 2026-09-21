@@ -16,6 +16,7 @@ const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrushFromUrl} from "./components/url-range.js";
 ```
 
 ```js
@@ -132,7 +133,7 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "var
   brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
   svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
   svg.property("value", [defaultStart, defaultEnd]);
-  return svg.node();
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
 

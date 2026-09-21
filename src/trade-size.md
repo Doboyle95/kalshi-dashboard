@@ -35,6 +35,7 @@ const priceFiles = await Promise.all([
 ]);
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrushFromUrl} from "./components/url-range.js";
 import {bestName, fmtStrike} from "./components/ticker-names.js";
 import {buildReportTickerToCat} from "./components/taker-categories.js";
 ```
@@ -211,7 +212,7 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     .style("fill-opacity", 0.15);
 
   svg.property("value", [clampedStart, defaultEnd]);
-  return svg.node();
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
 

@@ -29,6 +29,7 @@ const betType = (await DataAttachment("data/bet_type_daily.csv").csv({typed: tru
   .filter(d => d.venue === "Underdog");
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrushFromUrl} from "./components/url-range.js";
 ```
 
 ```js
@@ -139,7 +140,7 @@ function makeBrush(data, color, value = d => d.contracts_total ?? d.contracts ??
   svg.selectAll(".handle").style("display", "block").style("fill", color).style("fill-opacity", 0.9);
   svg.selectAll(".selection").style("stroke", color).style("stroke-width", "2px").style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
-  return svg.node();
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
 

@@ -111,6 +111,81 @@
     }
   }
 
+  // ── Embed ───────────────────────────────────────────────────────────────────
+  // Copies an <iframe> of this chart's section -- components/embed-mode.js renders
+  // <page>?embed=<heading id> as that section alone -- plus a small script that lets the
+  // host page size the iframe to fit. A window the reader has brushed rides along as
+  // from/to/days (components/url-range.js); #key=value controls from
+  // components/hash-state.js ride along in the hash.
+
+  // Where the embed view's section ends: the next h1-h3 WITH an id after the heading
+  // (an id-less one is a chart's own title, not a section).
+  function sectionEnd(heading) {
+    const main = document.querySelector(ROOT_SELECTOR);
+    if (!main) return null;
+    const walker = document.createTreeWalker(main, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node) => /^H[1-3]$/.test(node.tagName) && node.id ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
+    });
+    walker.currentNode = heading;
+    return walker.nextNode();
+  }
+
+  // The date brush driving this chart: the last one between its heading and the chart,
+  // else the first one after the chart within the same section.
+  function sectionDateBrush(root, heading, end) {
+    const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const brushes = Array.from(document.querySelectorAll("[data-date-brush]"))
+      .filter((el) => follows(heading, el) && (!end || follows(el, end)));
+    return brushes.filter((el) => follows(el, root) || root.contains(el)).at(-1) ||
+      brushes.find((el) => follows(root, el)) || null;
+  }
+
+  function escapeAttr(value) {
+    return String(value).replace(/[&"<>]/g, (c) => ({"&": "&amp;", "\"": "&quot;", "<": "&lt;", ">": "&gt;"})[c]);
+  }
+
+  function embedCode(root) {
+    const heading = anchorHeading(root);
+    if (!heading) return null;
+    const section = text(heading.textContent);
+    const end = sectionEnd(heading);
+    const canonical = document.querySelector('link[rel="canonical"]')?.href;
+    const url = new URL(canonical || location.pathname, location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("embed", heading.id);
+    const brush = sectionDateBrush(root, heading, end);
+    const range = typeof brush?.dateBrushParams === "function" ? brush.dateBrushParams() : {};
+    for (const [key, value] of Object.entries(range)) url.searchParams.set(key, value);
+    const state = new URLSearchParams(location.hash.replace(/^#/, ""));
+    for (const [key, value] of Array.from(state)) if (!value) state.delete(key);
+    if (String(state)) url.hash = String(state);
+    // The section's height as drawn here, plus the credit line: a close first guess for
+    // a host page that strips the resize script.
+    const main = document.querySelector(ROOT_SELECTOR);
+    const bottom = end ? end.getBoundingClientRect().top : main.getBoundingClientRect().bottom;
+    const height = Math.round(Math.min(2400, Math.max(320, bottom - heading.getBoundingClientRect().top + 70)));
+    const resize = "(function(w){if(w.__pcEmbedResize)return;w.__pcEmbedResize=1;" +
+      "w.addEventListener(\"message\",function(e){var d=e.data;" +
+      "if(e.origin!==" + JSON.stringify(url.origin) + "||!d||d.type!==\"predict-charts:embed-height\")return;" +
+      "var f=document.getElementsByTagName(\"iframe\");for(var i=0;i<f.length;i++)if(f[i].contentWindow===e.source){" +
+      "var h=Math.ceil(+d.height);if(h>=100&&h<=8000)f[i].style.height=h+\"px\";}});})(window);";
+    return `<iframe src="${escapeAttr(url.href)}" title="${escapeAttr(`${section} | Predict Charts`)}" ` +
+      `width="100%" height="${height}" style="border:0;width:100%;max-width:100%" loading="lazy"></iframe>` +
+      `<script>${resize}<\/script>`;
+  }
+
+  async function copyEmbed(root, button) {
+    const code = embedCode(root);
+    if (!code) return setButtonStatus(button, "Unavailable");
+    try {
+      await navigator.clipboard.writeText(code);
+      setButtonStatus(button, "Copied");
+    } catch {
+      window.prompt("Copy this embed code", code);
+    }
+  }
+
   function restoreFocus() {
     if (!focusState) return;
     const {root, placeholder, overlay, button} = focusState;
@@ -261,12 +336,13 @@
     const focus = actionButton("Focus", "Open chart in focus mode", () => toggleFocus(root, focus));
     const png = actionButton("PNG", "Download chart as PNG", () => downloadPng(root, png));
     const link = actionButton("Link", "Copy a link to this chart", () => copyLink(root, link));
+    const embed = actionButton("Embed", "Copy code to embed this chart on another site", () => copyEmbed(root, embed));
     const ask = actionButton("Ask", "Ask Predict Charts about this chart", () => {
       const context = contextFor(root);
       saveAskPrefill(context.question, context.context);
       location.assign(askHref());
     });
-    tools.append(focus, png, link, ask);
+    tools.append(focus, png, link, embed, ask);
     root.prepend(tools);
   }
 
@@ -346,6 +422,8 @@
   }
 
   function start() {
+    // The embed view (components/embed-mode.js) is one section with no chrome.
+    if (document.documentElement.classList.contains("pc-embed")) return;
     wireAskLinks();
     addPageAsk();
     addVenueOverview();

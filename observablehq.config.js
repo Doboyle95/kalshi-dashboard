@@ -51,6 +51,12 @@ const DATA_INSPECTOR = readFileSync(
   new URL("./src/components/data-inspector.js", import.meta.url),
   "utf-8"
 ).replace(/<\/script/gi, "<\\/script");
+// ?embed=<section id> turns a page into that one section, for iframing on other sites.
+// Inlined in <head> so the chrome is hidden before first paint; a no-op on any other load.
+const EMBED_MODE = readFileSync(
+  new URL("./src/components/embed-mode.js", import.meta.url),
+  "utf-8"
+).replace(/<\/script/gi, "<\\/script");
 
 // ── Venue deep dives: one sidebar row per venue, modules in-page ─────────────
 // Framework's `pages` supports exactly ONE level of nesting — normalizeSection()
@@ -478,12 +484,20 @@ export default {
     '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Inter+Tight:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;display=swap">',
     // Apply saved theme before first paint to avoid FOUC
     `<script>(function(){try{var t=localStorage.getItem("kalshi-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`,
+    // Embed view. AFTER the saved-theme script, so an embed's own theme (light unless
+    // ?theme= says otherwise) wins over a preference saved for the full site.
+    `<script>${EMBED_MODE}</script>`,
     // Wire the light/dark/system selectors rendered in both desktop and mobile
     // masthead menus. Keeping them in sync avoids one control displaying stale
     // state after the other changes the preference.
     `<script>document.addEventListener("DOMContentLoaded",function(){
+      // The embed view owns its theme (components/embed-mode.js).
+      if(document.documentElement.classList.contains("pc-embed"))return;
       var KEY="kalshi-theme";
-      var cur=localStorage.getItem(KEY)||"system";
+      // Guarded like the pre-paint script: storage access can throw when site data is
+      // blocked, and an uncaught throw here would leave the theme buttons unwired.
+      var cur="system";
+      try{cur=localStorage.getItem(KEY)||"system";}catch(e){}
       var wraps=Array.prototype.slice.call(document.querySelectorAll(".theme-toggle"));
       if(!wraps.length)return;
       var opts=[["light","☀","Light"],["dark","☾","Dark"],["system","⚙","System"]];
