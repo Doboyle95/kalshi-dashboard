@@ -135,6 +135,10 @@ const rhSeries = rhGrain === "Monthly"
 
 ```js
 const rhSel = Mutable(d3.extent(rhSeries, d => d.date));
+// The setter MUST live in this cell. Anywhere else `rhSel` is the unwrapped array, so
+// the brush callback used to assign `.value` onto that array and the chart never moved
+// (see components/date-brush.js, "Why an onSelect callback").
+const setRhSel = range => { rhSel.value = range; };
 ```
 
 ```js
@@ -142,7 +146,7 @@ display(renderDateBrush({
   data: rhSeries.map(d => ({date: d.date,
     value: rhMetric === "Estimated volume" ? d.value + d.rothera + d.fx : d.share})),
   initialRange: d3.extent(rhSeries, d => d.date),
-  onSelect: range => { rhSel.value = range; },
+  onSelect: setRhSel,
   color: "var(--accent-robinhood)",
   width
 }));
