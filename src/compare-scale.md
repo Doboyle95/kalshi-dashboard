@@ -123,6 +123,11 @@ Plot.plot({
   marks: [
     Plot.lineY(plottedBrushed.filter(d => !d.partial), {x: "date", y: "value", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
     Plot.dot(plottedBrushed.filter(d => d.partial), {x: "date", y: "value", fill: "venue", r: 4, symbol: "diamond"}),
+    Plot.ruleX(plottedBrushed, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(plottedBrushed, Plot.pointerX({
+      x: "date", y: "value",
+      title: d => `${d.venue}\n${fmtDate(d.date)}\n${scaleMetric === "Volume" ? `${Math.round(d.contracts).toLocaleString()} contracts` : `${(100 * d.value).toFixed(1)}% of reported contracts`}${d.partial ? "\nPartial day" : ""}`
+    })),
     scaleMetric === "Volume" && scaleType === "Linear" ? Plot.ruleY([0]) : null
   ].filter(Boolean)
 })
@@ -190,7 +195,15 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 330, marginLeft: 72,
   x: {type: "utc", label: null}, y: {label: "Reported open interest", grid: true, tickFormat: fmtCount},
   color: {legend: true, domain: oiVenues, range: oiVenues.map(d => VENUE_COLORS[d])},
-  marks: [Plot.ruleY([0]), Plot.lineY(oiRowsBrushed, {x: "date", y: "openInterest", stroke: "venue", strokeWidth: 2, curve: "monotone-x"})]
+  marks: [
+    Plot.ruleY([0]),
+    Plot.lineY(oiRowsBrushed, {x: "date", y: "openInterest", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.ruleX(oiRowsBrushed, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(oiRowsBrushed, Plot.pointerX({
+      x: "date", y: "openInterest",
+      title: d => `${d.venue}\n${fmtDate(d.date)}\n${Math.round(d.openInterest).toLocaleString()} open contracts`
+    }))
+  ]
 })
 ```
 
