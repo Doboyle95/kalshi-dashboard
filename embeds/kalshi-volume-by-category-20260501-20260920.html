@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kalshi volume by category | Predict Charts</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="pc-embed-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter+Tight:wght@400;600&amp;display=swap">
+<style>html,body{margin:0;padding:0;background:transparent}</style>
+</head>
+<body>
+<predict-chart data-pc-chart="kalshi-volume-by-category-20260920" style="display:block"></predict-chart>
+<script type="module">
+import * as Plot from "./lib/plot-0.6.17.js";
+const S = {"slug":"kalshi-volume-by-category-20260920","title":"Kalshi volume by category","subtitle":"Contracts traded per day, May 1 – Sep 20, 2026.","unit":"count","axisLabel":"Volume (contracts)","totalLabel":"Total contracts","series":[{"key":"c0","name":"Non-sports","mark":"bar"},{"key":"c1","name":"Other sports","mark":"bar"},{"key":"c2","name":"Baseball","mark":"bar"},{"key":"c3","name":"Soccer","mark":"bar"},{"key":"c4","name":"Basketball","mark":"bar"},{"key":"c5","name":"Football","mark":"bar"},{"key":"c6","name":"Parlay","mark":"bar"}],"light":["#d98300","#65c175","#007d66","#41aae7","#434baa","#bd76c8","#8a185c"],"dark":["#d07d00","#007426","#00ad97","#006aac","#9384e0","#94368f","#d5679c"],"start":"2026-05-01","source":"Source: Kalshi trade data via"};
+const D = {"n":143,"values":{"c0":[75423033,56972739,60721924,77600288,79120986,76430491,69243531,75051333,62840905,80072319,84159009,79723077,81001862,89510173,93906814,77921344,77056384,87347546,109498663,95488011,86155613,99065592,88044442,79247173,80321112,73907266,98640101,90253531,99349557,87533980,96874245,115464789,140471319,141339202,115983766,138675740,128563519,125521940,125531725,135643633,125320362,127824791,143821009,133578666,149200613,181451702,175717336,177671743,160203710,164782690,152417058,164827656,182202415,193498262,203135992,179665110,187498259,154083484,178035047,201661420,213833422,213666426,203507631,201548974,178026276,180456103,222240819,218689143,221458805,204284212,222284417,195043125,206222863,229714963,238426569,244268576,237186119,240187923,204022652,233641360,256010983,270855796,239700733,243188746,259499833,208848535,213098204,261811803,258729008,273195054,240193064,270110420,204566795,225379854,279154022,299876745,286085899,274003898,280490088,204489274,222210959,286879383,271924754,245946928,234039695,265004497,199240932,232969323,271248608,277088176,306847306,321649757,379778747,282129375,293445826,355274893,318329318,300461912,300698392,320004128,267671207,281150729,326992233,329120612,327081273,349993263,326449967,254887281,259888898,273125240,306819744,319974769,325553704,338310160,226250994,261167950,358539851,396610014,374563319,344646027,419537817,308457624,326906451],"c1":[130462261,104460833,128263427,120243610,123591841,118043626,140249642,140127310,200785296,176817123,140171447,148663676,148415424,217268482,158314057,208174570,162555243,115307363,112528666,129909938,132513115,120544213,100374946,169089711,128914841,131029280,172535873,161291083,196425014,151379116,180889134,140504744,150348593,134162216,162041516,116828649,143290293,145647052,98582677,141519757,104757402,158742807,148185707,145550041,266979594,215751297,162138008,183635567,214428572,184898681,180034223,148756471,115864233,133328432,158844690,159532876,150852081,123845375,144100398,156143260,195060510,192799813,178601666,171761722,176642783,167696616,138211461,175491145,212998195,191777611,216505389,369330169,211928937,241982447,256098310,295439400,304106163,296586071,295875805,256583969,221457422,281176701,281747985,285078319,291985278,307624644,254605725,255485111,311618533,305047619,268317483,293613604,320652363,211479551,251762552,298366961,309482097,261726033,288761380,280582468,232000896,174801780,266603502,276828784,287350577,281324311,325478807,265508873,198968635,245323045,247980740,221378296,218247309,248669910,202727064,212400907,224281101,249683216,190324286,209044778,162196314,259578552,279919990,282037951,276264352,283278054,261869188,261062500,193805545,199831621,226660478,218904459,169644815,212913247,200789995,144643167,154509688,227740891,193484725,203340907,214788271,226423195,116514364],"c2":[56454529,84214930,66577793,44859109,50868750,68624094,57434475,50407633,61385398,57510801,30070401,48857844,57243572,64555181,53100662,87450825,69159959,47929178,68542330,93273746,64993318,80006612,98808874,84529620,96949405,56827265,102920845,62128380,86375137,94789319,104083612,67820199,81545758,86771721,79629670,69569339,98485043,116344769,46762305,110394342,113357981,71065837,79817224,91851542,95270339,62878109,81019304,103526613,85612116,85366819,119566334,97294795,74872237,97660316,126395825,86844218,78437342,108595634,103864574,76245057,80923523,120960271,100857598,86994577,134978935,119235355,82188478,126490061,115295102,123284087,100276115,126803585,108934725,60637016,25491623,3469958,23627351,95932113,126644198,106567903,106268064,106008225,138924293,95400069,141764273,143402981,146963646,118017612,138673864,182410336,142610991,139779616,161178065,144045875,82454249,109679950,135195640,125011243,92286581,128305590,118971802,71780287,105716036,126957668,94229873,118046547,107203585,114459585,89974567,75148304,128365282,76791245,85909435,97025950,91259654,64884486,97615760,124616237,64095250,87024306,100753103,104326049,86548832,103742329,128057063,90838849,90126158,75690278,88045763,90776847,90853508,84685629,56589461,78263951,77399119,51214297,54433040,96413475,136137018,72476831,76179104,63106095,53757328],"c3":[12833876,56381540,48056465,27445797,22922938,32236300,11678613,13917884,42926000,52723016,16524085,17177242,32141943,15796974,15545072,37260691,53875734,13926147,22449365,13663905,13599101,18784190,39961456,47212319,11421759,8694132,12531988,8849590,15081385,63609736,26144336,22352152,20125285,20573399,33986687,28460687,34014604,23833589,19619811,35667627,30474357,146068416,198596294,235980079,307241098,311866407,256738567,400228200,326289879,350706177,439958934,496626278,402242007,499905252,489704316,507810421,407347575,494298609,129127023,422917580,418552997,512413381,406129327,582587712,361013712,605616828,466189328,471892351,51850591,225379411,231414174,560036184,42273609,33793543,358973189,339586024,64249105,77151498,424145317,581392217,7791906,39511064,61999077,54134476,21230927,62407992,68517997,15792652,24446164,28160792,30258004,24779442,64437303,51066070,21129782,21189937,15834384,24607677,17343974,36118238,34899203,18595258,24099286,14493280,23224697,24412726,59086389,62238962,33926063,24223799,52491686,39102260,42143343,106003129,99237286,37298518,31454362,36078150,38821943,60172540,116508046,101086213,51682737,24059608,27310542,24522945,58631611,106541600,83821213,37226751,52337816,74053428,59617170,52937243,114026906,98653046,51629752,70550198,58651947,41947987,61897573,127652808,122632460],"c4":[146577304,101211722,119079187,94596349,110679249,104708375,123348073,108994491,125546127,128888540,100803060,104643336,73284884,17042569,105451959,11379719,85365258,106247392,112862189,97328766,78478854,98101657,87799142,103217237,83172838,89500510,22887810,89819107,27893366,146767138,16809561,18408549,22388086,134926097,25903209,164641596,39914692,25161848,180216066,21193922,231404028,43837356,28738084,215424673,11462755,18461602,10375800,25074992,12091336,15621751,22425622,25837265,28915872,21362413,22860025,16096816,13378679,18977789,25183236,4104167,24755975,16613943,28186964,27588911,22668118,17101542,28026815,20899841,24906130,29552643,42026576,27675069,63327264,62358660,55077692,80567827,63069131,49737815,57374926,46709252,39841051,20449096,48428562,15393883,20500378,8520193,1503524,1925939,20774442,15976693,21666301,18540112,18641425,29611085,21495634,10078034,24703817,25290222,17998198,24307163,25405221,15704801,16804462,19609291,17373036,17191927,18517846,24627304,11370940,23595844,13480695,20467352,16275203,16783121,19795262,16997151,16354816,14176910,15741072,21615132,8443815,24182830,4851320,513516,492356,386251,386859,237719,183043,235426,407170,363661,338303,230270,333059,271840,486239,328209,905472,9902943,11223418,6718945,10897326],"c5":[465077,357922,288569,244714,365666,307946,348560,342278,406924,306354,718027,401895,224229,334400,376865,502135,392582,303162,370410,539021,540858,562175,297775,298548,250235,251041,420157,337920,438878,490982,511396,3462099,818979,1005346,293545,496096,374753,377597,598422,562467,563408,422810,441231,375703,573832,665355,751091,406196,513321,528070,580183,701444,500293,400096,480952,610829,326675,302199,456969,569737,621824,476529,339250,612924,313185,860197,423149,379484,458785,341630,392158,352415,558389,583089,764563,821233,437762,590290,551281,1329277,1068112,1295621,867151,1045242,1365041,915666,1161656,1178075,1353344,1303475,1239111,1443118,1486563,1403526,1432991,1793582,2001009,22471751,2003034,1344198,1471068,2345124,2086625,3068748,43259472,22948044,57914236,2187292,3095784,3214471,3280291,42624886,39833170,96645375,39550053,3893684,3230908,4226728,57679530,76129936,137837162,22093225,5550309,5968131,7156893,92243540,93793092,250138125,156302350,60704789,29363929,114507519,112682799,72439437,329841305,411905065,118516895,12917935,11792003,127668995,90784346,365246639,425445086],"c6":[145804259,140991535,149659857,151752587,149230134,149534361,153579264,176397308,226484436,190752460,141959750,129571544,124497600,90020444,155905222,162279592,155946517,131547334,142977113,167671417,133655894,163555015,177681620,188491658,153534805,135086940,145099755,139240888,161255835,256046652,164205959,137658092,164340267,219896457,145931549,259319225,211643762,174221392,223571796,216259194,266846988,226031147,316744657,402012959,405425061,318543402,366553074,463344027,457684241,478257248,553074100,531025523,486637309,564853043,671965317,765565959,724174591,680476141,334661662,555364255,571807615,628478414,553015724,648624952,644771210,698671249,615551001,546649995,422114788,541925130,547930027,849619144,312085591,154677391,370077167,321849290,172966892,420710174,688714091,675589723,372479414,413872400,501072266,249320045,475899692,545359029,363730815,396451509,445638974,469123069,382883105,565638923,612752025,407003363,319394284,436116760,513369917,406549065,494490621,594871603,432489154,386265933,582236108,570448797,481116186,505404131,810095839,506503359,385497862,530986361,665402576,408866096,557761285,863866068,580472758,493792413,668078450,625330821,538108006,799693822,1084802313,832889682,739891938,785530312,799208304,731031280,999370329,1344461758,823675359,719093523,925022013,1088268087,826007530,976327060,1477476220,1492356144,909646630,1071756290,1154596022,1050693819,1261212049,1917154688,1759868861]}};
+function renderPredictChart(Plot, S, D) {
+  const host = [...document.querySelectorAll(`[data-pc-chart="${S.slug}"]`)].find((el) => !el.dataset.pcDone);
+  if (!host) return;
+  host.dataset.pcDone = "1";
+  if (!document.getElementById("pc-embed-fonts")) {
+    ["inter-tight@5.3.0/latin-400.css", "inter-tight@5.3.0/latin-600.css", "ibm-plex-mono@5.3.0/latin-500.css"].forEach((f, i) => {
+      const l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.href = "https://cdn.jsdelivr.net/npm/@fontsource/" + f;
+      if (i === 0) l.id = "pc-embed-fonts";
+      document.head.append(l);
+    });
+  }
+  const DAY = 864e5;
+  const [y0, m0, d0] = S.start.split("-").map(Number);
+  const day0 = Date.UTC(y0, m0 - 1, d0);
+  const N = D.n;
+  const dates = Array.from({length: N}, (_, i) => new Date(day0 + i * DAY));
+  const parseRGB = (s) => { const m = /rgba?\(([^)]+)\)/.exec(s || ""); if (!m) return null; const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return p.length >= 3 && (p.length < 4 || p[3] > 0.05) ? p : null; };
+  let bg = null;
+  for (let el = host.parentElement; el && !bg; el = el.parentElement) bg = parseRGB(getComputedStyle(el).backgroundColor);
+  bg = bg || parseRGB(getComputedStyle(document.documentElement).backgroundColor) || [255, 255, 255];
+  const dark = host.dataset.theme === "dark" || (host.dataset.theme !== "light" && (0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2]) / 255 < 0.4);
+  const T = dark
+    ? {bg: "#111513", paper: "#171c19", ink: "#fbf8f1", fg: "#f2f3ec", muted: "#a9b0a9", faint: "#858f87", rule: "#39423b", ruleStrong: "#566158",
+       grid: "rgba(242,243,236,0.09)", tick: "rgba(242,243,236,0.18)", base: "rgba(242,243,236,0.45)", cross: "rgba(242,243,236,0.3)", colors: S.dark}
+    : {bg: "#f4f0e8", paper: "#fbf8f1", ink: "#171c19", fg: "#18201e", muted: "#626a65", faint: "#777e79", rule: "#c8c2b7", ruleStrong: "#9f9a91",
+       grid: "rgba(24,32,30,0.09)", tick: "rgba(24,32,30,0.18)", base: "rgba(24,32,30,0.45)", cross: "rgba(24,32,30,0.28)", colors: S.light};
+  const SANS = `"Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+  const MONO = `"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+  const trim = (s) => s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+  function compact(v, sig = 3) {
+    if (v < 0) return "−" + compact(-v, sig);
+    const a = Math.abs(v);
+    for (const [u, s] of [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (a >= u) return trim((v / u).toPrecision(sig)) + s;
+    return trim(Number(v).toPrecision(sig));
+  }
+  const sign = (v) => v < 0 ? "−" : S.diverging && v > 0 ? "+" : "";
+  const fmt = (v, unit) => v == null || Number.isNaN(v) ? "—" : sign(v) + (unit === "usd" ? "$" : "") + compact(Math.abs(v));
+  const full = (v, unit) => v == null || Number.isNaN(v) ? "" : sign(v) + (unit === "usd" ? "$" : "") + Math.round(Math.abs(v)).toLocaleString("en-US");
+  const dayLong = (d) => d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
+  const bars = S.series.filter((s) => s.mark === "bar");
+  const line = S.series.find((s) => s.mark === "line");
+  const color = (s) => T.colors[S.series.indexOf(s)];
+  const signColor = (v) => T.colors[v < 0 ? 1 : 0];
+  const unitOf = (s) => s.unit || S.unit;
+  const barTotal = (i) => bars.reduce((t, s) => t + (D.values[s.key][i] || 0), 0);
+  const shadow = host.shadowRoot || host.attachShadow({mode: "open"});
+  shadow.innerHTML = "";
+  const style = document.createElement("style");
+  style.textContent = `
+:host { display: block; }
+.pc { margin: 0; padding: 16px 18px 12px; border-radius: 3px; background: ${T.bg}; color: ${T.fg}; font: 400 14px/1.5 ${SANS}; }
+.pc-title { margin: 0 0 4px; color: ${T.ink}; font: 600 20px/1.25 ${SANS}; letter-spacing: -0.01em; }
+.pc-sub { margin: 0 0 12px; max-width: 72ch; color: ${T.muted}; font-size: 14.5px; line-height: 1.55; }
+.pc-legend { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
+.pc-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid ${T.rule}; border-radius: 2px; color: ${T.fg}; font: 500 11px/1.45 ${MONO}; white-space: nowrap; }
+.pc-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.pc-key { width: 16px; height: 2.5px; border-radius: 2px; flex: none; }
+.pc-plot { position: relative; outline: none; touch-action: pan-y; }
+.pc-plot:focus-visible { box-shadow: 0 0 0 3px rgba(244, 167, 54, 0.28); border-radius: 2px; }
+.pc-plot svg { display: block; max-width: none; overflow: visible; }
+.pc-plot svg text { font-variant-numeric: tabular-nums lining-nums; }
+.pc-cross { position: absolute; width: 1px; background: ${T.cross}; pointer-events: none; display: none; }
+.pc-tip { position: absolute; top: 0; min-width: 150px; max-width: 250px; padding: 8px 10px; border: 1px solid ${T.ruleStrong}; border-radius: 2px; background: ${T.paper}; color: ${T.fg}; font-size: 12.5px; line-height: 1.5; pointer-events: none; display: none; z-index: 2; }
+.pc-tip-date { margin-bottom: 3px; color: ${T.ink}; font-weight: 600; }
+.pc-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.pc-row b { min-width: 54px; color: ${T.ink}; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pc-row span { color: ${T.muted}; }
+.pc-total { margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid ${T.rule}; }
+.pc-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-top: 8px; padding-top: 7px; border-top: 1px solid ${T.rule}; color: ${T.muted}; font-size: 12px; }
+.pc-foot a { color: ${T.fg}; text-decoration: none; border-bottom: 1px solid ${T.rule}; }
+.pc-foot a:hover { border-bottom-color: #c84f32; }
+.pc-btn { padding: 0 0 1px; border: 0; border-bottom: 1px solid transparent; background: none; color: ${T.faint}; font: 500 10.5px/1.6 ${MONO}; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+.pc-btn:hover, .pc-btn:focus-visible, .pc-btn[aria-expanded="true"] { color: ${T.ink}; border-bottom-color: #c84f32; outline: none; }
+.pc-table { max-height: 300px; overflow: auto; margin-top: 8px; border-top: 1px solid ${T.rule}; }
+.pc table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.pc th, .pc td { padding: 3px 8px; border-bottom: 1px solid ${T.rule}; text-align: right; white-space: nowrap; }
+.pc th { position: sticky; top: 0; background: ${T.bg}; color: ${T.muted}; font: 500 10.5px/1.6 ${MONO}; letter-spacing: 0.03em; text-transform: uppercase; }
+.pc td { color: ${T.fg}; }
+.pc th:first-child, .pc td:first-child { text-align: left; }`;
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const fig = el("figure", "pc");
+  fig.setAttribute("role", "group");
+  fig.setAttribute("aria-label", S.title);
+  const title = el("div", "pc-title", S.title);
+  title.setAttribute("role", "heading");
+  title.setAttribute("aria-level", "3");
+  const legend = el("div", "pc-legend");
+  const keys = S.diverging ? S.signs.map((name, k) => ({name, clr: T.colors[k], line: false}))
+    : S.series.length > 1 ? S.series.map((s) => ({name: s.legend || s.name, clr: color(s), line: s.mark === "line"})) : [];
+  for (const k of keys) {
+    const chip = el("span", "pc-chip");
+    const key = el("i", k.line ? "pc-key" : "pc-dot");
+    key.style.background = k.clr;
+    chip.append(key, document.createTextNode(k.name));
+    legend.append(chip);
+  }
+  const plotBox = el("div", "pc-plot");
+  plotBox.tabIndex = 0;
+  plotBox.setAttribute("role", "img");
+  plotBox.setAttribute("aria-label", `${S.title}. ${S.subtitle} Use the left and right arrow keys to read each day.`);
+  const cross = el("div", "pc-cross");
+  const tip = el("div", "pc-tip");
+  tip.setAttribute("aria-hidden", "true");
+  const foot = el("div", "pc-foot");
+  const src = el("span", null, S.source + " ");
+  const link = el("a", null, "Predict Charts");
+  link.href = "https://predict-charts.com/";
+  link.target = "_blank";
+  link.rel = "noopener";
+  src.append(link);
+  const btn = el("button", "pc-btn", "Show data");
+  btn.type = "button";
+  btn.setAttribute("aria-expanded", "false");
+  const tableBox = el("div", "pc-table");
+  tableBox.hidden = true;
+  btn.addEventListener("click", () => {
+    const open = tableBox.hidden;
+    tableBox.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    btn.textContent = open ? "Hide data" : "Show data";
+    if (!open || tableBox.firstChild) return;
+    const table = el("table");
+    const head = table.createTHead().insertRow();
+    const cols = [{label: "Date"}, ...S.series.map((s) => ({label: s.column || s.name, s})), ...(bars.length > 1 ? [{label: S.totalLabel, total: true}] : [])];
+    for (const c of cols) head.append(el("th", null, c.label));
+    const body = table.createTBody();
+    for (let i = 0; i < N; i++) {
+      const r = body.insertRow();
+      r.insertCell().textContent = dates[i].toISOString().slice(0, 10);
+      for (const c of cols.slice(1)) r.insertCell().textContent = c.total ? full(barTotal(i), S.unit) : full(D.values[c.s.key][i], unitOf(c.s));
+    }
+    tableBox.append(table);
+  });
+  foot.append(src, btn);
+  fig.append(title, el("div", "pc-sub", S.subtitle), legend, plotBox, foot, tableBox);
+  shadow.append(style, fig);
+  let current = -1, plotW = 0, plotDpr = 0, geom = null, alignKey = "";
+  function alignment() { const b = plotBox.getBoundingClientRect(), d = window.devicePixelRatio || 1; return [((b.left + window.scrollX) * d) % 1, ((b.top + window.scrollY) * d) % 1, d].map((v) => v.toFixed(3)).join(","); }
+  function niceStep(max, count) { const raw = max / count, p = 10 ** Math.floor(Math.log10(raw)), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+  function ticksTo(top, step, bottom = 0) { const out = []; for (let k = Math.round(bottom / step); k * step <= top + step / 2; k++) out.push(+(k * step).toPrecision(12)); return out; }
+  function render() {
+    const W = Math.max(280, Math.floor(plotBox.clientWidth));
+    const dpr = window.devicePixelRatio || 1;
+    if (Math.abs(W - plotW) < 4 && dpr === plotDpr && alignment() === alignKey && plotBox.firstChild) return;
+    plotW = W;
+    plotDpr = dpr;
+    const H = Math.round(Math.max(250, Math.min(400, W * 0.52)));
+    let max = Math.max(...Array.from({length: N}, (_, i) => barTotal(i)));
+    if (line) max = Math.max(max, ...D.values[line.key].filter((v) => v != null));
+    const min = S.diverging ? Math.min(0, ...Array.from({length: N}, (_, i) => barTotal(i))) : 0;
+    max = Math.max(max, 0);
+    const step = niceStep(max - min, S.diverging ? 6 : 5), top = Math.ceil(max / step) * step, bottom = Math.floor(min / step) * step, yt = ticksTo(top, step, bottom);
+    const marks = [Plot.gridY(yt, {stroke: T.grid, strokeOpacity: 1})];
+    if (!S.diverging) marks.push(Plot.ruleY([0], {stroke: T.base}));
+    if (line) {
+      const pts = dates.map((d, i) => ({x: new Date(+d + DAY / 2), y: D.values[line.key][i] == null ? NaN : D.values[line.key][i]}));
+      marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: T.bg, strokeWidth: 7, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
+      marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: color(line), strokeWidth: 3, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
+    }
+    marks.push(Plot.axisY(yt, {anchor: "left", tickFormat: (v) => compact(v), label: S.axisLabel, labelAnchor: "top", tickSize: 0, tickPadding: 6}));
+    marks.push(Plot.axisX({ticks: "month", tickFormat: (d) => d.toLocaleDateString("en-US", {month: "short", timeZone: "UTC"}), tickSize: 4, stroke: T.tick, label: null}));
+    const plot = Plot.plot({
+      width: W, height: H, marginLeft: 44, marginRight: 8, marginTop: 24, marginBottom: 24,
+      x: {type: "utc", domain: [dates[0], new Date(+dates[N - 1] + DAY)]},
+      y: {domain: [bottom, top]},
+      style: {background: "transparent", color: T.muted, fontFamily: SANS, fontSize: "11px", overflow: "visible"},
+      marks
+    });
+    plot.setAttribute("aria-hidden", "true");
+    const xs = plot.scale("x"), ys = plot.scale("y");
+    const [dA, dB] = xs.domain.map(Number), [rA, rB] = xs.range;
+    const box = plotBox.getBoundingClientRect();
+    const ox = box.left + window.scrollX, oy = box.top + window.scrollY;
+    const snapX = (v) => Math.round((v + ox) * dpr) / dpr - ox;
+    const snapY = (v) => Math.round((v + oy) * dpr) / dpr - oy;
+    const [yB, yT] = ys.range;
+    const yOf = (v) => snapY(yB - (v - bottom) / (top - bottom) * (yB - yT));
+    const slot = (rB - rA) / N;
+    const gap = slot * dpr >= 3 ? Math.max(1, Math.round(dpr)) / dpr : 0;
+    const NS = "http://www.w3.org/2000/svg";
+    const layer = document.createElementNS(NS, "g");
+    layer.setAttribute("shape-rendering", "crispEdges");
+    const addRect = (x, y, w, h, fill, opacity) => {
+      const r = document.createElementNS(NS, "rect");
+      r.setAttribute("x", +x.toFixed(4));
+      r.setAttribute("y", +y.toFixed(4));
+      r.setAttribute("width", +w.toFixed(4));
+      r.setAttribute("height", +h.toFixed(4));
+      r.setAttribute("fill", fill);
+      r.setAttribute("fill-opacity", opacity);
+      layer.append(r);
+    };
+    const zh = Math.max(1, Math.round(dpr)) / dpr;
+    for (let i = 0; i < N; i++) {
+      const x0 = snapX(rA + i * slot), x1 = snapX(rA + (i + 1) * slot) - gap;
+      if (x1 <= x0) continue;
+      if (S.diverging) {
+        const v = D.values[bars[0].key][i] || 0;
+        if (!v) continue;
+        const ya = yOf(0), yb = v > 0 ? Math.min(yOf(v), ya - 1 / dpr) : Math.max(yOf(v), ya + zh + 1 / dpr);
+        addRect(x0, Math.min(ya, yb), x1 - x0, Math.abs(ya - yb), signColor(v), "0.95");
+        continue;
+      }
+      let acc = 0, yPrev = yOf(0);
+      for (const s of bars) {
+        const v = D.values[s.key][i] || 0;
+        if (v <= 0) continue;
+        acc += v;
+        const y = yOf(acc);
+        if (yPrev > y) addRect(x0, y, x1 - x0, yPrev - y, color(s), "0.95");
+        yPrev = y;
+      }
+    }
+    if (S.diverging) addRect(snapX(rA), yOf(0), snapX(rB) - snapX(rA), zh, T.base, "1");
+    const grid = plot.querySelector('[aria-label="y-grid"]');
+    if (grid) grid.after(layer); else plot.prepend(layer);
+    alignKey = alignment();
+    geom = {xpx: (t) => rA + (t - dA) / (dB - dA) * (rB - rA), inv: (px) => dA + (px - rA) / (rB - rA) * (dB - dA), top: Math.min(...ys.range), bottom: Math.max(...ys.range), W};
+    for (const n of [...plotBox.childNodes]) if (n !== cross && n !== tip) n.remove();
+    plotBox.prepend(plot);
+    if (!cross.isConnected) plotBox.append(cross, tip);
+    if (current >= 0) show(current);
+  }
+  function show(i) {
+    if (!geom) return;
+    current = i;
+    const mid = geom.xpx(day0 + i * DAY + DAY / 2);
+    cross.style.cssText = `display:block;left:${mid}px;top:${geom.top}px;height:${geom.bottom - geom.top}px`;
+    tip.replaceChildren(el("div", "pc-tip-date", dayLong(dates[i])));
+    const row = (clr, value, label) => {
+      const r = el("div", "pc-row");
+      const key = el("i", "pc-key");
+      if (clr) key.style.background = clr; else key.style.visibility = "hidden";
+      r.append(key, el("b", null, value), el("span", null, label));
+      return r;
+    };
+    if (bars.length > 1) {
+      const t = row(null, fmt(barTotal(i), S.unit), S.totalLabel);
+      t.classList.add("pc-total");
+      tip.append(t);
+    }
+    for (const s of [...bars].reverse()) tip.append(row(S.diverging ? signColor(D.values[s.key][i] || 0) : color(s), fmt(D.values[s.key][i], unitOf(s)), s.tipLabel || s.name));
+    if (line) tip.append(row(color(line), fmt(D.values[line.key][i], unitOf(line)), line.tipLabel || line.name));
+    tip.style.display = "block";
+    const tw = tip.offsetWidth;
+    tip.style.left = `${mid + 12 + tw <= geom.W ? mid + 12 : Math.max(0, mid - 12 - tw)}px`;
+    tip.style.top = `${geom.top}px`;
+  }
+  function hide() { current = -1; cross.style.display = "none"; tip.style.display = "none"; }
+  function indexAt(clientX) {
+    const svg = plotBox.querySelector("svg");
+    if (!svg || !geom) return -1;
+    const r = svg.getBoundingClientRect();
+    const px = (clientX - r.left) * (geom.W / r.width);
+    return Math.max(0, Math.min(N - 1, Math.floor((geom.inv(px) - day0) / DAY)));
+  }
+  plotBox.addEventListener("pointermove", (e) => { const i = indexAt(e.clientX); if (i >= 0 && i !== current) show(i); });
+  plotBox.addEventListener("pointerdown", (e) => { const i = indexAt(e.clientX); if (i >= 0) show(i); });
+  plotBox.addEventListener("pointerleave", () => { if (document.activeElement !== host) hide(); });
+  plotBox.addEventListener("keydown", (e) => {
+    const step = {ArrowLeft: -1, ArrowRight: 1, Home: -N, End: N}[e.key];
+    if (step == null) return;
+    e.preventDefault();
+    show(Math.max(0, Math.min(N - 1, (current < 0 ? N - 1 : current) + step)));
+  });
+  plotBox.addEventListener("focus", () => show(current < 0 ? N - 1 : current));
+  plotBox.addEventListener("blur", hide);
+  render();
+  let raf = 0;
+  const later = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); };
+  if (typeof ResizeObserver === "function") { const ro = new ResizeObserver(later); ro.observe(plotBox); ro.observe(document.documentElement); }
+  window.addEventListener("load", later);
+  window.addEventListener("resize", later);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
+}
+const theme = new URLSearchParams(location.search).get("theme");
+const pcHost = document.querySelector("[data-pc-chart]");
+if (theme === "dark" || theme === "light") pcHost.dataset.theme = theme;
+else if (theme === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) pcHost.dataset.theme = "dark";
+renderPredictChart(Plot, S, D);
+let lastHeight = 0;
+function postHeight() {
+  if (window.parent === window) return;
+  const height = Math.ceil(document.body.getBoundingClientRect().height);
+  if (!height || Math.abs(height - lastHeight) < 2) return;
+  lastHeight = height;
+  try { window.parent.postMessage({type: "predict-charts:embed-height", embed: S.slug, height}, "*"); } catch (e) {}
+}
+if (typeof ResizeObserver === "function") new ResizeObserver(postHeight).observe(document.body);
+window.addEventListener("load", postHeight);
+postHeight();
+</script>
+</body>
+</html>

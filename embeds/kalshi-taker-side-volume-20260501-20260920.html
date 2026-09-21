@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kalshi taker-side volume | Predict Charts</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="pc-embed-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter+Tight:wght@400;600&amp;display=swap">
+<style>html,body{margin:0;padding:0;background:transparent}</style>
+</head>
+<body>
+<predict-chart data-pc-chart="kalshi-taker-side-volume-20260920" style="display:block"></predict-chart>
+<script type="module">
+import * as Plot from "./lib/plot-0.6.17.js";
+const S = {"slug":"kalshi-taker-side-volume-20260920","title":"Kalshi taker-side volume","subtitle":"Dollar value of the taker's side of every trade, per day, May 1 – Sep 20, 2026.","unit":"usd","axisLabel":"Taker-side volume ($)","totalLabel":"","series":[{"key":"v","name":"Taker-side volume","mark":"bar"}],"light":["#008a75"],"dark":["#1fa89c"],"start":"2026-05-01","source":"Source: Kalshi trade data via"};
+const D = {"n":143,"values":{"v":[204942396,194164536,207302806,185841667,191054562,199557343,198095241,198122555,249812731,247508924,177428103,195370105,184931438,166675404,191476420,189079767,215656236,186718160,209562842,215445408,186175312,209652060,212990244,248020878,206512476,185029404,209938523,204377946,216375436,282654091,209215737,186334012,204541442,263187009,203168103,260172448,224936277,217823900,236658184,222638205,292795482,245567852,287962384,406861233,388254753,368736096,327397382,418254501,357774850,388174623,470132310,461397217,413629010,490348004,523057925,492454377,425672711,475386279,287062150,434945076,470478120,541639626,464724467,558167630,471360368,579600162,476527933,514893668,310018421,382133463,414920588,640253090,323421102,290057524,455261608,438663152,315808402,388663217,554904965,576789664,334590355,379384115,417922459,346607267,391382674,394077483,365124776,342504686,397827006,417805892,362961317,396580394,427886241,361274642,348739195,392953487,413863870,382526153,373948338,377604859,353933713,309857667,379353901,370451253,371054267,393503731,431149151,386774295,327202250,355259594,411212174,373611283,414751218,463434462,411599356,372621862,377469537,401654184,354215645,431759827,443238004,451964468,418442139,409482672,434848279,456382839,469128923,540956751,432631318,372145816,403339101,468431006,398745014,420383165,557768204,607725428,418040216,448552924,444082780,454978169,494505647,648024725,647883832]}};
+function renderPredictChart(Plot, S, D) {
+  const host = [...document.querySelectorAll(`[data-pc-chart="${S.slug}"]`)].find((el) => !el.dataset.pcDone);
+  if (!host) return;
+  host.dataset.pcDone = "1";
+  if (!document.getElementById("pc-embed-fonts")) {
+    ["inter-tight@5.3.0/latin-400.css", "inter-tight@5.3.0/latin-600.css", "ibm-plex-mono@5.3.0/latin-500.css"].forEach((f, i) => {
+      const l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.href = "https://cdn.jsdelivr.net/npm/@fontsource/" + f;
+      if (i === 0) l.id = "pc-embed-fonts";
+      document.head.append(l);
+    });
+  }
+  const DAY = 864e5;
+  const [y0, m0, d0] = S.start.split("-").map(Number);
+  const day0 = Date.UTC(y0, m0 - 1, d0);
+  const N = D.n;
+  const dates = Array.from({length: N}, (_, i) => new Date(day0 + i * DAY));
+  const parseRGB = (s) => { const m = /rgba?\(([^)]+)\)/.exec(s || ""); if (!m) return null; const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return p.length >= 3 && (p.length < 4 || p[3] > 0.05) ? p : null; };
+  let bg = null;
+  for (let el = host.parentElement; el && !bg; el = el.parentElement) bg = parseRGB(getComputedStyle(el).backgroundColor);
+  bg = bg || parseRGB(getComputedStyle(document.documentElement).backgroundColor) || [255, 255, 255];
+  const dark = host.dataset.theme === "dark" || (host.dataset.theme !== "light" && (0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2]) / 255 < 0.4);
+  const T = dark
+    ? {bg: "#111513", paper: "#171c19", ink: "#fbf8f1", fg: "#f2f3ec", muted: "#a9b0a9", faint: "#858f87", rule: "#39423b", ruleStrong: "#566158",
+       grid: "rgba(242,243,236,0.09)", tick: "rgba(242,243,236,0.18)", base: "rgba(242,243,236,0.45)", cross: "rgba(242,243,236,0.3)", colors: S.dark}
+    : {bg: "#f4f0e8", paper: "#fbf8f1", ink: "#171c19", fg: "#18201e", muted: "#626a65", faint: "#777e79", rule: "#c8c2b7", ruleStrong: "#9f9a91",
+       grid: "rgba(24,32,30,0.09)", tick: "rgba(24,32,30,0.18)", base: "rgba(24,32,30,0.45)", cross: "rgba(24,32,30,0.28)", colors: S.light};
+  const SANS = `"Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+  const MONO = `"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+  const trim = (s) => s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+  function compact(v, sig = 3) {
+    if (v < 0) return "−" + compact(-v, sig);
+    const a = Math.abs(v);
+    for (const [u, s] of [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (a >= u) return trim((v / u).toPrecision(sig)) + s;
+    return trim(Number(v).toPrecision(sig));
+  }
+  const sign = (v) => v < 0 ? "−" : S.diverging && v > 0 ? "+" : "";
+  const fmt = (v, unit) => v == null || Number.isNaN(v) ? "—" : sign(v) + (unit === "usd" ? "$" : "") + compact(Math.abs(v));
+  const full = (v, unit) => v == null || Number.isNaN(v) ? "" : sign(v) + (unit === "usd" ? "$" : "") + Math.round(Math.abs(v)).toLocaleString("en-US");
+  const dayLong = (d) => d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
+  const bars = S.series.filter((s) => s.mark === "bar");
+  const line = S.series.find((s) => s.mark === "line");
+  const color = (s) => T.colors[S.series.indexOf(s)];
+  const signColor = (v) => T.colors[v < 0 ? 1 : 0];
+  const unitOf = (s) => s.unit || S.unit;
+  const barTotal = (i) => bars.reduce((t, s) => t + (D.values[s.key][i] || 0), 0);
+  const shadow = host.shadowRoot || host.attachShadow({mode: "open"});
+  shadow.innerHTML = "";
+  const style = document.createElement("style");
+  style.textContent = `
+:host { display: block; }
+.pc { margin: 0; padding: 16px 18px 12px; border-radius: 3px; background: ${T.bg}; color: ${T.fg}; font: 400 14px/1.5 ${SANS}; }
+.pc-title { margin: 0 0 4px; color: ${T.ink}; font: 600 20px/1.25 ${SANS}; letter-spacing: -0.01em; }
+.pc-sub { margin: 0 0 12px; max-width: 72ch; color: ${T.muted}; font-size: 14.5px; line-height: 1.55; }
+.pc-legend { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
+.pc-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid ${T.rule}; border-radius: 2px; color: ${T.fg}; font: 500 11px/1.45 ${MONO}; white-space: nowrap; }
+.pc-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.pc-key { width: 16px; height: 2.5px; border-radius: 2px; flex: none; }
+.pc-plot { position: relative; outline: none; touch-action: pan-y; }
+.pc-plot:focus-visible { box-shadow: 0 0 0 3px rgba(244, 167, 54, 0.28); border-radius: 2px; }
+.pc-plot svg { display: block; max-width: none; overflow: visible; }
+.pc-plot svg text { font-variant-numeric: tabular-nums lining-nums; }
+.pc-cross { position: absolute; width: 1px; background: ${T.cross}; pointer-events: none; display: none; }
+.pc-tip { position: absolute; top: 0; min-width: 150px; max-width: 250px; padding: 8px 10px; border: 1px solid ${T.ruleStrong}; border-radius: 2px; background: ${T.paper}; color: ${T.fg}; font-size: 12.5px; line-height: 1.5; pointer-events: none; display: none; z-index: 2; }
+.pc-tip-date { margin-bottom: 3px; color: ${T.ink}; font-weight: 600; }
+.pc-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.pc-row b { min-width: 54px; color: ${T.ink}; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pc-row span { color: ${T.muted}; }
+.pc-total { margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid ${T.rule}; }
+.pc-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-top: 8px; padding-top: 7px; border-top: 1px solid ${T.rule}; color: ${T.muted}; font-size: 12px; }
+.pc-foot a { color: ${T.fg}; text-decoration: none; border-bottom: 1px solid ${T.rule}; }
+.pc-foot a:hover { border-bottom-color: #c84f32; }
+.pc-btn { padding: 0 0 1px; border: 0; border-bottom: 1px solid transparent; background: none; color: ${T.faint}; font: 500 10.5px/1.6 ${MONO}; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+.pc-btn:hover, .pc-btn:focus-visible, .pc-btn[aria-expanded="true"] { color: ${T.ink}; border-bottom-color: #c84f32; outline: none; }
+.pc-table { max-height: 300px; overflow: auto; margin-top: 8px; border-top: 1px solid ${T.rule}; }
+.pc table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.pc th, .pc td { padding: 3px 8px; border-bottom: 1px solid ${T.rule}; text-align: right; white-space: nowrap; }
+.pc th { position: sticky; top: 0; background: ${T.bg}; color: ${T.muted}; font: 500 10.5px/1.6 ${MONO}; letter-spacing: 0.03em; text-transform: uppercase; }
+.pc td { color: ${T.fg}; }
+.pc th:first-child, .pc td:first-child { text-align: left; }`;
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const fig = el("figure", "pc");
+  fig.setAttribute("role", "group");
+  fig.setAttribute("aria-label", S.title);
+  const title = el("div", "pc-title", S.title);
+  title.setAttribute("role", "heading");
+  title.setAttribute("aria-level", "3");
+  const legend = el("div", "pc-legend");
+  const keys = S.diverging ? S.signs.map((name, k) => ({name, clr: T.colors[k], line: false}))
+    : S.series.length > 1 ? S.series.map((s) => ({name: s.legend || s.name, clr: color(s), line: s.mark === "line"})) : [];
+  for (const k of keys) {
+    const chip = el("span", "pc-chip");
+    const key = el("i", k.line ? "pc-key" : "pc-dot");
+    key.style.background = k.clr;
+    chip.append(key, document.createTextNode(k.name));
+    legend.append(chip);
+  }
+  const plotBox = el("div", "pc-plot");
+  plotBox.tabIndex = 0;
+  plotBox.setAttribute("role", "img");
+  plotBox.setAttribute("aria-label", `${S.title}. ${S.subtitle} Use the left and right arrow keys to read each day.`);
+  const cross = el("div", "pc-cross");
+  const tip = el("div", "pc-tip");
+  tip.setAttribute("aria-hidden", "true");
+  const foot = el("div", "pc-foot");
+  const src = el("span", null, S.source + " ");
+  const link = el("a", null, "Predict Charts");
+  link.href = "https://predict-charts.com/";
+  link.target = "_blank";
+  link.rel = "noopener";
+  src.append(link);
+  const btn = el("button", "pc-btn", "Show data");
+  btn.type = "button";
+  btn.setAttribute("aria-expanded", "false");
+  const tableBox = el("div", "pc-table");
+  tableBox.hidden = true;
+  btn.addEventListener("click", () => {
+    const open = tableBox.hidden;
+    tableBox.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    btn.textContent = open ? "Hide data" : "Show data";
+    if (!open || tableBox.firstChild) return;
+    const table = el("table");
+    const head = table.createTHead().insertRow();
+    const cols = [{label: "Date"}, ...S.series.map((s) => ({label: s.column || s.name, s})), ...(bars.length > 1 ? [{label: S.totalLabel, total: true}] : [])];
+    for (const c of cols) head.append(el("th", null, c.label));
+    const body = table.createTBody();
+    for (let i = 0; i < N; i++) {
+      const r = body.insertRow();
+      r.insertCell().textContent = dates[i].toISOString().slice(0, 10);
+      for (const c of cols.slice(1)) r.insertCell().textContent = c.total ? full(barTotal(i), S.unit) : full(D.values[c.s.key][i], unitOf(c.s));
+    }
+    tableBox.append(table);
+  });
+  foot.append(src, btn);
+  fig.append(title, el("div", "pc-sub", S.subtitle), legend, plotBox, foot, tableBox);
+  shadow.append(style, fig);
+  let current = -1, plotW = 0, plotDpr = 0, geom = null, alignKey = "";
+  function alignment() { const b = plotBox.getBoundingClientRect(), d = window.devicePixelRatio || 1; return [((b.left + window.scrollX) * d) % 1, ((b.top + window.scrollY) * d) % 1, d].map((v) => v.toFixed(3)).join(","); }
+  function niceStep(max, count) { const raw = max / count, p = 10 ** Math.floor(Math.log10(raw)), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+  function ticksTo(top, step, bottom = 0) { const out = []; for (let k = Math.round(bottom / step); k * step <= top + step / 2; k++) out.push(+(k * step).toPrecision(12)); return out; }
+  function render() {
+    const W = Math.max(280, Math.floor(plotBox.clientWidth));
+    const dpr = window.devicePixelRatio || 1;
+    if (Math.abs(W - plotW) < 4 && dpr === plotDpr && alignment() === alignKey && plotBox.firstChild) return;
+    plotW = W;
+    plotDpr = dpr;
+    const H = Math.round(Math.max(250, Math.min(400, W * 0.52)));
+    let max = Math.max(...Array.from({length: N}, (_, i) => barTotal(i)));
+    if (line) max = Math.max(max, ...D.values[line.key].filter((v) => v != null));
+    const min = S.diverging ? Math.min(0, ...Array.from({length: N}, (_, i) => barTotal(i))) : 0;
+    max = Math.max(max, 0);
+    const step = niceStep(max - min, S.diverging ? 6 : 5), top = Math.ceil(max / step) * step, bottom = Math.floor(min / step) * step, yt = ticksTo(top, step, bottom);
+    const marks = [Plot.gridY(yt, {stroke: T.grid, strokeOpacity: 1})];
+    if (!S.diverging) marks.push(Plot.ruleY([0], {stroke: T.base}));
+    if (line) {
+      const pts = dates.map((d, i) => ({x: new Date(+d + DAY / 2), y: D.values[line.key][i] == null ? NaN : D.values[line.key][i]}));
+      marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: T.bg, strokeWidth: 7, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
+      marks.push(Plot.lineY(pts, {x: "x", y: "y", stroke: color(line), strokeWidth: 3, curve: "monotone-x", strokeLinejoin: "round", strokeLinecap: "round"}));
+    }
+    marks.push(Plot.axisY(yt, {anchor: "left", tickFormat: (v) => compact(v), label: S.axisLabel, labelAnchor: "top", tickSize: 0, tickPadding: 6}));
+    marks.push(Plot.axisX({ticks: "month", tickFormat: (d) => d.toLocaleDateString("en-US", {month: "short", timeZone: "UTC"}), tickSize: 4, stroke: T.tick, label: null}));
+    const plot = Plot.plot({
+      width: W, height: H, marginLeft: 44, marginRight: 8, marginTop: 24, marginBottom: 24,
+      x: {type: "utc", domain: [dates[0], new Date(+dates[N - 1] + DAY)]},
+      y: {domain: [bottom, top]},
+      style: {background: "transparent", color: T.muted, fontFamily: SANS, fontSize: "11px", overflow: "visible"},
+      marks
+    });
+    plot.setAttribute("aria-hidden", "true");
+    const xs = plot.scale("x"), ys = plot.scale("y");
+    const [dA, dB] = xs.domain.map(Number), [rA, rB] = xs.range;
+    const box = plotBox.getBoundingClientRect();
+    const ox = box.left + window.scrollX, oy = box.top + window.scrollY;
+    const snapX = (v) => Math.round((v + ox) * dpr) / dpr - ox;
+    const snapY = (v) => Math.round((v + oy) * dpr) / dpr - oy;
+    const [yB, yT] = ys.range;
+    const yOf = (v) => snapY(yB - (v - bottom) / (top - bottom) * (yB - yT));
+    const slot = (rB - rA) / N;
+    const gap = slot * dpr >= 3 ? Math.max(1, Math.round(dpr)) / dpr : 0;
+    const NS = "http://www.w3.org/2000/svg";
+    const layer = document.createElementNS(NS, "g");
+    layer.setAttribute("shape-rendering", "crispEdges");
+    const addRect = (x, y, w, h, fill, opacity) => {
+      const r = document.createElementNS(NS, "rect");
+      r.setAttribute("x", +x.toFixed(4));
+      r.setAttribute("y", +y.toFixed(4));
+      r.setAttribute("width", +w.toFixed(4));
+      r.setAttribute("height", +h.toFixed(4));
+      r.setAttribute("fill", fill);
+      r.setAttribute("fill-opacity", opacity);
+      layer.append(r);
+    };
+    const zh = Math.max(1, Math.round(dpr)) / dpr;
+    for (let i = 0; i < N; i++) {
+      const x0 = snapX(rA + i * slot), x1 = snapX(rA + (i + 1) * slot) - gap;
+      if (x1 <= x0) continue;
+      if (S.diverging) {
+        const v = D.values[bars[0].key][i] || 0;
+        if (!v) continue;
+        const ya = yOf(0), yb = v > 0 ? Math.min(yOf(v), ya - 1 / dpr) : Math.max(yOf(v), ya + zh + 1 / dpr);
+        addRect(x0, Math.min(ya, yb), x1 - x0, Math.abs(ya - yb), signColor(v), "0.95");
+        continue;
+      }
+      let acc = 0, yPrev = yOf(0);
+      for (const s of bars) {
+        const v = D.values[s.key][i] || 0;
+        if (v <= 0) continue;
+        acc += v;
+        const y = yOf(acc);
+        if (yPrev > y) addRect(x0, y, x1 - x0, yPrev - y, color(s), "0.95");
+        yPrev = y;
+      }
+    }
+    if (S.diverging) addRect(snapX(rA), yOf(0), snapX(rB) - snapX(rA), zh, T.base, "1");
+    const grid = plot.querySelector('[aria-label="y-grid"]');
+    if (grid) grid.after(layer); else plot.prepend(layer);
+    alignKey = alignment();
+    geom = {xpx: (t) => rA + (t - dA) / (dB - dA) * (rB - rA), inv: (px) => dA + (px - rA) / (rB - rA) * (dB - dA), top: Math.min(...ys.range), bottom: Math.max(...ys.range), W};
+    for (const n of [...plotBox.childNodes]) if (n !== cross && n !== tip) n.remove();
+    plotBox.prepend(plot);
+    if (!cross.isConnected) plotBox.append(cross, tip);
+    if (current >= 0) show(current);
+  }
+  function show(i) {
+    if (!geom) return;
+    current = i;
+    const mid = geom.xpx(day0 + i * DAY + DAY / 2);
+    cross.style.cssText = `display:block;left:${mid}px;top:${geom.top}px;height:${geom.bottom - geom.top}px`;
+    tip.replaceChildren(el("div", "pc-tip-date", dayLong(dates[i])));
+    const row = (clr, value, label) => {
+      const r = el("div", "pc-row");
+      const key = el("i", "pc-key");
+      if (clr) key.style.background = clr; else key.style.visibility = "hidden";
+      r.append(key, el("b", null, value), el("span", null, label));
+      return r;
+    };
+    if (bars.length > 1) {
+      const t = row(null, fmt(barTotal(i), S.unit), S.totalLabel);
+      t.classList.add("pc-total");
+      tip.append(t);
+    }
+    for (const s of [...bars].reverse()) tip.append(row(S.diverging ? signColor(D.values[s.key][i] || 0) : color(s), fmt(D.values[s.key][i], unitOf(s)), s.tipLabel || s.name));
+    if (line) tip.append(row(color(line), fmt(D.values[line.key][i], unitOf(line)), line.tipLabel || line.name));
+    tip.style.display = "block";
+    const tw = tip.offsetWidth;
+    tip.style.left = `${mid + 12 + tw <= geom.W ? mid + 12 : Math.max(0, mid - 12 - tw)}px`;
+    tip.style.top = `${geom.top}px`;
+  }
+  function hide() { current = -1; cross.style.display = "none"; tip.style.display = "none"; }
+  function indexAt(clientX) {
+    const svg = plotBox.querySelector("svg");
+    if (!svg || !geom) return -1;
+    const r = svg.getBoundingClientRect();
+    const px = (clientX - r.left) * (geom.W / r.width);
+    return Math.max(0, Math.min(N - 1, Math.floor((geom.inv(px) - day0) / DAY)));
+  }
+  plotBox.addEventListener("pointermove", (e) => { const i = indexAt(e.clientX); if (i >= 0 && i !== current) show(i); });
+  plotBox.addEventListener("pointerdown", (e) => { const i = indexAt(e.clientX); if (i >= 0) show(i); });
+  plotBox.addEventListener("pointerleave", () => { if (document.activeElement !== host) hide(); });
+  plotBox.addEventListener("keydown", (e) => {
+    const step = {ArrowLeft: -1, ArrowRight: 1, Home: -N, End: N}[e.key];
+    if (step == null) return;
+    e.preventDefault();
+    show(Math.max(0, Math.min(N - 1, (current < 0 ? N - 1 : current) + step)));
+  });
+  plotBox.addEventListener("focus", () => show(current < 0 ? N - 1 : current));
+  plotBox.addEventListener("blur", hide);
+  render();
+  let raf = 0;
+  const later = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); };
+  if (typeof ResizeObserver === "function") { const ro = new ResizeObserver(later); ro.observe(plotBox); ro.observe(document.documentElement); }
+  window.addEventListener("load", later);
+  window.addEventListener("resize", later);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
+}
+const theme = new URLSearchParams(location.search).get("theme");
+const pcHost = document.querySelector("[data-pc-chart]");
+if (theme === "dark" || theme === "light") pcHost.dataset.theme = theme;
+else if (theme === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) pcHost.dataset.theme = "dark";
+renderPredictChart(Plot, S, D);
+let lastHeight = 0;
+function postHeight() {
+  if (window.parent === window) return;
+  const height = Math.ceil(document.body.getBoundingClientRect().height);
+  if (!height || Math.abs(height - lastHeight) < 2) return;
+  lastHeight = height;
+  try { window.parent.postMessage({type: "predict-charts:embed-height", embed: S.slug, height}, "*"); } catch (e) {}
+}
+if (typeof ResizeObserver === "function") new ResizeObserver(postHeight).observe(document.body);
+window.addEventListener("load", postHeight);
+postHeight();
+</script>
+</body>
+</html>

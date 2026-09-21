@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "observable preview",
-    "build": "observable build && node scripts/postprocess-site.mjs dist",
+    "build": "observable build && node scripts/postprocess-site.mjs dist && node scripts/copy-embeds.mjs dist",
     "briefing:generate": "node scripts/generate-daily-briefing.mjs",
     "test:data-loader": "node --test tests/remote-data.test.mjs",
     "test:data-watchdog": "python3 -m unittest tests.test_freshness_remote",
