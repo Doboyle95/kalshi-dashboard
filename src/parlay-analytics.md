@@ -774,7 +774,9 @@ Plot.plot({
 })
 ```
 
-## What a parlay costs vs. multiplying its legs
+<!-- Raw HTML so the id stays the one the original title produced: ?embed= links address
+     this section by it, and a retitle must not break them. -->
+<h2 id="what-a-parlay-costs-vs-multiplying-its-legs" tabindex="-1"><a class="observablehq-header-anchor" href="#what-a-parlay-costs-vs-multiplying-its-legs">What a non-correlated parlay costs vs. multiplying its legs</a></h2>
 
 _A non-correlated parlay is worth exactly the product of its legs: three independent
 legs at 77¢, 66¢ and 74¢ are worth 37.6¢ together. These charts price **every leg at the
@@ -813,6 +815,8 @@ const pvlCents = v => v >= 1 ? v.toFixed(0) + "¢" : v >= 0.01 ? v.toFixed(2) + 
 const pvlPendingShare = 100 * d3.sum(pvlDailyRaw.filter(d => d.kind === "pending"), d => d.stake_usd)
   / d3.sum(pvlDailyRaw, d => d.stake_usd);
 const pvlMarkupFmt = d => (d > 0 ? "+" : "") + d.toFixed(1) + "%";
+// Non-correlated markup at a given leg count, for the prose under the legs chart.
+const pvlIndepAtLegs = n => pvlLegs.find(d => d.kind === "independent" && d.bucket_label === n)?.markup_pct;
 // Kalshi began charging a maker fee on combos at 05:00 ET on 2026-08-20 — double its
 // standard maker rate — and exempted combos made entirely of independent NFL legs, which
 // are created under their own series. fee_group carries that split.
@@ -863,8 +867,10 @@ Plot.plot({
 ```
 
 _Markup by number of legs, whole window. A two-leg ticket is priced almost exactly at its
-parts; the gap widens with every leg added, and by the double-digit tickets the parlay
-costs a multiple of what its legs imply._
+parts; the gap widens with every leg added. A non-correlated ticket costs about
+${Math.round(pvlIndepAtLegs("10"))}% more than its legs at ten legs and about
+${Math.round(pvlIndepAtLegs("15"))}% more at fifteen — part of that at the long end is the
+minimum-price effect explained below rather than markup._
 
 ```js
 Plot.plot({
@@ -968,6 +974,10 @@ display(Plot.plot({
   price flattens out down there while the product of the legs keeps falling, which is what
   drives the enormous markups at the cheap end of the first chart. Read that band as a
   minimum-price effect, not as a judgement about those parlays' odds.</p>
+  <p><strong>Checked against other leg prices.</strong> Re-pricing a sample of days with
+  each leg's <em>next</em> print after the parlay, or the average of the prints either
+  side of it, moves the markup by under half a point up to eight legs and by about two
+  points on the longest tickets, nowhere near enough to change the picture.</p>
   <p><strong>Window.</strong> From June 25, 2026 — the first day our leg snapshot covers
   the tickets that traded, and safely after the June 7 switch to sub-cent price collection,
   before which a cheap parlay's price was rounded to whole cents and this comparison would
