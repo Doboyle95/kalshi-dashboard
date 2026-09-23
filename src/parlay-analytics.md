@@ -795,46 +795,40 @@ const pvlProfileRaw = await DataAttachment("data/parlay_vs_legs_profile.csv").cs
 // prices is not its fair price and the gap is not a markup; the producer still publishes
 // kind='correlated', but this section does not draw it.
 const PVL_COLOR = KIND_COLORS[0];   // the page's non-correlated blue
-// Every figure here leaves out trades whose legs multiply out below this price bin (log10 of
-// cents): under ~0.1¢ a parlay trades at the lowest price sellers quote whatever its legs are
-// worth, so its "markup" measures that floor, not a margin (method card below). The same cut
-// as FLOOR_BIN_LOG10C in KalshiData python/build_parlay_vs_legs.py, which publishes the
-// *_above_floor measures read here.
-const PVL_FLOOR_BIN = -0.75;
 const pvlIndepProfile = pvlProfileRaw.filter(d => d.kind === "independent");
-const pvlLegsAll = pvlIndepProfile.filter(d => d.dim === "legs");
+const pvlPriceRows = pvlIndepProfile.filter(d => d.dim === "price");
+// The diagonal chart: one dot per price band, across = what its legs were worth on average,
+// up = what was actually paid. Bands whose legs are worth under PVL_X_MIN run on for another
+// five decades at the same ~0.1¢ price; they are counted in every figure, just drawn off the
+// left edge. Thin bands (a few hundred trades out of millions) are not drawn as noise.
+const PVL_X_MIN = 0.01, PVL_X_MAX = 100;
+const pvlPoints = pvlPriceRows
+  .filter(d => d.n_trades >= 500 && d.avg_indep_cents >= PVL_X_MIN)
+  .sort((a, b) => a.avg_indep_cents - b.avg_indep_cents);
+const pvlOffLeftShare = 100 * d3.sum(pvlPriceRows.filter(d => d.avg_indep_cents < PVL_X_MIN), d => d.stake_usd)
+  / d3.sum(pvlPriceRows, d => d.stake_usd);
 const pvlLegs = pvlIndepProfile
-  .filter(d => d.dim === "legs_above_floor" && d.n_trades >= 500)
+  .filter(d => d.dim === "legs" && d.n_trades >= 500)
   .map(d => ({...d, label: String(d.bucket_label)}))   // typed parsing makes "10" a number
   .sort((a, b) => a.bucket_num - b.bucket_num);
-const pvlCentsLabel = v => v >= 1 ? Math.round(v) + "¢" : v.toFixed(1) + "¢";
-const pvlCentsTip = v => v >= 1 ? v.toFixed(1) + "¢" : v.toFixed(2) + "¢";
-// Price bands above the floor, favourites first, so the markup climbs left to right as it
-// does by leg count. bucket_num identifies a band; its label is what the legs in it were
-// actually worth on average (avg_indep_cents), not the band's nominal midpoint.
-const pvlPrice = pvlIndepProfile
-  .filter(d => d.dim === "price" && d.n_trades >= 500 && Math.log10(d.bucket_num) >= PVL_FLOOR_BIN - 1e-9)
-  .sort((a, b) => b.bucket_num - a.bucket_num)
-  .map(d => ({...d, label: pvlCentsLabel(d.avg_indep_cents)}));
-const pvlPriceLabel = new Map(pvlPrice.map(d => [d.bucket_num, d.label]));
+const pvlCentsTip = v => v >= 1 ? v.toFixed(1) + "¢" : v >= 0.01 ? v.toFixed(2) + "¢" : v.toFixed(3) + "¢";
 // Markup of a set of rows as a ratio of sums, never an average of markups.
-const pvlRatio = (rows, paid, fair) => {
-  const p = d3.sum(rows, d => d[paid]), f = d3.sum(rows, d => d[fair]);
+const pvlRatio = rows => {
+  const p = d3.sum(rows, d => d.stake_usd), f = d3.sum(rows, d => d.indep_stake_usd);
   return f > 0 ? 100 * (p / f - 1) : null;
 };
-const pvlLegsMarkup = rows => pvlRatio(rows, "stake_usd", "indep_stake_usd");
-const pvlDayMarkup  = rows => pvlRatio(rows, "stake_usd_above_floor", "indep_stake_usd_above_floor");
 const pvlAt = n => pvlLegs.filter(d => d.bucket_num === n);
-const pvlLegsShare = rows => 100 * d3.sum(rows, d => d.stake_usd) / d3.sum(pvlLegs, d => d.stake_usd);
 const pvlDays = pvlDailyRaw.filter(d => d.kind === "independent");
-const pvlPaid = d3.sum(pvlDays, d => d.stake_usd_above_floor);
-const pvlFair = d3.sum(pvlDays, d => d.indep_stake_usd_above_floor);
-const pvlMarkup = pvlDayMarkup(pvlDays);
+const pvlPaid = d3.sum(pvlDays, d => d.stake_usd);
+const pvlFair = d3.sum(pvlDays, d => d.indep_stake_usd);
+const pvlMarkup = pvlRatio(pvlDays);
 const pvlFrom = d3.min(pvlDays, d => d.date), pvlTo = d3.max(pvlDays, d => d.date);
-// What the floor cut leaves out: of all priced non-correlated money, and of the 13+-leg money.
-const pvlFloorShare = 100 * (1 - pvlPaid / d3.sum(pvlDays, d => d.stake_usd));
-const pvlLongFloorShare = 100 * (1 - d3.sum(pvlLegs.filter(d => d.bucket_num >= 13), d => d.stake_usd)
-  / d3.sum(pvlLegsAll.filter(d => d.bucket_num >= 13), d => d.stake_usd));
+// Longshots at the ~0.1¢ minimum (legs worth under ~0.13¢, the *_above_floor cut KalshiData
+// publishes): their share of the money overall, and on 13+-leg tickets.
+const pvlFloorShare = 100 * (1 - d3.sum(pvlDays, d => d.stake_usd_above_floor) / pvlPaid);
+const pvlLegsAF = pvlIndepProfile.filter(d => d.dim === "legs_above_floor" && d.bucket_num >= 13);
+const pvlLongFloorShare = 100 * (1 - d3.sum(pvlLegsAF, d => d.stake_usd)
+  / d3.sum(pvlLegs.filter(d => d.bucket_num >= 13), d => d.stake_usd));
 // One row per date (coverage is a per-date property, repeated on each kind's row).
 const pvlCovDays = Array.from(d3.group(pvlDailyRaw, d => +d.date), ([, rows]) => rows[0]);
 // Priced, but not drawn: the ticket's correlation class is not mapped yet.
@@ -842,18 +836,15 @@ const pvlPendingShare = 100 * d3.sum(pvlDailyRaw.filter(d => d.kind === "pending
   / d3.sum(pvlDailyRaw, d => d.stake_usd);
 const pvlFmt = v => v == null ? "–" : (v >= 0.05 ? "+" : v <= -0.05 ? "−" : "")
   + (Math.abs(v) >= 10 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1)) + "%";
+// A markup of +150% reads better as "2.5× its legs".
+const pvlFmtShort = v => v >= 100 ? (1 + v / 100).toFixed(1) + "× its legs" : pvlFmt(v);
 const pvlAxisFmt = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + "%";
-// The band whose legs were worth closest to a price, for the captions and bar labels.
-const pvlNearest = cents => d3.least(pvlPrice, d => Math.abs(Math.log(d.avg_indep_cents / cents)));
-// Bars that carry a direct label; every bar has a hover tip. A label sits above the bar, or
-// just above the zero line when the bar is negative, so it never lands on the axis labels.
+const pvlCentsAxis = v => v >= 100 ? "$1" : v + "¢";
+// The dot whose legs were worth closest to a price, for the direct labels.
+const pvlNearest = cents => d3.least(pvlPoints, d => Math.abs(Math.log(d.avg_indep_cents / cents)));
 const pvlLegLabelled = pvlLegs.filter(d => ["2", "5", "10", "15", pvlLegs.at(-1)?.label].includes(d.label));
-const pvlPriceLabelled = [...new Set([pvlPrice[0], pvlNearest(10), pvlNearest(1), pvlPrice.at(-1)])].filter(Boolean);
-const pvlBarLabel = (data, x) => Plot.text(data, {x, y: d => Math.max(0, d.markup_pct),
-  text: d => pvlFmt(d.markup_pct), dy: -7, lineAnchor: "bottom",
-  fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)"});
-// On a narrow screen, every other tick label, always keeping the last one (21+, the cheapest
-// band) and dropping its neighbour so the two cannot collide.
+// On a narrow screen, every other tick label, always keeping the last one (21+) and dropping
+// its neighbour so the two cannot collide.
 const pvlSparseTick = (i, n, w) => w >= 600 || i === n - 1 || (i % 2 === 0 && i !== n - 2);
 // Kalshi began charging a maker fee on combos at 05:00 ET on 2026-08-20 — double its
 // standard maker rate — and exempted combos made entirely of independent NFL legs, which
@@ -867,29 +858,72 @@ const PVL_FEE_GROUPS = new Map([
 ```
 
 ```js
-// Narrower minimum than the shared kpi-grid so the four cards sit two-by-two on a phone.
-display(html`<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
-  <div class="kpi-card">
-    <div class="kpi-label">All non-correlated</div>
-    <div class="kpi-value">${pvlFmt(pvlMarkup)}</div>
-    <div class="kpi-meta">${fmtUSD(pvlPaid)} paid for legs worth ${fmtUSD(pvlFair)}</div>
-  </div>
-  ${[["Two legs", pvlAt(2)], ["Five legs", pvlAt(5)], ["Ten or more legs", pvlLegs.filter(d => d.bucket_num >= 10)]]
-    .map(([label, rows]) => html`<div class="kpi-card">
-    <div class="kpi-label">${label}</div>
-    <div class="kpi-value">${pvlFmt(pvlLegsMarkup(rows))}</div>
-    <div class="kpi-meta">${pvlLegsShare(rows).toFixed(0)}% of the money</div>
-  </div>`)}
+display(html`<div class="surface-card compact-details" style="font-size:13px;padding:12px 16px;margin:6px 0 18px 0;">
+Over ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo)}, non-correlated parlays cost
+<strong>${pvlFmt(pvlMarkup)} more</strong> than the product of their own legs —
+${fmtUSD(pvlPaid)} staked against ${fmtUSD(pvlFair)} of what the legs were worth. That
+average hides the shape: the markup is close to nothing on ordinary prices and grows as a
+parlay gets longer and cheaper.
 </div>`);
 ```
 
-_Markup over the legs' combined value, ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo)}.
-These figures and the next two charts cover that whole window; only the daily chart at the
-end follows the date selector above._
+_Each dot is a group of tickets with similar odds. **Across** is what their legs are worth
+multiplied together; **up** is what bettors actually paid. On the dashed line a parlay costs
+exactly its legs, and the shaded gap above it is the markup. Each step on both scales is ten
+times the one before, so coin flips and one-in-a-thousand longshots fit on one chart. Covers
+the whole window — the date selector above does not apply to this chart or the next.
+Tickets whose legs are worth under 0.01¢ (${pvlOffLeftShare.toFixed(1)}% of the money) sit off
+the left edge; they cost about 0.1¢ too._
 
-_**More legs, bigger markup.** A two-leg ticket is priced almost exactly at its legs. Each
-leg added puts a little more on top: about ${pvlFmt(pvlLegsMarkup(pvlAt(10)))} at ten legs
-and ${pvlFmt(pvlLegsMarkup(pvlAt(15)))} at fifteen._
+```js
+{
+  const H = Math.round(Math.min(460, Math.max(320, width * 0.6)));
+  const m = {left: 56, right: 24, top: 24, bottom: 44};
+  // Screen angle of the corner-to-corner diagonal, so its label runs along it.
+  const diagAngle = -Math.atan2(H - m.top - m.bottom, width - m.left - m.right) * 180 / Math.PI;
+  const labelled = [...new Set(width >= 600
+    ? [pvlNearest(10), pvlNearest(1), pvlNearest(0.2), pvlNearest(0.03)]
+    : [pvlNearest(10), pvlNearest(0.2), pvlNearest(0.03)])].filter(Boolean);
+  const halo = {stroke: "var(--theme-background)", strokeWidth: 4, paintOrder: "stroke"};
+  display(Plot.plot({
+    style: {fontFamily: "var(--font-sans)", fontSize: "12px"},
+    width, height: H, marginLeft: m.left, marginRight: m.right, marginTop: m.top, marginBottom: m.bottom,
+    x: {type: "log", domain: [PVL_X_MIN, PVL_X_MAX], ticks: [0.01, 0.1, 1, 10, 100], tickFormat: pvlCentsAxis,
+        tickSize: 0, grid: true, label: "What the legs are worth together"},
+    y: {type: "log", domain: [PVL_X_MIN, PVL_X_MAX], ticks: [0.01, 0.1, 1, 10, 100], tickFormat: pvlCentsAxis,
+        tickSize: 0, grid: true, label: "What the parlay cost"},
+    marks: [
+      // The markup: the gap between "priced at its legs" and what was paid.
+      Plot.areaY(pvlPoints, {x: "avg_indep_cents", y1: "avg_indep_cents", y2: "avg_traded_cents",
+        fill: PVL_COLOR, fillOpacity: 0.18, curve: "monotone-x"}),
+      Plot.line([[PVL_X_MIN, PVL_X_MIN], [PVL_X_MAX, PVL_X_MAX]],
+        {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
+      // Below the line where the dots sit on it, clear of the shaded gap.
+      Plot.text([[2, 2]], {x: d => d[0], y: d => d[1], text: () => "Priced exactly at its legs",
+        rotate: diagAngle, dy: 14, fontSize: 11, fill: "var(--theme-foreground-muted)"}),
+      Plot.line(pvlPoints, {x: "avg_indep_cents", y: "avg_traded_cents", stroke: PVL_COLOR,
+        strokeWidth: 2, curve: "monotone-x"}),
+      Plot.dot(pvlPoints, {x: "avg_indep_cents", y: "avg_traded_cents", r: 4, fill: PVL_COLOR,
+        stroke: "var(--theme-background)", strokeWidth: 1.5}),
+      Plot.text(labelled, {x: "avg_indep_cents", y: "avg_traded_cents", text: d => pvlFmtShort(d.markup_pct),
+        textAnchor: "end", dx: -8, dy: -9, fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)", ...halo}),
+      width >= 600 ? Plot.text([[PVL_X_MIN * 1.15, 0.5]], {x: d => d[0], y: d => d[1],
+        text: () => "Sellers won't go much below 0.1¢,\nhowever little the legs are worth",
+        textAnchor: "start", lineAnchor: "bottom", fontSize: 11, fill: "var(--theme-foreground-muted)"}) : null,
+      Plot.tip(pvlPoints, Plot.pointer({x: "avg_indep_cents", y: "avg_traded_cents",
+        title: d => `Legs worth ${pvlCentsTip(d.avg_indep_cents)} together\n`
+          + `Paid ${pvlCentsTip(d.avg_traded_cents)} · markup ${pvlFmt(d.markup_pct)}\n`
+          + `${fmtCount(d.n_trades)} trades · ${fmtUSD(d.stake_usd)} staked`}))
+    ]
+  }));
+}
+```
+
+_**More legs, bigger markup.** Markup by number of legs, whole window. A two-leg ticket is
+priced almost exactly at its legs; each leg added puts more on top — about
+${pvlFmt(pvlRatio(pvlAt(10)))} at ten legs and ${pvlFmt(pvlRatio(pvlAt(15)))} at fifteen. Much
+of the long end is longshots priced at the ~0.1¢ minimum: the flat stretch at the left of
+the chart above._
 
 ```js
 Plot.plot({
@@ -899,38 +933,16 @@ Plot.plot({
       tickFormat: (d, i) => pvlSparseTick(i, pvlLegs.length, width) ? d : ""},
   y: {label: "Paid above the legs' value", grid: true, ticks: 5, tickFormat: pvlAxisFmt},
   marks: [
-    Plot.barY(pvlLegs, {x: "label", y: "markup_pct", fill: PVL_COLOR, ry2: 3}),
+    Plot.barY(pvlLegs, {x: "label", y: "markup_pct", fill: PVL_COLOR}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
-    pvlBarLabel(pvlLegLabelled, "label"),
-    Plot.tip(pvlLegs, Plot.pointerX({x: "label", y: "markup_pct",
+    // On top of the bar, or just above the zero line for a negative bar, so a label never
+    // lands on the axis labels.
+    Plot.text(pvlLegLabelled, {x: "label", y: d => Math.max(0, d.markup_pct), text: d => pvlFmt(d.markup_pct),
+      dy: -7, lineAnchor: "bottom", fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)"}),
+    Plot.tip(pvlLegs, Plot.pointerX({x: "label", y: d => Math.max(0, d.markup_pct),
       title: d => `${d.label} legs\n`
         + `Legs worth ${pvlCentsTip(d.avg_indep_cents)} · paid ${pvlCentsTip(d.avg_traded_cents)}\n`
         + `Markup ${pvlFmt(d.markup_pct)}\n`
-        + `${fmtCount(d.n_trades)} trades · ${fmtUSD(d.stake_usd)} staked`}))
-  ]
-})
-```
-
-_**Longer odds, bigger markup.** The same measure by what the legs are worth together:
-${pvlFmt(pvlNearest(50)?.markup_pct)} on a coin-flip ticket, ${pvlFmt(pvlNearest(10)?.markup_pct)}
-around 10¢ and ${pvlFmt(pvlNearest(1)?.markup_pct)} around 1¢. The chart stops near 0.2¢:
-below that, a parlay trades at a floor price whatever its legs are worth._
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)", fontSize: "12px"},
-  width, height: 280, marginLeft: 52, marginTop: 28, marginBottom: 42,
-  x: {label: "What the legs are worth together", domain: pvlPrice.map(d => d.bucket_num),
-      padding: 0.22, tickSize: 0,
-      tickFormat: (n, i) => pvlSparseTick(i, pvlPrice.length, width) ? pvlPriceLabel.get(n) : ""},
-  y: {label: "Paid above the legs' value", grid: true, ticks: 5, tickFormat: pvlAxisFmt},
-  marks: [
-    Plot.barY(pvlPrice, {x: "bucket_num", y: "markup_pct", fill: PVL_COLOR, ry2: 3}),
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
-    pvlBarLabel(pvlPriceLabelled, "bucket_num"),
-    Plot.tip(pvlPrice, Plot.pointerX({x: "bucket_num", y: "markup_pct",
-      title: d => `Legs worth ${pvlCentsTip(d.avg_indep_cents)} together\n`
-        + `Paid ${pvlCentsTip(d.avg_traded_cents)} · markup ${pvlFmt(d.markup_pct)}\n`
         + `${fmtCount(d.n_trades)} trades · ${fmtUSD(d.stake_usd)} staked`}))
   ]
 })
@@ -962,9 +974,8 @@ const pvlFeeRows = PVL_FEE_GROUPS.get(pvlFeeChoice) == null
   : pvlDays.filter(d => d.fee_group === PVL_FEE_GROUPS.get(pvlFeeChoice));
 const pvlShownRows = pvlFeeRows.filter(inParlayRange);
 const pvlSeries = Array.from(d3.group(pvlShownRows, d => +d.date), ([, g]) => ({
-    date: g[0].date, markup_pct: pvlDayMarkup(g),
-    stake_usd: d3.sum(g, d => d.stake_usd_above_floor),
-    n_trades: d3.sum(g, d => d.n_trades_above_floor),
+    date: g[0].date, markup_pct: pvlRatio(g),
+    stake_usd: d3.sum(g, d => d.stake_usd), n_trades: d3.sum(g, d => d.n_trades),
     leg_coverage_pct: g[0].leg_coverage_pct}))
   .filter(d => d.markup_pct != null)
   .sort((a, b) => a.date - b.date);
@@ -973,7 +984,7 @@ const pvlSides = [
   {side: "before", rows: pvlShownRows.filter(d => d.date < PVL_COMBO_MAKER_START)},
   {side: "after",  rows: pvlShownRows.filter(d => d.date >= PVL_COMBO_MAKER_START)}
 ].map(s => ({side: s.side, from: d3.min(s.rows, d => d.date), to: d3.max(s.rows, d => d.date),
-             markup: s.rows.length ? pvlDayMarkup(s.rows) : null}))
+             markup: s.rows.length ? pvlRatio(s.rows) : null}))
  .filter(s => s.markup != null);
 const pvlFeeInView = pvlSeries.length > 0
   && PVL_COMBO_MAKER_START >= pvlSeries[0].date && PVL_COMBO_MAKER_START <= pvlSeries.at(-1).date;
@@ -1020,25 +1031,28 @@ display(Plot.plot({
   each leg's <em>next</em> print after the parlay, or the average of the prints either
   side of it, moves the markup by under half a point up to eight legs and by about two
   points on the longest tickets, nowhere near enough to change the picture.</p>
-  <p><strong>The cheapest tickets are left out.</strong> Below about 0.1¢ a parlay's price
+  <p><strong>Longshots at the minimum price.</strong> Below about 0.1¢ a parlay's price
   stops following its legs: whether they multiply out to 0.05¢ or a billionth of a cent, it
   trades at around 0.08–0.1¢, the lowest price sellers will quote (Kalshi's own price grid
-  goes down to 0.01¢). Measured as a markup, those tickets run to hundreds or thousands of
-  percent, which says more about that floor than about the odds. So every figure above leaves
-  out tickets whose legs multiply out to less than about 0.13¢. That is
-  ${pvlFloorShare.toFixed(1)}% of the money, but ${pvlLongFloorShare.toFixed(0)}% of it on
-  tickets of 13 legs or more, where counting them would push the markup far higher.</p>
+  goes down to 0.01¢). Those bettors really do pay that, so the tickets are counted in every
+  figure here — they are the flat stretch at the left of the first chart. They are
+  ${pvlFloorShare.toFixed(1)}% of the money overall but ${pvlLongFloorShare.toFixed(0)}% of it
+  on tickets of 13 legs or more, which is why the long end of the legs chart climbs so
+  steeply.</p>
   <p><strong>A trade counts only if every one of its legs had traded that day</strong>
   before it — ${d3.mean(pvlCovDays, d => d.leg_coverage_pct).toFixed(0)}% of them do. A leg
   priced in an earlier session is deliberately <em>not</em> carried forward: yesterday's
-  price is not a quote for today. Separately, we hold the leg list for
+  price is not a quote for today, and a price from later in the day would build in whatever
+  happened after the bet. Leaving these trades out does not flatter the result: on four
+  sample days, pricing them with each missing leg's next trade moved the markup by less than
+  half a point at every leg count. Separately, we hold the leg list for
   ${d3.mean(pvlCovDays, d => d.legs_known_pct).toFixed(0)}% of parlay trades; the remainder
   are mostly PREPACK/COMBO tickets, whose legs Kalshi does not publish in the feed that
   carries them. And ${pvlPendingShare.toFixed(1)}% of the money that IS priced sits on
   tickets whose correlation class has not been mapped yet, so it is left out of the charts
   above — that backlog normally clears within a day or two.</p>
   <p><strong>Markup is money-weighted</strong>: total paid ÷ total value of the legs
-  multiplied together − 1, over the trades in the bar. It is not an average of per-trade
+  multiplied together − 1, over the trades in the group. It is not an average of per-trade
   ratios — a fifteen-leg ticket's legs multiply out to a number so small that individual
   ratios run into the millions and any average of them is meaningless.</p>
   <p><strong>Window.</strong> From June 25, 2026 — the first day our leg snapshot covers
