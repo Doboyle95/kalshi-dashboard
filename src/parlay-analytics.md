@@ -816,7 +816,8 @@ const pvlPendingShare = 100 * d3.sum(pvlDailyRaw.filter(d => d.kind === "pending
   / d3.sum(pvlDailyRaw, d => d.stake_usd);
 const pvlMarkupFmt = d => (d > 0 ? "+" : "") + d.toFixed(1) + "%";
 // Non-correlated markup at a given leg count, for the prose under the legs chart.
-const pvlIndepAtLegs = n => pvlLegs.find(d => d.kind === "independent" && d.bucket_label === n)?.markup_pct;
+// Match on bucket_num: typed CSV parsing turns the numeric bucket_label values into numbers.
+const pvlIndepAtLegs = n => pvlLegs.find(d => d.kind === "independent" && d.bucket_num === n)?.markup_pct;
 // Kalshi began charging a maker fee on combos at 05:00 ET on 2026-08-20 — double its
 // standard maker rate — and exempted combos made entirely of independent NFL legs, which
 // are created under their own series. fee_group carries that split.
@@ -868,8 +869,8 @@ Plot.plot({
 
 _Markup by number of legs, whole window. A two-leg ticket is priced almost exactly at its
 parts; the gap widens with every leg added. A non-correlated ticket costs about
-${Math.round(pvlIndepAtLegs("10"))}% more than its legs at ten legs and about
-${Math.round(pvlIndepAtLegs("15"))}% more at fifteen — part of that at the long end is the
+${Math.round(pvlIndepAtLegs(10))}% more than its legs at ten legs and about
+${Math.round(pvlIndepAtLegs(15))}% more at fifteen — part of that at the long end is the
 minimum-price effect explained below rather than markup._
 
 ```js
