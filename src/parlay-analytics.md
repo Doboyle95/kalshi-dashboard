@@ -908,7 +908,7 @@ the left edge; they cost about 0.1¢ too._
       Plot.text(labelled, {x: "avg_indep_cents", y: "avg_traded_cents", text: d => pvlFmtShort(d.markup_pct),
         textAnchor: "end", dx: -8, dy: -9, fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)", ...halo}),
       width >= 600 ? Plot.text([[PVL_X_MIN * 1.15, 0.5]], {x: d => d[0], y: d => d[1],
-        text: () => "Sellers won't go much below 0.1¢,\nhowever little the legs are worth",
+        text: () => "Prices stop falling near 0.1¢,\nhowever little the legs are worth",
         textAnchor: "start", lineAnchor: "bottom", fontSize: 11, fill: "var(--theme-foreground-muted)"}) : null,
       Plot.tip(pvlPoints, Plot.pointer({x: "avg_indep_cents", y: "avg_traded_cents",
         title: d => `Legs worth ${pvlCentsTip(d.avg_indep_cents)} together\n`
@@ -1032,10 +1032,12 @@ display(Plot.plot({
   side of it, moves the markup by under half a point up to eight legs and by about two
   points on the longest tickets, nowhere near enough to change the picture.</p>
   <p><strong>Longshots at the minimum price.</strong> Below about 0.1¢ a parlay's price
-  stops following its legs: whether they multiply out to 0.05¢ or a billionth of a cent, it
-  trades at around 0.08–0.1¢, the lowest price sellers will quote (Kalshi's own price grid
-  goes down to 0.01¢). Those bettors really do pay that, so the tickets are counted in every
-  figure here — they are the flat stretch at the left of the first chart. They are
+  stops following its legs: whether they multiply out to 0.05¢ or a billionth of a cent, the
+  ticket still costs about 0.1¢. Until 3 September that was Kalshi's own rule — a parlay could
+  not trade below 0.1¢. Since then Kalshi allows prices down to 0.01¢, yet tickets whose legs
+  are worth next to nothing still trade at about 0.05–0.1¢. Those bettors really do pay that,
+  so the tickets are counted in every figure here — they are the flat stretch at the left of
+  the first chart. They are
   ${pvlFloorShare.toFixed(1)}% of the money overall but ${pvlLongFloorShare.toFixed(0)}% of it
   on tickets of 13 legs or more, which is why the long end of the legs chart climbs so
   steeply.</p>
@@ -1055,11 +1057,13 @@ display(Plot.plot({
   multiplied together − 1, over the trades in the group. It is not an average of per-trade
   ratios — a fifteen-leg ticket's legs multiply out to a number so small that individual
   ratios run into the millions and any average of them is meaningless.</p>
-  <p><strong>Window.</strong> From June 25, 2026 — the first day our leg snapshot covers
-  the tickets that traded, and safely after the June 7 switch to sub-cent price collection,
-  before which a cheap parlay's price was rounded to whole cents and this comparison would
-  be noise. Prices are yes-side taker trades only, which for parlays is nearly all of the
-  flow: they are quoted on request, so the customer is the yes buyer.</p>
+  <p><strong>Window.</strong> From late June 2026 — the first days our leg snapshot covers
+  the tickets that traded, and after the June 7 switch to sub-cent price collection, before
+  which a cheap parlay's price was rounded to whole cents and this comparison would be noise.
+  On three later days — June 25, July 5 and July 6 — our stored parlay prices are rounded to
+  whole cents, so those days are left out rather than shown wrong. Prices are yes-side taker trades
+  only, which for parlays is nearly all of the flow: they are quoted on request, so the
+  customer is the yes buyer.</p>
 </details>
 
 <details class="surface-card compact-details">
