@@ -778,12 +778,9 @@ Plot.plot({
      this section by it, and a retitle must not break them. -->
 <h2 id="what-a-parlay-costs-vs-multiplying-its-legs" tabindex="-1"><a class="observablehq-header-anchor" href="#what-a-parlay-costs-vs-multiplying-its-legs">What a multi-game parlay costs vs. multiplying its legs</a></h2>
 
-_A non-correlated parlay is worth exactly the product of its legs: three independent
-legs at 77¢, 66¢ and 74¢ are worth 37.6¢ together. These charts price **every leg at the
-instant its parlay traded** — the leg market's last print at or before that moment — and
-compare that product with what the parlay actually cost. The difference is the markup a
-bettor pays over the legs' combined value, before fees. Same-game parlays are left out:
-their legs move together, so multiplying them is not the right price._
+_A multi-game parlay is fairly priced at its legs' prices multiplied together, each taken at the
+moment the parlay traded. Over ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo)} bettors paid
+**${pvlFmt(pvlMarkup)} more** than that: ${fmtUSD(pvlPaid)} for legs worth ${fmtUSD(pvlFair)}._
 
 ```js
 const pvlDailyRaw   = await DataAttachment("data/parlay_vs_legs_daily.csv").csv({typed: true});
@@ -860,23 +857,9 @@ const PVL_FEE_GROUPS = new Map([
 ]);
 ```
 
-```js
-display(html`<div class="surface-card compact-details" style="font-size:13px;padding:12px 16px;margin:6px 0 18px 0;">
-Over ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo)}, non-correlated parlays cost
-<strong>${pvlFmt(pvlMarkup)} more</strong> than the product of their own legs —
-${fmtUSD(pvlPaid)} staked against ${fmtUSD(pvlFair)} of what the legs were worth. That
-average hides the shape: the markup is close to nothing on ordinary prices and grows as a
-parlay gets longer and cheaper.
-</div>`);
-```
-
-_Each dot is a group of tickets with similar odds. **Across** is what their legs are worth
-multiplied together; **up** is what bettors actually paid. On the dashed line a parlay costs
-exactly its legs, and the shaded gap above it is the markup. Each step on both scales is ten
-times the one before, so coin flips and one-in-a-thousand longshots fit on one chart. Covers
-the whole window — the date selector above does not apply to this chart or the next.
-Tickets whose legs are worth under 0.01¢ (${pvlOffLeftShare.toFixed(1)}% of the money) sit off
-the left edge; they cost about 0.1¢ too._
+_Each dot is a group of tickets with similar odds: across is what their legs are worth
+multiplied together, up is what bettors paid, and the shaded gap above the dashed line is the
+markup._
 
 ```js
 {
@@ -922,11 +905,8 @@ the left edge; they cost about 0.1¢ too._
 }
 ```
 
-_**More legs, bigger markup.** Markup by number of legs, whole window. A two-leg ticket is
-priced almost exactly at its legs; each leg added puts more on top — about
-${pvlFmt(pvlRatio(pvlAt(10)))} at ten legs and ${pvlFmt(pvlRatio(pvlAt(15)))} at fifteen. Much
-of the long end is longshots priced at the ~0.1¢ minimum: the flat stretch at the left of
-the chart above._
+_The markup grows with every leg — about ${pvlFmt(pvlRatio(pvlAt(10)))} at ten legs and
+${pvlFmt(pvlRatio(pvlAt(15)))} at fifteen, much of it from long shots stuck at the ~0.1¢ minimum._
 
 ```js
 Plot.plot({
@@ -951,16 +931,8 @@ Plot.plot({
 })
 ```
 
-_**Before and after the combo maker fee.** Daily markup, money-weighted across every priced
-trade that day — the one chart in this section that follows the date selector above. The
-dashed lines are the average on each side of **20 August 2026, when Kalshi started charging
-a maker fee on combos**, at double its standard maker rate. It exempted combos built entirely
-of independent NFL legs, which trade under their own series; switching to those below is a
-sanity check rather than a controlled experiment, because the exempt bucket is NFL-only and
-follows the football calendar — ${pvlExemptShare.toFixed(0)}% of the money since 20 August,
-most of it on NFL Sundays — so its daily figure is volatile. What does hold up is that the step survives
-holding the ticket mix fixed — most of it is a repricing of 2-to-6-leg tickets, not a shift
-in what people were buying._
+_Daily markup — the one chart here that follows the date selector — with dashed averages before
+and after Kalshi started charging a maker fee on combos on 20 August 2026._
 
 <div class="control-strip">
 
@@ -1025,6 +997,17 @@ display(Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>How this is measured, and what it misses</summary>
+  <p><strong>Scope.</strong> Multi-game parlays only: same-game parlays are left out because
+  their legs move together, so multiplying them is not the right price. The first two charts
+  cover the whole window; tickets whose legs are worth under 0.01¢
+  (${pvlOffLeftShare.toFixed(1)}% of the money) sit off the left edge of the first, at about
+  0.1¢ like their neighbours.</p>
+  <p><strong>The maker-fee step.</strong> Kalshi's combo maker fee is double its standard maker
+  rate; combos built entirely of independent NFL legs are exempt and trade under their own
+  series. The fee-exempt option is a sanity check rather than a controlled experiment — it is
+  NFL-only and follows the football calendar (${pvlExemptShare.toFixed(0)}% of the money since
+  20 August). What does hold up is that the step survives holding the ticket mix fixed: most of
+  it is a repricing of 2-to-6-leg tickets, not a shift in what people were buying.</p>
   <p><strong>Leg prices are taken at the instant the parlay traded</strong> — the last
   print in that leg's own market at or before the parlay's timestamp. Both trade in the
   same tape, so the two are directly comparable. This is not a detail: pricing the same
