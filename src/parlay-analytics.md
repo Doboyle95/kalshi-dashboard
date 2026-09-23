@@ -776,7 +776,7 @@ Plot.plot({
 
 <!-- Raw HTML so the id stays the one the original title produced: ?embed= links address
      this section by it, and a retitle must not break them. -->
-<h2 id="what-a-parlay-costs-vs-multiplying-its-legs" tabindex="-1"><a class="observablehq-header-anchor" href="#what-a-parlay-costs-vs-multiplying-its-legs">What a non-correlated parlay costs vs. multiplying its legs</a></h2>
+<h2 id="what-a-parlay-costs-vs-multiplying-its-legs" tabindex="-1"><a class="observablehq-header-anchor" href="#what-a-parlay-costs-vs-multiplying-its-legs">What a multi-game parlay costs vs. multiplying its legs</a></h2>
 
 _A non-correlated parlay is worth exactly the product of its legs: three independent
 legs at 77¢, 66¢ and 74¢ are worth 37.6¢ together. These charts price **every leg at the
