@@ -850,6 +850,9 @@ const pvlSparseTick = (i, n, w) => w >= 600 || i === n - 1 || (i % 2 === 0 && i 
 // standard maker rate — and exempted combos made entirely of independent NFL legs, which
 // are created under their own series. fee_group carries that split.
 const PVL_COMBO_MAKER_START = new Date("2026-08-20");
+// The exempt bucket's share of the non-correlated money since the fee started (caption below).
+const pvlExemptShare = 100 * d3.sum(pvlDays.filter(d => d.date >= PVL_COMBO_MAKER_START && d.fee_group === "nfl_no_maker"), d => d.stake_usd)
+  / d3.sum(pvlDays.filter(d => d.date >= PVL_COMBO_MAKER_START), d => d.stake_usd);
 const PVL_FEE_GROUPS = new Map([
   ["All parlays", null],
   ["Maker-fee combo series", "combo_maker"],
@@ -953,8 +956,9 @@ trade that day — the one chart in this section that follows the date selector 
 dashed lines are the average on each side of **20 August 2026, when Kalshi started charging
 a maker fee on combos**, at double its standard maker rate. It exempted combos built entirely
 of independent NFL legs, which trade under their own series; switching to those below is a
-sanity check rather than a controlled experiment, because the exempt bucket carries well under
-1% of the money and its daily figure is volatile. What does hold up is that the step survives
+sanity check rather than a controlled experiment, because the exempt bucket is NFL-only and
+follows the football calendar — ${pvlExemptShare.toFixed(0)}% of the money since 20 August,
+most of it on NFL Sundays — so its daily figure is volatile. What does hold up is that the step survives
 holding the ticket mix fixed — most of it is a repricing of 2-to-6-leg tickets, not a shift
 in what people were buying._
 
