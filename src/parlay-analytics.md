@@ -802,8 +802,6 @@ const PVL_X_MIN = 0.01, PVL_X_MAX = 100;
 const pvlPoints = pvlPriceRows
   .filter(d => d.n_trades >= 500 && d.avg_indep_cents >= PVL_X_MIN)
   .sort((a, b) => a.avg_indep_cents - b.avg_indep_cents);
-const pvlOffLeftShare = 100 * d3.sum(pvlPriceRows.filter(d => d.avg_indep_cents < PVL_X_MIN), d => d.stake_usd)
-  / d3.sum(pvlPriceRows, d => d.stake_usd);
 const pvlLegs = pvlIndepProfile
   .filter(d => d.dim === "legs" && d.n_trades >= 500)
   .map(d => ({...d, label: String(d.bucket_label)}))   // typed parsing makes "10" a number
@@ -820,17 +818,6 @@ const pvlPaid = d3.sum(pvlDays, d => d.stake_usd);
 const pvlFair = d3.sum(pvlDays, d => d.indep_stake_usd);
 const pvlMarkup = pvlRatio(pvlDays);
 const pvlFrom = d3.min(pvlDays, d => d.date), pvlTo = d3.max(pvlDays, d => d.date);
-// Longshots at the ~0.1¢ minimum (legs worth under ~0.13¢, the *_above_floor cut KalshiData
-// publishes): their share of the money overall, and on 13+-leg tickets.
-const pvlFloorShare = 100 * (1 - d3.sum(pvlDays, d => d.stake_usd_above_floor) / pvlPaid);
-const pvlLegsAF = pvlIndepProfile.filter(d => d.dim === "legs_above_floor" && d.bucket_num >= 13);
-const pvlLongFloorShare = 100 * (1 - d3.sum(pvlLegsAF, d => d.stake_usd)
-  / d3.sum(pvlLegs.filter(d => d.bucket_num >= 13), d => d.stake_usd));
-// One row per date (coverage is a per-date property, repeated on each kind's row).
-const pvlCovDays = Array.from(d3.group(pvlDailyRaw, d => +d.date), ([, rows]) => rows[0]);
-// Priced, but not drawn: the ticket's correlation class is not mapped yet.
-const pvlPendingShare = 100 * d3.sum(pvlDailyRaw.filter(d => d.kind === "pending"), d => d.stake_usd)
-  / d3.sum(pvlDailyRaw, d => d.stake_usd);
 const pvlFmt = v => v == null ? "–" : (v >= 0.05 ? "+" : v <= -0.05 ? "−" : "")
   + (Math.abs(v) >= 10 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1)) + "%";
 // A markup of +150% reads better as "2.5× its legs".
@@ -847,9 +834,6 @@ const pvlSparseTick = (i, n, w) => w >= 600 || i === n - 1 || (i % 2 === 0 && i 
 // standard maker rate — and exempted combos made entirely of independent NFL legs, which
 // are created under their own series. fee_group carries that split.
 const PVL_COMBO_MAKER_START = new Date("2026-08-20");
-// The exempt bucket's share of the non-correlated money since the fee started (caption below).
-const pvlExemptShare = 100 * d3.sum(pvlDays.filter(d => d.date >= PVL_COMBO_MAKER_START && d.fee_group === "nfl_no_maker"), d => d.stake_usd)
-  / d3.sum(pvlDays.filter(d => d.date >= PVL_COMBO_MAKER_START), d => d.stake_usd);
 const PVL_FEE_GROUPS = new Map([
   ["All parlays", null],
   ["Maker-fee combo series", "combo_maker"],
@@ -994,64 +978,6 @@ display(Plot.plot({
   ]
 }))
 ```
-
-<details class="surface-card compact-details">
-  <summary>How this is measured, and what it misses</summary>
-  <p><strong>Scope.</strong> Multi-game parlays only: same-game parlays are left out because
-  their legs move together, so multiplying them is not the right price. The first two charts
-  cover the whole window; tickets whose legs are worth under 0.01¢
-  (${pvlOffLeftShare.toFixed(1)}% of the money) sit off the left edge of the first, at about
-  0.1¢ like their neighbours.</p>
-  <p><strong>The maker-fee step.</strong> Kalshi's combo maker fee is double its standard maker
-  rate; combos built entirely of independent NFL legs are exempt and trade under their own
-  series. The fee-exempt option is a sanity check rather than a controlled experiment — it is
-  NFL-only and follows the football calendar (${pvlExemptShare.toFixed(0)}% of the money since
-  20 August). What does hold up is that the step survives holding the ticket mix fixed: most of
-  it is a repricing of 2-to-6-leg tickets, not a shift in what people were buying.</p>
-  <p><strong>Leg prices are taken at the instant the parlay traded</strong> — the last
-  print in that leg's own market at or before the parlay's timestamp. Both trade in the
-  same tape, so the two are directly comparable. This is not a detail: pricing the same
-  legs at their <em>daily average</em> instead makes parlays look <em>cheaper</em> than
-  their own legs, because a leg's daily average absorbs moves that happened after the
-  parlay printed, and the error compounds with every leg.</p>
-  <p><strong>Checked against other leg prices.</strong> Re-pricing a sample of days with
-  each leg's <em>next</em> print after the parlay, or the average of the prints either
-  side of it, moves the markup by under half a point up to eight legs and by about two
-  points on the longest tickets, nowhere near enough to change the picture.</p>
-  <p><strong>Longshots at the minimum price.</strong> Below about 0.1¢ a parlay's price
-  stops following its legs: whether they multiply out to 0.05¢ or a billionth of a cent, the
-  ticket still costs about 0.1¢. Until 3 September that was Kalshi's own rule — a parlay could
-  not trade below 0.1¢. Since then Kalshi allows prices down to 0.01¢, yet tickets whose legs
-  are worth next to nothing still trade at about 0.05–0.1¢. Those bettors really do pay that,
-  so the tickets are counted in every figure here — they are the flat stretch at the left of
-  the first chart. They are
-  ${pvlFloorShare.toFixed(1)}% of the money overall but ${pvlLongFloorShare.toFixed(0)}% of it
-  on tickets of 13 legs or more, which is why the long end of the legs chart climbs so
-  steeply.</p>
-  <p><strong>A trade counts only if every one of its legs had traded that day</strong>
-  before it — ${d3.mean(pvlCovDays, d => d.leg_coverage_pct).toFixed(0)}% of them do. A leg
-  priced in an earlier session is deliberately <em>not</em> carried forward: yesterday's
-  price is not a quote for today, and a price from later in the day would build in whatever
-  happened after the bet. Leaving these trades out does not flatter the result: on four
-  sample days, pricing them with each missing leg's next trade moved the markup by less than
-  half a point at every leg count. Separately, we hold the leg list for
-  ${d3.mean(pvlCovDays, d => d.legs_known_pct).toFixed(0)}% of parlay trades; the remainder
-  are mostly PREPACK/COMBO tickets, whose legs Kalshi does not publish in the feed that
-  carries them. And ${pvlPendingShare.toFixed(1)}% of the money that IS priced sits on
-  tickets whose correlation class has not been mapped yet, so it is left out of the charts
-  above — that backlog normally clears within a day or two.</p>
-  <p><strong>Markup is money-weighted</strong>: total paid ÷ total value of the legs
-  multiplied together − 1, over the trades in the group. It is not an average of per-trade
-  ratios — a fifteen-leg ticket's legs multiply out to a number so small that individual
-  ratios run into the millions and any average of them is meaningless.</p>
-  <p><strong>Window.</strong> From late June 2026 — the first days our leg snapshot covers
-  the tickets that traded, and after the June 7 switch to sub-cent price collection, before
-  which a cheap parlay's price was rounded to whole cents and this comparison would be noise.
-  On three later days — June 25, July 5 and July 6 — our stored parlay prices are rounded to
-  whole cents, so those days are left out rather than shown wrong. Prices are yes-side taker trades
-  only, which for parlays is nearly all of the flow: they are quoted on request, so the
-  customer is the yes buyer.</p>
-</details>
 
 <details class="surface-card compact-details">
   <summary>About this page &amp; method</summary>
