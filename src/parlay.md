@@ -32,7 +32,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
-  context: "Parlay P&L page using parlay_pnl_unified_daily.csv and parlay_cashout_daily.csv."
+  context: "Parlay P&L page using parlay_pnl_unified_daily.csv, parlay_cashout_daily.csv and parlay_pnl_by_price_daily.csv (bettor P&L by the price paid)."
 }));
 ```
 
@@ -92,6 +92,7 @@ const cashoutFlowShareKpi = totalCashoutValueKpi / (totalHandle + totalCashoutVa
   <p>Parlays pay out only if every leg hits, so most expire worthless — the same dynamic as sportsbook parlays. This page totals what parlay bettors actually won and lost, settled parlays only, computed trade by trade.</p>
   <p>The headline is <em>realized</em> P&L — net of fees and after cash-outs (parlay positions sold back before settlement). The second chart shows the counterfactual where everyone held to the end; the gap between them is what cashing out did to bettors. "Staked" counts only the money bettors put in to <em>open</em> parlays — cashing out isn't counted as a new stake.</p>
   <p>Cash-outs are <strong>inferred, not labelled</strong>. Nothing in the data says "this trade was a cash-out", so we use the shape of the market: parlays are priced on request, so the buyer takes the yes side and a no-side taker is usually someone selling a position back. Two checks remove the sales that can't be — one bigger than everything ever bought on that parlay, and one that would have to pool twenty or more separate earlier buys spread over six hours or longer. What's left is still an estimate.</p>
+  <p>The breakdown by price paid credits each cash-out to the buy it closed, usually a buy of exactly the same size. It starts June 7, 2026, when prices below a cent began to be recorded, and leaves out five days in late June and early July whose prices were stored rounded to the cent.</p>
 </details>
 
 ```js
@@ -173,6 +174,75 @@ Plot.plot({
     Plot.tip(cumU.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}\nCash-out effect: ${fmtUSD(d.realized - d.hold)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 })
+```
+
+## What bettors lost, by the price they paid
+
+```js
+// Loaded inside this section's own block on purpose: build_chart_catalog.py credits a series
+// to the nearest ## heading PRECEDING its DataAttachment call. A failed load falls back to the
+// empty-state note below rather than taking the rest of the page with it.
+const byPrice = await DataAttachment("data/parlay_pnl_by_price_daily.csv").csv({typed: true}).catch(() => []);
+```
+
+_Share of stakes lost at each price, after cash-outs and fees, with the dollars under each bar — ${pbpSpan}._
+
+```js
+// One bar per band of the price paid, summed from the daily rows over the page's date window.
+// Each cash-out is credited to the buy it closed (python/build_parlay_pnl_by_price.py), so a
+// band's net is what the people who paid that price actually made.
+const PBP_TICK = {1: "10¢\nand up", 2: "3¢\nto 10¢", 3: "1¢\nto 3¢", 4: "0.5¢\nto 1¢", 5: "0.1¢\nto 0.5¢", 6: "Under\n0.1¢"};
+const PBP_NAME = {1: "10¢ and up", 2: "3¢ to under 10¢", 3: "1¢ to under 3¢", 4: "0.5¢ to under 1¢", 5: "0.1¢ to under 0.5¢", 6: "Under 0.1¢"};
+const pbpRows = byPrice.filter(d => d.staked_usd > 0 && inParlayPnlRange(d));
+const pbpFrom = d3.min(pbpRows, d => d.date), pbpTo = d3.max(pbpRows, d => d.date);
+const pbpSpan = pbpRows.length ? `parlays bought ${fmtDate(pbpFrom)} to ${fmtDate(pbpTo)}` : "nothing in this date range";
+const pbp = d3.rollups(pbpRows, rs => ({
+    staked: d3.sum(rs, d => d.staked_usd), net: d3.sum(rs, d => d.net_usd), held: d3.sum(rs, d => d.held_net_usd),
+    buys: d3.sum(rs, d => d.buys), won: d3.sum(rs, d => d.buys_won), first: d3.min(rs, d => d.date)
+  }), d => d.band)
+  .map(([band, v]) => ({band, ...v, ret: 100 * v.net / v.staked, heldRet: 100 * v.held / v.staked}))
+  .sort((a, b) => a.band - b.band);
+```
+
+```js
+const pbpPct = r => `${r < 0 ? "−" : "+"}${Math.abs(r).toFixed(0)}%`;
+// Prices under 0.1¢ only exist since 2026-09-03 (Kalshi's parlay price grid). When the window
+// reaches back before a band's first day, say so on the bar, so it isn't read as the same period.
+const pbpSince = d => d.first > pbpFrom
+  ? `since ${d.first.toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"})}` : "";
+// Room past each bar's end for its labels; no y axis, because every bar carries its own value.
+const pbpLo = Math.min(-10, (d3.min(pbp, d => d.ret) ?? 0) * 1.45);
+const pbpHi = Math.max(0, (d3.max(pbp, d => d.ret) ?? 0) * 1.45);
+// dy and lineAnchor are CONSTANTS in Plot, so losing and winning bands get separate label marks
+// (exact complements, so no band can fall through both).
+const pbpLoss = pbp.filter(d => d.ret < 0), pbpGain = pbp.filter(d => !(d.ret < 0));
+const pbpLabels = (rows, anchor, dys) => [
+  Plot.text(rows, {x: "band", y: "ret", text: d => pbpPct(d.ret), lineAnchor: anchor, dy: dys[0],
+                   fontSize: 13, fontWeight: 600, fill: "var(--theme-foreground)"}),
+  Plot.text(rows, {x: "band", y: "ret", text: d => fmtUSD(d.net), lineAnchor: anchor, dy: dys[1],
+                   fontSize: 11, fill: "var(--theme-foreground-muted)"}),
+  Plot.text(rows, {x: "band", y: "ret", text: pbpSince, lineAnchor: anchor, dy: dys[2],
+                   fontSize: 10, fill: "var(--theme-foreground-muted)"})
+];
+display(pbp.length ? Plot.plot({
+  style: {fontFamily: "var(--font-sans)", fontSize: "12px"}, width, height: 320, marginTop: 48, marginBottom: 0,
+  x: {domain: pbp.map(d => d.band), axis: "top", tickFormat: b => PBP_TICK[b], tickSize: 0, label: null, padding: 0.35},
+  y: {domain: [pbpLo, pbpHi], axis: null},
+  marks: [
+    Plot.barY(pbp, {x: "band", y: "ret", ry2: 4, fillOpacity: 0.85,
+      fill: d => d.ret < 0 ? "var(--accent-negative)" : "var(--accent-positive)"}),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
+    ...pbpLabels(pbpLoss, "top", [7, 25, 40]),
+    ...pbpLabels(pbpGain, "bottom", [-21, -7, -35]),
+    Plot.tip(pbp, Plot.pointerX({x: "band", y: "ret", lineWidth: 40, title: d => [
+      PBP_NAME[d.band],
+      `Staked: ${fmtUSD(d.staked)}`,
+      `After cash-outs and fees: ${fmtUSD(d.net)} (${pbpPct(d.ret)})`,
+      `If held to settlement: ${fmtUSD(d.held)} (${pbpPct(d.heldRet)})`,
+      `Bets: ${fmtCount(d.buys)}, of which ${fmtCount(d.won)} won`
+    ].join("\n")}))
+  ]
+}) : html`<p class="chart-note">The breakdown by price starts June 7, 2026 — widen the date range to include it.</p>`);
 ```
 
 ## The other side of the trade
