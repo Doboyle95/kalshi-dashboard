@@ -45,7 +45,10 @@ html.pc-embed .chart-tools,
 html.pc-embed .data-inspector-ask,
 html.pc-embed .pc-embed-out { display: none !important; }
 html.pc-embed #observablehq-center { margin: 0 !important; padding: 0 !important; }
-html.pc-embed #observablehq-main { margin: 0 !important; padding: 2px 16px 10px; min-height: 0; max-width: none; min-width: 240px; }
+/* !important: Framework reserves room for its (hidden here) table of contents with
+   #observablehq-toc ~ #observablehq-main { padding-right: calc(192px + 1rem) } above ~912px, which
+   outranks this rule and left a 208px blank band down the right of every wide embed (2026-09-25). */
+html.pc-embed #observablehq-main { margin: 0 !important; padding: 2px 16px 10px !important; min-height: 0; max-width: none; min-width: 240px; }
 html.pc-embed:not(.pc-embed-ready) #observablehq-main { visibility: hidden; }
 /* The page draws a chapter rule over each top-level h2; an embed has one chapter. */
 html.pc-embed .pc-embed-target { margin-top: 0.4rem !important; padding-top: 0 !important; border-top: 0 !important; }
