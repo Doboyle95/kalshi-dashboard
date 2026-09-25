@@ -35,6 +35,8 @@
   style.textContent = `
 html.pc-embed { scrollbar-gutter: auto; }
 html.pc-embed, html.pc-embed body { height: auto; min-height: 0; }
+/* Sized by its host (see postHeight): never show a scrollbar of our own, or the page flickers. */
+html.pc-embed.pc-embed-fitted, html.pc-embed.pc-embed-fitted body { overflow: hidden; }
 html.pc-embed body { margin: 0; max-width: none; }
 html.pc-embed #observablehq-header,
 html.pc-embed #observablehq-footer,
@@ -210,6 +212,15 @@ html.pc-embed .pc-embed-missing { padding: 20px 0 8px; font: 15px/1.5 var(--font
     classify();
     new MutationObserver(schedule).observe(main, {childList: true, subtree: true});
     if (typeof ResizeObserver === "function") new ResizeObserver(postHeight).observe(document.body);
+    // Once the host has sized the frame to the height we posted, the frame can never need a
+    // scrollbar of its own -- and must not show one. A scrollbar narrows the page; a chart whose
+    // height follows its width then redraws shorter, the host shrinks the frame, the scrollbar
+    // goes, the chart widens again, and round it goes (the parlay-vs-legs diagonal flickered
+    // like this in 600-760px columns, 2026-09-25). A host WITHOUT the resize script never
+    // matches our height, so it keeps the scrollbar and its readers can still scroll.
+    window.addEventListener("resize", () => {
+      if (lastHeight && Math.abs(window.innerHeight - lastHeight) <= 2) root.classList.add("pc-embed-fitted");
+    });
     const armGiveUp = () => setTimeout(giveUp, 8000);
     if (document.readyState === "complete") armGiveUp();
     else window.addEventListener("load", armGiveUp, {once: true});
