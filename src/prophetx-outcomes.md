@@ -5,7 +5,7 @@ title: ProphetX · Outcomes
 <div class="page-hero">
   <div class="page-eyebrow">ProphetX</div>
   <h1>Do the prices come true?</h1>
-  <p class="page-lead">Every single-market contract that has finished, joined back to the prices actually paid for it on the tape.</p>
+  <p class="page-lead">Every single-market contract that has finished, joined back to the prices actually paid for it in the trade records.</p>
 </div>
 
 <div class="instruction-line"><strong>Single markets only.</strong> Parlays are excluded and cannot be added &mdash; the published data does not resolve a combo's legs.</div>

@@ -116,7 +116,7 @@ export function tradeDetail(row, source) {
   const publishesAggressor = row.venue === "Novig";
   const fieldNote = publishesAggressor
     ? "Novig publishes an aggressor flag, so taker-side rankings use the side identified by the venue."
-    : `This record contains only fields ${row.venue}'s collected trade tape publishes. The venue does not publish an aggressor flag, so a taker is never inferred.`;
+    : `This view shows only fields present in ${row.venue}'s collected trade records. The venue does not publish an aggressor flag, so a taker is never inferred.`;
   return {
     crumb: `${fmtCount(row.contracts)} trade`,
     eyebrow: `Individual trade · ${row.venue}`,

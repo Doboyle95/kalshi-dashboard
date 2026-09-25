@@ -94,7 +94,7 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
 display(html`<div class="chart-note" style="border-left:3px solid var(--accent-negative); padding-left:.75rem;">
   ○ On the clearing-date report basis, only <strong>${meta.pct_resolved?.toFixed(1)}%</strong> of
   parlay volume has matured. The P&L is a real figure for that settled cohort, not an estimate of
-  the eventual total; trade-date tape totals use a different date basis and are not mixed into this percentage.
+  the eventual total; trade-date transaction totals use a different date basis and are not mixed into this percentage.
   Fees are estimated at Polymarket's standard taker rate (<code>6% × p × (1−p)</code> per contract) —
   the venue publishes no fee schedule specific to combos, so this is the general-market rate applied
   by assumption, not a confirmed combo rate.
@@ -103,7 +103,7 @@ display(html`<div class="chart-note" style="border-left:3px solid var(--accent-n
 
 ## What parlay bettors realized, before and after fees
 
-_Running total of resolved parlay P&L on the clearing-date report basis — **not** the same date axis as the daily-stakes chart further down, which is transaction-dated off the tape. The lighter dashed line is before fees; the solid line is after — the gap between them is the fee drag. Settled parlays only; a day here is when outcomes were published, not when the parlay was bought._
+_Running total of resolved parlay P&L on the clearing-date report basis — **not** the same date axis as the daily-stakes chart further down, which is dated by the underlying transactions. The lighter dashed line is before fees; the solid line is after — the gap between them is the fee drag. Settled parlays only; a day here is when outcomes were published, not when the parlay was bought._
 
 ```js
 const dpSorted = dailyPnl.slice().sort((a, b) => a.date - b.date);
@@ -186,7 +186,7 @@ display(Plot.plot({
 
 ## Daily stakes
 
-_Dollars staked on parlays each day; the hollow point is a day still being collected. Transaction-date basis (off the tape) — a different date axis from the realized-P&L charts above, which use the clearing-date report basis._
+_Dollars staked on parlays each day; the hollow point is a day still being collected. Transaction-date basis (from trade records) — a different date axis from the realized-P&L charts above, which use the clearing-date report basis._
 
 ```js
 display(Plot.plot({
@@ -226,6 +226,6 @@ display(Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
-  <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is necessarily the buyer and buyer P&L is taker P&L — the same footing on which Crypto.com combos are published. Outcomes come from the daily market report; the price paid for every contract comes from the venue's own time-and-sales tape, joined on symbol, so no bin midpoint or bid-range estimate is involved (<code>basis = ${meta.basis}</code>). Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract) since combos carry no published fee schedule of their own — treat the after-fee figures as directional, not a confirmed venue disclosure.</p>
-  <p>A parlay counts only once it has matured on a prior business day. Some positions close out early — a real trade against the house that drives the position's open interest to zero, the same underlying mechanism as a Kalshi cash-out — and those are quarantined rather than scored: ${meta.pct_terminated?.toFixed(3)}% of matured volume. Unlike Kalshi, this venue's trade tape carries no side/aggressor column, so a closing trade can't be identified directly the way a Kalshi cash-out is; only full closes that also get their maturity date backdated in the daily report are caught here, so this is a narrower net than a complete cash-out accounting would be. There is no held-to-settlement comparison on this page.</p>
+  <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is necessarily the buyer and buyer P&L is taker P&L — the same footing on which Crypto.com combos are published. Outcomes come from the daily market report; the price paid for every contract comes from the venue's own time-and-sales records, joined on symbol, so no bin midpoint or bid-range estimate is involved (<code>basis = ${meta.basis}</code>). Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract) since combos carry no published fee schedule of their own — treat the after-fee figures as directional, not a confirmed venue disclosure.</p>
+  <p>A parlay counts only once it has matured on a prior business day. Some positions close out early — a real trade against the house that drives the position's open interest to zero, the same underlying mechanism as a Kalshi cash-out — and those are quarantined rather than scored: ${meta.pct_terminated?.toFixed(3)}% of matured volume. Unlike Kalshi, this venue's trade records have no side/aggressor column, so a closing trade can't be identified directly the way a Kalshi cash-out is; only full closes that also get their maturity date backdated in the daily report are caught here, so this is a narrower net than a complete cash-out accounting would be. There is no held-to-settlement comparison on this page.</p>
 </details>

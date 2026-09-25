@@ -523,7 +523,7 @@ function tradeDetail(row) {
       {title: "Market context", items: context},
       {title: "Continue exploring", items: [
         {label: "Open Market Explorer", description: "Find this or related markets across supported venues", value: "→", href: "./market-explorer"},
-        {label: "Compare against other venues", description: "The same rankings on every venue that publishes a tape", value: "→", href: "./trade-size"}
+        {label: "Compare against other venues", description: "The same rankings on every venue that publishes trade records", value: "→", href: "./trade-size"}
       ]}
     ],
     coverage: "Taker side and block trade are both Kalshi's own flags, but the block flag is only recoverable for trades from mid-2026 onward, so \"Not known\" is a gap in coverage rather than a denial. Market and outcome names are decoded from the ticker here rather than published by the exchange, so an unrecognised series falls back to its raw code.",
@@ -574,7 +574,7 @@ display(overallRows.length
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">No large-trade rows are being served.</div>`);
 ```
 
-<p class="chart-note"><strong>Block trade</strong> is Kalshi's own flag for privately negotiated size printed to the tape; an em dash means we cannot tell, not that it was ordinary, because the flag is only recoverable for trades from mid-2026 onward.</p>
+<p class="chart-note"><strong>Block trade</strong> is Kalshi's own flag for privately negotiated size recorded in the trade data; an em dash means we cannot tell, not that it was ordinary, because the flag is only recoverable for trades from mid-2026 onward.</p>
 
 <div class="instruction-line"><strong>Useful trick:</strong> switch to "One-party stake" to surface trades at extreme prices, where one side risks close to the full dollar and the other almost nothing. Click any market name to open the trade.</div>
 
@@ -611,4 +611,4 @@ display(smallMarketRows.length
   <p>Because the denominator — the market's lifetime volume — keeps growing while a market is still active, a trade can drop out of this list over time even though the trade itself never changes.</p>
 </details>
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./trade-size">Trading behavior across venues</a>, which ranks the same prints against every other venue's tape.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./trade-size">Trading behavior across venues</a>, which ranks the same prints against every other venue's trade records.</div>

@@ -712,7 +712,7 @@ function tradeDetail(row) {
       ? "The venue collection window is left-censored: this trade is real, but the file does not cover the venue's full prior history."
       : row.venue === "Kalshi"
         ? "Kalshi publishes an aggressor flag and readable market mapping here; those fields are not backfilled onto venues that do not publish them."
-        : "This record contains only fields the venue's collected trade tape publishes. A blank taker side is not inferred.",
+        : "This view shows only fields present in the venue's collected trade records. A blank taker side is not inferred.",
     state: {kind: "trade", source: "trade-size", venue: row.venue, trade: tradeIdentity(row)},
     ask: {
       question: `Explain why this ${fmtCount(row.contracts)}-contract trade on ${row.venue} is notable. Use its price, market share and collection-window limits, and do not infer an aggressor when the venue does not publish one.`,
@@ -790,7 +790,7 @@ Inputs.table(overallRows, {
 
 <p class="chart-note">${overallKalshi
   ? html`Kalshi is the only venue here with an aggressor flag on every print and a market-name dictionary, so it carries the extra Category, Outcome and Taker-side columns. <strong>Block trade</strong> is Kalshi's own flag; &mdash; means we cannot tell, not that it was an ordinary trade.`
-  : html`Covers this venue's collected tape, not its whole history. Market labels are whatever the venue itself publishes &mdash; ProphetX and Novig name their fixtures, DKeX, Polymarket and Underdog publish only an opaque contract id, and none of them is renamed here. <strong>Taker stake</strong> is offered on Kalshi and Novig only, the two venues that flag the aggressor.`}</p>
+  : html`Covers this venue's collected trade records, not its whole history. Market labels are whatever the venue itself publishes &mdash; ProphetX and Novig name their fixtures, DKeX, Polymarket and Underdog publish only an opaque contract id, and none of them is renamed here. <strong>Taker stake</strong> is offered on Kalshi and Novig only, the two venues that flag the aggressor.`}</p>
 
 ## Largest trades in small markets
 
