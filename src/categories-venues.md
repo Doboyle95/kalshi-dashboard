@@ -116,6 +116,16 @@ const categoryRows = categoryScope === "Excluding sports"
 const categoryBuckets = categoryScope === "Excluding sports"
   ? BUCKETS.filter(d => !d.startsWith("Sports"))
   : BUCKETS;
+// Direct labels are limited to segments wide enough to read at typical mobile
+// widths. The legend and tooltip retain the full taxonomy and exact values.
+const categoryLabels = perVenue.flatMap(({venue, shares}) => {
+  let left = 0;
+  return shares.filter(s => categoryBuckets.includes(s.bucket)).map(s => {
+    const label = {venue, bucket: s.bucket, mid: left + s.pct / 2, pct: s.pct};
+    left += s.pct;
+    return label;
+  }).filter(s => s.pct >= 13);
+});
 ```
 
 <div class="instruction-line">Share of each venue's contracts over ${WIN_LO} to ${WIN_HI} &mdash; a rolling 30 days ending on the last day every venue reported. The pale green band is parlay volume inside sports. Use the scope control to inspect smaller non-sports categories without a second duplicate chart.</div>
@@ -138,6 +148,11 @@ Plot.plot({
       title: d => `${d.venue}\n${d.bucket}\n${d.pct.toFixed(2)}% of its contracts\n${fmtCount(d.contracts)} contracts`,
       tip: true
     }),
+    Plot.text(categoryLabels, {
+      x: "mid", y: "venue", text: d => `${Math.round(d.pct)}%`,
+      fill: d => d.bucket === "Sports · parlays" ? "#15251e" : "#ffffff",
+      fontSize: 11, fontWeight: 700, pointerEvents: "none"
+    }),
     Plot.ruleX([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5})
   ]
 })
@@ -159,7 +174,7 @@ Inputs.table(
   {
     columns: ["venue", "bucket", "pct", "contracts"],
     header: {venue: "Venue", bucket: "Bucket", pct: "Share", contracts: "Contracts"},
-    format: {pct: d => `${d.toFixed(3)}%`, contracts: d => fmtCount(d)},
+    format: {pct: d => `${d.toFixed(1)}%`, contracts: d => fmtCount(d)},
     align: {pct: "right", contracts: "right"},
     rows: 16
   }

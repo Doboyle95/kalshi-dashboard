@@ -151,7 +151,7 @@ Inputs.table(headline, {
     to: iso
   },
   align: {share30: "right", share: "right", parlay: "right", days: "right"},
-  rows: 8
+  rows: Math.max(10, headline.length + 1)
 })
 ```
 

@@ -10,6 +10,13 @@ const dailyBriefing = await FileAttachment("daily-briefing.json").json();
 const dailyBriefingReady = dailyBriefing?.status === "ready";
 const dailyBriefingBody = html`<div class="daily-intel-body"></div>`;
 dailyBriefingBody.innerHTML = safeMarkdown(dailyMarked, dailyBriefing?.insights || "The daily briefing is not available yet.");
+const dailyBriefingHighlights = [...dailyBriefingBody.querySelectorAll("li")].slice(0, 3).map(item => {
+  const heading = item.querySelector("strong")?.textContent?.trim() ?? "Market update";
+  return {
+    heading: heading.replace(/:\s*$/, ""),
+    detail: item.textContent.slice(heading.length).replace(/^:\s*/, "").trim()
+  };
+});
 // Two formatters on purpose, because the two fields are different kinds of value.
 // `data_through` is a bare calendar date ("2026-08-21") that Date parses as UTC
 // midnight, so it has to be read back in UTC or it slips a day for anyone west of
@@ -50,16 +57,6 @@ const briefingCorrection = html`<p class="caption" style="margin: 0 0 0.45rem" h
     <h1>US prediction markets today</h1>
     <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
   </div>
-  <aside class="daily-intel">
-    <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingDate(dailyBriefing.data_through)}` : "First run pending"}</span></div>
-    <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
-    ${dailyBriefingBody}
-    ${briefingCorrection}
-    <div class="daily-intel-actions">
-      <a href="./chat" data-ask-prefill data-question="Go deeper on this prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
-      <span>${[briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : "", briefingShortBy].filter(Boolean).join(" · ")}</span>
-    </div>
-  </aside>
 </div>
 
 ```js
@@ -160,6 +157,31 @@ if (briefingSettled && briefingNarrated && Math.abs(briefingSettled.contracts / 
 }
 ```
 
+<div class="briefing-kicker">Aligned through ${fmtDay(commonThrough)} · seven calendar days · reported contracts</div>
+
+<div class="kpi-grid briefing-kpis">
+  <div class="kpi-card" data-accent="kalshi">
+    <div class="kpi-label">Reported industry volume</div>
+    <div class="kpi-value" title="${Math.round(alignedTotal).toLocaleString()} contracts">${fmtCount(alignedTotal)}</div>
+    <div class="kpi-meta">aligned 7-day window</div>
+  </div>
+  <div class="kpi-card" data-accent="secondary">
+    <div class="kpi-label">Kalshi share</div>
+    <div class="kpi-value">${fmtShare(alignedTotal ? alignedKalshi / alignedTotal : null)}</div>
+    <div class="kpi-meta">of aligned reported volume</div>
+  </div>
+  <div class="kpi-card" data-accent="tertiary">
+    <div class="kpi-label">Largest competitor</div>
+    <div class="kpi-value">${largestCompetitor?.[0] ?? "—"}</div>
+    <div class="kpi-meta">${fmtCount(largestCompetitor?.[1] ?? 0)} contracts</div>
+  </div>
+  <div class="kpi-card" data-accent="warning">
+    <div class="kpi-label">Fastest recent growth</div>
+    <div class="kpi-value">${fastestGrowth?.venue ?? "—"}</div>
+    <div class="kpi-meta">${fmtPct(fastestGrowth?.change)} vs prior reported 7 days</div>
+  </div>
+</div>
+
 <h2 class="briefing-scale-title" id="volume-across-exchanges">Volume across exchanges</h2>
 
 <p class="section-intro">Reported daily contracts across every venue with a usable series. Linear preserves the real scale gap; log makes smaller venues readable.</p>
@@ -201,7 +223,9 @@ const scalePlot = Plot.plot({
   y: {type: scaleType === "Log" ? "log" : "linear", label: "Daily reported volume (contracts)", grid: true, tickFormat: fmtCount},
   color: {legend: true, domain: scaleVenues, range: scaleVenues.map(venue => VENUE_COLORS[venue])},
   marks: [
-    Plot.lineY(scaleRowsBrushed.filter(row => !row.partial), {x: "date", y: "contracts", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.lineY(scaleRowsBrushed.filter(row => !row.partial && !["Kalshi", "Polymarket US"].includes(row.venue)), {x: "date", y: "contracts", stroke: "venue", strokeOpacity: 0.48, strokeWidth: 1.5, curve: "monotone-x"}),
+    Plot.lineY(scaleRowsBrushed.filter(row => !row.partial && row.venue === "Polymarket US"), {x: "date", y: "contracts", stroke: "venue", strokeWidth: 2.4, curve: "monotone-x"}),
+    Plot.lineY(scaleRowsBrushed.filter(row => !row.partial && row.venue === "Kalshi"), {x: "date", y: "contracts", stroke: "venue", strokeWidth: 2.8, curve: "monotone-x"}),
     Plot.dot(scaleRowsBrushed.filter(row => row.partial), {x: "date", y: "contracts", fill: "venue", r: 4, symbol: "diamond"}),
     Plot.ruleX(scaleRowsBrushed, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(scaleRowsBrushed, Plot.pointerX({x: "date", y: "contracts", title: row => `${fmtDayLong(row.date)}\n${row.venue}: ${Math.round(row.contracts).toLocaleString()} contracts${row.partial ? "\nPartial day" : ""}`})),
@@ -233,30 +257,22 @@ display(renderDateBrush({
 }));
 ```
 
-<div class="briefing-kicker">Aligned through ${fmtDay(commonThrough)} · seven calendar days · reported contracts</div>
-
-<div class="kpi-grid briefing-kpis">
-  <div class="kpi-card" data-accent="kalshi">
-    <div class="kpi-label">Reported industry volume</div>
-    <div class="kpi-value" title="${Math.round(alignedTotal).toLocaleString()} contracts">${fmtCount(alignedTotal)}</div>
-    <div class="kpi-meta">aligned 7-day window</div>
+<aside class="daily-intel">
+  <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingDate(dailyBriefing.data_through)}` : "First run pending"}</span></div>
+  <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
+  <div class="daily-intel-highlights">
+    ${dailyBriefingHighlights.map(item => html`<div class="daily-intel-highlight"><strong>${item.heading}</strong><p>${item.detail}</p></div>`)}
   </div>
-  <div class="kpi-card" data-accent="secondary">
-    <div class="kpi-label">Kalshi share</div>
-    <div class="kpi-value">${fmtShare(alignedTotal ? alignedKalshi / alignedTotal : null)}</div>
-    <div class="kpi-meta">of aligned reported volume</div>
+  <details class="daily-intel-details" ${dailyBriefingHighlights.length ? "" : "open"}>
+    <summary>Read full briefing</summary>
+    ${dailyBriefingBody}
+    ${briefingCorrection}
+  </details>
+  <div class="daily-intel-actions">
+    <a href="./chat" data-ask-prefill data-question="Go deeper on this prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
+    <span>${[briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : "", briefingShortBy].filter(Boolean).join(" · ")}</span>
   </div>
-  <div class="kpi-card" data-accent="tertiary">
-    <div class="kpi-label">Largest competitor</div>
-    <div class="kpi-value">${largestCompetitor?.[0] ?? "—"}</div>
-    <div class="kpi-meta">${fmtCount(largestCompetitor?.[1] ?? 0)} contracts</div>
-  </div>
-  <div class="kpi-card" data-accent="warning">
-    <div class="kpi-label">Fastest recent growth</div>
-    <div class="kpi-value">${fastestGrowth?.venue ?? "—"}</div>
-    <div class="kpi-meta">${fmtPct(fastestGrowth?.change)} vs prior reported 7 days</div>
-  </div>
-</div>
+</aside>
 
 ## Economics and outcomes
 

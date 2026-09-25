@@ -6,7 +6,7 @@ import {
   volumeEventMarks
 } from "../src/components/volume-events.js";
 
-test("right-edge event labels anchor inward", () => {
+test("events near the right edge remain visible", () => {
   const events = positionedVolumeEvents(
     [{date: new Date("2026-06-11"), label: "World Cup '26", tier: 0}],
     new Date("2025-01-01"),
@@ -15,8 +15,7 @@ test("right-edge event labels anchor inward", () => {
   );
 
   assert.equal(events.length, 1);
-  assert.equal(events[0].textAnchor, "end");
-  assert.equal(events[0].labelDx, -3);
+  assert.equal(events[0].label, "World Cup '26");
   assert.equal(events[0].y, 100);
 });
 
@@ -36,11 +35,11 @@ test("event rows stay within the selected window and use tier heights", () => {
   assert.deepEqual(events.map(d => d.y), [150, 96, 200]);
 });
 
-test("event marks expose the computed anchor and offset to Plot", () => {
+test("event marks expose their label and date in a hover tip", () => {
   const calls = [];
   const Plot = {
     ruleX: (data, options) => { calls.push(["ruleX", data, options]); return "rule"; },
-    text: (data, options) => { calls.push(["text", data, options]); return "text"; }
+    dot: (data, options) => { calls.push(["dot", data, options]); return "dot"; }
   };
   const events = positionedVolumeEvents(
     [{date: new Date("2026-08-01"), label: "Near edge", tier: 1}],
@@ -49,7 +48,7 @@ test("event marks expose the computed anchor and offset to Plot", () => {
     10
   );
 
-  assert.deepEqual(volumeEventMarks(Plot, events), ["rule", "text"]);
-  assert.equal(calls[1][2].textAnchor, "end");
-  assert.equal(calls[1][2].dx, -3);
+  assert.deepEqual(volumeEventMarks(Plot, events), ["rule", "dot"]);
+  assert.equal(calls[1][2].tip, true);
+  assert.match(calls[1][2].title(events[0]), /Near edge · Aug 1, 2026/);
 });

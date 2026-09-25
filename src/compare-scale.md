@@ -121,7 +121,9 @@ Plot.plot({
   y: {type: scaleMetric === "Volume" && scaleType === "Log" ? "log" : "linear", label: scaleMetric === "Volume" ? "Daily reported contracts" : "Share of reported contracts", percent: scaleMetric === "Market share", grid: true, tickFormat: scaleMetric === "Volume" ? fmtCount : undefined},
   color: {legend: true, domain: venueNames, range: venueNames.map(d => VENUE_COLORS[d])},
   marks: [
-    Plot.lineY(plottedBrushed.filter(d => !d.partial), {x: "date", y: "value", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.lineY(plottedBrushed.filter(d => !d.partial && !["Kalshi", "Polymarket US"].includes(d.venue)), {x: "date", y: "value", stroke: "venue", strokeWidth: 1.5, strokeOpacity: 0.58, curve: "monotone-x"}),
+    Plot.lineY(plottedBrushed.filter(d => !d.partial && d.venue === "Polymarket US"), {x: "date", y: "value", stroke: "venue", strokeWidth: 2.4, curve: "monotone-x"}),
+    Plot.lineY(plottedBrushed.filter(d => !d.partial && d.venue === "Kalshi"), {x: "date", y: "value", stroke: "venue", strokeWidth: 2.8, curve: "monotone-x"}),
     Plot.dot(plottedBrushed.filter(d => d.partial), {x: "date", y: "value", fill: "venue", r: 4, symbol: "diamond"}),
     Plot.ruleX(plottedBrushed, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     Plot.tip(plottedBrushed, Plot.pointerX({
