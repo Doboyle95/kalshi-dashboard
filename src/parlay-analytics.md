@@ -841,6 +841,20 @@ const PVL_FEE_GROUPS = new Map([
 ]);
 ```
 
+<!-- The diagonal chart alone, embeddable as ?embed=parlay-cost-vs-legs-chart (embed-mode.js shows an
+element target by itself). The title stands in for the section heading, which such an embed
+leaves out. It shows only when this wrapper IS the embed target: not on the page, and not in an
+embed of the whole section, which has its own heading. -->
+<style>
+.pvl-embed-title { display: none; }
+html.pc-embed .pc-embed-target > .pvl-embed-title {
+  display: block; max-width: 640px; margin: 0.4rem 0 0.25rem; color: var(--theme-foreground-alt);
+  font: 500 clamp(1.55rem, 2.4vw, 2rem)/1.2 var(--font-serif); letter-spacing: -0.025em; text-wrap: balance;
+}
+</style>
+<div id="parlay-cost-vs-legs-chart">
+<div class="pvl-embed-title" role="heading" aria-level="2">What a multi-game parlay costs vs. multiplying its legs</div>
+
 _Each dot is a group of tickets with similar odds: across is what their legs are worth
 multiplied together, up is what bettors paid, and the shaded gap above the dashed line is the
 markup._
@@ -888,6 +902,8 @@ markup._
   }));
 }
 ```
+
+</div>
 
 _The markup grows with every leg — about ${pvlFmt(pvlRatio(pvlAt(10)))} at ten legs and
 ${pvlFmt(pvlRatio(pvlAt(15)))} at fifteen, much of it from long shots stuck at the ~0.1¢ minimum._

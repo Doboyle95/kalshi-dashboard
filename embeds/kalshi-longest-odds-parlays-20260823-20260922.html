@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>The longest-odds parlays on Kalshi | Predict Charts</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="pc-embed-fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=Inter+Tight:wght@400;600&amp;display=swap">
+<!--
+  Frozen snapshot, written 2026-09-25 from the parlay-vs-legs analysis of 2026-09-23: the ten
+  multi-game parlays (the leg classifier's "independent" kind) with the longest odds from
+  multiplying their legs, among the 463 bought before any of their games and longer than 1 in a
+  billion, Aug 23 to Sep 22, 2026. Each leg is its own market's last trade before the parlay traded.
+  Same rows and figures as the table Daniel was sent on 2026-09-23. No live data, nothing refreshes.
+-->
+<style>
+html, body { margin: 0; padding: 0; background: transparent; }
+:root {
+  --bg: #f4f0e8; --paper: #fbf8f1; --ink: #171c19; --fg: #18201e; --muted: #626a65; --faint: #777e79;
+  --rule: #c8c2b7; --rule-strong: #9f9a91; --accent: #c84f32;
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --paper: #171c19; --ink: #fbf8f1; --fg: #f2f3ec; --muted: #a9b0a9; --faint: #858f87;
+  --rule: #39423b; --rule-strong: #566158; --accent: #f17151;
+}
+.pc { margin: 0; padding: 16px 18px 12px; border-radius: 3px; background: var(--bg); color: var(--fg);
+  font: 400 14px/1.5 "Inter Tight", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.pc-title { margin: 0 0 4px; color: var(--ink); font: 600 20px/1.25 "Inter Tight", system-ui, sans-serif; letter-spacing: -0.01em; }
+.pc-sub { margin: 0 0 12px; max-width: 72ch; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums lining-nums; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: right; vertical-align: top; }
+th { color: var(--muted); font: 500 10.5px/1.45 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.03em; text-transform: uppercase; vertical-align: bottom; border-bottom-color: var(--rule-strong); }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+.l { text-align: left; }
+td { color: var(--fg); }
+.n { color: var(--faint); }
+.what { min-width: 13ch; }
+.what small { display: block; color: var(--muted); font-size: 12px; }
+.m { display: none; }
+.paid b { display: block; font-weight: 400; white-space: nowrap; }
+.paid small { display: block; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.odds { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.nw { white-space: nowrap; }
+sup { font-size: 0.72em; line-height: 0; }
+.pc-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+  margin-top: 10px; padding-top: 7px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px; }
+.pc-foot a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--rule); }
+.pc-foot a:hover { border-bottom-color: var(--accent); }
+/* Medium columns: the rank and the date give their width to the legs; the date moves under them. */
+@media (max-width: 720px) {
+  .n, .bought { display: none; }
+  .m { display: inline; }
+}
+/* Narrow columns: each ticket becomes a small card -- its legs as the heading (with the day it was
+   bought), then one label / value line per figure. Each value is ONE element, so a flex line can't
+   split a number from its exponent. */
+@media (max-width: 640px) {
+  table, tbody, tr, td { display: block; }
+  thead { display: none; }
+  tr { padding: 9px 0 8px; border-bottom: 1px solid var(--rule); }
+  td { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 1px 0; border: 0; text-align: right; }
+  td::before { content: attr(data-label); color: var(--muted); text-align: left; font-size: 12px; }
+  td.n, td.bought { display: none; }
+  td.what { display: block; text-align: left; font-weight: 600; color: var(--ink); padding-bottom: 4px; }
+  td.what::before { content: none; }
+  td.what small { font-weight: 400; }
+  .m { display: inline; }
+  .paid b, .paid small { display: inline; }
+  .paid small::before { content: " · "; }
+}
+</style>
+</head>
+<body>
+<figure class="pc" role="group" aria-label="The longest-odds parlays on Kalshi">
+<div class="pc-title" role="heading" aria-level="3">The longest-odds parlays on Kalshi</div>
+<div class="pc-sub">The ten multi-game parlays with the longest odds that were bought before any of their games started, <span class="nw">Aug 23 – Sep 22, 2026</span>. Multiplying their legs’ prices gives odds as long as 1 in 10<sup>73</sup>, but bettors paid about 1 in 1,000.</div>
+<table>
+<thead><tr>
+<th class="l n">#</th><th class="l bought">Bought</th><th class="l">Legs</th><th>Odds from multiplying the legs</th><th>Odds actually paid</th><th>Staked → payout if it won</th><th>Price ÷ legs’ value</th>
+</tr></thead>
+<tbody>
+<tr><td class="l n">1</td><td class="l nw bought">Mon Sep 7</td><td class="l what">48 legs, all college football<small>36 of them at 5¢ or less<span class="m"> · bought Mon Sep 7</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 1.1 × 10<sup>73</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,000</b><small>0.10¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$4.54 → $4,545</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>70</sup>×</span></td></tr>
+<tr><td class="l n">2</td><td class="l nw bought">Fri Sep 4</td><td class="l what">50 legs, all college football<small>20 of them at 5¢ or less<span class="m"> · bought Fri Sep 4</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 7.6 × 10<sup>60</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,000</b><small>0.10¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.91 → $909</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>58</sup>×</span></td></tr>
+<tr><td class="l n">3</td><td class="l nw bought">Fri Sep 18</td><td class="l what">26 legs, all college football<small>24 of them at 5¢ or less<span class="m"> · bought Fri Sep 18</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 6.0 × 10<sup>46</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,000</b><small>0.10¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.91 → $909</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>44</sup>×</span></td></tr>
+<tr><td class="l n">4</td><td class="l nw bought">Thu Sep 3</td><td class="l what">38 legs, all college football<small>17 of them at 5¢ or less<span class="m"> · bought Thu Sep 3</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 3.4 × 10<sup>45</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,000</b><small>0.10¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.39 → $391</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>42</sup>×</span></td></tr>
+<tr><td class="l n">5</td><td class="l nw bought">Wed Sep 2</td><td class="l what">30 legs, all college football<small>19 of them at 5¢ or less<span class="m"> · bought Wed Sep 2</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 2.0 × 10<sup>44</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,000</b><small>0.10¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.91 → $909</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>41</sup>×</span></td></tr>
+<tr><td class="l n">6</td><td class="l nw bought">Thu Sep 10</td><td class="l what">45 legs: college football 35, Premier League 10<small>12 of them at 5¢ or less<span class="m"> · bought Thu Sep 10</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 1.2 × 10<sup>39</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,111</b><small>0.09¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.90 → $1,000</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>36</sup>×</span></td></tr>
+<tr><td class="l n">7</td><td class="l nw bought">Sat Sep 19</td><td class="l what">38 legs: college football 37, CFL 1<small>10 of them at 5¢ or less<span class="m"> · bought Sat Sep 19</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 3.1 × 10<sup>37</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 400</b><small>0.25¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$3.70 → $1,480</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>35</sup>×</span></td></tr>
+<tr><td class="l n">8</td><td class="l nw bought">Sat Sep 12</td><td class="l what">29 legs: college football 26, tennis 3<small>9 of them at 5¢ or less<span class="m"> · bought Sat Sep 12</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 7.3 × 10<sup>32</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 1,111</b><small>0.09¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.06 → $70</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>30</sup>×</span></td></tr>
+<tr><td class="l n">9</td><td class="l nw bought">Sat Sep 19</td><td class="l what">16 legs, all college football<small>all 16 at 5¢ or less<span class="m"> · bought Sat Sep 19</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 10<sup>32</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 526</b><small>0.19¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$0.09 → $48</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>29</sup>×</span></td></tr>
+<tr><td class="l n">10</td><td class="l nw bought">Sun Sep 13</td><td class="l what">41 legs, all college football<small>8 of them at 5¢ or less<span class="m"> · bought Sun Sep 13</span></small></td><td class="odds" data-label="Odds from multiplying the legs"><span>1 in 1.7 × 10<sup>31</sup></span></td><td class="paid" data-label="Odds actually paid"><span><b>1 in 667</b><small>0.15¢ a contract</small></span></td><td data-label="Staked → payout if it won"><span class="nw">$1.76 → $1,176</span></td><td data-label="Price ÷ legs’ value"><span class="nw">10<sup>28</sup>×</span></td></tr>
+</tbody>
+</table>
+<div class="pc-foot"><span>Each leg priced at its own market’s last trade before the parlay was bought. Source: Kalshi trade data via <a href="https://predict-charts.com/parlay-analytics" target="_blank" rel="noopener">Predict Charts</a></span></div>
+</figure>
+<script type="module">
+const slug = "kalshi-longest-odds-parlays-20260823-20260922";
+const theme = new URLSearchParams(location.search).get("theme");
+if (theme === "dark" || (theme === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches))
+  document.documentElement.dataset.theme = "dark";
+let lastHeight = 0;
+function postHeight() {
+  if (window.parent === window) return;
+  const height = Math.ceil(document.body.getBoundingClientRect().height);
+  if (!height || Math.abs(height - lastHeight) < 2) return;
+  lastHeight = height;
+  try { window.parent.postMessage({type: "predict-charts:embed-height", embed: slug, height}, "*"); } catch (e) {}
+}
+if (typeof ResizeObserver === "function") new ResizeObserver(postHeight).observe(document.body);
+window.addEventListener("load", postHeight);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(postHeight);
+postHeight();
+</script>
+</body>
+</html>
