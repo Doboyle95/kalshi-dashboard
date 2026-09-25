@@ -10,13 +10,6 @@ const dailyBriefing = await FileAttachment("daily-briefing.json").json();
 const dailyBriefingReady = dailyBriefing?.status === "ready";
 const dailyBriefingBody = html`<div class="daily-intel-body"></div>`;
 dailyBriefingBody.innerHTML = safeMarkdown(dailyMarked, dailyBriefing?.insights || "The daily briefing is not available yet.");
-const dailyBriefingHighlights = [...dailyBriefingBody.querySelectorAll("li")].slice(0, 3).map(item => {
-  const heading = item.querySelector("strong")?.textContent?.trim() ?? "Market update";
-  return {
-    heading: heading.replace(/:\s*$/, ""),
-    detail: item.textContent.slice(heading.length).replace(/^:\s*/, "").trim()
-  };
-});
 // Two formatters on purpose, because the two fields are different kinds of value.
 // `data_through` is a bare calendar date ("2026-08-21") that Date parses as UTC
 // midnight, so it has to be read back in UTC or it slips a day for anyone west of
@@ -57,6 +50,16 @@ const briefingCorrection = html`<p class="caption" style="margin: 0 0 0.45rem" h
     <h1>US prediction markets today</h1>
     <p class="page-lead">Current scale, recent reported volume, product mix, fees, and the best outcome evidence the public data supports.</p>
   </div>
+  <aside class="daily-intel">
+    <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingDate(dailyBriefing.data_through)}` : "First run pending"}</span></div>
+    <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
+    ${dailyBriefingBody}
+    ${briefingCorrection}
+    <div class="daily-intel-actions">
+      <a href="./chat" data-ask-prefill data-question="Go deeper on this prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
+      <span>${[briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : "", briefingShortBy].filter(Boolean).join(" · ")}</span>
+    </div>
+  </aside>
 </div>
 
 ```js
@@ -256,23 +259,6 @@ display(renderDateBrush({
   width
 }));
 ```
-
-<aside class="daily-intel">
-  <div class="daily-intel-topline"><span>${dailyBriefingReady ? `Briefing · ${fmtBriefingStamp(dailyBriefing.generated_at)}` : "Daily briefing"}</span><span>${dailyBriefingReady ? `Data through ${fmtBriefingDate(dailyBriefing.data_through)}` : "First run pending"}</span></div>
-  <h2>${dailyBriefing?.title || "What changed in prediction markets"}</h2>
-  <div class="daily-intel-highlights">
-    ${dailyBriefingHighlights.map(item => html`<div class="daily-intel-highlight"><strong>${item.heading}</strong><p>${item.detail}</p></div>`)}
-  </div>
-  <details class="daily-intel-details" ${dailyBriefingHighlights.length ? "" : "open"}>
-    <summary>Read full briefing</summary>
-    ${dailyBriefingBody}
-    ${briefingCorrection}
-  </details>
-  <div class="daily-intel-actions">
-    <a href="./chat" data-ask-prefill data-question="Go deeper on this prediction-market briefing. Verify the most interesting claims, add relevant context, and tell me what else changed." data-context="Daily Predict Charts briefing on the homepage.">Ask a follow-up</a>
-    <span>${[briefingAgeDays >= 2 ? `${briefingAgeDays} days old` : "", briefingShortBy].filter(Boolean).join(" · ")}</span>
-  </div>
-</aside>
 
 ## Economics and outcomes
 
