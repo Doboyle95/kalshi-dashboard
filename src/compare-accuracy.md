@@ -159,8 +159,8 @@ Plot.plot({
   y: {label: "Actual win rate", domain: [0, 1], tickFormat: d => `${Math.round(100 * d)}%`, grid: true},
   color: {legend: true, domain: venues, range: venues.map(colorOf)},
   marks: [
-    Plot.line([{implied: 0, actual: 0}, {implied: 1, actual: 1}], {x: "implied", y: "actual", stroke: "var(--theme-foreground-muted)", strokeDasharray: "4,3", strokeWidth: 1.5}),
-    Plot.dot(accuracyRows, {x: "implied", y: "actual", fill: "venue", r: 5, fillOpacity: 0.78, stroke: "var(--theme-background)", strokeWidth: 0.9, tip: true, title: d => `${d.venue}\n${Math.round(100*d.implied)}¢ implied · ${(100*d.actual).toFixed(1)}% actual\n${Math.round(d.events ?? 0).toLocaleString()} effective/independent events`})
+    Plot.line([{implied: 0, actual: 0}, {implied: 1, actual: 1}], {x: "implied", y: "actual", stroke: "var(--theme-foreground-muted)", strokeDasharray: "4,4", strokeWidth: 2}),
+    Plot.dot(accuracyRows, {x: "implied", y: "actual", fill: "venue", r: 6, fillOpacity: 0.9, stroke: "var(--editorial-paper)", strokeWidth: 1.4, tip: true, title: d => `${d.venue}\n${Math.round(100*d.implied)}¢ implied · ${(100*d.actual).toFixed(1)}% actual\n${Math.round(d.events ?? 0).toLocaleString()} effective/independent events`})
   ]
 })
 ```

@@ -5369,3 +5369,414 @@ svg[class^="plot-"] g[aria-label="tip"] > path {
     border-top: 1px solid var(--editorial-rule);
   }
 }
+
+/* Design refresh: a quieter canvas, readable plotting surfaces and a clearer
+   editorial hierarchy throughout Briefing, Compare and the venue pages. */
+:root,
+html[data-theme="light"] {
+  --editorial-rule: #d9d4ca;
+  --editorial-rule-strong: #a9a397;
+  --editorial-paper: #fffdf8;
+  --plot-background: var(--editorial-paper);
+  --card-bg: var(--editorial-paper);
+  --card-border: var(--editorial-rule);
+  --divider: var(--editorial-rule);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --editorial-paper: #1b211d;
+    --editorial-rule: #39443c;
+    --editorial-rule-strong: #657066;
+    --plot-background: var(--editorial-paper);
+    --card-bg: var(--editorial-paper);
+    --card-border: var(--editorial-rule);
+    --divider: var(--editorial-rule);
+  }
+}
+
+html[data-theme="dark"] {
+  --editorial-paper: #1b211d;
+  --editorial-rule: #39443c;
+  --editorial-rule-strong: #657066;
+  --plot-background: var(--editorial-paper);
+  --card-bg: var(--editorial-paper);
+  --card-border: var(--editorial-rule);
+  --divider: var(--editorial-rule);
+}
+
+.page-hero:not(.briefing-hero) h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(2.35rem, 4vw, 3.55rem);
+  font-weight: 500;
+  letter-spacing: -0.038em;
+  line-height: 0.99;
+}
+
+.page-hero:not(.briefing-hero) .page-eyebrow {
+  display: block;
+  margin-bottom: 0.65rem;
+}
+
+.briefing-hero {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+
+.briefing-hero-copy {
+  max-width: 850px;
+}
+
+.briefing-scale-title,
+#observablehq-main > h2:not(.briefing-scale-title) {
+  border-top-color: var(--editorial-rule);
+  font-family: var(--font-serif);
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.briefing-kicker {
+  margin: 0.7rem 0 0.5rem;
+  color: var(--theme-foreground-muted);
+  font-size: 0.76rem;
+}
+
+.kpi-grid,
+.briefing-kpis {
+  overflow: hidden;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 7px;
+  background: var(--editorial-paper);
+}
+
+.kpi-card {
+  padding: 1.05rem 1.15rem;
+}
+
+.kpi-label {
+  font-size: 0.75rem;
+}
+
+.kpi-value,
+.kpi-value-sm {
+  margin-top: 0.34rem;
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+}
+
+.plot-shell {
+  margin: 0.75rem 0 1.35rem;
+  padding: 0.75rem 1rem 0.85rem;
+  overflow: visible;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 7px;
+  background: var(--editorial-paper);
+}
+
+.plot-shell:has(> figure) {
+  padding-top: 0.5rem;
+}
+
+.observablehq--block > figure.chart-action-host {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0.7rem 0 1.35rem;
+  padding: 0.65rem 0.9rem 0.8rem;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 7px;
+  background: var(--editorial-paper);
+}
+
+.plot-shell .observablehq--block > figure.chart-action-host {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+figure.chart-action-host [class*="-swatches-wrap"] {
+  margin-bottom: 0.8rem;
+  color: var(--theme-foreground-muted);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+}
+
+.plot-shell svg[class^="plot-"],
+svg[class^="plot-"] {
+  max-width: 100%;
+  height: auto;
+  color: var(--theme-foreground-muted);
+  font-size: 12px;
+}
+
+svg[class^="plot-"] text {
+  font-size: 12px;
+}
+
+svg[class^="plot-"] [aria-label="y-grid"] line,
+svg[class^="plot-"] [aria-label="x-grid"] line {
+  stroke: var(--editorial-rule);
+  stroke-opacity: 0.7;
+}
+
+.chart-tools {
+  min-height: 30px;
+  margin-bottom: 0.25rem;
+  gap: 0.35rem;
+  opacity: 1;
+}
+
+.chart-tools button,
+.chart-tools button:last-child {
+  min-height: 28px;
+  padding: 0.22rem 0.52rem;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-foreground-muted);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 550;
+}
+
+.chart-tools button:hover,
+.chart-tools button:focus-visible,
+.chart-tools button:last-child:hover {
+  border-color: var(--editorial-accent);
+  background: color-mix(in srgb, var(--editorial-accent) 7%, var(--editorial-paper));
+  color: var(--theme-foreground);
+}
+
+.control-strip {
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0 0.5rem;
+  padding: 0.62rem 0.85rem;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 6px;
+  background: var(--editorial-paper);
+}
+
+.control-strip form > label,
+.control-strip form > div > label {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.instruction-line,
+.chart-note {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--editorial-rule);
+  border-left: 3px solid var(--editorial-rule-strong);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--editorial-paper) 76%, var(--theme-background));
+  color: var(--theme-foreground-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.instruction-line strong,
+.chart-note strong {
+  color: var(--theme-foreground);
+}
+
+.briefing-table {
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+}
+
+.briefing-table th {
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.surface-card.table-scroll {
+  border: 1px solid var(--editorial-rule);
+  border-radius: 6px;
+  background: var(--editorial-paper);
+}
+
+.daily-intel {
+  margin: 1.8rem 0;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 7px;
+  background: var(--editorial-paper);
+}
+
+.daily-intel-topline {
+  font-size: 0.73rem;
+}
+
+.daily-intel h2 {
+  margin: 0.55rem 0 0.95rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.45rem, 2vw, 1.8rem);
+  font-weight: 500;
+}
+
+.daily-intel-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.daily-intel-highlight {
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--editorial-rule);
+  border-radius: 5px;
+  background: var(--theme-background);
+}
+
+.daily-intel-highlight strong {
+  display: block;
+  margin-bottom: 0.38rem;
+  color: var(--theme-foreground);
+  font-size: 0.88rem;
+}
+
+.daily-intel-highlight p {
+  margin: 0;
+  color: var(--theme-foreground-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.daily-intel-details {
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--editorial-rule);
+}
+
+.daily-intel-details > summary {
+  width: fit-content;
+  color: var(--editorial-accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.daily-intel-body {
+  margin-top: 0.8rem;
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+.daily-intel-body ul,
+.daily-intel-body ol {
+  gap: 0.5rem;
+}
+
+.compare-mobile-picker {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .page-hero:not(.briefing-hero) h1 {
+    font-size: clamp(2.2rem, 10vw, 2.9rem);
+  }
+
+  .daily-intel-highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-nav {
+    display: none;
+  }
+
+  .compare-mobile-picker {
+    display: block;
+    max-width: var(--observablehq-max-width);
+    margin: 0 auto;
+    padding: 0.45rem 1rem;
+  }
+
+  .compare-mobile-picker > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 34px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .compare-mobile-picker > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .compare-mobile-picker > summary span {
+    color: var(--theme-foreground-muted);
+    font-size: 0.73rem;
+  }
+
+  .compare-mobile-picker > summary strong {
+    color: var(--editorial-accent);
+    font-size: 0.85rem;
+  }
+
+  .compare-mobile-picker > summary strong::after {
+    content: "⌄";
+    margin-left: 0.5rem;
+    color: var(--theme-foreground-muted);
+  }
+
+  .compare-mobile-picker nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+    padding: 0.45rem 0 0.65rem;
+  }
+
+  .compare-mobile-picker nav a {
+    padding: 0.5rem 0.6rem;
+    border-radius: 4px;
+    color: var(--theme-foreground-muted);
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  .compare-mobile-picker nav a[aria-current="page"] {
+    background: color-mix(in srgb, var(--editorial-accent) 11%, var(--editorial-paper));
+    color: var(--editorial-accent);
+    font-weight: 650;
+  }
+
+  .plot-shell {
+    margin-right: -0.25rem;
+    margin-left: -0.25rem;
+    padding: 0.5rem 0.35rem 0.7rem;
+  }
+
+  .control-strip {
+    padding: 0.55rem 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid,
+  .briefing-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-card:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .kpi-card:nth-child(n + 3) {
+    border-top: 1px solid var(--editorial-rule);
+  }
+
+  .kpi-value,
+  .kpi-value-sm {
+    font-size: 1.25rem;
+  }
+
+  .kpi-card:nth-child(n + 3) .kpi-value {
+    overflow-wrap: anywhere;
+    font-size: 1.05rem;
+  }
+
+  .daily-intel {
+    padding: 1rem;
+  }
+}

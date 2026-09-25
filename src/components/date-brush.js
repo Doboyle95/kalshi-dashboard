@@ -38,28 +38,28 @@ const toUTCDate = (s) => { const [y, m, d] = String(s).split("-").map(Number); r
 function ensureBrushStyles() {
   if (document.getElementById("kd-daterange-styles")) return;
   const css = `
-.kd-daterange { margin-bottom: 1.25rem; }
+.kd-daterange { margin: .65rem 0 1.4rem; }
 .kd-dr-bar { display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
-.kd-seg { display:inline-flex; gap:2px; padding:0; border-radius:0;
-  background:transparent; border:0; border-bottom:1px solid var(--card-border, var(--theme-foreground-faint)); }
+.kd-seg { display:inline-flex; gap:2px; padding:2px; border-radius:5px;
+  background:var(--editorial-paper); border:1px solid var(--card-border, var(--theme-foreground-faint)); }
 .kd-seg button { appearance:none; border:0; background:transparent; cursor:pointer;
-  display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:0;
-  font:500 11.5px/1.5 var(--font-mono, ui-monospace); letter-spacing:.2px;
+  display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:3px;
+  font:550 12px/1.5 var(--font-sans, sans-serif); letter-spacing:0;
   color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
 .kd-seg button svg { opacity:.75; }
 .kd-seg button:hover { color:var(--theme-foreground); background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
-.kd-seg button.active { color:var(--theme-foreground); background:transparent; box-shadow:inset 0 -2px 0 var(--editorial-accent,var(--accent-primary)); }
+.kd-seg button.active { color:var(--theme-foreground); background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 10%,var(--editorial-paper)); box-shadow:none; }
 .kd-seg button.active:hover { background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
-.kd-quick { display:inline-flex; gap:1px; padding:0; border-radius:0;
-  background:transparent; border:0; border-bottom:1px solid var(--card-border, var(--theme-foreground-faint)); }
+.kd-quick { display:inline-flex; gap:1px; padding:2px; border-radius:5px;
+  background:var(--editorial-paper); border:1px solid var(--card-border, var(--theme-foreground-faint)); }
 .kd-quick button { appearance:none; border:0; background:transparent; cursor:pointer;
-  padding:3px 8px; border-radius:0; font:500 11.5px/1.5 var(--font-mono, ui-monospace);
-  letter-spacing:.1px; color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
+  padding:4px 8px; border-radius:3px; font:550 12px/1.5 var(--font-sans, sans-serif);
+  letter-spacing:0; color:var(--theme-foreground-muted); transition:background .15s ease, color .15s ease; }
 .kd-quick button:hover { color:var(--theme-foreground); background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
-.kd-quick button.active { color:var(--theme-foreground); background:transparent; box-shadow:inset 0 -2px 0 var(--editorial-accent,var(--accent-primary)); }
+.kd-quick button.active { color:var(--theme-foreground); background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 10%,var(--editorial-paper)); box-shadow:none; }
 .kd-quick button.active:hover { background:color-mix(in srgb,var(--editorial-accent,var(--accent-primary)) 6%,transparent); }
 .kd-dr-inputs { display:none; align-items:center; gap:7px;
-  font:12px/1.4 var(--font-mono, ui-monospace); color:var(--theme-foreground-muted); }
+  font:12px/1.4 var(--font-sans, sans-serif); color:var(--theme-foreground-muted); }
 .kd-dr-lbl { letter-spacing:.3px; text-transform:uppercase; font-size:10.5px; opacity:.75; }
 .kd-dr-dash { opacity:.6; }
 .kd-dr-inputs input[type=date] { font:inherit; padding:3px 7px; color:var(--theme-foreground);
@@ -102,7 +102,7 @@ export function renderDateBrush({
     .style("display", "block")
     .style("background", "var(--editorial-paper, var(--theme-background-alt))")
     .style("border", "1px solid var(--card-border)")
-    .style("border-radius", "0");
+    .style("border-radius", "5px");
 
   // Sparkline
   svg.append("path").datum(data)
@@ -119,7 +119,7 @@ export function renderDateBrush({
     .attr("transform", `translate(0,${height - marginBottom})`)
     .call(d3.axisBottom(x).ticks(Math.max(4, Math.round(w / 100))).tickSizeOuter(0))
     .call(g => g.select(".domain").attr("stroke", "var(--card-border)"))
-    .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "currentColor").attr("fill-opacity", 0.6));
+    .call(g => g.selectAll("text").style("font-size", "11px").attr("fill", "currentColor").attr("fill-opacity", 0.7));
 
   // Clamp the initial range to the data domain.
   let [defStart, defEnd] = initialRange || xDomain;

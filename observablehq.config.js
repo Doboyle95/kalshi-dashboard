@@ -292,12 +292,16 @@ function venueStrip(path, current) {
 
 function compareStrip(path) {
   const links = SITE_MAP.find((g) => g.label === "Compare venues").links;
+  const current = links.find(([, p]) => p === path)?.[0] ?? "Overview";
   return '<div class="context-shell"><nav class="compare-nav" aria-label="Compare modules">' +
     '<span class="compare-nav-label">Compare</span>' +
     links.map(([label, p]) =>
       '<a href="' + p + '"' + (p === path ? ' aria-current="page"' : "") + '>' + escapeHtml(label) + '</a>'
     ).join("") +
-  '</nav></div>';
+  '</nav><details class="compare-mobile-picker"><summary><span>Compare venues</span><strong>' + escapeHtml(current) + '</strong></summary>' +
+    '<nav aria-label="Compare modules">' + links.map(([label, p]) =>
+      '<a href="' + p + '"' + (p === path ? ' aria-current="page"' : "") + '>' + escapeHtml(label) + '</a>'
+    ).join("") + '</nav></details></div>';
 }
 
 // The global masthead. It is emitted as build-time HTML on every page, so the
