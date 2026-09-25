@@ -181,4 +181,4 @@ display(Plot.plot({
   <p><strong>&ldquo;Other&rdquo; is not one thing.</strong> At Underdog it is the combo bucket; at OG/Crypto.com and DKeX it is a genuine residual, and OG/Crypto.com carries a separate explicit <em>Parlays</em> value. It is mapped per venue rather than globally.</p>
 </details>
 
-<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./rothera">Rothera &middot; Activity</a> for volume, open interest and top markets, <a href="./rothera-behavior">Trading behavior</a> for the trade tape, and <a href="./categories-venues">Products across venues</a> for the comparison.</div>
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./rothera">Rothera &middot; Activity</a> for volume, open interest and top markets, <a href="./rothera-behavior">Trading behavior</a> for individual trade records, and <a href="./categories-venues">Products across venues</a> for the comparison.</div>

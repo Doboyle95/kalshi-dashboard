@@ -55,7 +55,7 @@ const tapeContracts = d3.sum(size, d => +d.contracts || 0);
 ```
 
 ```js
-display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>This page reads a different, shorter feed than the rest of the venue.</strong> ${fmtCount(tapePrints)} prints and ${fmtCount(tapeContracts)} contracts across ${tapeDays.length} sessions, ${fmtDate(new Date(`${tapeFirst}T00:00:00Z`))} to ${fmtDate(new Date(`${tapeLast}T00:00:00Z`))}. <a href="./rothera">Activity</a> and <a href="./rothera-products">Products</a> run back to May on end-of-day market data; anything before the tape starts is permanently unavailable, which includes the whole 2026 World Cup.</div>`);
+display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>This page reads a different, shorter feed than the rest of the venue.</strong> ${fmtCount(tapePrints)} prints and ${fmtCount(tapeContracts)} contracts across ${tapeDays.length} sessions, ${fmtDate(new Date(`${tapeFirst}T00:00:00Z`))} to ${fmtDate(new Date(`${tapeLast}T00:00:00Z`))}. <a href="./rothera">Activity</a> and <a href="./rothera-products">Products</a> run back to May on end-of-day market data; anything before those trade records begin is permanently unavailable, which includes the whole 2026 World Cup.</div>`);
 ```
 
 ## Trade size mix
@@ -114,7 +114,7 @@ display(vapBins.length
 
 ## When it trades
 
-<p class="section-intro">Prints by hour of the Eastern day, summed across every session on the tape. This is the one venue here whose feed carries a timestamp, so it is the only place on the site outside Kalshi where an intraday shape can be drawn at all.</p>
+<p class="section-intro">Prints by hour of the Eastern day, summed across every recorded session. This is the one venue here whose feed carries a timestamp, so it is the only place on the site outside Kalshi where an intraday shape can be drawn at all.</p>
 
 <div class="control-strip">
 
@@ -238,12 +238,12 @@ display(smallRows.length
 
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
-  <p><strong>Everything here is a real print.</strong> Rothera publishes a fill-level tape &mdash; timestamp, contract, price, quantity &mdash; and this page reads it directly. Nothing on it is inferred from end-of-day bars, which is what the rest of the venue's pages are built on.</p>
+  <p><strong>Everything here is a real print.</strong> Rothera publishes individual fill records &mdash; timestamp, contract, price, quantity &mdash; and this page reads it directly. Nothing on it is inferred from end-of-day bars, which is what the rest of the venue's pages are built on.</p>
   <p><strong>There is no aggressor flag,</strong> so no trade can be attributed to a taker and the &ldquo;Taker stake&rdquo; ranking is absent rather than shown blank. Novig is the only competitor on this site that publishes one.</p>
   <p><strong>There is no English market name.</strong> Rothera publishes a product code and an outcome code and nothing else descriptive, so the tables show the code. Expanding <code>MLBGAME-26AUG30SEATOR-TOR</code> into a fixture would be a hand-written guess presented as venue data.</p>
   <p><strong>The trading day starts at 5 PM Eastern,</strong> not midnight: Rothera runs a 21:00Z-to-20:59Z session, so a session dated the 7th holds prints stamped from the evening of the 6th. Daily figures are keyed to the session, which is what makes them reconcile exactly against the venue's own end-of-day volume. The intraday chart is wall-clock time and is unaffected &mdash; it sums each hour of the day across every session.</p>
   <p><strong>Trade-size buckets are shared across venues,</strong> copied from the Kalshi producer, so a 100-lot is bucketed the same way everywhere and <a href="./trade-size">the comparison</a> means something.</p>
-  <p><strong>&ldquo;% of market&rdquo; is share of a window, not of a lifetime.</strong> The tape starts long after the venue did, so a market already busy before it began reads as more concentrated than it truly was. A market must also have traded at least 20 separate times to appear.</p>
+  <p><strong>&ldquo;% of market&rdquo; is share of a window, not of a lifetime.</strong> Those fill records start long after the venue did, so a market already busy before it began reads as more concentrated than it truly was. A market must also have traded at least 20 separate times to appear.</p>
 </details>
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./rothera">Rothera &middot; Activity</a>, <a href="./rothera-economics">Rothera &middot; Economics</a>, and <a href="./trade-size">Trading behavior across venues</a> for the comparison.</div>

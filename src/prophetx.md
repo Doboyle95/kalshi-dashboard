@@ -5,7 +5,7 @@ title: ProphetX
 <div class="page-hero">
   <div class="page-eyebrow">Competitor</div>
   <h1>ProphetX</h1>
-  <p class="page-lead">A peer-to-peer sports exchange publishing a full time-and-sales tape. This page covers <strong>what trades there</strong> — daily contract volume, how much of it is parlays, and on single markets <strong>whether those prices come true</strong>.</p>
+  <p class="page-lead">A peer-to-peer sports exchange publishing detailed time-and-sales records. This page covers <strong>what trades there</strong> — daily contract volume, how much of it is parlays, and on single markets <strong>whether those prices come true</strong>.</p>
 </div>
 
 ```js
@@ -162,7 +162,7 @@ display(parlayChart({
 
 ## Biggest games by volume
 
-<div class="instruction-line">Parlays and tournament outrights are left out because neither belongs to a single game; what remains is 77% of the tape.</div>
+<div class="instruction-line">Parlays and tournament outrights are left out because neither belongs to a single game; what remains is 77% of the recorded trades.</div>
 
 ```js
 // ProphetX names the fixture in every contract_description as

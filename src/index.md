@@ -240,7 +240,7 @@ display(scalePlot);
 
 </div>
 
-<div class="chart-inspect-hint">Click a date in the chart to open its industry snapshot. Exact recent dates are also available in the tape below.</div>
+<div class="chart-inspect-hint">Click a date in the chart to open its industry snapshot. Exact recent dates are also available in the table below.</div>
 
 ```js
 display(renderDateBrush({
@@ -360,7 +360,7 @@ display(html`<table class="briefing-table scoreboard-table">
 
 </div>
 
-## Recent daily volume tape
+## Recent daily volume by venue
 
 <p class="section-intro">Exact numbers for the most recent ten calendar dates. A tilde marks a still-filling report; an em dash means no figure was published for that venue and date, not zero trading.</p>
 
@@ -769,7 +769,7 @@ if (productView === "Current mix") {
 ## Go deeper
 
 <div class="destination-grid">
-  <a class="destination-card" href="./volume"><strong>Kalshi deep dive</strong><span>Activity, products, economics, outcomes, and parlays from the richest tape.</span></a>
+  <a class="destination-card" href="./volume"><strong>Kalshi deep dive</strong><span>Activity, products, economics, outcomes, and parlays from the most detailed public trade records.</span></a>
   <a class="destination-card" href="./compare"><strong>Compare venues</strong><span>Start with the strongest common measure, with coverage limits visible.</span></a>
   <a class="destination-card" href="./market-explorer"><strong>Explore markets</strong><span>Venue leaders, top markets, and one searchable finder.</span></a>
   <a class="destination-card" href="./methodology"><strong>Data &amp; methodology</strong><span>Coverage, definitions, mappings, and the limits of every comparison.</span></a>
