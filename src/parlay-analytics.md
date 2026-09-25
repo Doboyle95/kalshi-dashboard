@@ -795,16 +795,17 @@ const PVL_COLOR = KIND_COLORS[0];   // the page's non-correlated blue
 const pvlIndepProfile = pvlProfileRaw.filter(d => d.kind === "independent");
 const pvlPriceRows = pvlIndepProfile.filter(d => d.dim === "price");
 // The diagonal chart: one dot per price band, across = what its legs were worth on average,
-// up = what was actually paid. Both axes run down to 10⁻⁸¢ (legs worth 1 in 10 billion) on
-// purpose: that tail is the finding -- the legs keep getting worth less, the price stays at
-// ~0.1¢ (Daniel, 2026-09-25: "one of the most interesting findings"). Every band there holds
-// 100+ trades; beyond 10⁻⁸¢ they thin to a handful each (the most extreme ~10⁻¹⁰⁹¢, still
-// ~0.1¢), so they stay off the chart but in every figure. The square domain keeps the
-// "priced exactly at its legs" line at 45°.
-const PVL_X_MIN = 1e-8, PVL_X_MAX = 100;
-const PVL_TICKS = [1e-8, 1e-6, 1e-4, 0.01, 1, 100];
+// up = what was actually paid. Both axes run down to 0.0001¢ (legs worth 1 in a million) so the
+// floor shows: the legs keep getting worth less, the price stays at ~0.1¢, and the gap reaches
+// ~1,000x. Daniel 2026-09-25: the tail is "one of the most interesting findings", but 10⁻⁸¢ was
+// "a little too far" -- 10⁻⁴. Bands below keep the same ~0.1¢ price all the way to ~10⁻¹⁰⁹¢;
+// they are counted in every figure, just not drawn. The square domain keeps the "priced exactly
+// at its legs" line at 45°. Thin bands (a few hundred trades out of millions) are noise, not drawn.
+const PVL_X_MIN = 1e-4, PVL_X_MAX = 100;
+const PVL_TICKS = [1e-4, 1e-3, 0.01, 0.1, 1, 10, 100];
+const PVL_TICKS_NARROW = [1e-4, 0.01, 1, 100];
 const pvlPoints = pvlPriceRows
-  .filter(d => d.n_trades >= 100 && d.avg_indep_cents >= PVL_X_MIN)
+  .filter(d => d.n_trades >= 500 && d.avg_indep_cents >= PVL_X_MIN)
   .sort((a, b) => a.avg_indep_cents - b.avg_indep_cents);
 const pvlLegs = pvlIndepProfile
   .filter(d => d.dim === "legs" && d.n_trades >= 500)
@@ -840,7 +841,7 @@ const pvlFmt = v => v == null ? "–" : (v >= 0.05 ? "+" : v <= -0.05 ? "−" : 
 // A markup of +150% reads better as "2.5× its legs"; +100,000,000% as "1 million× its legs".
 const pvlFmtShort = v => v >= 100 ? pvlTimes(1 + v / 100) + " its legs" : pvlFmt(v);
 const pvlAxisFmt = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + "%";
-const pvlCentsAxis = v => v >= 100 ? "$1" : v >= 0.01 ? v + "¢" : pvlSci(v) + "¢";
+const pvlCentsAxis = v => v >= 100 ? "$1" : v >= 0.0001 ? v + "¢" : pvlSci(v) + "¢";
 // The dot whose legs were worth closest to a price, for the direct labels.
 const pvlNearest = cents => d3.least(pvlPoints, d => Math.abs(Math.log(d.avg_indep_cents / cents)));
 const pvlLegLabelled = pvlLegs.filter(d => ["2", "5", "10", "15", pvlLegs.at(-1)?.label].includes(d.label));
@@ -886,8 +887,8 @@ markup._
   // two decades along the floor. Floor labels sit to the RIGHT of their dot (the left edge is near).
   const labelled = [...new Set(width >= 600 ? [pvlNearest(10), pvlNearest(1)] : [pvlNearest(10)])].filter(Boolean);
   const floorLabelled = [...new Set(width >= 600
-    ? [pvlNearest(0.01), pvlNearest(1e-4), pvlNearest(1e-7)]
-    : [pvlNearest(1e-7)])].filter(Boolean);
+    ? [pvlNearest(0.01), pvlNearest(1e-4)]
+    : [pvlNearest(1e-4)])].filter(Boolean);
   // Floor labels are orders of magnitude, so one significant figure ("1,000×", not "983×");
   // the tooltip keeps two.
   const roundTimes = x => x >= 1e6 ? `${+(x / 1e6).toPrecision(1)} million×`
@@ -896,9 +897,9 @@ markup._
   display(Plot.plot({
     style: {fontFamily: "var(--font-sans)", fontSize: "12px"},
     width, height: H, marginLeft: m.left, marginRight: m.right, marginTop: m.top, marginBottom: m.bottom,
-    x: {type: "log", domain: [PVL_X_MIN, PVL_X_MAX], ticks: PVL_TICKS, tickFormat: pvlCentsAxis,
+    x: {type: "log", domain: [PVL_X_MIN, PVL_X_MAX], ticks: width >= 600 ? PVL_TICKS : PVL_TICKS_NARROW, tickFormat: pvlCentsAxis,
         tickSize: 0, grid: true, label: "What the legs are worth together"},
-    y: {type: "log", domain: [PVL_X_MIN, PVL_X_MAX], ticks: PVL_TICKS, tickFormat: pvlCentsAxis,
+    y: {type: "log", domain: [PVL_X_MIN, PVL_X_MAX], ticks: width >= 600 ? PVL_TICKS : PVL_TICKS_NARROW, tickFormat: pvlCentsAxis,
         tickSize: 0, grid: true, label: "What the parlay cost"},
     marks: [
       // The markup: the gap between "priced at its legs" and what was paid.
@@ -907,7 +908,7 @@ markup._
       Plot.line([[PVL_X_MIN, PVL_X_MIN], [PVL_X_MAX, PVL_X_MAX]],
         {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
       // Below the line in the empty lower-left, clear of the dots and the shaded gap.
-      Plot.text([[1e-5, 1e-5]], {x: d => d[0], y: d => d[1], text: () => "Priced exactly at its legs",
+      Plot.text([[1e-3, 1e-3]], {x: d => d[0], y: d => d[1], text: () => "Priced exactly at its legs",
         rotate: diagAngle, dy: 14, fontSize: 11, fill: "var(--theme-foreground-muted)"}),
       Plot.line(pvlPoints, {x: "avg_indep_cents", y: "avg_traded_cents", stroke: PVL_COLOR,
         strokeWidth: 2, curve: "monotone-x"}),
