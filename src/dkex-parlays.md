@@ -33,7 +33,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "How do DKeX parlay buyers do, by leg count and by whether the legs span one sport or several?",
-  context: "DKeX parlays page using dkex_parlay_daily.csv (date x leg count x sport set)."
+  context: "DKeX parlays page using dkex_parlay_daily.csv (date x leg count x sport set) and competitor_parlay_pnl_by_price_daily.csv (buyer P&L by the price paid, venue = DKeX)."
 }));
 ```
 
@@ -109,6 +109,7 @@ const settledShare = ALL.contracts ? ALL.settled_contracts / ALL.contracts : 0;
   <p><strong>Everything is dated by TRADE date, not settlement date.</strong> A row says how much of the stake placed that day has resolved so far, so the newest days are the least settled. ${pct(settledShare, 1)} of all parlay contracts have resolved. Voided ($0.50) and pro-rated settlements are excluded from P&amp;L and reported separately, so the drop is auditable.</p>
   <p><strong>Two figures, and the fee one is the comparable.</strong> Buyers are down ${fmtUSD(ALL.pnl)} before fees and ${fmtUSD(netPnl)} after the DKeX taker charge plus DraftKings Predictions&rsquo; applicable introducing-broker commission &mdash; ${netPerContract != null ? netPerContract.toFixed(5) : "—"} per contract, the same net basis used for the comparable Kalshi and Polymarket US rows. The clustered 95% interval on the gross return per contract runs ${ciLo != null ? ciLo.toFixed(2) : "—"}% to ${ciHi != null ? ciHi.toFixed(2) : "—"}% &mdash; ${ciLo != null && ciHi != null && ciLo < 0 && ciHi > 0 ? "it <strong>includes zero</strong>, so the gross edge is a point estimate rather than a distinguishable one" : "it <strong>excludes zero</strong>, so the gross edge is distinguishable from noise at that level"}. The interval is clustered on the combo, because every print of one combo shares a single settlement.</p>
   <p>⚠ <strong>This page covers the combos in the trade records, which is about two thirds of them.</strong> DKeX&rsquo;s daily market report accounts for 16,594,228 combo contracts; its time-and-sales report carries 11,304,853 of them, and 26,558 settled combos with report volume appear in no time-and-sales file at all. That is DKeX&rsquo;s own publication, not a gap in collection &mdash; the files were re-downloaded from the source and match. P&amp;L needs an executed price and only the time-and-sales records include one, so every level on this page (stake, contracts) is a floor rather than the venue total. The rates &mdash; price paid, win rate, return on stake &mdash; are measured on 11.2M contracts and are not affected by the missing third unless it trades differently, which cannot be checked.</p>
+  <p><strong>The breakdown by price paid</strong> scores every combo trade against its settlement, after DKeX&rsquo;s taker charge plus DraftKings Predictions&rsquo; commission &mdash; on a 1&cent; parlay those come to nearly 60% of the stake. DKeX prices combos in whole cents, so nothing trades below 1&cent;. Its records don&rsquo;t say whether a trade was a buy or a sell, so a parlay sold back before settlement can&rsquo;t be separated out the way Kalshi&rsquo;s cash-outs are: every trade counts as a bet held to the end.</p>
   <p><strong>The settlement-as-mark trap does not apply here, and it was checked.</strong> On Polymarket a settlement price is a running mark until the contract matured on a prior day, and treating same-day rows as final reports parlay buyers <em>profiting</em>. Every one of DKeX's combo tickers appears in the settlement reports exactly once, so no price ever moves, and 99.6% land on $0.00 or $1.00.</p>
 </details>
 
@@ -220,6 +221,22 @@ Plot.plot({
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">⚠ ${days.length} days of trading. The aggregate is a large sample in contracts &mdash; ${fmtCount(ALL.settled_contracts)} resolved &mdash; but the per-leg-count bars are not stable yet, and the buckets showing buyers ahead are far more likely to be noise than a real edge. Read the shape, not the individual bars.</div>
+
+## What bettors lost, by the price they paid
+
+```js
+// Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest
+// ## heading PRECEDING its DataAttachment call. A failed load shows the empty-state note instead.
+const lossRows = await DataAttachment("data/competitor_parlay_pnl_by_price_daily.csv").csv({typed: true}).catch(() => []);
+```
+
+_Share of stakes lost at each price after fees, with the dollars under each bar — ${dkLoss.span}. DKeX never prices a parlay below 1¢._
+
+```js
+import {lossByPrice, lossByPriceChart} from "./components/parlay-loss-by-price.js";
+const dkLoss = lossByPrice(lossRows, "DKeX");
+display(lossByPriceChart(dkLoss, {width}));
+```
 
 ## One sport or several
 

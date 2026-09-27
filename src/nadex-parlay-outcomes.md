@@ -130,3 +130,25 @@ That day: ${fmtM(+d.gross_pnl)}`,
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex-parlays">Parlays</a> for adoption and volume, <a href="./nadex-outcomes">OG/Crypto.com &middot; Outcomes</a> for whole-suite price calibration, and <a href="./nadex">OG/Crypto.com &middot; Activity</a>.</div>
+
+## What bettors lost, by the price they paid
+
+```js
+// Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest
+// ## heading PRECEDING its DataAttachment call. A failed load shows the empty-state note instead.
+const lossRows = await DataAttachment("data/competitor_parlay_pnl_by_price_daily.csv").csv({typed: true}).catch(() => []);
+```
+
+_Share of stakes lost at each price after the exchange's standard 2¢-a-contract fee, with the dollars under each bar — ${ogLoss.span}. Prices start at 1¢, where the fee alone is bigger than the stake._
+
+```js
+import {lossByPrice, lossByPriceChart} from "./components/parlay-loss-by-price.js";
+// Follows the page's date window, applied to the day each parlay was BOUGHT.
+const ogLoss = lossByPrice(lossRows, "Crypto.com/Nadex", [nadexPnlFrom, nadexPnlTo]);
+display(lossByPriceChart(ogLoss, {width, feeName: "the 2¢ fee"}));
+```
+
+<details class="surface-card compact-details">
+  <summary>How the price breakdown is measured</summary>
+  <p>Every COMBO trade is scored against its settlement and grouped by the price paid, on the day it was bought. The fee is the exchange's standard 2¢ a contract; the Crypto.com app has charged its own customers 1&ndash;1.75¢ since June 30, so for them the losses after fees are somewhat smaller. The venue's records don't say whether a trade was a buy or a sell, so a parlay sold back before settlement can't be separated out the way Kalshi's cash-outs are: every trade counts as a bet held to the end.</p>
+</details>
