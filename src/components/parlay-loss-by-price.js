@@ -1,8 +1,9 @@
 // "What bettors lost, by the price they paid" for a competitor's parlay page -- the twin of the
 // inline Kalshi chart on src/parlay.md, drawn the same way so the venues read alike.
 // Rows: competitor_parlay_pnl_by_price_daily.csv (python/build_competitor_parlay_pnl_by_price.py),
-// one per venue x buy date x price band. No cash-out adjustment exists for these venues (no
-// buy/sell flag), so every print is a bet held to settlement.
+// one per venue x buy date x price band. DKeX and OG/Crypto.com have no buy/sell flag, so every
+// print there is a bet held to settlement; Polymarket US's rows credit cash-outs (a later print of
+// exactly the same size at a different price), so they are realized, like Kalshi's.
 import * as Plot from "npm:@observablehq/plot";
 import * as d3 from "npm:d3";
 
@@ -15,8 +16,10 @@ const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numer
 const pct = r => `${r < 0 ? "−" : "+"}${Math.abs(r).toFixed(0)}%`;
 
 // One entry per band, summed over the venue's rows inside [from, to] (buy dates; either end may be
-// omitted). `span` is the caption's date phrase.
-export function lossByPrice(rows, venue, [from, to] = []) {
+// omitted). `span` is the caption's date phrase. `minShare` leaves out bands holding less than that
+// share of the window's stake: a band of a few dozen bets (Polymarket's under 0.1c, 0.02% of its
+// money) can read +200% off one win and would set the scale every other bar is drawn on.
+export function lossByPrice(rows, venue, [from, to] = [], {minShare = 0} = {}) {
   const rs = rows.filter(d => d.venue === venue && d.staked_usd > 0
     && (from == null || d.date >= from) && (to == null || d.date <= to));
   const first = d3.min(rs, d => d.date), last = d3.max(rs, d => d.date);
@@ -27,7 +30,9 @@ export function lossByPrice(rows, venue, [from, to] = []) {
     }), d => d.band)
     .map(([band, v]) => ({band, ...v, ret: 100 * v.net / v.staked, grossRet: 100 * v.gross / v.staked}))
     .sort((a, b) => a.band - b.band);
-  return {bands, first, span: rs.length ? `parlays bought ${fmtDate(first)} to ${fmtDate(last)}` : "nothing in this date range"};
+  const total = d3.sum(bands, d => d.staked);
+  const kept = minShare > 0 ? bands.filter(d => d.staked >= minShare * total) : bands;
+  return {bands: kept, first, span: rs.length ? `parlays bought ${fmtDate(first)} to ${fmtDate(last)}` : "nothing in this date range"};
 }
 
 // The bar chart. `feeName` names the fee in the tooltip ("fees", "the 2¢ fee").

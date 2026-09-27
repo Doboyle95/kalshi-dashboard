@@ -37,15 +37,18 @@ display(askPageLink({
 ```
 
 ```js
-// Headline figures. contracts/pnl are resolved-only; the daily volume series (`daily`) is
-// all traded volume on its own transaction-date basis -- see the clearing-vs-transaction
-// note below before comparing dates across charts on this page.
+// Headline figures: bets (buys) on parlays with a result, after cash-outs. The daily volume
+// series (`daily`) counts every trade, cash-outs included; everything is dated by transaction
+// date (build_polymarket_parlay.py, rebuilt 2026-09-27).
 const totalContracts = d3.sum(bins, d => d.contracts);
 const totalPnlGross  = d3.sum(bins, d => d.pnl);
 const totalFees      = d3.sum(bins, d => d.fees ?? 0);
 const totalPnl       = d3.sum(bins, d => d.pnl_net ?? d.pnl);
 const totalStake     = d3.sum(bins, d => d.contracts * d.price_paid);
 const pctOfStake     = totalStake ? totalPnl / totalStake * 100 : 0;
+// Held-to-settlement counterfactual, before fees (pnl_held exists from the 2026-09-27 rebuild on).
+const heldPnl        = bins.some(d => d.pnl_held != null) ? d3.sum(bins, d => d.pnl_held) : NaN;
+const heldPct        = totalStake && Number.isFinite(heldPnl) ? `${(100 * heldPnl / totalStake).toFixed(1)}%` : "—";
 const meta           = bins[0] ?? {};
 const provDaily       = daily.filter(d => !d.complete);
 const settled         = daily.filter(d => d.complete);
@@ -60,7 +63,7 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
   <div class="kpi-card">
     <div class="kpi-label">Realized taker P&L</div>
     <div class="kpi-value">${fmtUSD(totalPnl)}</div>
-    <div class="kpi-meta">resolved parlays only, after est. fees</div>
+    <div class="kpi-meta">after cash-outs and est. fees</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Before fees</div>
@@ -80,7 +83,7 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
   <div class="kpi-card">
     <div class="kpi-label">Resolved so far</div>
     <div class="kpi-value">${meta.pct_resolved?.toFixed(1)}%</div>
-    <div class="kpi-meta">clearing-date report basis</div>
+    <div class="kpi-meta">of stakes have a result</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Share of venue volume</div>
@@ -90,20 +93,12 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
 </div>
 
 ```js
-// The single most important caveat on this page, so it sits directly under the KPIs.
-display(html`<div class="chart-note" style="border-left:3px solid var(--accent-negative); padding-left:.75rem;">
-  ○ On the clearing-date report basis, only <strong>${meta.pct_resolved?.toFixed(1)}%</strong> of
-  parlay volume has matured. The P&L is a real figure for that settled cohort, not an estimate of
-  the eventual total; trade-date transaction totals use a different date basis and are not mixed into this percentage.
-  Fees are estimated at Polymarket's standard taker rate (<code>6% × p × (1−p)</code> per contract) —
-  the venue publishes no fee schedule specific to combos, so this is the general-market rate applied
-  by assumption, not a confirmed combo rate.
-</div>`);
+display(html`<div class="chart-note">Every bet counts at the price paid, and a cashed-out bet at the price it was cashed out at. Fees are estimated at Polymarket's standard taker rate.</div>`);
 ```
 
 ## What parlay bettors realized, before and after fees
 
-_Running total of resolved parlay P&L on the clearing-date report basis — **not** the same date axis as the daily-stakes chart further down, which is dated by the underlying transactions. The lighter dashed line is before fees; the solid line is after — the gap between them is the fee drag. Settled parlays only; a day here is when outcomes were published, not when the parlay was bought._
+_Running total by the day each parlay was bought; the dashed line is before fees. Recent days keep moving as their parlays settle._
 
 ```js
 const dpSorted = dailyPnl.slice().sort((a, b) => a.date - b.date);
@@ -129,7 +124,7 @@ display(Plot.plot({
 
 ## Daily realized P&L
 
-_Each bar is that day's resolved parlay P&L, after fees — same clearing-date basis as the chart above. Green days beat the house; red days didn't._
+_What the parlays bought each day made or lost, after fees. Green days beat the house; red days didn't._
 
 ```js
 display(Plot.plot({
@@ -140,7 +135,7 @@ display(Plot.plot({
     Plot.rectY(dpSorted, {x1: "date", x2: d => new Date(d.date.getTime() + 864e5), y: "pnl_net",
       fill: d => d.pnl_net < 0 ? "var(--accent-negative)" : "var(--accent-positive)", fillOpacity: 0.85,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.pnl_gross)}\nAfter fees: ${fmtUSD(d.pnl_net)}\nStaked: ${fmtUSD(d.stake)}\nContracts: ${fmtCount(d.contracts)}` + (d.terminated_contracts ? `\nExcluded (early-terminated): ${fmtCount(d.terminated_contracts)} contracts` : "")}),
+      title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.pnl_gross)}\nAfter fees: ${fmtUSD(d.pnl_net)}\nStaked: ${fmtUSD(d.stake)}\nContracts: ${fmtCount(d.contracts)}` + (d.terminated_contracts ? `\nLeft out (settled at an in-between price): ${fmtCount(d.terminated_contracts)} contracts` : "")}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
   ]
 }))
@@ -184,22 +179,42 @@ display(Plot.plot({
 }))
 ```
 
-## Daily stakes
-
-_Dollars staked on parlays each day; the hollow point is a day still being collected. Transaction-date basis (from trade records) — a different date axis from the realized-P&L charts above, which use the clearing-date report basis._
+## What bettors lost, by the price they paid
 
 ```js
+// Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest
+// ## heading PRECEDING its DataAttachment call. A failed load shows the empty-state note instead.
+const lossRows = await DataAttachment("data/competitor_parlay_pnl_by_price_daily.csv").csv({typed: true}).catch(() => []);
+```
+
+_Share of stakes lost at each price after cash-outs and fees, with the dollars under each bar — ${pmLoss.span}._
+
+```js
+import {lossByPrice, lossByPriceChart} from "./components/parlay-loss-by-price.js";
+// Bands under 0.1% of the money are left out: under 0.1c holds ~0.02% of it and swings on one win.
+const pmLoss = lossByPrice(lossRows, "Polymarket US", [], {minShare: 0.001});
+display(lossByPriceChart(pmLoss, {width}));
+```
+
+## Daily stakes
+
+_Money bet on new parlays each day (cash-outs are not counted as bets); the hollow point is a day still being collected._
+
+```js
+// buy_stake_usd leaves out the trades that close an earlier bet (~20% of parlay trade dollars);
+// stake_usd, every trade, is the fallback for a file written before 2026-09-27.
+const betStake = d => d.buy_stake_usd ?? d.stake_usd;
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Staked (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
-    Plot.areaY(settled, {x: "date", y: "stake_usd", fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
-    Plot.lineY(settled, {x: "date", y: "stake_usd", stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(provDaily, {x: "date", y: "stake_usd", r: 4, fill: "var(--theme-background)", stroke: "var(--accent-polymarket)", strokeWidth: 2}),
+    Plot.areaY(settled, {x: "date", y: betStake, fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
+    Plot.lineY(settled, {x: "date", y: betStake, stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(provDaily, {x: "date", y: betStake, r: 4, fill: "var(--theme-background)", stroke: "var(--accent-polymarket)", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(daily, Plot.pointerX({x: "date", y: "stake_usd",
-      title: d => `${fmtDate(d.date)}\nStaked: ${fmtUSD(d.stake_usd)}\nContracts: ${fmtCount(d.contracts)}\nTrades: ${fmtCount(d.trades)}${d.complete ? "" : "\n(still collecting)"}`}))
+    Plot.tip(daily, Plot.pointerX({x: "date", y: betStake,
+      title: d => `${fmtDate(d.date)}\nStaked: ${fmtUSD(betStake(d))}` + (d.cashout_stake_usd != null ? `\nCashed out: ${fmtUSD(d.cashout_stake_usd)}` : "") + `\nContracts: ${fmtCount(d.contracts)}\nTrades: ${fmtCount(d.trades)}${d.complete ? "" : "\n(still collecting)"}`}))
   ]
 }))
 ```
@@ -226,6 +241,6 @@ display(Plot.plot({
 
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
-  <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is necessarily the buyer and buyer P&L is taker P&L — the same footing on which Crypto.com combos are published. Outcomes come from the daily market report; the price paid for every contract comes from the venue's own time-and-sales records, joined on symbol, so no bin midpoint or bid-range estimate is involved (<code>basis = ${meta.basis}</code>). Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract) since combos carry no published fee schedule of their own — treat the after-fee figures as directional, not a confirmed venue disclosure.</p>
-  <p>A parlay counts only once it has matured on a prior business day. Some positions close out early — a real trade against the house that drives the position's open interest to zero, the same underlying mechanism as a Kalshi cash-out — and those are quarantined rather than scored: ${meta.pct_terminated?.toFixed(3)}% of matured volume. Unlike Kalshi, this venue's trade records have no side/aggressor column, so a closing trade can't be identified directly the way a Kalshi cash-out is; only full closes that also get their maturity date backdated in the daily report are caught here, so this is a narrower net than a complete cash-out accounting would be. There is no held-to-settlement comparison on this page.</p>
+  <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is the buyer and buyer P&L is taker P&L. Every bet counts at the price it traded at on the venue's time-and-sales records. Those records carry no buy/sell flag, so a later trade of exactly the same size at a different price is read as that bet being cashed out, and the bet makes the cash-out price rather than the result. Held to settlement instead, the same bets would have returned ${heldPct} before fees.</p>
+  <p>Results come from the daily market report where it gives one, and otherwise from the venue's own settlement record for each parlay; the report never gives one for about a seventh of the money, and those parlays win more often than the rest. ${meta.pct_resolved?.toFixed(1)}% of stakes have a result so far. Voided parlays and the few settled at an in-between price (${meta.pct_terminated?.toFixed(2)}% of contracts) are left out. Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract, charged again on a cash-out), since combos have no published schedule of their own. Everything is dated by the day the parlay was bought.</p>
 </details>
