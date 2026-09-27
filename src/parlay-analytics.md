@@ -4,9 +4,9 @@ title: Parlay Anatomy
 
 # Parlay Anatomy
 
-How Kalshi parlays are built and priced: the house edge by parlay length, the
-rise of multi-leg betting over time, which real games draw the most parlay
-money, and whether the implied odds match what actually happens — split by
+How Kalshi parlays are built and priced: the rise of multi-leg betting over
+time, which real games draw the most parlay money, whether the implied odds
+match what actually happens, and the house edge by parlay length — split by
 **same-game (correlated)** vs **multi-game (independent)** tickets.
 
 ```js
@@ -112,46 +112,6 @@ const he = heRaw.map(d => ({
   taker_stake: d.taker_stake,
   taker_pnl: d.taker_pnl
 })).sort((a,b) => a.legsN - b.legsN);
-```
-
-## House edge climbs with parlay length
-
-_Cost to the bettor per \$100 staked (taker P&L, before fees — real cost is worse). Each added leg compounds the margin on same-game tickets; the multi-game series is noisier and dips at 7 legs before climbing again at 10+._
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 360, marginLeft: 56,
-  x: {label: "Number of legs", domain: he.map(d=>d.legsLabel).filter((v,i,a)=>a.indexOf(v)===i), type: "point"},
-  y: {label: "House edge (% of stake)", grid: true, tickFormat: d => d + "%"},
-  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
-  marks: [
-    Plot.line(he, {x: "legsLabel", y: "house_edge", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.dot(he, {x: "legsLabel", y: "house_edge", fill: "kind", r: 4}),
-    Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "house_edge", stroke: "kind",
-      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtCount(d.total_vol)} contracts\nTaker stakes: ${fmtUSD(d.taker_stake)}`})),
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
-  ]
-})
-```
-
-## Win rate collapses with length
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width, height: 280, marginLeft: 56,
-  x: {label: "Number of legs", domain: he.map(d=>d.legsLabel).filter((v,i,a)=>a.indexOf(v)===i), type: "point"},
-  y: {label: "Settled win rate", grid: true, tickFormat: d => d + "%"},
-  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
-  marks: [
-    Plot.line(he, {x: "legsLabel", y: "win_rate", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.dot(he, {x: "legsLabel", y: "win_rate", fill: "kind", r: 4}),
-    Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "win_rate", stroke: "kind",
-      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}`})),
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
-  ]
-})
 ```
 
 ```js
@@ -264,7 +224,7 @@ const inParlayRange = row => row.date >= parlayBrushFrom && row.date <= parlayBr
 _From a standing start in late 2025 to billions of contracts a month. **Stakes** is the money bettors actually paid, and a long-shot ticket is a lot of contracts and very little of it${riseBasisNote(riseMetric)}._
 
 ```js
-const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View"}));
+const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Daily", label: "View"}));
 const riseMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: metricLabel}));
 ```
 
@@ -1022,6 +982,46 @@ display(Plot.plot({
         + `Legs priced at trade time: ${d.leg_coverage_pct}%`}))
   ]
 }))
+```
+
+## House edge climbs with parlay length
+
+_Cost to the bettor per \$100 staked (taker P&L, before fees — real cost is worse). Each added leg compounds the margin on same-game tickets; the multi-game series is noisier and dips at 7 legs before climbing again at 10+._
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 360, marginLeft: 56,
+  x: {label: "Number of legs", domain: he.map(d=>d.legsLabel).filter((v,i,a)=>a.indexOf(v)===i), type: "point"},
+  y: {label: "House edge (% of stake)", grid: true, tickFormat: d => d + "%"},
+  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
+  marks: [
+    Plot.line(he, {x: "legsLabel", y: "house_edge", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.dot(he, {x: "legsLabel", y: "house_edge", fill: "kind", r: 4}),
+    Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "house_edge", stroke: "kind",
+      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nHouse edge: ${pct1(d.house_edge)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}\nVolume: ${fmtCount(d.total_vol)} contracts\nTaker stakes: ${fmtUSD(d.taker_stake)}`})),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
+  ]
+})
+```
+
+## Win rate collapses with length
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width, height: 280, marginLeft: 56,
+  x: {label: "Number of legs", domain: he.map(d=>d.legsLabel).filter((v,i,a)=>a.indexOf(v)===i), type: "point"},
+  y: {label: "Settled win rate", grid: true, tickFormat: d => d + "%"},
+  color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
+  marks: [
+    Plot.line(he, {x: "legsLabel", y: "win_rate", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.dot(he, {x: "legsLabel", y: "win_rate", fill: "kind", r: 4}),
+    Plot.tip(he, Plot.pointerX({x: "legsLabel", y: "win_rate", stroke: "kind",
+      title: d => `${d.legsLabel}-leg · ${kindShort(d.kind)}\nWin rate: ${pct1(d.win_rate)}\nParlays: ${d.n_parlays.toLocaleString()}`})),
+    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"})
+  ]
+})
 ```
 
 <details class="surface-card compact-details">
