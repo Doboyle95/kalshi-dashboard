@@ -72,12 +72,19 @@ const DEST_DOMAIN = DEST.map(d => d.label);
 const DEST_RANGE  = DEST.map(d => d.color);
 
 const isComplete = d => d.complete === true || String(d.complete).toUpperCase() === "TRUE";
+// Weeks run Monday-Sunday and the CSV keys them by week_start. The page shows the day a
+// week ENDED instead: labelled by its Monday, a finished week reads six days older than
+// the data in it. week_start parses as UTC midnight, so +6 days lands on the Sunday.
+const weekEnd = d => new Date(+d + 6 * 86400000);
+const weekLabel = d => isComplete(d)
+  ? "Week ended " + fmtWeek(weekEnd(d.week_start))
+  : "Week ending " + fmtWeek(weekEnd(d.week_start)) + " (in progress)";
 const weeklyComplete = weekly.filter(isComplete);
 ```
 
 ```js
 const rhMonthlyLatest = latestDate(monthlyParsed, d => d.month_date);
-const rhWeeklyLatest  = latestDate(weekly, d => d.week_start);
+const rhWeeklyLatest  = latestDate(weeklyComplete, d => weekEnd(d.week_start));
 const rhStaleDays = rhWeeklyLatest ? Math.floor((Date.now() - +rhWeeklyLatest) / 86400000) : null;
 
 // 2026-08-07: this page had NO freshness panel. It matters more here than anywhere else,
@@ -92,7 +99,7 @@ display(freshnessPanel({
     : "Data freshness",
   items: [
     {label: "Weekly estimates", date: rhWeeklyLatest,
-     meta: "Latest week present in the data", tone: "settlement"},
+     meta: "Last full week in the data, by the day it ended", tone: "settlement"},
     {label: "Monthly estimates", date: rhMonthlyLatest,
      meta: "Latest month present in the data", tone: "settlement"}
   ],
@@ -127,9 +134,9 @@ const rhSeries = rhGrain === "Monthly"
       kalshi: d.kalshi_billions, label: fmtDate(d.month_date)
     }))
   : (rhMetric === "Estimated volume" ? weeklyComplete : weekly).map(d => ({
-      date: d.week_start, value: d.rh_est_billions, share: d.rh_share_pct,
+      date: weekEnd(d.week_start), value: d.rh_est_billions, share: d.rh_share_pct,
       rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0,
-      kalshi: d.kalshi_billions, label: "Week of " + fmtWeek(d.week_start)
+      kalshi: d.kalshi_billions, label: weekLabel(d)
     }));
 ```
 
@@ -191,7 +198,7 @@ Plot.plot({
     // which for barY is y -- that turned every y into a month-long span in milliseconds,
     // so all bars became identical and full-height.
     ? {interval: d3.utcMonth, label: null, tickFormat: d => d3.utcFormat("%b '%y")(d), tickRotate: -35}
-    : {label: null, tickRotate: -35},
+    : {label: "Week ended", tickRotate: -35},
   y: {
     label: rhMetric === "Estimated volume" ? "Contracts (billions)" : "Estimated share of Kalshi (%)",
     grid: true,
