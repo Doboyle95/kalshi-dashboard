@@ -10,7 +10,7 @@ title: Robinhood on Kalshi
 
 <details class="surface-card compact-details">
   <summary>Methodology</summary>
-  <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient — currently <strong>5.2455</strong> — that converts a share of positions held into a share of volume traded.</p>
+  <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient that converts a share of positions held into a share of volume traded: <strong>5.38</strong> through May 2026 and <strong>4.68</strong> from June, when Robinhood's own exchange, Rothera, launched and the relationship shifted.</p>
   <p><strong>Rothera is subtracted first.</strong> It clears through the same firm, so from June 2026 its open positions sit inside the same filing. Left in, June 2026 estimates 66% high.</p>
   <p><strong>What the estimate covers.</strong> It is fitted against Robinhood's announced total less Rothera, so it predicts everything Robinhood sends anywhere except Rothera. ForecastEx sports and weather volume — which we attribute to Robinhood — is then taken off to leave Kalshi alone. That is an attribution, not a second estimate: the coefficient is not refitted and the total does not change.</p>
   <p><strong>Accuracy.</strong> The coefficient is calibrated against the ten months where Robinhood published an actual figure. Mean error across those months is <strong>4.2%</strong>.</p>
@@ -66,6 +66,9 @@ const reportedParsed = reported
 const DEST = [
   {key: "kalshi",     label: "Kalshi",     color: "var(--accent-kalshi)"},
   {key: "rothera",    label: "Rothera",    color: "var(--theme-foreground)"},
+  // From 2026-09-08 Robinhood routes football to OG.com. Estimated, not measured -- see
+  // python/build_rh_ogcom_estimate.py. Purple is the site's OG/Crypto.com colour everywhere.
+  {key: "og",         label: "OG/Crypto.com", color: "var(--accent-nadex)"},
   {key: "forecastex", label: "ForecastEx", color: "var(--accent-forecastex)"}
 ];
 const DEST_DOMAIN = DEST.map(d => d.label);
@@ -121,7 +124,7 @@ const rhGrain = view(Inputs.radio(["Weekly", "Monthly"], {label: "Period", value
 const rhMetric = view(Inputs.radio(["Estimated volume", "Share of Kalshi"], {label: "Metric", value: "Estimated volume"}));
 ```
 
-<p class="section-intro">Estimated only — Robinhood does not report a per-venue figure. Rothera and ForecastEx are measured; Kalshi is what the model infers.</p>
+<p class="section-intro">Robinhood does not report per-venue figures. Rothera and ForecastEx are measured; OG/Crypto.com is estimated from its football volume, and Kalshi from Robinhood's CFTC filings.</p>
 
 ```js
 // One series drives both the brush and the chart, so the two can never disagree about
@@ -130,12 +133,12 @@ const rhMetric = view(Inputs.radio(["Estimated volume", "Share of Kalshi"], {lab
 const rhSeries = rhGrain === "Monthly"
   ? monthlyParsed.map(d => ({
       date: d.month_date, value: d.rh_est_billions, share: d.rh_share_pct,
-      rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0,
+      rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0, og: d.og_billions ?? 0,
       kalshi: d.kalshi_billions, label: fmtDate(d.month_date)
     }))
   : (rhMetric === "Estimated volume" ? weeklyComplete : weekly).map(d => ({
       date: weekEnd(d.week_start), value: d.rh_est_billions, share: d.rh_share_pct,
-      rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0,
+      rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0, og: d.og_billions ?? 0,
       kalshi: d.kalshi_billions, label: weekLabel(d)
     }));
 ```
@@ -151,7 +154,7 @@ const setRhSel = range => { rhSel.value = range; };
 ```js
 display(renderDateBrush({
   data: rhSeries.map(d => ({date: d.date,
-    value: rhMetric === "Estimated volume" ? d.value + d.rothera + d.fx : d.share})),
+    value: rhMetric === "Estimated volume" ? d.value + d.rothera + d.og + d.fx : d.share})),
   initialRange: d3.extent(rhSeries, d => d.date),
   onSelect: setRhSel,
   color: "var(--accent-robinhood)",
@@ -165,6 +168,7 @@ const rhView = rhSeries.filter(d => d.date >= rhSel[0] && d.date <= rhSel[1]);
 const rhStack = rhView.flatMap(d => [
   {...d, dest: "Kalshi", v: d.value},
   {...d, dest: "Rothera", v: d.rothera},
+  {...d, dest: "OG/Crypto.com", v: d.og},
   {...d, dest: "ForecastEx", v: d.fx}
 ]).filter(d => d.v > 0);
 ```
@@ -245,7 +249,7 @@ Plot.plot({
 
 ## Where Robinhood's volume goes
 
-<p class="section-intro">Robinhood reports an all-venue total each month; taking off the Rothera and ForecastEx volume we measure ourselves leaves its Kalshi figure, with no estimate involved. Faded bars are months it has not reported yet.</p>
+<p class="section-intro">Robinhood reports an all-venue total each month. Take off the Rothera and ForecastEx volume we measure, and from September 8 the OG/Crypto.com volume we estimate, and what remains is Kalshi. Faded bars are months Robinhood has not reported yet.</p>
 
 ```js
 // Long form, one row per destination, so Plot stacks them. Rothera is OBSERVED in every
@@ -255,6 +259,7 @@ Plot.plot({
 const destStack = reportedParsed.flatMap(d => [
   {...d, dest: "Kalshi",     value: d.rh_kalshi_billions},
   {...d, dest: "Rothera",    value: d.rothera_billions ?? 0},
+  {...d, dest: "OG/Crypto.com", value: d.og_billions ?? 0},
   {...d, dest: "ForecastEx", value: d.forecastex_billions ?? 0}
 ]).filter(d => d.value > 0);
 ```
@@ -274,7 +279,7 @@ Plot.plot({
     // not re-laying for whoever edits this next.
     Plot.barY(destStack, {
       x: "month_date", y: "value", fill: "dest", z: "dest",
-      order: ["Kalshi", "Rothera", "ForecastEx"],
+      order: DEST_DOMAIN,
       // Opacity carries reported-vs-estimated; colour carries destination. Two variables,
       // two visual channels, so neither has to be read out of the other.
       fillOpacity: d => d.is_actual ? 0.9 : 0.4,
@@ -282,9 +287,13 @@ Plot.plot({
         Month: d => fmtDate(d.month_date),
         Destination: d => d.dest,
         Contracts: d => fmtB(d.value) + " contracts",
+        // Robinhood reports the TOTAL, never the Kalshi slice -- so an "actual" Kalshi bar
+        // is that total less the other venues, and says so.
         Basis: d => d.dest === "Kalshi"
-          ? (d.is_actual ? "Reported by Robinhood" : "Estimated")
-          : "Measured from " + d.dest,
+          ? (d.is_actual ? "Robinhood's reported total, less the other venues" : "Estimated")
+          : d.dest === "OG/Crypto.com"
+            ? "Estimated from OG/Crypto.com's football volume"
+            : "Measured from " + d.dest,
         "All venues": d => d.rh_total_billions > 0
           ? fmtB(d.rh_total_billions) + " contracts"
           : "not yet reported"
