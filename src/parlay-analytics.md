@@ -256,18 +256,43 @@ display(Plot.plot({
 _Mean legs per parlay crept up past 6 and is still rising &mdash; ${latestMeanLegs ?? "—"} in the latest month._
 
 ```js
-Plot.plot({
+// Daily view: parlay_legs_daily.csv is the monthly series' entry cohort by DAY -- each parlay on
+// the ET date it first traded -- from the same builder and facts, so a month of its rows weighted
+// by n_parlays gives that month's point. Loaded here, not in the shared block at the top, so the
+// chart catalog credits it to this section. If the file is missing only the daily view goes.
+const legsDailyRaw = await (async () => {
+  try { return await DataAttachment("data/parlay_legs_daily.csv").csv({typed: true}); }
+  catch (e) { return []; }
+})();
+const legsDaily = legsDailyRaw
+  .map(d => ({date: d.date instanceof Date ? d.date : d3.utcParse("%Y-%m-%d")(String(d.date)),
+              n_parlays: +d.n_parlays, mean_legs: +d.mean_legs, median_legs: +d.median_legs}))
+  .filter(d => d.date && Number.isFinite(d.mean_legs))
+  .sort((a, b) => a.date - b.date);
+const legsGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly", label: "View",
+  disabled: legsDaily.length ? false : ["Daily"]}));
+```
+
+```js
+const legsDailyView = legsGranularity === "Daily";
+const legsSeries = legsDailyView ? legsDaily : tline;
+const legsShown = legsSeries.filter(inParlayRange);
+display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 240, marginLeft: 56,
   x: {type: "utc", label: null},
-  y: {label: "Mean legs / parlay", grid: true, domain: [0, d3.max(tline, d=>d.mean_legs)*1.15]},
+  y: {label: "Mean legs / parlay", grid: true, domain: [0, d3.max(legsSeries, d => d.mean_legs) * 1.15]},
   marks: [
-    Plot.line(tline.filter(inParlayRange), {x: "date", y: "mean_legs", stroke: "#7048e8", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.dot(tline.filter(inParlayRange), {x: "date", y: "mean_legs", fill: "#7048e8", r: 3}),
-    Plot.tip(tline.filter(inParlayRange), Plot.pointerX({x: "date", y: "mean_legs",
-      title: d => `${d.month}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}))
+    // A dot per month; a plain line for the ~370 daily points, which dots would bury.
+    Plot.line(legsShown, {x: "date", y: "mean_legs", stroke: "#7048e8",
+      strokeWidth: legsDailyView ? 1.5 : 2.5, curve: legsDailyView ? "linear" : "monotone-x"}),
+    legsDailyView ? null : Plot.dot(legsShown, {x: "date", y: "mean_legs", fill: "#7048e8", r: 3}),
+    Plot.tip(legsShown, Plot.pointerX({x: "date", y: "mean_legs",
+      title: d => legsDailyView
+        ? `${d3.utcFormat("%Y-%m-%d")(d.date)}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}\nParlays first traded: ${d.n_parlays.toLocaleString()}`
+        : `${d.month}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}))
   ]
-})
+}))
 ```
 
 _Composition on two different bases: share of **volume** in 4+-leg parlays, and share of **tickets** that are same-game (correlated). The same-game ticket share dipped sharply in Feb–Mar 2026._
