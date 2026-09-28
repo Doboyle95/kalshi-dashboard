@@ -78,7 +78,7 @@ display(rows.length ? renderDateBrush({
 
 ## Daily volume · calls and puts
 
-<p class="section-intro">Each bar is one CME Daily Bulletin (FanDuel + DraftKings combined), shown exactly as CME publishes it. <strong>Mondays look huge because CME reports the whole weekend in the Monday bulletin</strong> — Saturday, Sunday and Monday volume all land on Monday (holiday weekends like Good Friday bundle in even more). Gaps are days we couldn't collect, not zero-volume days. On the <a href="./compare-scale#volume-and-market-share">Scale &amp; Liquidity comparison</a> we spread those weekend lumps back across the days they actually traded; here we keep the raw bulletin figures.</p>
+<p class="section-intro">Each bar is one CME Daily Bulletin, shown exactly as CME publishes it. <strong>Mondays look huge because they include the weekend.</strong> Gaps are days we couldn't collect, not zero-volume days.</p>
 
 ```js
 const inRange = rows.filter(d => d.date >= cmeDateSel[0] && d.date <= cmeDateSel[1]);
@@ -102,8 +102,6 @@ display(Plot.plot({
   ]
 }))
 ```
-
-<p class="chart-note">Across the <strong>${inRange.length}</strong> days shown, FanDuel + DraftKings cleared <strong>${fmtCount(d3.sum(inRange, d => d.total))}</strong> contracts on CME.</p>
 
 <details class="surface-card compact-details">
   <summary>About this data</summary>
