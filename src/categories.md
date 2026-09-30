@@ -526,6 +526,12 @@ function clearPinnedCategories() {
 
 <p class="section-intro">Start here. The treemap is the fastest read on which categories matter most in the window — click any tile to zoom into the biggest markets inside it.</p>
 
+```js
+// Reported fees per ticker per day, read by the treemap's Fees metric and the All-time
+// leaderboard below. Own cell, so only those readers wait for this ~12 MB file.
+const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
+```
+
 <div class="control-strip">
 
 ```js
@@ -1726,6 +1732,7 @@ const sportsSplit = await DataAttachment("data/daily_sports_vs_nonsports.csv").c
 
 ```js
 // Map tickers to display groups - Football and Basketball split into pro/college subcategories
+// fees.md keeps a copy of wideMap + wideCategoryForTicker for its fee-by-category charts -- change both.
 const wideMap = {
   // NFL (pro football) - dark warm
   KXNFLGAME: "NFL", KXNFLSPREAD: "NFL", KXNFLTOTAL: "NFL", KXSB: "NFL",
@@ -2187,231 +2194,6 @@ Plot.plot({
 </div>
 
 <div class="chart-note"><strong>Reading note:</strong> daily columns are noisier than the monthly bars — weekends, single big events, and settlement days all show up. Brush to a few months to read individual days clearly.</div>
-
-## Fees by category over time
-
-<p class="section-intro">The same category mix, but for the fees Kalshi <em>collected</em> — on a trade-date basis (fees as charged when a trade executes, not when markets settle). Uses the date window and category controls below; shares the brush with the volume charts above.</p>
-
-```js
-const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
-const dailyOverallFees = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-```
-
-```js
-// wideDailyFees — parallel to wideDaily, but trade-date fees instead of contracts.
-// Parlay is a single bucket (no per-leg fee data), derived as the residual
-// total_fees - sports_fees - nonsports_fees so the stack still sums to the day's fees.
-const feesTotalByDate = new Map(dailyOverallFees.map(d => [+d.date, +d.fees_total || 0]));
-const wideDailyFees = topDailyFees.map(row => {
-  const sp = sportsSplit.find(s => +s.date === +row.date) || {};
-  const groups = {
-    NFL: 0, "College football": 0, NBA: 0, "College basketball": 0,
-    Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0, Soccer: 0, "Combat sports": 0,
-    Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
-  };
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const wg = wideCategoryForTicker(cat);
-    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
-  }
-  const feesSports    = +sp.fees_sports_nonparlay || 0;
-  const feesNonSports = +sp.fees_nonsports || 0;
-  const feesParlay    = Math.max(0, (feesTotalByDate.get(+row.date) || 0) - feesSports - feesNonSports);
-  const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
-    groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
-  return {
-    date: row.date,
-    ...groups,
-    Parlay: feesParlay,
-    "Other sports":     Math.max(0, feesSports    - knownSports),
-    "Other non-sports": Math.max(0, feesNonSports - knownNonSports)
-  };
-});
-
-// Detailed order/colors for fees — single "Parlay" bucket (no correlated/independent/pending split).
-const feesWideOrder = [
-  "Other non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
-  "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
-  "College football", "NFL", "College basketball", "NBA", "Parlay"
-];
-const feesWideColors = {...wideColors, "Parlay": "#7b1fa2"};
-```
-
-<div class="control-strip">
-
-```js
-const feeScale  = view(Inputs.radio(["Absolute", "Normalized"], {value: "Absolute", label: "Scale"}));
-const feeDetail = view(Inputs.radio(["General", "Detailed"],    {value: "General",  label: "Categories"}));
-```
-
-</div>
-
-```js
-const feeActiveOrder    = feeDetail === "Detailed" ? feesWideOrder : generalOrder;
-const feeActiveColorMap = feeDetail === "Detailed" ? feesWideColors : generalColors;
-const [feeStart, feeEnd] = catDateSel;
-
-// Build tidy rows at a given period grain (month "YYYY-MM" or day Date) for the active detail.
-function feeTidyRows(rows, periodOf, dateField) {
-  const rolled = d3.rollup(
-    rows,
-    rs => { const o = {}; for (const g of feesWideOrder) o[g] = d3.sum(rs, d => d[g] || 0); return o; },
-    periodOf
-  );
-  const sorted = [...rolled].sort(([a], [b]) => a < b ? -1 : 1);
-  const tidy = sorted.flatMap(([p, vals]) => {
-    if (feeDetail === "General") {
-      const gen = Object.fromEntries(generalOrder.map(g => [g, 0]));
-      for (const [det, gname] of Object.entries(generalMap)) gen[gname] += vals[det] || 0;
-      return generalOrder.map(g => ({[dateField]: p, category: g, fees: gen[g]}));
-    }
-    return feesWideOrder.map(g => ({[dateField]: p, category: g, fees: vals[g] || 0}));
-  });
-  const totals = d3.rollup(tidy, rs => d3.sum(rs, r => r.fees), d => d[dateField]);
-  const plot = tidy.map(d => ({...d, value: feeScale === "Normalized" ? d.fees / (totals.get(d[dateField]) || 1) : d.fees}));
-  const tip = Array.from(d3.rollup(plot, rs => {
-    const o = {[dateField]: rs[0][dateField]};
-    for (const r of rs) o[r.category] = r.value;
-    o.total = d3.sum(rs, r => r.fees);
-    return o;
-  }, d => d[dateField])).map(([, v]) => v);
-  return {sorted, plot, tip};
-}
-
-const feeWindowRows = wideDailyFees.filter(d => d.date >= feeStart && d.date <= feeEnd);
-
-const feeMonthly = feeTidyRows(feeWindowRows, d => d.date.toISOString().slice(0, 7), "month");
-feeMonthly.tip.sort((a, b) => a.month < b.month ? -1 : 1);
-const feeMonthLabels = feeMonthly.sorted.map(([mo]) => mo);
-const feeMonthTickFmt = mo => { const [y, m] = mo.split("-"); const a = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m - 1]; return m === "01" ? `${a} '${y.slice(2)}` : a; };
-
-const feeUSD = d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k");
-const feeTipRows = (d, key) => {
-  const rows = feeActiveOrder.filter(c => (d[c] || 0) > 0).sort((a, b) => (d[b] || 0) - (d[a] || 0));
-  const shown = rows.slice(0, 12).map(c => feeScale === "Normalized" ? `${c}: ${((d[c]||0)*100).toFixed(1)}%` : `${c}: $${fmtCount(d[c]||0)}`);
-  const hidden = rows.length - shown.length;
-  return [key, feeScale === "Normalized" ? "Total: 100%" : `Total: $${fmtCount(d.total||0)}`, ...shown, ...(hidden > 0 ? [`+${hidden} more`] : [])].join("\n");
-};
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  width, height: 420, marginLeft: 70,
-  marginBottom: feeMonthLabels.length > 18 ? 50 : 40,
-  color: {legend: true, domain: feeActiveOrder, range: feeActiveOrder.map(g => feeActiveColorMap[g])},
-  x: {type: "band", domain: feeMonthLabels, label: null, tickFormat: feeMonthTickFmt, tickRotate: feeMonthLabels.length > 18 ? -45 : 0},
-  y: {label: feeScale === "Normalized" ? "Share of monthly fees" : "Monthly fees (USD)", grid: true,
-      tickFormat: feeScale === "Normalized" ? (d => (d*100).toFixed(0)+"%") : feeUSD},
-  marks: [
-    Plot.barY(feeMonthly.plot, {x: "month", y: "value", fill: "category", order: feeActiveOrder, fillOpacity: 0.88}),
-    Plot.ruleX(feeMonthly.tip, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
-    Plot.tip(feeMonthly.tip, Plot.pointerX({x: "month", fontSize: 11, lineHeight: 1.1, title: d => feeTipRows(d, d.month)})),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note"><strong>Reading note:</strong> these are trade-date fees (charged when a trade executes), so they reconcile with the daily fee totals on the Fees page. Parlay is one bucket — we don't have per-leg fee data to split it. <em>General</em>/<em>Detailed</em>/<em>Normalized</em> behave as in the volume chart.</div>
-
-### Daily view
-
-```js
-const feeDaily = feeTidyRows(feeWindowRows, d => +d.date, "ms");
-feeDaily.plot.forEach(d => d.date = new Date(d.ms));
-feeDaily.tip.forEach(d => d.date = new Date(d.ms));
-feeDaily.tip.sort((a, b) => a.ms - b.ms);
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  width, height: 340, marginLeft: 70,
-  color: {legend: true, domain: feeActiveOrder, range: feeActiveOrder.map(g => feeActiveColorMap[g])},
-  x: {type: "utc", label: null},
-  y: {label: feeScale === "Normalized" ? "Share of daily fees" : "Daily fees (USD)", grid: true,
-      tickFormat: feeScale === "Normalized" ? (d => (d*100).toFixed(0)+"%") : feeUSD},
-  marks: [
-    Plot.areaY(feeDaily.plot, {x: "date", y: "value", fill: "category", order: feeActiveOrder, fillOpacity: 0.85, curve: "step"}),
-    Plot.ruleX(feeDaily.tip, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.22})),
-    Plot.tip(feeDaily.tip, Plot.pointerX({x: "date", fontSize: 11, lineHeight: 1.1,
-      title: d => feeTipRows(d, d.date.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}))})),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-### Fee rate by category
-
-<p class="section-intro">Effective fee rate (¢ per contract charged) by category — the same per-category split as the fees chart above, but as a rate instead of a dollar total, so a category can be flagged as expensive-per-contract even if its total fee dollars are small. Kalshi's fee formula peaks at the 50¢ strike and falls off toward 1¢/99¢, so this mostly reflects each category's typical contract price. Same window/toggle/colors as the fees charts above.</p>
-
-```js
-// wideDaily already carries a plain "Parlay" total (pre-3-way leg split) matching
-// feesWideOrder's exact category grain, so no extra reconciliation is needed here.
-const volWindowRowsForRate = wideDaily.filter(d => d.date >= feeStart && d.date <= feeEnd);
-const volMonthlyForRate = d3.rollup(
-  volWindowRowsForRate,
-  rs => { const o = {}; for (const g of feesWideOrder) o[g] = d3.sum(rs, d => d[g] || 0); return o; },
-  d => d.date.toISOString().slice(0, 7)
-);
-
-const feeRateTidy = feeMonthly.sorted.flatMap(([mo, feeVals]) => {
-  const volVals = volMonthlyForRate.get(mo) || {};
-  if (feeDetail === "General") {
-    const genFees = Object.fromEntries(generalOrder.map(g => [g, 0]));
-    const genVol  = Object.fromEntries(generalOrder.map(g => [g, 0]));
-    for (const [det, gname] of Object.entries(generalMap)) {
-      genFees[gname] += feeVals[det] || 0;
-      genVol[gname]  += volVals[det] || 0;
-    }
-    return generalOrder.map(g => ({month: mo, category: g, rate: genVol[g] > 0 ? genFees[g] / genVol[g] * 100 : null}));
-  }
-  return feesWideOrder.map(g => ({month: mo, category: g, rate: (volVals[g] || 0) > 0 ? (feeVals[g] || 0) / volVals[g] * 100 : null}));
-});
-const feeRateTip = Array.from(
-  d3.rollup(feeRateTidy, rs => {
-    const o = {month: rs[0].month};
-    for (const r of rs) o[r.category] = r.rate;
-    return o;
-  }, d => d.month)
-).map(([, v]) => v).sort((a, b) => a.month < b.month ? -1 : 1);
-const feeRateTipRows = d => {
-  const rows = feeActiveOrder.filter(c => d[c] != null).sort((a, b) => (d[b] ?? 0) - (d[a] ?? 0));
-  const shown = rows.slice(0, 12).map(c => `${c}: ${d[c].toFixed(2)}¢`);
-  const hidden = rows.length - shown.length;
-  return [d.month, ...shown, ...(hidden > 0 ? [`+${hidden} more`] : [])].join("\n");
-};
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  width, height: 340, marginLeft: 60,
-  marginBottom: feeMonthLabels.length > 18 ? 50 : 40,
-  color: {legend: true, domain: feeActiveOrder, range: feeActiveOrder.map(g => feeActiveColorMap[g])},
-  x: {type: "band", domain: feeMonthLabels, label: null, tickFormat: feeMonthTickFmt, tickRotate: feeMonthLabels.length > 18 ? -45 : 0},
-  y: {label: "Fee rate (¢ / contract)", grid: true, tickFormat: d => d.toFixed(1) + "¢"},
-  marks: [
-    Plot.lineY(feeRateTidy, {x: "month", y: "rate", stroke: "category", z: "category",
-      curve: "monotone-x", strokeWidth: 2, defined: d => d.rate != null}),
-    Plot.ruleX(feeRateTip, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
-    Plot.tip(feeRateTip, Plot.pointerX({x: "month", fontSize: 11, lineHeight: 1.1, title: feeRateTipRows})),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note"><strong>Reading note:</strong> a month with zero contracts for a category is left as a gap in that line rather than a misleading 0¢ rate. <em>General</em>/<em>Detailed</em> match the toggle above; this chart ignores the <em>Normalized</em> scale control (a rate is already normalized).</div>
 
 ```js
 if (hasCategoryFocus) {
