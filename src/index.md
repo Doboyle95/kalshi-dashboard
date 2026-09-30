@@ -425,7 +425,9 @@ const VENUE_BUCKET = {
   Commodities: "Non-sports", Companies: "Non-sports", Crypto: "Non-sports", Weather: "Non-sports",
   "Climate and Weather": "Non-sports", "Science and Technology": "Non-sports",
   Entertainment: "Non-sports", Mentions: "Non-sports", Mention: "Non-sports", Social: "Non-sports",
-  Health: "Non-sports", World: "Non-sports", Transportation: "Non-sports"
+  Health: "Non-sports", World: "Non-sports", Transportation: "Non-sports",
+  // category_daily files a parlay whose legs are ALL non-sport here (Kalshi calls it "Sports").
+  "Non-sport parlays": "Non-sports"
 };
 // "Other" means a different thing at each venue, so it is never mapped globally:
 // Underdog's "Other" is its combo/parlay bucket (verified against
@@ -484,6 +486,12 @@ const kalshiColumnBucket = new Map(kalshiColumns.map(column => {
   const bucket = TAKER_GENERAL_MAP[kalshiTickerToCat.get(column)];
   return [column, PRODUCT_BUCKETS.includes(bucket) ? bucket : "Unclassified"];
 }));
+// A parlay whose legs are all non-sport is a non-sport bet, but sport and non-sport parlays
+// share one series column, so category_daily's per-ticker "Non-sport parlays" volume is moved
+// out of Parlay by date. Both files load typed, so +date is the same UTC-midnight key.
+const kalshiNonSportParlay = new Map(kCat
+  .filter(r => r.date && r.kalshi_category === "Non-sport parlays")
+  .map(r => [+r.date, +r.contracts || 0]));
 const kalshiProductRows = kTickerDaily.flatMap(row => {
   if (!row.date) return [];
   const sums = new Map();
@@ -492,6 +500,11 @@ const kalshiProductRows = kTickerDaily.flatMap(row => {
     if (!(value > 0)) continue;
     const bucket = kalshiColumnBucket.get(column);
     sums.set(bucket, (sums.get(bucket) ?? 0) + value);
+  }
+  const nonSportParlay = Math.min(kalshiNonSportParlay.get(+row.date) ?? 0, sums.get("Parlay") ?? 0);
+  if (nonSportParlay > 0) {
+    sums.set("Parlay", sums.get("Parlay") - nonSportParlay);
+    sums.set("Non-sports", (sums.get("Non-sports") ?? 0) + nonSportParlay);
   }
   return Array.from(sums, ([bucket, contracts]) => ({date: row.date, venue: "Kalshi", bucket, contracts}));
 });

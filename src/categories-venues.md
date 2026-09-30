@@ -74,8 +74,11 @@ const perVenue = RAW.map(([key, rows, c, v, venue = key]) => {
   const agg = roll(key, rows, c, v);
   // Kalshi books parlays INSIDE Sports, so its band is carved out rather than mapped.
   // Every other venue publishes the parlay bucket separately and needs no adjustment.
+  // A parlay whose legs are ALL non-sport is a non-sport bet: category_daily already files it
+  // under "Non-sport parlays" (bucket Other), so it is taken out of the parlay volume carved here.
   if (venue === "Kalshi") {
-    const p = d3.sum(kParlay.filter(r => inWin(r.date)), r => +r.contracts || 0);
+    const p = d3.sum(kParlay.filter(r => inWin(r.date)), r => +r.contracts || 0)
+      - d3.sum(kCat.filter(r => inWin(r.date) && r.kalshi_category === "Non-sport parlays"), r => +r.contracts || 0);
     const sports = agg.get("Sports") ?? 0;
     agg.set("Sports", Math.max(0, sports - p));
     agg.set("Sports · parlays", p);
