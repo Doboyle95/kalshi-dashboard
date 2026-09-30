@@ -11,7 +11,7 @@ title: Fees & Economics
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_COLORS, VENUE_ORDER, normalizeVenueName} from "./components/venue-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const daily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
@@ -83,30 +83,26 @@ const selectedFeeVenues = view(Inputs.checkbox(feeVenues, {label: "Venues", valu
 ```js
 const feeValue = d => feeMeasure.startsWith("Fee cost") ? d.cost : d.revenue;
 const feeShown = feeRows.filter(d => selectedFeeVenues.includes(d.venue) && (feeValue(d) ?? 0) > 0);
-const feeTotalsByDate = Array.from(
-  d3.rollup(feeShown, rows => d3.sum(rows, feeValue), d => +d.date),
-  ([date, value]) => ({date: new Date(date), value})
-).sort((a, b) => a.date - b.date);
-const feeDomainStart = d3.min(feeRows, d => d.date);
-const feeDomainEnd = d3.max(feeRows, d => d.date);
-const feeDateSel = Mutable([d3.utcDay.offset(feeDomainEnd, -364), feeDomainEnd]);
-display(renderDateBrush({
-  data: feeTotalsByDate,
-  initialRange: [d3.utcDay.offset(feeDomainEnd, -364), feeDomainEnd],
+```
+
+```js
+// Every venue's fee cost, whatever the Measure and Venues controls say, so flipping
+// either keeps the window.
+const feeDateSel = view(dateBrush({
+  data: feeRows,
+  valueAccessor: d => d.cost ?? 0,
   quickRanges: [
     {label: "90d", days: 90, title: "Last 90 days"},
     {label: "365d", days: 365, title: "Last 365 days"},
     {label: "All", days: Infinity, title: "All available history"}
   ],
-  onSelect: range => { feeDateSel.value = range; },
   color: "var(--accent-cme)",
   width
 }));
 ```
 
 ```js
-const [feeFrom, feeTo] = feeDateSel;
-const feeBrushed = feeShown.filter(d => d.date >= feeFrom && d.date <= feeTo);
+const feeBrushed = feeShown.filter(inDateRange(feeDateSel));
 const feeSolid = feeBrushed.filter(d => !d.provisional);
 const feeMeasureLabel = feeMeasure.startsWith("Fee cost") ? "fee cost" : "exchange revenue";
 ```
@@ -162,25 +158,21 @@ const cumVenues = view(Inputs.checkbox(feeVenues, {label: "Venues", value: feeVe
 
 ```js
 // Its own window too, so the cumulative view can be read over a different span from
-// the daily one without the two fighting over a single brush.
-const cumRows = feeSolid.filter(d => cumVenues.includes(d.venue));
-const cumTotalsByDate = Array.from(
-  d3.rollup(cumRows, rows => d3.sum(rows, feeValue), d => +d.date),
-  ([date, value]) => ({date: new Date(date), value})
-).sort((a, b) => a.date - b.date);
-const cumDomainEnd = d3.max(feeRows, d => d.date);
-const cumDateSel = Mutable([d3.utcDay.offset(cumDomainEnd, -364), cumDomainEnd]);
-display(renderDateBrush({
-  data: cumTotalsByDate.length ? cumTotalsByDate : [{date: cumDomainEnd, value: 0}],
-  initialRange: [d3.utcDay.offset(cumDomainEnd, -364), cumDomainEnd],
+// the daily one without the two fighting over a single brush. Every venue's fee cost,
+// whatever the controls say, so flipping one keeps the window.
+const cumDateSel = view(dateBrush({
+  data: feeRows,
+  valueAccessor: d => d.cost ?? 0,
   quickRanges: [{label: "90d", days: 90}, {label: "365d", days: 365}, {label: "All", days: Infinity}],
-  onSelect: range => { cumDateSel.value = range; },
   color: "var(--accent-cme)",
   width
 }));
 ```
 
 ```js
+// Still-filling days are left out, as in the daily chart's solid line; the window is
+// this chart's own brush, not the daily one's.
+const cumRows = feeShown.filter(d => !d.provisional && cumVenues.includes(d.venue));
 const [cumFrom, cumTo] = cumDateSel;
 const cumWindow = cumRows.filter(d => d.date >= cumFrom && d.date <= cumTo);
 // Rothera's line begins where its fee estimate begins, not where the venue does.
@@ -333,25 +325,20 @@ const realizedFees = daily
   .filter(d => d.date && d.contracts > 0 && d.fees != null && d.fees > 0)
   .map(d => ({...d, centsPerContract: 100 * d.fees / (d.contracts * contractDollars(d.venue, d.date))}));
 const realizedNames = Array.from(new Set(realizedFees.map(d => d.venue)));
-const realizedWindow = view(Inputs.radio(["90 days", "All history"], {label: "Window", value: "90 days"}));
-const realizedEnd = d3.max(realizedFees, d => d.date);
-const realizedShown = realizedFees.filter(d => realizedWindow === "All history" || d.date >= d3.utcDay.offset(realizedEnd, -89));
-const realizedBrushSeries = Array.from(d3.rollup(realizedShown, group => d3.sum(group, d => d.centsPerContract) / group.length, d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
-  .sort((a, b) => a.date - b.date);
-const realizedStart = d3.min(realizedShown, d => d.date);
-const realizedDateSel = Mutable([realizedStart, realizedEnd]);
-display(renderDateBrush({
-  data: realizedBrushSeries,
-  initialRange: [realizedStart, realizedEnd],
-  onSelect: range => { realizedDateSel.value = range; },
+```
+
+```js
+const realizedDateSel = view(dateBrush({
+  data: realizedFees,
+  valueAccessor: d => d.contracts,
+  quickRanges: [{label: "90d", days: 90}, {label: "365d", days: 365}, {label: "All", days: Infinity}],
   color: "var(--accent-cme)",
   width
 }));
 ```
 
 ```js
-const [realizedBrushFrom, realizedBrushTo] = realizedDateSel;
-const realizedBrushed = realizedShown.filter(d => d.date >= realizedBrushFrom && d.date <= realizedBrushTo);
+const realizedBrushed = realizedFees.filter(inDateRange(realizedDateSel));
 ```
 
 ```js

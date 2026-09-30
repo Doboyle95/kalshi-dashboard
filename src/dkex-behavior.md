@@ -11,6 +11,7 @@ title: DKeX · Trading behavior
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {tradeSizeMix, volumeAtPrice, metricsFor, fmtCount, fmtUSD, fmtPct, fmtPrice, fmtDate} from "./components/venue-modules.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {attachTradeInspector, venueTradeRows} from "./components/inspect-tables.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -51,8 +52,12 @@ const sizeMeasure = view(Inputs.radio(["Share", "Contracts"], {label: "Measure",
 </div>
 
 ```js
+const sizeRange = view(dateBrush({data: size, valueAccessor: d => +d.contracts, color: ACCENT, width}));
+```
+
+```js
 display(size.length
-  ? tradeSizeMix({rows: size, width, measure: sizeMeasure})
+  ? tradeSizeMix({rows: size.filter(inDateRange(sizeRange)), width, measure: sizeMeasure})
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The trade-size series is not being served for this venue.</div>`);
 ```
 

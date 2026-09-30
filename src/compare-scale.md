@@ -11,7 +11,7 @@ title: Scale & Liquidity
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard, normalizeVenueName} from "./components/venue-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true});
@@ -68,28 +68,21 @@ const scaleExclude = view(Inputs.checkbox(["Exclude Kalshi"], {value: []}));
 // could brush to LESS than 30 days but never more. The period presets moved onto the
 // brush itself, which is what index.md and compare-fees.md already do.
 //
-// This cell deliberately reads NEITHER scaleMetric NOR scaleExclude. A Mutable is
+// This cell deliberately reads NEITHER scaleMetric NOR scaleExclude. The brush is
 // rebuilt whenever its defining cell re-runs, so referencing either here would snap the
-// window back to the 90d default every time you switched metric or ticked Exclude
+// window back to the default every time you switched metric or ticked Exclude
 // Kalshi. It also fixes the sparkline as the all-venue shape in both states -- that
 // strip is for orientation, not measurement, and a stable one is easier to aim with.
 const scaleUniverse = rows.filter(d => !d.sparse && d.contracts > 0);
-const scaleLatest = d3.max(scaleUniverse, d => d.date);
-const scaleDefaultStart = d3.utcDay.offset(scaleLatest, -89);
-const scaleBrushSeries = Array.from(d3.rollup(scaleUniverse, group => d3.sum(group, d => d.contracts), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
-  .sort((a, b) => a.date - b.date);
-const scaleDateSel = Mutable([scaleDefaultStart, scaleLatest]);
-const setScaleDate = range => { scaleDateSel.value = range; };
-display(renderDateBrush({
-  data: scaleBrushSeries,
-  initialRange: [scaleDefaultStart, scaleLatest],
+const scaleDateSel = view(dateBrush({
+  data: scaleUniverse,
+  valueAccessor: d => d.contracts,
   quickRanges: [
     {label: "30d", days: 30, title: "Last 30 days"},
     {label: "90d", days: 90, title: "Last 90 days"},
     {label: "365d", days: 365, title: "Last 365 days"},
     {label: "All", days: Infinity, title: "All available history"}
   ],
-  onSelect: setScaleDate,
   color: "var(--accent-kalshi)",
   width
 }));
@@ -110,8 +103,7 @@ const venueNames = VENUE_ORDER.filter(venue => plotted.some(d => d.venue === ven
 ```
 
 ```js
-const [scaleBrushFrom, scaleBrushTo] = scaleDateSel;
-const plottedBrushed = plotted.filter(d => d.date >= scaleBrushFrom && d.date <= scaleBrushTo);
+const plottedBrushed = plotted.filter(inDateRange(scaleDateSel));
 ```
 
 ```js
@@ -160,23 +152,17 @@ const oiAll = [
   // artefact of the duplicate, not a fitted series.
   ...competitor.filter(d => +d.open_interest > 0 && d.platform !== "Kalshi").map(d => ({date: d.date, venue: normalizeVenueName(d.platform), openInterest: +d.open_interest}))
 ].filter(d => d.date && d.openInterest > 0);
-// Split for the same reason as the chart above: the Mutable must not live in a cell
+// Split for the same reason as the chart above: the brush must not live in a cell
 // that reads oiExclude, or ticking the box throws away the brushed window.
-const oiFirst = d3.min(oiAll, d => d.date), oiLast = d3.max(oiAll, d => d.date);
-const oiBrushSeries = Array.from(d3.rollup(oiAll, group => d3.sum(group, d => d.openInterest), d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
-  .sort((a, b) => a.date - b.date);
-const oiDateSel = Mutable([oiFirst, oiLast]);
-const setOiDate = range => { oiDateSel.value = range; };
-display(renderDateBrush({
-  data: oiBrushSeries,
-  initialRange: [oiFirst, oiLast],
+const oiDateSel = view(dateBrush({
+  data: oiAll,
+  valueAccessor: d => d.openInterest,
   quickRanges: [
     {label: "30d", days: 30, title: "Last 30 days"},
     {label: "90d", days: 90, title: "Last 90 days"},
     {label: "365d", days: 365, title: "Last 365 days"},
     {label: "All", days: Infinity, title: "All available history"}
   ],
-  onSelect: setOiDate,
   color: "var(--accent-polymarket)",
   width
 }));
@@ -188,8 +174,7 @@ const oiVenues = VENUE_ORDER.filter(venue => oiRows.some(d => d.venue === venue)
 ```
 
 ```js
-const [oiBrushFrom, oiBrushTo] = oiDateSel;
-const oiRowsBrushed = oiRows.filter(d => d.date >= oiBrushFrom && d.date <= oiBrushTo);
+const oiRowsBrushed = oiRows.filter(inDateRange(oiDateSel));
 ```
 
 ```js

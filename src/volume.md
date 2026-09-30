@@ -102,7 +102,7 @@ const peakDay = daily.reduce((best, d) => d.contracts_total > best.contracts_tot
 // accessor for total_oi_contracts while the body read `daily`, a table with no such
 // column, so every y was undefined, yMax fell back to 1 and the sparkline path was all
 // NaN: an empty grey box over an x-domain years wider than open interest has data for.
-function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "var(--accent-kalshi)", rows = daily) {
+function makeDateBrush(yAcc = d => d.contracts_total, color = "var(--accent-kalshi)", rows = daily) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(rows, d => d.date)).range([ml, w - mr]);
@@ -130,11 +130,6 @@ function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "var
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const defaultEnd = d3.max(rows, d => d.date);
-  // Clamp the requested start into this table's own range. Callers pass a shared
-  // 2025-01-01 default, which predates the open-interest series (starts 2025-04-01);
-  // brushing to a date the scale cannot place gives an out-of-range selection.
-  const brushStart = defaultStart < x.domain()[0] ? x.domain()[0] : defaultStart;
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", event => {
@@ -151,11 +146,9 @@ function makeDateBrush(defaultStart, yAcc = d => d.contracts_total, color = "var
     });
 
   const brushG = svg.append("g").attr("class", "brush");
-
-
-  brushG.call(brush).call(brush.move, [brushStart, defaultEnd].map(x));
+  brushG.call(brush);
   svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
-  svg.property("value", [brushStart, defaultEnd]);
+  // Opens on the newest 365 days of `rows` (defaultWindow), or on the URL's window.
   return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
@@ -291,10 +284,10 @@ const feeWideDaily = topDailyFees.map(row => {
 <p class="section-intro">Kalshi's daily trading volume, with a 7-day trend line. Flip on event markers to line the spikes up with the days that caused them.</p>
 
 ```js
-const dr1 = view(makeDateBrush(new Date("2025-01-01")));
+const dr1 = view(makeDateBrush());
 ```
 
-<div class="instruction-line"><strong>Useful trick:</strong> switch to <em>Log</em> scale when the early years look flat — it makes Kalshi's pre-2025 growth readable without burying the recent spike.</div>
+<div class="instruction-line"><strong>Useful trick:</strong> widen the brush to the early years and switch to <em>Log</em> scale — it makes Kalshi's pre-2025 growth readable without burying the recent spike.</div>
 
 ```js
 const [s1, e1] = dr1;
@@ -382,7 +375,7 @@ const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label:
 <div class="instruction-line"><strong>Useful trick:</strong> compare the same date here and on the volume chart — if the dollars jumped more than the trades, that day was a few big tickets, not a crowd.</div>
 
 ```js
-const drTrades = view(makeDateBrush(new Date("2025-01-01"), d => d.trades || 0, "#f28e2b"));
+const drTrades = view(makeDateBrush(d => d.trades || 0, "#f28e2b"));
 ```
 
 ```js
@@ -456,7 +449,7 @@ const volumeEventMode = view(Inputs.radio(["On", "Off"], {
 <div class="instruction-line"><strong>Useful trick:</strong> flip the metric to <em>Fees</em> after you spot a shift — sports and non-sports earn Kalshi very different amounts per contract.</div>
 
 ```js
-const dr2 = view(makeDateBrush(new Date("2025-01-01")));
+const dr2 = view(makeDateBrush());
 ```
 
 ```js
@@ -778,7 +771,7 @@ const oiLast = oi.length ? oi[oi.length - 1] : null;
 ```
 
 ```js
-const drOI = oi.length ? view(makeDateBrush(new Date("2025-01-01"), d => d.total_oi_contracts, "#7048e8", oi)) : [null, null];
+const drOI = oi.length ? view(makeDateBrush(d => d.total_oi_contracts, "#7048e8", oi)) : [null, null];
 ```
 
 ```js

@@ -91,7 +91,7 @@ const latestDay = daily.reduce((best, d) => d.date > (best?.date ?? new Date(0))
 </details>
 
 ```js
-function makeBrush(data, color, value = d => d.contracts_total ?? d.contracts ?? 0) {
+function makeBrush(data, color, {value = d => d.contracts_total ?? d.contracts ?? 0, snap = null} = {}) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const xDomain = d3.extent(data, d => d.date);
@@ -140,7 +140,7 @@ function makeBrush(data, color, value = d => d.contracts_total ?? d.contracts ??
   svg.selectAll(".handle").style("display", "block").style("fill", color).style("fill-opacity", 0.9);
   svg.selectAll(".selection").style("stroke", color).style("stroke-width", "2px").style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
-  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG, snap});
 }
 ```
 
@@ -251,7 +251,10 @@ Plot.plot({
 import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
 const udParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
 const udParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabel}));
-const brushParlay = view(makeBrush(daily, UNDERDOG));
+```
+
+```js
+const brushParlay = view(makeBrush(daily, UNDERDOG, {snap: "month"}));
 ```
 
 ```js
@@ -376,6 +379,18 @@ const betTypeDaily = Array.from(
 ```
 
 ```js
+const brushBetType = view(makeBrush(
+  Array.from(d3.rollup(betType, v => d3.sum(v, d => +d.contracts || 0), d => +d.date), ([t, contracts]) => ({date: new Date(t), contracts}))
+    .sort((a, b) => a.date - b.date),
+  UNDERDOG));
+```
+
+```js
+const [sB, eB] = brushBetType;
+const betTypeDailyF = betTypeDaily.filter(d => d.date >= sB && d.date <= eB);
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
@@ -385,7 +400,7 @@ Plot.plot({
   y: {label: "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: {legend: true, domain: topBetTypes, scheme: "set2"},
   marks: [
-    Plot.rectY(betTypeDaily, {
+    Plot.rectY(betTypeDailyF, {
       x: "date", y: "contracts", fill: "bet_type", interval: "day",
       insetLeft: 1, insetRight: 1, inset: 0.5,
       tip: true,

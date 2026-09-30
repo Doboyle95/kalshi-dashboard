@@ -24,7 +24,7 @@ const calibrationCurve = await DataAttachment("data/calibration_three_way.csv").
 const calibrationClusters = await DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {buildReportTickerToCat, TAKER_GENERAL_MAP} from "./components/taker-categories.js";
 import {bestName, fmtWinner, fmtStrike, parseMarketDateFromKey} from "./components/ticker-names.js";
@@ -95,8 +95,6 @@ const fmtUSD = n => (n < 0 ? "-$" : "$") + fmtCount(Math.abs(n ?? 0));
 const fmtPct = n => `${(n ?? 0).toFixed(1)}%`;
 const fmtROI = n => `${(n ?? 0).toFixed(2)}%`;
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
-const latestPnlDate = d3.max(daily, d => d.date);
-const earliestPnlDate = d3.min(daily, d => d.date);
 const positive = "var(--accent-positive)";
 const negative = "var(--accent-negative)";
 const grossColor = "#f4a736";
@@ -117,30 +115,6 @@ const sportsSegmentColors = {"Sports": "#1a9641", "Non-sports": "var(--accent-ka
 </details>
 
 ```js
-// Mutable + brush in the same cell so the brush callback closes over the
-// Mutable wrapper (see parlay.md / categories.md for the same pattern). The
-// runtime hands consuming cells the unwrapped value, so a setter in another
-// cell would no-op.
-const takerDateSel = Mutable([
-  new Date(Math.max(+new Date("2025-01-01"), +earliestPnlDate)),
-  latestPnlDate
-]);
-display(renderDateBrush({
-  data: daily,
-  dateAccessor: d => d.date,
-  valueAccessor: d => d.contracts_total || 0,
-  initialRange: [
-    new Date(Math.max(+new Date("2025-01-01"), +earliestPnlDate)),
-    latestPnlDate
-  ],
-  onSelect: r => { takerDateSel.value = r; },
-  color: grossColor,
-  width
-}));
-```
-
-```js
-const [startDate, endDate] = takerDateSel;
 const takerVolumeByDate = new Map(takerVolumeDaily.map(d => [+d.date, d]));
 const dailyWithTakerVolume = daily.map(d => {
   const n = takerVolumeByDate.get(+d.date) ?? {};
@@ -152,12 +126,9 @@ const dailyWithTakerVolume = daily.map(d => {
   };
 });
 
+// The KPI cards above the first chart follow that chart's brush (Cumulative Taker P&L).
 const filteredDaily = dailyWithTakerVolume
-  .filter(d => d.date >= startDate && d.date <= endDate)
-  .sort((a, b) => a.date - b.date);
-
-const filteredMakerDaily = makerDaily
-  .filter(d => d.date >= startDate && d.date <= endDate)
+  .filter(inDateRange(cumTakerRange))
   .sort((a, b) => a.date - b.date);
 
 // pnl_gross/pnl_net/fees_taker cover SETTLED contracts only; notional_total covers every
@@ -181,6 +152,12 @@ totals.grossRoi = totals.settledVolume ? totals.gross / totals.settledVolume * 1
 totals.netRoi = totals.settledVolume ? totals.net / totals.settledVolume * 100 : 0;
 totals.feeDragRoi = totals.settledVolume ? totals.fees / totals.settledVolume * 100 : 0;
 totals.coverage = totals.total ? totals.settled / totals.total * 100 : 0;
+```
+
+```js
+const filteredMakerDaily = makerDaily
+  .filter(inDateRange(makerRange))
+  .sort((a, b) => a.date - b.date);
 
 const makerTotals = {
   gross: d3.sum(filteredMakerDaily, d => d.pnl_gross || 0),
@@ -249,6 +226,10 @@ const cumulativeTip = Array.from(
 
 <p class="section-intro">The gap between the gross and net lines is fee drag. If both lines fall, takers are losing to outcomes before fees even enter the picture.</p>
 
+```js
+const cumTakerRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts_total || 0, color: grossColor, width}));
+```
+
 <div class="plot-shell">
 
 ```js
@@ -316,6 +297,10 @@ const makerCumulativeTip = Array.from(
 
 <div class="instruction-line"><strong>Useful trick:</strong> the maker chart is the taker chart flipped around — a steep taker loss means the market-makers on the other side won big.</div>
 
+```js
+const makerRange = view(dateBrush({data: makerDaily, valueAccessor: d => d.contracts_settled || 0, color: makerGrossColor, width}));
+```
+
 <div class="kpi-grid compact-kpis">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Net maker P&L</div>
@@ -367,7 +352,8 @@ Plot.plot({
 </div>
 
 ```js
-const dailyBars = filteredDaily
+const dailyBars = dailyWithTakerVolume
+  .filter(inDateRange(swingRange))
   .filter(d => (d.contracts_settled || 0) >= 25000)
   .map(d => ({
     ...d,
@@ -380,6 +366,10 @@ const dailyBars = filteredDaily
 ## Daily Outcome Swings
 
 <p class="section-intro">Each day's net result for takers, colored by return on what they staked — so a big-dollar day isn't mistaken for a high-percentage one.</p>
+
+```js
+const swingRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts_settled || 0, color: netColor, width}));
+```
 
 <div class="plot-shell">
 
@@ -510,8 +500,9 @@ const pnlByTickerCatDaily = pnlByTicker.map(d => {
 });
 
 const pnlSummaryByCat = new Map();
+const [catFrom, catTo] = catPnlRange;
 for (const d of pnlByTickerCatDaily) {
-  if (d.date < startDate || d.date > endDate) continue;
+  if (d.date < catFrom || d.date > catTo) continue;
   if (!(d.contracts_settled > 0)) continue;
   const acc = pnlSummaryByCat.get(d.category) || {category: d.category, gross: 0, net: 0, fees: 0, feesMaker: 0, settled: 0, days: new Set()};
   acc.gross += d.pnl_gross;
@@ -660,6 +651,11 @@ Inputs.table(marketPnlSearch, {
 
 <p class="section-intro">The categories where takers won or lost the most net dollars — sports broken out sport-by-sport rather than lumped into one Kalshi "Sports" bucket. Switch to Detailed for the sport-by-sport split.</p>
 
+```js
+// Over the per-ticker rows the leaderboard sums, so the brush spans exactly their dates.
+const catPnlRange = view(dateBrush({data: pnlByTicker, valueAccessor: d => d.contracts_settled || 0, color: netColor, width}));
+```
+
 <div class="plot-shell">
 
 ```js
@@ -731,7 +727,7 @@ Plot.plot({
 
 ```js
 const sportsRows = sportsDaily
-  .filter(d => d.date >= startDate && d.date <= endDate)
+  .filter(inDateRange(sportsPnlRange))
   .map(d => ({
     date: d.date,
     segment: String(d.is_sports).toLowerCase() === "true" ? "Sports" : "Non-sports",
@@ -752,6 +748,10 @@ for (const segment of ["Sports", "Non-sports"]) {
 <details class="surface-card compact-details secondary-section">
   <summary>Sports vs non-sports detail</summary>
   <p>Optional split between the newer sports regime and the older non-sports book.</p>
+
+```js
+const sportsPnlRange = view(dateBrush({data: sportsDaily, valueAccessor: d => d.contracts_settled || 0, color: "var(--accent-kalshi)", width}));
+```
 
 <div class="plot-shell">
 
@@ -797,12 +797,16 @@ const focusCategory = view(Inputs.select(categoryRows.map(d => d.category), {
 </div>
 
 ```js
+const focusRange = view(dateBrush({data: pnlByTicker, valueAccessor: d => d.contracts_settled || 0, color: netColor, width}));
+```
+
+```js
 // pnlByTickerCatDaily (defined above, next to the leaderboard) already has every report_ticker
 // reclassified into the active toggle's categories - sum across every one that lands in
 // focusCategory (a General bucket like "Football" spans multiple report_tickers).
 const focusRows = Array.from(
   d3.rollup(
-    pnlByTickerCatDaily.filter(d => d.category === focusCategory && d.date >= startDate && d.date <= endDate),
+    pnlByTickerCatDaily.filter(d => d.category === focusCategory && d.date >= focusRange[0] && d.date <= focusRange[1]),
     rows => ({
       pnl_net: d3.sum(rows, r => r.pnl_net),
       contracts_settled: d3.sum(rows, r => r.contracts_settled)

@@ -133,7 +133,7 @@ const rawSegmentKey = view(Inputs.select(segmentOptions, {
 </div>
 
 ```js
-function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color = "var(--accent-kalshi)") {
+function makeDateBrush(rows, yAcc = d => d.contracts || 0, color = "var(--accent-kalshi)") {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const totals = Array.from(
@@ -173,11 +173,6 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  // Clamp defaultStart to the available date range so the initial brush selection
-  // is always meaningful even when preset windows are wider than the data.
-  const xMin = xDomain[0], xMax = xDomain[1];
-  const clampedStart = defaultStart && +defaultStart < +xMin ? xMin : (defaultStart || xMin);
-  const defaultEnd = xMax;
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     // "end" only — see components/date-brush.js for why.
@@ -196,7 +191,7 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
 
   const brushG = svg.append("g").attr("class", "brush");
 
-  brushG.call(brush).call(brush.move, [clampedStart, defaultEnd].map(x));
+  brushG.call(brush);
 
   // d3 v7 hides .handle by default - force visible so users can see the draggable edges.
   svg.selectAll(".handle")
@@ -211,7 +206,7 @@ function makeDateBrush(defaultStart, rows, yAcc = d => d.contracts || 0, color =
     .style("fill", color)
     .style("fill-opacity", 0.15);
 
-  svg.property("value", [clampedStart, defaultEnd]);
+  // Opens on the newest 365 days (defaultWindow), or on the URL's window.
   return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 }
 ```
@@ -226,22 +221,21 @@ const selectedRowsAllTime = platformRows.filter(d => d.segment_type === selected
 ```
 
 ```js
-// Own cell on purpose: it consumes selectedRows, which comes from the brush, and the
-// brush takes selectedRowsAllTime from the cell above. In one cell that is a circular
+// Own cell on purpose: it consumes largeWin, which comes from the top chart's brush, and
+// that brush takes selectedRowsAllTime from the cell above. In one cell that is a circular
 // definition (check-observable-cycles fails the deploy) and the cards never resolve.
-// The cards follow the brush like every chart beneath them. selectedRows is the
-// brushed subset (defined with the brush below); selectedRowsAllTime feeds the brush
-// itself so the date extent is the segment's full history.
-const selectedTotalContracts = d3.sum(selectedRows, d => d.contracts);
-const selectedTotalTrades = d3.sum(selectedRows, d => d.trade_count);
-const selectedMaxTrade = d3.max(selectedRows, d => d.max_trade_size);
+// The cards follow the top chart's brush; selectedRowsAllTime feeds the brush itself so
+// the date extent is the segment's full history.
+const selectedTotalContracts = d3.sum(largeWin.selectedRows, d => d.contracts);
+const selectedTotalTrades = d3.sum(largeWin.selectedRows, d => d.trade_count);
+const selectedMaxTrade = d3.max(largeWin.selectedRows, d => d.max_trade_size);
 ```
 
 <div class="kpi-grid">
   <div class="kpi-card" data-accent="kalshi">
     <div class="kpi-label">Selected contracts</div>
     <div class="kpi-value" title="${(selectedTotalContracts ?? 0).toLocaleString()} contracts">${fmtCount(selectedTotalContracts)}</div>
-    <div class="kpi-meta">${optionLabel(selectedSegmentKey)} &middot; ${dateWindowLabel}</div>
+    <div class="kpi-meta">${optionLabel(selectedSegmentKey)} &middot; ${largeWin.label}</div>
   </div>
   <div class="kpi-card" data-accent="secondary">
     <div class="kpi-label">Trades</div>
@@ -257,102 +251,101 @@ const selectedMaxTrade = d3.max(selectedRows, d => d.max_trade_size);
 
 <details class="surface-card compact-details">
   <summary>About this page</summary>
-  <p>The top chart counts only the contracts from trades at or above the threshold you pick; the ribbon below shows the full size mix for the same window. OG/Crypto.com isn't shown here — only daily totals are available for it, not individual trades.</p>
+  <p>The top chart counts only the contracts from trades at or above the threshold you pick; the ribbon below shows the full size mix. OG/Crypto.com isn't shown here — only daily totals are available for it, not individual trades.</p>
 </details>
 
 ```js
-// Default brush window: Jan 1, 2025 → latest. Drag the brush edges to widen or
-// narrow the range; the chart, mix ribbon, and KPIs all recompute reactively.
-const brushDefaultStart = new Date("2025-01-01");
+// Every chart below has its own brush (newest 365 days by default); this turns one brush
+// window into that chart's daily totals and size-mix rows.
+function sizeWindow([startDate, endDate]) {
+  const label = `${fmtDate(startDate)} to ${fmtDate(endDate)}`;
+  const selectedRows = selectedRowsAllTime.filter(d => d.date >= startDate && d.date <= endDate);
+  const dailyTotals = Array.from(
+    d3.rollup(
+      selectedRows,
+      rows => ({
+        contracts: d3.sum(rows, d => d.contracts),
+        trades: d3.sum(rows, d => d.trade_count),
+        max_trade_size: d3.max(rows, d => d.max_trade_size)
+      }),
+      d => +d.date
+    ),
+    ([date, values]) => ({date: new Date(date), ...values})
+  ).sort((a, b) => a.date - b.date);
+
+  const dailyBucketMap = d3.rollup(selectedRows, rows => rows[0], d => +d.date, d => d.size_bucket);
+  const mixRows = dailyTotals.flatMap(day => {
+    let y0 = 0;
+    return BUCKETS.map(bucket => {
+      const raw = dailyBucketMap.get(+day.date)?.get(bucket.bucket);
+      const contracts = raw?.contracts || 0;
+      const trade_count = raw?.trade_count || 0;
+      const share = day.contracts ? contracts / day.contracts : 0;
+      const row = {
+        date: day.date,
+        size_bucket: bucket.bucket,
+        bucket_order: bucket.order,
+        contracts,
+        trade_count,
+        share,
+        y0,
+        y1: y0 + share,
+        total_contracts: day.contracts,
+        total_trades: day.trades,
+        max_trade_size: day.max_trade_size
+      };
+      y0 += share;
+      return row;
+    });
+  });
+  return {label, selectedRows, dailyTotals, mixRows};
+}
 ```
 
 ```js
-const dateRange = view(makeDateBrush(brushDefaultStart, selectedRowsAllTime));
-```
-
-```js
-const [startDate, endDate] = dateRange;
-const dateWindowLabel = `${fmtDate(startDate)} to ${fmtDate(endDate)}`;
-const selectedRows = selectedRowsAllTime.filter(d => d.date >= startDate && d.date <= endDate);
-const dailyTotals = Array.from(
-  d3.rollup(
-    selectedRows,
-    rows => ({
-      contracts: d3.sum(rows, d => d.contracts),
-      trades: d3.sum(rows, d => d.trade_count),
-      max_trade_size: d3.max(rows, d => d.max_trade_size)
-    }),
-    d => +d.date
-  ),
-  ([date, values]) => ({date: new Date(date), ...values})
-).sort((a, b) => a.date - b.date);
-
-const dailyBucketMap = d3.rollup(selectedRows, rows => rows[0], d => +d.date, d => d.size_bucket);
-const mixRows = dailyTotals.flatMap(day => {
-  let y0 = 0;
-  return BUCKETS.map(bucket => {
-    const raw = dailyBucketMap.get(+day.date)?.get(bucket.bucket);
-    const contracts = raw?.contracts || 0;
-    const trade_count = raw?.trade_count || 0;
-    const share = day.contracts ? contracts / day.contracts : 0;
-    const row = {
+// The threshold line, radar share and spike days for one window's rows.
+function thresholdWindow(win) {
+  const {dailyTotals, mixRows} = win;
+  const thresholdOrder = largeThreshold === "100k+" ? 7 : largeThreshold === "50k+" ? 6 : largeThreshold === "10k+" ? 5 : 4;
+  // Precompute each day's large-bucket sums once (Map keyed by epoch date), then take the
+  // trailing-30 baseline from the per-day share array. The old shape refiltered ALL of
+  // mixRows 30x per day on every brush/threshold change — O(days² × buckets), multi-second
+  // freezes on an all-time brush. Semantics unchanged.
+  const largeByDate = new Map();
+  for (const d of mixRows) {
+    if (d.bucket_order < thresholdOrder) continue;
+    const k = +d.date;
+    const agg = largeByDate.get(k) || {contracts: 0, trades: 0};
+    agg.contracts += d.contracts;
+    agg.trades += d.trade_count;
+    largeByDate.set(k, agg);
+  }
+  const shareByIndex = dailyTotals.map(day =>
+    day.contracts ? ((largeByDate.get(+day.date)?.contracts || 0) / day.contracts) : 0
+  );
+  const thresholdRows = dailyTotals.map((day, i) => {
+    const agg = largeByDate.get(+day.date) || {contracts: 0, trades: 0};
+    const share = shareByIndex[i];
+    const prior = shareByIndex.slice(Math.max(0, i - 30), i).filter(Number.isFinite);
+    const baseline = prior.length >= 14 ? d3.mean(prior) : null;
+    return {
       date: day.date,
-      size_bucket: bucket.bucket,
-      bucket_order: bucket.order,
-      contracts,
-      trade_count,
       share,
-      y0,
-      y1: y0 + share,
+      large_contracts: agg.contracts,
+      large_trades: agg.trades,
+      baseline,
+      lift: baseline ? share / baseline : null,
       total_contracts: day.contracts,
-      total_trades: day.trades,
       max_trade_size: day.max_trade_size
     };
-    y0 += share;
-    return row;
   });
-});
-```
 
-```js
-const thresholdOrder = largeThreshold === "100k+" ? 7 : largeThreshold === "50k+" ? 6 : largeThreshold === "10k+" ? 5 : 4;
-// Precompute each day's large-bucket sums once (Map keyed by epoch date), then take the
-// trailing-30 baseline from the per-day share array. The old shape refiltered ALL of
-// mixRows 30x per day on every brush/threshold change — O(days² × buckets), multi-second
-// freezes on an all-time brush. Semantics unchanged.
-const largeByDate = new Map();
-for (const d of mixRows) {
-  if (d.bucket_order < thresholdOrder) continue;
-  const k = +d.date;
-  const agg = largeByDate.get(k) || {contracts: 0, trades: 0};
-  agg.contracts += d.contracts;
-  agg.trades += d.trade_count;
-  largeByDate.set(k, agg);
+  const spikeRows = thresholdRows
+    .filter(d => d.baseline != null && d.share >= 0.03 && d.lift >= 3 && d.large_contracts >= 1000000)
+    .sort((a, b) => d3.descending(a.lift, b.lift))
+    .slice(0, 12);
+  return {...win, thresholdRows, spikeRows};
 }
-const shareByIndex = dailyTotals.map(day =>
-  day.contracts ? ((largeByDate.get(+day.date)?.contracts || 0) / day.contracts) : 0
-);
-const thresholdRows = dailyTotals.map((day, i) => {
-  const agg = largeByDate.get(+day.date) || {contracts: 0, trades: 0};
-  const share = shareByIndex[i];
-  const prior = shareByIndex.slice(Math.max(0, i - 30), i).filter(Number.isFinite);
-  const baseline = prior.length >= 14 ? d3.mean(prior) : null;
-  return {
-    date: day.date,
-    share,
-    large_contracts: agg.contracts,
-    large_trades: agg.trades,
-    baseline,
-    lift: baseline ? share / baseline : null,
-    total_contracts: day.contracts,
-    max_trade_size: day.max_trade_size
-  };
-});
-
-const spikeRows = thresholdRows
-  .filter(d => d.baseline != null && d.share >= 0.03 && d.lift >= 3 && d.large_contracts >= 1000000)
-  .sort((a, b) => d3.descending(a.lift, b.lift))
-  .slice(0, 12);
 ```
 
 <div class="instruction-line"><strong>Useful trick:</strong> move from <em>10k+</em> to <em>100k+</em> — if the spike still holds, it's true whale flow, not just ordinary block trading.</div>
@@ -368,7 +361,15 @@ const largeThreshold = view(Inputs.radio(["1k+", "10k+", "50k+", "100k+"], {
 
 </div>
 
-<div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${dateWindowLabel}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total ${selectedPlatform} volume. Use the <strong>Platform</strong> control above to change venue.</div>
+<div class="chart-note">Showing ${optionLabel(selectedSegmentKey)} from ${largeWin.label}. The top chart is <strong>${largeThreshold} trade volume only</strong>, not total ${selectedPlatform} volume. Use the <strong>Platform</strong> control above to change venue.</div>
+
+```js
+const largeRange = view(makeDateBrush(selectedRowsAllTime));
+```
+
+```js
+const largeWin = thresholdWindow(sizeWindow(largeRange));
+```
 
 <div class="plot-shell">
 
@@ -381,22 +382,22 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: `${largeThreshold} contracts`, grid: true, tickFormat: fmtCount},
   marks: [
-    Plot.areaY(thresholdRows, {
+    Plot.areaY(largeWin.thresholdRows, {
       x: "date",
       y: "large_contracts",
       fill: "var(--accent-kalshi)",
       fillOpacity: 0.2,
       curve: "monotone-x"
     }),
-    Plot.lineY(thresholdRows, {
+    Plot.lineY(largeWin.thresholdRows, {
       x: "date",
       y: "large_contracts",
       stroke: "var(--accent-kalshi)",
       strokeWidth: 2,
       curve: "monotone-x"
     }),
-    Plot.ruleX(thresholdRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(thresholdRows, Plot.pointerX({
+    Plot.ruleX(largeWin.thresholdRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(largeWin.thresholdRows, Plot.pointerX({
       x: "date",
       title: d => [
         fmtDate(d.date),
@@ -414,6 +415,14 @@ Plot.plot({
 
 </div>
 
+```js
+const mixRange = view(makeDateBrush(selectedRowsAllTime));
+```
+
+```js
+const mixWin = sizeWindow(mixRange);
+```
+
 <div class="plot-shell">
 
 ```js
@@ -426,7 +435,7 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Share of contracts", percent: true, grid: true},
   marks: [
-    Plot.areaY(mixRows, {
+    Plot.areaY(mixWin.mixRows, {
       x: "date",
       y1: "y1",
       y2: "y0",
@@ -434,12 +443,12 @@ Plot.plot({
       fillOpacity: 0.92,
       curve: "monotone-x"
     }),
-    Plot.ruleX(mixRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.ruleX(mixWin.mixRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
     // 2D pointer (not pointerX): on a stacked area we want the specific
     // colored bucket band under the cursor, so match on x=date AND the band
     // midpoint in share units. The old static `title:` channel rendered one
     // SVG <title> per area path and effectively showed no usable tooltip.
-    Plot.tip(mixRows, Plot.pointer({
+    Plot.tip(mixWin.mixRows, Plot.pointer({
       x: "date",
       y: d => (d.y0 + d.y1) / 2,
       title: d => [
@@ -462,6 +471,14 @@ Plot.plot({
 
 <p class="section-intro">Flags the days when the big-block share ran well above its recent normal — not just busy days, but unusually top-heavy ones.</p>
 
+```js
+const radarRange = view(makeDateBrush(selectedRowsAllTime, d => d.contracts || 0, "#e15759"));
+```
+
+```js
+const radarWin = thresholdWindow(sizeWindow(radarRange));
+```
+
 <div class="plot-shell">
 
 ```js
@@ -473,21 +490,21 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: `${largeThreshold} share`, percent: true, grid: true},
   marks: [
-    Plot.areaY(thresholdRows, {
+    Plot.areaY(radarWin.thresholdRows, {
       x: "date",
       y: "share",
       fill: "#e15759",
       fillOpacity: 0.12,
       curve: "monotone-x"
     }),
-    Plot.lineY(thresholdRows, {
+    Plot.lineY(radarWin.thresholdRows, {
       x: "date",
       y: "share",
       stroke: "#e15759",
       strokeWidth: 2,
       curve: "monotone-x"
     }),
-    Plot.lineY(thresholdRows.filter(d => d.baseline != null), {
+    Plot.lineY(radarWin.thresholdRows.filter(d => d.baseline != null), {
       x: "date",
       y: "baseline",
       stroke: "var(--annotation-stroke)",
@@ -495,7 +512,7 @@ Plot.plot({
       strokeWidth: 1.5,
       curve: "monotone-x"
     }),
-    Plot.dot(spikeRows, {
+    Plot.dot(radarWin.spikeRows, {
       x: "date",
       y: "share",
       r: 5,
@@ -503,7 +520,7 @@ Plot.plot({
       stroke: "var(--theme-background)",
       strokeWidth: 1.5
     }),
-    Plot.text(spikeRows.slice(0, 5), {
+    Plot.text(radarWin.spikeRows.slice(0, 5), {
       x: "date",
       y: "share",
       text: d => `${d.lift.toFixed(1)}x`,
@@ -512,8 +529,8 @@ Plot.plot({
       fontSize: 11,
       fontWeight: 700
     }),
-    Plot.ruleX(thresholdRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(thresholdRows, Plot.pointerX({
+    Plot.ruleX(radarWin.thresholdRows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(radarWin.thresholdRows, Plot.pointerX({
       x: "date",
       title: d => [
         fmtDate(d.date),
@@ -539,7 +556,7 @@ Plot.plot({
 </div>
 
 ```js
-const topSpikes = spikeRows.slice(0, 8).map(d => ({
+const topSpikes = radarWin.spikeRows.slice(0, 8).map(d => ({
   date: fmtDate(d.date),
   threshold: largeThreshold,
   share: fmtPct(d.share),

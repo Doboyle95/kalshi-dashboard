@@ -10,7 +10,7 @@ title: OG/Crypto.com · Parlays
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {GRANULARITIES, parlayChart, toDailyParlay} from "./components/parlay-series.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -47,19 +47,14 @@ const parlayAdoptionMonthly = Array.from(
   })
 ).sort((a, b) => a.month - b.month);
 const firstParlayMonth = parlayAdoptionMonthly.find(d => d.parlays > 0)?.month;
-const nadexParlayDateSel = Mutable([d3.min(parlayAdoptionMonthly, d => d.month), d3.max(parlayAdoptionMonthly, d => d.month)]);
-display(renderDateBrush({
-  data: parlayAdoptionMonthly.map(d => ({date: d.month, value: d.share})),
-  initialRange: [d3.min(parlayAdoptionMonthly, d => d.month), d3.max(parlayAdoptionMonthly, d => d.month)],
-  onSelect: range => { nadexParlayDateSel.value = range; },
-  color: "var(--accent-nadex)",
-  width
-}));
 ```
 
 ```js
-const [nadexParlayFrom, nadexParlayTo] = nadexParlayDateSel;
-const parlayAdoptionMonthlyBrushed = parlayAdoptionMonthly.filter(d => d.month >= nadexParlayFrom && d.month <= nadexParlayTo);
+const nadexParlayDateSel = view(dateBrush({data: parlayAdoptionMonthly, dateAccessor: d => d.month, valueAccessor: d => d.share, color: "var(--accent-nadex)", width}));
+```
+
+```js
+const parlayAdoptionMonthlyBrushed = parlayAdoptionMonthly.filter(inDateRange(nadexParlayDateSel, d => d.month));
 ```
 
 ```js
@@ -92,6 +87,11 @@ const ndParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Monthly", 
 ```
 
 ```js
+// snap: the Monthly view rolls these daily rows into months, so open on whole months.
+const ndParlayVolRange = view(dateBrush({data: catDaily.filter(d => d.category === "Parlays"), valueAccessor: d => +d.contracts || 0, color: "var(--accent-nadex)", width, snap: "month"}));
+```
+
+```js
 // Volume only, and there is no metric toggle here on purpose. The one Nadex stake series
 // is keyed on the SETTLEMENT session, not the trading day, and it starts eight months after
 // parlays did — putting it behind the same toggle as this chart would offer two bars that
@@ -103,7 +103,7 @@ const ndVenueByDay = d3.rollup(
   catDaily, v => d3.sum(v, d => +d.contracts || 0), d => d3.utcFormat("%Y-%m-%d")(d.date)
 );
 const ndParlayDaily = toDailyParlay(
-  catDaily.filter(d => d.category === "Parlays"),
+  catDaily.filter(d => d.category === "Parlays").filter(inDateRange(ndParlayVolRange)),
   {date: "date", contracts: "contracts"}
 ).map(d => ({...d, venue: ndVenueByDay.get(d.day) ?? null}));
 display(parlayChart({

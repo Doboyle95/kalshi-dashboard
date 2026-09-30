@@ -65,7 +65,8 @@ const briefingCorrection = html`<p class="caption" style="margin: 0 0 0.45rem" h
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard, recentCalendarDates, valueLookup} from "./components/venue-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange, renderDateBrush} from "./components/date-brush.js";
+import {defaultWindow} from "./components/url-range.js";
 import {TAKER_GENERAL_MAP, buildReportTickerToCat} from "./components/taker-categories.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -202,8 +203,7 @@ const scaleType = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "
 // Quick ranges below change the selection, not the brush's domain, so a user can
 // drag directly from a 30-day view back into older data.
 const scaleRows = platformRows.filter(row => !row.sparse && row.contracts > 0);
-const scaleLatest = d3.max(scaleRows, row => row.date);
-const scaleStart = d3.utcDay.offset(scaleLatest, -364);
+const [scaleStart, scaleLatest] = defaultWindow(d3.extent(scaleRows, row => row.date));
 const scaleVenues = VENUE_ORDER.filter(venue => scaleRows.some(row => row.venue === venue));
 const scaleDateSel = Mutable([scaleStart, scaleLatest]);
 const setScaleDate = range => { scaleDateSel.value = range; };
@@ -714,6 +714,11 @@ const productView = view(Inputs.radio(["Current mix", "Sports share trend"], {la
 
 </div>
 
+```js
+// The trend view's own brush; the current-mix bars are not a time series and take none.
+const sportsTrendRange = view(dateBrush({data: productView === "Sports share trend" ? monthlySports : [], valueAccessor: row => row.contracts, color: "var(--accent-kalshi)", width}));
+```
+
 <div class="plot-shell">
 
 ```js
@@ -751,8 +756,8 @@ if (productView === "Current mix") {
     y: {label: "Sports share of reported contracts", percent: true, domain: [0, 100], grid: true},
     color: {legend: true, domain: productVenueOrder, range: productVenueOrder.map(venue => VENUE_COLORS[venue])},
     marks: [
-      Plot.lineY(monthlySports.filter(row => row.date >= scaleBrushFrom && row.date <= scaleBrushTo), {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
-      Plot.dot(monthlySports.filter(row => row.date >= scaleBrushFrom && row.date <= scaleBrushTo), {x: "date", y: "share", fill: "venue", r: 2.5, tip: true, title: row => `${row.venue} · ${row.date.toLocaleDateString("en-US", {month: "short", year: "numeric", timeZone: "UTC"})}\nSports share: ${(100 * row.share).toFixed(1)}%\n${Math.round(row.contracts).toLocaleString()} contracts`}),
+      Plot.lineY(monthlySports.filter(inDateRange(sportsTrendRange)), {x: "date", y: "share", stroke: "venue", strokeWidth: 2, curve: "monotone-x"}),
+      Plot.dot(monthlySports.filter(inDateRange(sportsTrendRange)), {x: "date", y: "share", fill: "venue", r: 2.5, tip: true, title: row => `${row.venue} · ${row.date.toLocaleDateString("en-US", {month: "short", year: "numeric", timeZone: "UTC"})}\nSports share: ${(100 * row.share).toFixed(1)}%\n${Math.round(row.contracts).toLocaleString()} contracts`}),
       Plot.ruleY([0, 1])
     ]
   }));

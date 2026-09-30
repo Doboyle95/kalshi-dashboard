@@ -11,6 +11,7 @@ title: Underdog Exchange · Economics
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {feeRows, feesDaily, realizedRate, rateShape, fmtCount, fmtUSD} from "./components/venue-modules.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
@@ -34,7 +35,11 @@ if (!rows.length) display(html`<div class="instruction-line" style="border-left-
 ## Fees per day
 
 ```js
-if (rows.length) display(feesDaily({rows, width, color: ACCENT}));
+const feesDayRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, color: ACCENT, width}));
+```
+
+```js
+if (rows.length) display(feesDaily({rows: rows.filter(inDateRange(feesDayRange)), width, color: ACCENT}));
 ```
 
 ```js
@@ -44,13 +49,21 @@ if (rows.length) display(html`<div class="instruction-line" style="border-left-c
 ## Cumulative
 
 ```js
-if (rows.length) display(feesDaily({rows, width, color: ACCENT, cumulative: true}));
+const feesCumRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, color: ACCENT, width}));
+```
+
+```js
+if (rows.length) display(feesDaily({rows: rows.filter(inDateRange(feesCumRange)), width, color: ACCENT, cumulative: true}));
 ```
 
 ## Effective rate
 
 ```js
-if (rows.length) display(realizedRate({rows, width, color: ACCENT}));
+const rateRange = view(dateBrush({data: rows, valueAccessor: d => d.centsPerContract, color: ACCENT, width}));
+```
+
+```js
+if (rows.length) display(realizedRate({rows: rows.filter(inDateRange(rateRange)), width, color: ACCENT}));
 ```
 
 ```js

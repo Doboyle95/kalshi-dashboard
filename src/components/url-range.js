@@ -32,6 +32,30 @@ function parseDay(value) {
   return date;
 }
 
+// The window every time-series chart opens on: the newest 365 days of ITS OWN data,
+// the same days the "365d" quick range and ?days=365 select. A chart with less than a
+// year of data opens on all of it. The brush still spans the full history, so a reader
+// can widen it. Every brush on the site -- shared and page-local -- takes its default
+// from here, so the window is changed in one place.
+//
+// snap: "month" is for a chart that sums DAILY rows into months: a window starting on,
+// say, the 20th would open the chart on a first bar holding a third of a month, which
+// reads as a slump. The start moves forward to the first whole month instead.
+export const DEFAULT_WINDOW_DAYS = 365;
+
+export function defaultWindow(domain, {days = DEFAULT_WINDOW_DAYS, snap = null} = {}) {
+  const low = +domain?.[0], high = +domain?.[1];
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return domain;
+  let start = high - (days - 1) * DAY_MS;
+  if (snap === "month") {
+    const d = new Date(start);
+    const monthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+    if (monthStart !== start) start = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    if (start > high) start = monthStart;
+  }
+  return [new Date(Math.max(low, start)), new Date(high)];
+}
+
 export function formatDay(date) {
   return new Date(+date).toISOString().slice(0, 10);
 }
@@ -114,13 +138,13 @@ export function pushInitialRange(onSelect, range) {
 // d3.brushX on `brushG`. Call as the function's last step, in place of `svg.node()`:
 //   return dateBrushFromUrl(svg.node(), {x, brush, brushG});
 // view() reads .value when the cell resolves, so the charts start on the URL window.
-export function dateBrushFromUrl(node, {x, brush, brushG}) {
-  const initial = node.value;
+// The page default is always defaultWindow(x.domain()); whatever start the page set
+// before calling this is replaced, so no page-local copy can drift from the site default.
+export function dateBrushFromUrl(node, {x, brush, brushG, snap = null}) {
   const domain = x.domain();
+  const initial = defaultWindow(domain, {snap});
   const range = urlDateRange(initial, domain);
-  if (range !== initial) {
-    brushG.call(brush.move, range.map(x));   // programmatic: the brush handlers ignore it
-    node.value = range;
-  }
+  brushG.call(brush.move, range.map(x));   // programmatic: the brush handlers ignore it
+  node.value = range;
   return tagDateBrush(node, () => ({range: node.value, domain, defaultRange: initial}));
 }

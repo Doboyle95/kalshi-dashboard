@@ -22,6 +22,7 @@ const rows = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true
 const pnlBins = await DataAttachment("data/dkex_parlay_pnl.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 ```
 
 ```js
@@ -138,6 +139,10 @@ const wideLegs = [...byDayLegs].map(([t, m]) => {
 ```
 
 ```js
+const legStakeRange = view(dateBrush({data: rows, valueAccessor: d => d.stake_usd, color: DKEX, width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 74,
@@ -145,10 +150,10 @@ Plot.plot({
   y: {label: "Staked (USD)", grid: true, tickFormat: d => fmtUSD(d)},
   color: {legend: true, columns: 4, domain: legLabels, range: legColors},
   marks: [
-    Plot.areaY(legStack, {x: "date", y: "stake_usd", fill: "label",
+    Plot.areaY(legStack.filter(inDateRange(legStakeRange)), {x: "date", y: "stake_usd", fill: "label",
       order: legLabels.slice().reverse(), curve: "monotone-x", fillOpacity: 0.9}),
-    Plot.ruleX(wideLegs, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(wideLegs, Plot.pointerX({x: "date", title: d =>
+    Plot.ruleX(wideLegs.filter(inDateRange(legStakeRange)), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(wideLegs.filter(inDateRange(legStakeRange)), Plot.pointerX({x: "date", title: d =>
       [`${fmtDate(d.date)}  ${fmtUSD(d.total)} staked`]
         .concat(legLabels.filter(l => d[l] > 0).sort((a, b) => d[b] - d[a])
           .map(l => `${l}: ${fmtUSD(d[l])}  (${pct(d[l] / d.total)})`)).join("\n")})),

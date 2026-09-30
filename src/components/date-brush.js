@@ -12,13 +12,25 @@
 // nothing. Defining the setter inside the consuming cell (where the cell can
 // drive the Mutable's setter directly) is the reliable path.
 //
-// Usage (unchanged):
-//   const parlayDateSel = Mutable([new Date("2025-01-01"), latestDate]);
+// Usage -- one brush per chart, placed directly above it (Daniel, 2026-09-30: a brush
+// shared by a section or a group of charts is not enough):
+//   const volRange = view(dateBrush({
+//     data: rows, dateAccessor: d => d.date, valueAccessor: d => d.contracts,
+//     color: "var(--accent-kalshi)", width
+//   }));
+//   const shown = rows.filter(inDateRange(volRange));
+// dateBrush() sums rows that share a UTC day for the sparkline, so a long table (one row
+// per day per category) can be handed over as is. A chart that sums daily rows into
+// months passes snap: "month", so it never opens on a partial first month.
+//
+// A time-series brush opens on the newest 365 days of its own data (defaultWindow() in
+// url-range.js); pass no initialRange. Only the non-time-series windows (categories
+// treemap, All-time leaderboard) still pass one. The Mutable + onSelect form, for a
+// window that several cells must share:
+//   const tmDateSel = Mutable([start, end]);
 //   display(renderDateBrush({
-//     data: pnl, dateAccessor: d => d.date, valueAccessor: d => d.stakes,
-//     initialRange: [new Date("2025-01-01"), latestDate],
-//     quickRanges: [{label: "30d", days: 30}, {label: "All", days: Infinity}],
-//     onSelect: r => { parlayDateSel.value = r; }, width
+//     data, dateAccessor: d => d.date, valueAccessor: d => d.value,
+//     initialRange: [start, end], onSelect: r => { tmDateSel.value = r; }, width
 //   }));
 //
 // The brush only writes on `end` (mouseup), not continuously during drag —
@@ -27,7 +39,7 @@
 // not per keystroke, for the same reason.
 
 import * as d3 from "npm:d3";
-import {pushInitialRange, tagDateBrush, urlDateRange} from "./url-range.js";
+import {defaultWindow, pushInitialRange, tagDateBrush, urlDateRange} from "./url-range.js";
 
 let dateRangeControlId = 0;
 
@@ -77,8 +89,9 @@ export function renderDateBrush({
   data,
   dateAccessor = d => d.date,
   valueAccessor = d => d.value,
-  initialRange,               // [Date, Date] — defaults to data extent
+  initialRange,               // [Date, Date] — omit for time series: defaults to defaultWindow() (newest 365 days)
   quickRanges = [],           // [{label, days}] — optional compact range presets
+  snap = null,                // "month": open on whole months (a chart summing daily rows by month)
   onSelect,                   // (range: [Date, Date]) => void
   width,
   height = 60,
@@ -121,13 +134,15 @@ export function renderDateBrush({
     .call(g => g.select(".domain").attr("stroke", "var(--card-border)"))
     .call(g => g.selectAll("text").style("font-size", "11px").attr("fill", "currentColor").attr("fill-opacity", 0.7));
 
-  // Clamp the initial range to the data domain.
-  let [defStart, defEnd] = initialRange || xDomain;
+  // Open on initialRange if the page gives one (only the non-time-series views do: the
+  // categories treemap and All-time leaderboard), else on the site default -- the newest
+  // 365 days of this chart's data. Clamped to the data domain.
+  let [defStart, defEnd] = initialRange || defaultWindow(xDomain, {snap});
   if (!(defStart instanceof Date)) defStart = new Date(defStart);
   if (!(defEnd instanceof Date)) defEnd = new Date(defEnd);
   if (defStart < domainStart) defStart = domainStart;
   if (defEnd > domainEnd) defEnd = domainEnd;
-  if (defStart >= defEnd) { defStart = domainStart; defEnd = domainEnd; }
+  if (!(defStart < defEnd)) { defStart = domainStart; defEnd = domainEnd; }
 
   // A from/to/days window in the page URL (embed and shared links; see
   // components/url-range.js) replaces the page default. The page's own Mutable still
@@ -257,7 +272,10 @@ export function renderDateBrush({
     if (moveBrush) brushG.call(brush.move, [a, b].map(x));   // programmatic → won't refire onSelect
     syncInputs();
     syncQuickButtons();
-    if (fire && typeof onSelect === "function") onSelect([a, b]);
+    if (!fire) return;
+    container.value = [a, b];
+    container.dispatchEvent(new Event("input"));   // for view(dateBrush(...))
+    if (typeof onSelect === "function") onSelect([a, b]);
   }
 
   btnBrush.addEventListener("click", () => setMode("brush"));
@@ -283,6 +301,49 @@ export function renderDateBrush({
     defaultRange: pageDefault,
     quickDays: quickButtons.find(({button}) => button.classList.contains("active"))?.item.days ?? null
   }));
+  // view() reads .value when the cell resolves, so a view(dateBrush(...)) chart starts
+  // on the opening window; a Mutable-driven page gets it through onSelect.
+  container.value = [defStart, defEnd];
   if (urlRange !== pageDefault) pushInitialRange(onSelect, urlRange);
   return container;
+}
+
+const toTime = raw => (raw instanceof Date || typeof raw === "number" ? +raw : Date.parse(raw));
+
+// Rows -> one {date, value} per UTC day (value summed), sorted, dates as UTC midnights.
+function dailySeries(data, dateAccessor, valueAccessor) {
+  const byDay = new Map();
+  for (const d of data ?? []) {
+    const t = toTime(dateAccessor(d));
+    if (!Number.isFinite(t)) continue;
+    const day = Math.floor(t / 864e5) * 864e5;
+    const v = +valueAccessor(d);
+    byDay.set(day, (byDay.get(day) ?? 0) + (Number.isFinite(v) ? v : 0));
+  }
+  return Array.from(byDay, ([t, value]) => ({date: new Date(t), value})).sort((a, b) => a.date - b.date);
+}
+
+// A brush for ONE chart, usable with view(): its value is the selected [start, end]
+// (UTC-midnight Dates, both ends inclusive -- filter with inDateRange()). It opens on the
+// newest 365 days of the data it is given, honours ?from/?to/?days, and feeds the Embed
+// button like every other brush. With no dated rows it renders nothing and its window
+// admits everything, so a chart with no data still draws its own empty state.
+export function dateBrush({data, dateAccessor = d => d.date, valueAccessor = d => d.value, ...options} = {}) {
+  const series = dailySeries(data, dateAccessor, valueAccessor);
+  if (!series.length) {
+    const empty = document.createElement("div");
+    empty.value = [new Date(-8.64e15), new Date(8.64e15)];
+    return empty;
+  }
+  return renderDateBrush({...options, data: series, dateAccessor: d => d.date, valueAccessor: d => d.value});
+}
+
+// Row filter for a brush window: inDateRange(range) keeps rows dated start <= date <= end,
+// the same test the older pages write out by hand. Accepts Dates or ISO strings on the row.
+export function inDateRange([start, end], dateAccessor = d => d.date) {
+  const lo = +start, hi = +end;
+  return d => {
+    const t = toTime(dateAccessor(d));
+    return t >= lo && t <= hi;
+  };
 }

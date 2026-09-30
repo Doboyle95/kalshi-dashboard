@@ -21,6 +21,7 @@ const daily    = await DataAttachment("data/polymarket_parlay_daily.csv").csv({t
 const dailyPnl = await DataAttachment("data/polymarket_parlay_pnl_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 ```
 
 ```js
@@ -107,16 +108,21 @@ const cumDailyPnl = dpSorted.map(d => { _pg += d.pnl_gross; _pn += d.pnl_net; re
 ```
 
 ```js
+const pmCumRange = view(dateBrush({data: dailyPnl, valueAccessor: d => d.stake, color: "var(--accent-polymarket)", width}));
+```
+
+```js
+const cumDailyPnlShown = cumDailyPnl.filter(inDateRange(pmCumRange));
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
-    Plot.areaY(cumDailyPnl, {x: "date", y: "net", fill: "var(--accent-polymarket)", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumDailyPnl, {x: "date", y: "gross", stroke: "var(--accent-polymarket)", strokeOpacity: 0.5, strokeDasharray: "4,3", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.lineY(cumDailyPnl, {x: "date", y: "net", stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(cumDailyPnlShown, {x: "date", y: "net", fill: "var(--accent-polymarket)", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumDailyPnlShown, {x: "date", y: "gross", stroke: "var(--accent-polymarket)", strokeOpacity: 0.5, strokeDasharray: "4,3", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.lineY(cumDailyPnlShown, {x: "date", y: "net", stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumDailyPnl, Plot.pointerX({x: "date", y: "net",
+    Plot.tip(cumDailyPnlShown, Plot.pointerX({x: "date", y: "net",
       title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.gross)}\nAfter fees: ${fmtUSD(d.net)}`}))
   ]
 }))
@@ -127,12 +133,16 @@ display(Plot.plot({
 _What the parlays bought each day made or lost, after fees. Green days beat the house; red days didn't._
 
 ```js
+const pmDailyPnlRange = view(dateBrush({data: dailyPnl, valueAccessor: d => d.stake, color: "var(--accent-polymarket)", width}));
+```
+
+```js
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Daily realized P&L, after fees (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
-    Plot.rectY(dpSorted, {x1: "date", x2: d => new Date(d.date.getTime() + 864e5), y: "pnl_net",
+    Plot.rectY(dpSorted.filter(inDateRange(pmDailyPnlRange)), {x1: "date", x2: d => new Date(d.date.getTime() + 864e5), y: "pnl_net",
       fill: d => d.pnl_net < 0 ? "var(--accent-negative)" : "var(--accent-positive)", fillOpacity: 0.85,
       tip: true,
       title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.pnl_gross)}\nAfter fees: ${fmtUSD(d.pnl_net)}\nStaked: ${fmtUSD(d.stake)}\nContracts: ${fmtCount(d.contracts)}` + (d.terminated_contracts ? `\nLeft out (settled at an in-between price): ${fmtCount(d.terminated_contracts)} contracts` : "")}),
@@ -201,19 +211,24 @@ display(lossByPriceChart(pmLoss, {width}));
 _Money bet on new parlays each day (cash-outs are not counted as bets); the hollow point is a day still being collected._
 
 ```js
+const pmStakesRange = view(dateBrush({data: daily, valueAccessor: d => d.buy_stake_usd ?? d.stake_usd, color: "var(--accent-polymarket)", width}));
+```
+
+```js
 // buy_stake_usd leaves out the trades that close an earlier bet (~20% of parlay trade dollars);
 // stake_usd, every trade, is the fallback for a file written before 2026-09-27.
 const betStake = d => d.buy_stake_usd ?? d.stake_usd;
+const inStakesRange = inDateRange(pmStakesRange);
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Staked (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
-    Plot.areaY(settled, {x: "date", y: betStake, fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
-    Plot.lineY(settled, {x: "date", y: betStake, stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(provDaily, {x: "date", y: betStake, r: 4, fill: "var(--theme-background)", stroke: "var(--accent-polymarket)", strokeWidth: 2}),
+    Plot.areaY(settled.filter(inStakesRange), {x: "date", y: betStake, fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
+    Plot.lineY(settled.filter(inStakesRange), {x: "date", y: betStake, stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(provDaily.filter(inStakesRange), {x: "date", y: betStake, r: 4, fill: "var(--theme-background)", stroke: "var(--accent-polymarket)", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(daily, Plot.pointerX({x: "date", y: betStake,
+    Plot.tip(daily.filter(inStakesRange), Plot.pointerX({x: "date", y: betStake,
       title: d => `${fmtDate(d.date)}\nStaked: ${fmtUSD(betStake(d))}` + (d.cashout_stake_usd != null ? `\nCashed out: ${fmtUSD(d.cashout_stake_usd)}` : "") + `\nContracts: ${fmtCount(d.contracts)}\nTrades: ${fmtCount(d.trades)}${d.complete ? "" : "\n(still collecting)"}`}))
   ]
 }))
@@ -224,16 +239,21 @@ display(Plot.plot({
 _Parlays went from nothing to roughly a quarter of everything traded on the venue in under three weeks._
 
 ```js
+const pmShareRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts, color: "var(--accent-polymarket)", width}));
+```
+
+```js
+const inShareRange = inDateRange(pmShareRange);
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 60,
   x: {type: "utc", label: null},
   y: {label: "Share of venue contracts", grid: true, tickFormat: d => (d * 100).toFixed(0) + "%"},
   marks: [
-    Plot.areaY(settled, {x: "date", y: d => d.pct_of_venue / 100, fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
-    Plot.lineY(settled, {x: "date", y: d => d.pct_of_venue / 100, stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(provDaily, {x: "date", y: d => d.pct_of_venue / 100, r: 4, fill: "var(--theme-background)", stroke: "var(--accent-polymarket)", strokeWidth: 2}),
+    Plot.areaY(settled.filter(inShareRange), {x: "date", y: d => d.pct_of_venue / 100, fill: "var(--accent-polymarket)", fillOpacity: 0.15, curve: "monotone-x"}),
+    Plot.lineY(settled.filter(inShareRange), {x: "date", y: d => d.pct_of_venue / 100, stroke: "var(--accent-polymarket)", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(provDaily.filter(inShareRange), {x: "date", y: d => d.pct_of_venue / 100, r: 4, fill: "var(--theme-background)", stroke: "var(--accent-polymarket)", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(daily, Plot.pointerX({x: "date", y: d => d.pct_of_venue / 100,
+    Plot.tip(daily.filter(inShareRange), Plot.pointerX({x: "date", y: d => d.pct_of_venue / 100,
       title: d => `${fmtDate(d.date)}\nParlays: ${d.pct_of_venue.toFixed(2)}% of venue\nParlay contracts: ${fmtCount(d.contracts)}`}))
   ]
 }))

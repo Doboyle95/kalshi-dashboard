@@ -26,7 +26,7 @@ const weekly  = await DataAttachment("data/rh_weekly_estimates.csv").csv({typed:
 const reported = await DataAttachment("data/rh_actual_vs_estimate.csv").csv({typed: true});
 const filing = await DataAttachment("data/rh_daily_filing.csv").csv({typed: true});
 const fcmCmp = await DataAttachment("data/fcm_comparison.csv").csv({typed: true});
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -127,9 +127,8 @@ const rhMetric = view(Inputs.radio(["Estimated volume", "Share of Kalshi"], {lab
 <p class="section-intro">Robinhood does not report per-venue figures. Rothera and ForecastEx are measured; OG/Crypto.com is estimated from its football volume, and Kalshi from Robinhood's CFTC filings.</p>
 
 ```js
-// One series drives both the brush and the chart, so the two can never disagree about
-// which points exist. Monthly is the same method at a monthly window, not a sum of the
-// weekly rows -- weeks straddle month ends.
+// Monthly is the same method at a monthly window, not a sum of the weekly rows -- weeks
+// straddle month ends.
 const rhSeries = rhGrain === "Monthly"
   ? monthlyParsed.map(d => ({
       date: d.month_date, value: d.rh_est_billions, share: d.rh_share_pct,
@@ -144,26 +143,7 @@ const rhSeries = rhGrain === "Monthly"
 ```
 
 ```js
-const rhSel = Mutable(d3.extent(rhSeries, d => d.date));
-// The setter MUST live in this cell. Anywhere else `rhSel` is the unwrapped array, so
-// the brush callback used to assign `.value` onto that array and the chart never moved
-// (see components/date-brush.js, "Why an onSelect callback").
-const setRhSel = range => { rhSel.value = range; };
-```
-
-```js
-display(renderDateBrush({
-  data: rhSeries.map(d => ({date: d.date,
-    value: rhMetric === "Estimated volume" ? d.value + d.rothera + d.og + d.fx : d.share})),
-  initialRange: d3.extent(rhSeries, d => d.date),
-  onSelect: setRhSel,
-  color: "var(--accent-robinhood)",
-  width
-}));
-```
-
-```js
-const rhView = rhSeries.filter(d => d.date >= rhSel[0] && d.date <= rhSel[1]);
+const rhView = rhSeries.filter(inDateRange(rhSel));
 // Long form for the stack. Kalshi is the estimate; the other two are measured.
 const rhStack = rhView.flatMap(d => [
   {...d, dest: "Kalshi", v: d.value},
@@ -190,6 +170,18 @@ const rhLast = rhView.length ? rhView[rhView.length - 1] : null;
     <div class="kpi-meta">${rhLast ? `${rhLast.label} — ${fmtPct(rhLast.share)} of Kalshi` : ""}</div>
   </div>
 </div>
+
+```js
+// Built from the weekly file whatever the Period and Metric toggles say, so flipping a
+// toggle keeps the window. Weekly rows are dated by the day the week ended, as charted.
+const rhSel = view(dateBrush({
+  data: weekly,
+  dateAccessor: d => weekEnd(d.week_start),
+  valueAccessor: d => (d.rh_est_billions ?? 0) + (d.rothera_billions ?? 0) + (d.og_billions ?? 0) + (d.fx_billions ?? 0),
+  color: "var(--accent-robinhood)",
+  width
+}));
+```
 
 ```js
 Plot.plot({
@@ -265,6 +257,16 @@ const destStack = reportedParsed.flatMap(d => [
 ```
 
 ```js
+const destRange = view(dateBrush({
+  data: reportedParsed,
+  dateAccessor: d => d.month_date,
+  valueAccessor: d => d.rh_kalshi_billions + (d.rothera_billions ?? 0) + (d.og_billions ?? 0) + (d.forecastex_billions ?? 0),
+  color: "var(--accent-robinhood)",
+  width
+}));
+```
+
+```js
 Plot.plot({
   marginLeft: 58, marginBottom: 50,
   height: 360,
@@ -277,7 +279,7 @@ Plot.plot({
     // `z` is passed explicitly even though barY would inherit it from `fill`: an array
     // `order` without a z channel throws "missing channel: z", and that is a trap worth
     // not re-laying for whoever edits this next.
-    Plot.barY(destStack, {
+    Plot.barY(destStack.filter(inDateRange(destRange, d => d.month_date)), {
       x: "month_date", y: "value", fill: "dest", z: "dest",
       order: DEST_DOMAIN,
       // Opacity carries reported-vs-estimated; colour carries destination. Two variables,
@@ -322,6 +324,10 @@ const fmtM = n => "$" + ((n ?? 0) / 1e6).toFixed(1) + "M";
 ```
 
 ```js
+const filingRange = view(dateBrush({data: filing, valueAccessor: d => d.swap_open_long, color: "var(--accent-robinhood)", width}));
+```
+
+```js
 Plot.plot({
   marginLeft: 62, marginBottom: 40,
   height: 300,
@@ -340,12 +346,12 @@ Plot.plot({
   },
   marks: [
     Plot.ruleY([0]),
-    Plot.line(filingSeries, {
+    Plot.line(filingSeries.filter(inDateRange(filingRange)), {
       x: "date", y: "value", stroke: "series", strokeWidth: 1.6
     }),
     // One tip for both series at the hovered date, rather than two marks fighting over
     // the pointer.
-    Plot.tip(filing, Plot.pointerX({
+    Plot.tip(filing.filter(inDateRange(filingRange)), Plot.pointerX({
       x: "date",
       y: "swap_open_long",
       channels: {
@@ -387,6 +393,10 @@ const fcmSeries = fcmCmp.flatMap(d =>
 ```
 
 ```js
+const fcmRange = view(dateBrush({data: fcmCmp, valueAccessor: d => (+d.robinhood || 0) + (+d.coinbase || 0) + (+d.fanduel || 0), color: "var(--accent-robinhood)", width}));
+```
+
+```js
 Plot.plot({
   marginLeft: 66, marginBottom: 40,
   height: 340,
@@ -400,9 +410,9 @@ Plot.plot({
   },
   color: {domain: FCMS.map(f => f.label), range: FCMS.map(f => f.color), legend: true},
   marks: [
-    Plot.line(fcmSeries, {x: "date", y: "value", stroke: "firm", strokeWidth: 1.5}),
+    Plot.line(fcmSeries.filter(inDateRange(fcmRange)), {x: "date", y: "value", stroke: "firm", strokeWidth: 1.5}),
     fcmScale === "Linear" ? Plot.ruleY([0]) : null,
-    Plot.tip(fcmCmp, Plot.pointerX({
+    Plot.tip(fcmCmp.filter(inDateRange(fcmRange)), Plot.pointerX({
       x: "date",
       y: "robinhood",
       channels: {

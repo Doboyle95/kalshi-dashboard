@@ -28,7 +28,7 @@ const parlayCorrByTicker = await DataAttachment("data/parlay_corr_by_ticker_dail
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {hashGet, hashSet, hashInput} from "./components/hash-state.js";
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange, renderDateBrush} from "./components/date-brush.js";
 import {
   parseMarketDateFromKey, CAT_COLORS, NFL_TEAMS, NBA_TEAMS, MLB_TEAMS, NHL_TEAMS,
   SOCCER_TEAMS, WC_TEAMS, CRICKET_TEAMS, IPL_TEAMS, TENNIS_PLAYERS, CFB_TEAMS, CBB_TEAMS,
@@ -1888,29 +1888,14 @@ const wideColors = {
 ```
 
 ```js
-// Date range - default to 2025 onwards (earlier has near-zero sports volume).
-// The Mutable AND the renderDateBrush() call live in the SAME cell so the
-// onSelect callback closes over the actual Mutable wrapper. The previous inline
-// d3.brushX lived in a separate cell from `const catDateSel = Mutable(...)`, so
-// Observable Framework auto-unwrapped the Mutable to its array value before the
-// brush handler ran — `catDateSel.value = ...` then assigned `.value` onto a
-// plain array and silently no-opped, so dragging never updated the chart.
-// renderDateBrush also provides the Brush<->Dates toggle (the date-dropdown).
-const catChartMaxDate = d3.max(topDaily, d => d.date);
-const catDateSel = Mutable([new Date("2025-01-01"), catChartMaxDate]);
+// The monthly chart's own brush (newest 365 days by default). The daily view and the
+// focused comparison below each have their own, over the same series.
 const catSparkData = wideDaily.map(d => ({
   date: d.date,
   value: wideOrder.reduce((s, g) => s + (d[g] || 0), 0)
 }));
-display(renderDateBrush({
-  data: catSparkData,
-  dateAccessor: d => d.date,
-  valueAccessor: d => d.value,
-  initialRange: [new Date("2025-01-01"), catChartMaxDate],
-  onSelect: r => { catDateSel.value = r; },
-  color: "#1a9641",
-  width
-}));
+// snap: the chart sums daily rows into months, so open on whole months.
+const catRange = view(dateBrush({data: catSparkData, color: "#1a9641", width, snap: "month"}));
 ```
 
 <div class="control-strip">
@@ -1953,7 +1938,7 @@ const activeColorMap = effectiveChartDetail === "Detailed" ? wideColors   : gene
 ```
 
 ```js
-const [chartStart, chartEnd] = catDateSel;
+const [chartStart, chartEnd] = catRange;
 
 // Roll up to monthly totals within the brushed window
 const monthRolled = d3.rollup(
@@ -2108,13 +2093,17 @@ Plot.plot({
 
 ### Daily view
 
-<p class="section-intro">The same category mix, day by day instead of month by month. Uses the date window, category detail, and scale controls above. Brush to a tighter window to read individual days.</p>
+<p class="section-intro">The same category mix, day by day instead of month by month. Uses the category detail and scale controls above. Brush to a tighter window to read individual days.</p>
+
+```js
+const dayRange = view(dateBrush({data: catSparkData, color: "#1a9641", width}));
+```
 
 ```js
 // Daily volume by category — reuses wideDaily (already per-day) + the same
-// category mapping, colors, brush window (catDateSel) and controls
-// (effectiveChartDetail / chartScale) as the monthly chart above.
-const [dayStart, dayEnd] = catDateSel;
+// category mapping, colors and controls (effectiveChartDetail / chartScale) as the
+// monthly chart above, on this chart's own brush window.
+const [dayStart, dayEnd] = dayRange;
 const dailyWindow = wideDaily.filter(d => d.date >= dayStart && d.date <= dayEnd);
 
 const dailyTidy = dailyWindow.flatMap(d => {
@@ -2287,6 +2276,27 @@ if (hasCategoryFocus) {
 ```
 
 ```js
+// The comparison's own brush, shown only while categories are pinned (with no rows it
+// renders nothing and admits every date).
+const cmpRange = view(dateBrush({data: tmPinnedCategories.length ? catSparkData : [], color: "#1a9641", width, snap: "month"}));
+```
+
+```js
+// Monthly totals inside the comparison's own window, built exactly like the monthly
+// chart's (monthRolled / monthTotals above) so the two agree on any shared window.
+const cmpSortedMonths = [...d3.rollup(
+  wideDaily.filter(inDateRange(cmpRange)),
+  rs => {
+    const obj = {};
+    for (const g of wideOrder) obj[g] = d3.sum(rs, d => d[g] || 0);
+    return obj;
+  },
+  d => d.date.toISOString().slice(0, 7)
+)].sort(([a], [b]) => a < b ? -1 : 1);
+const cmpMonthTotals = new Map(cmpSortedMonths.map(([mo, vals]) => [mo, d3.sum(wideOrder, g => vals[g] || 0)]));
+```
+
+```js
 const comparePrimary = tmActiveCategory ? mapCategoryForComparison(tmActiveCategory) : null;
 const rawCompareSeries = tmPinnedCategories.length
   ? Array.from(new Set([
@@ -2304,14 +2314,14 @@ const compareMode = rawCompareSeries.length
 
 const compareSeries = rawCompareSeries.filter(category =>
   wideOrder.includes(category) &&
-  sortedMonths.some(([, vals]) => (vals[category] || 0) > 0)
+  cmpSortedMonths.some(([, vals]) => (vals[category] || 0) > 0)
 );
 
 const missingCompareSeries = rawCompareSeries.filter(category => !compareSeries.includes(category));
 
 const compareFirstNonzero = new Map(compareSeries.map(category => [
   category,
-  sortedMonths.find(([, vals]) => (vals[category] || 0) > 0)?.[1]?.[category] || null
+  cmpSortedMonths.find(([, vals]) => (vals[category] || 0) > 0)?.[1]?.[category] || null
 ]));
 
 const compareValue = (category, contracts, monthTotal) => {
@@ -2320,8 +2330,8 @@ const compareValue = (category, contracts, monthTotal) => {
   return contracts;
 };
 
-const compareTidy = sortedMonths.flatMap(([month, vals]) => {
-  const monthTotal = monthTotals.get(month) || 0;
+const compareTidy = cmpSortedMonths.flatMap(([month, vals]) => {
+  const monthTotal = cmpMonthTotals.get(month) || 0;
   return compareSeries.map(category => ({
     month,
     category,
@@ -2526,25 +2536,11 @@ const mtDaily = mtDated.length === 0 ? mtDated
 ```
 
 ```js
-// Mutable + brush in the SAME cell so the callback closes over the wrapper.
-// Default window: last 6 months. Drag the edges to widen or narrow.
-const mtEnd0 = d3.max(mtDaily, d => d.date);
-const mtStart0 = new Date(mtEnd0);
-mtStart0.setMonth(mtStart0.getMonth() - 6);
-const mtDateSel = Mutable([mtStart0, mtEnd0]);
 const mtSparkData = mtDaily.map(row => ({
   date: row.date,
   value: mtOrder.reduce((s, g) => s + (row[g] || 0), 0)
 }));
-display(renderDateBrush({
-  data: mtSparkData,
-  dateAccessor: d => d.date,
-  valueAccessor: d => d.value,
-  initialRange: [mtStart0, mtEnd0],
-  onSelect: r => { mtDateSel.value = r; },
-  color: "#4e79a7",
-  width
-}));
+const mtDateSel = view(dateBrush({data: mtSparkData, color: "#4e79a7", width}));
 ```
 
 ```js

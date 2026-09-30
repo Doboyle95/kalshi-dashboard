@@ -21,6 +21,7 @@ const parlay    = await DataAttachment("data/polymarket_parlay_daily.csv").csv({
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 ```
 
 ```js
@@ -69,7 +70,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 </details>
 
 ```js
-function makeBrush(data, color) {
+function makeBrush(data, color, {snap = null} = {}) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(data, d => d.date)).range([ml, w - mr]);
@@ -115,8 +116,13 @@ function makeBrush(data, color) {
   svg.selectAll(".handle").style("display", "block").style("fill", color).style("fill-opacity", 0.9);
   svg.selectAll(".selection").style("stroke", color).style("stroke-width", "2px").style("fill", color).style("fill-opacity", 0.15);
   svg.property("value", [start, end]);
-  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG, snap});
 }
+
+// A long table (one row per day per category or type) -> one {date, contracts_total} per
+// day, sorted, which is the shape makeBrush draws.
+const dailyTotals = (rows, value) => Array.from(d3.rollup(rows, v => d3.sum(v, value), d => +d.date), ([t, contracts_total]) => ({date: new Date(t), contracts_total}))
+  .sort((a, b) => a.date - b.date);
 
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
 ```
@@ -172,7 +178,12 @@ const polymarketProductView = view(Inputs.radio(
 ```
 
 ```js
-const brushProducts = view(makeBrush(split, "var(--accent-polymarket)"));
+const pmSplitBrush = makeBrush(split, "var(--accent-polymarket)");
+const brushProducts = view(pmSplitBrush);
+```
+
+```js
+if (pmSplitBrush) pmSplitBrush.style.display = polymarketProductView === "Sports vs non-sports" ? "block" : "none";
 ```
 
 ```js
@@ -214,7 +225,12 @@ polymarketProductView === "Sports vs non-sports" ? Plot.plot({
 <p class="section-intro" hidden>Where the sports money lands, day by day.</p>
 
 ```js
-const brushCats = brushProducts;
+const pmTrendBrush = makeBrush(dailyTotals(catDaily, d => d.contracts), "var(--accent-polymarket)");
+const brushCats = view(pmTrendBrush);
+```
+
+```js
+if (pmTrendBrush) pmTrendBrush.style.display = polymarketProductView === "Sport trend" ? "block" : "none";
 ```
 
 ```js
@@ -316,8 +332,20 @@ const mtFrom = mtCovered.length ? mtCovered[0] : null;
 ```
 
 ```js
-const [sM, eM] = brushProducts;
-// Respect the shared brush, but never draw below the coverage gate.
+// No covered day yet: an empty brush whose window admits everything (the chart shows its note).
+const pmTypesBrush = mtFrom
+  ? makeBrush(dailyTotals(mktType.filter(d => d.date >= mtFrom), d => +d.contracts || 0), "var(--accent-polymarket)")
+  : dateBrush({data: []});
+const brushTypes = view(pmTypesBrush);
+```
+
+```js
+if (pmTypesBrush) pmTypesBrush.style.display = polymarketProductView === "Contract types" ? "block" : "none";
+```
+
+```js
+const [sM, eM] = brushTypes;
+// Respect this chart's brush, but never draw below the coverage gate.
 const mtWin = mtFrom
   ? mktType.filter(d => d.date >= Math.max(sM, mtFrom) && d.date <= eM && (+d.contracts || 0) > 0)
   : [];
@@ -520,12 +548,16 @@ const fmtUSD0 = n => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n 
 ```
 
 ```js
+const pmParlayRange = view(makeBrush(parlayDaily.map(d => ({date: d.date, contracts_total: d.contracts})), "#B07AA1", {snap: "month"}));
+```
+
+```js
 // Bars, not an area: a launch ramp this short is a series of discrete periods, and a
 // smoothed curve over that few points invents a shape the data does not have.
 // volumeUnit "dollars" because a matured combo settles at exactly 1 or 0, so the contract
 // count IS a face-value dollar figure here — labelling it a bare count understates it.
 parlayChart({
-  daily: parlayDaily,
+  daily: parlayDaily.filter(inDateRange(pmParlayRange)),
   granularity: parlayGranularity,
   metric: parlayMetric,
   color: "#B07AA1",

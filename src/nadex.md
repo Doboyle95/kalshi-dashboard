@@ -135,7 +135,7 @@ function makeBrush(data, color) {
 
 ## Daily volume
 
-<p class="section-intro">Daily event-contract volume since OG/Crypto.com event contracts started appearing in the exchange's daily bulletins.</p>
+<p class="section-intro">Daily event-contract volume from the exchange's daily bulletins.</p>
 
 ```js
 const brushVolume = view(makeBrush(split, "var(--accent-nadex)"));

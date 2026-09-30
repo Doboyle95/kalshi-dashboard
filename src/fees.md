@@ -83,7 +83,8 @@ const avgFeeRate     = totalFees / totalContracts * 100; // cents per contract
 </details>
 
 ```js
-function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "var(--accent-secondary)") {
+// snap "month": for a chart that sums daily rows into months (opens on whole months).
+function makeDateBrush(yAcc = d => d.fees_total || 0, color = "var(--accent-secondary)", snap = null) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(daily, d => d.date)).range([ml, w - mr]);
@@ -111,7 +112,6 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "var
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  const defaultEnd = d3.max(daily, d => d.date);
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
     .on("brush end", event => {
@@ -128,12 +128,10 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "var
     });
 
   const brushG = svg.append("g").attr("class", "brush");
-
-
-  brushG.call(brush).call(brush.move, [defaultStart, defaultEnd].map(x));
+  brushG.call(brush);
   svg.selectAll(".handle").style("fill", color).style("fill-opacity", 0.8);
-  svg.property("value", [defaultStart, defaultEnd]);
-  return dateBrushFromUrl(svg.node(), {x, brush, brushG});
+  // Opens on the newest 365 days (defaultWindow), or on the URL's window.
+  return dateBrushFromUrl(svg.node(), {x, brush, brushG, snap});
 }
 ```
 
@@ -144,7 +142,7 @@ function makeDateBrush(defaultStart, yAcc = d => d.fees_total || 0, color = "var
 <div class="instruction-line"><strong>Useful trick:</strong> brush around a major volume spike, then check whether fees stayed elevated after volume cooled off.</div>
 
 ```js
-const dr1 = view(makeDateBrush(new Date("2025-01-01")));
+const dr1 = view(makeDateBrush());
 ```
 
 ```js
@@ -201,7 +199,7 @@ Plot.plot({
 <div class="instruction-line"><strong>Useful trick:</strong> switch to <em>Share of total</em> and brush across mid-2025 — the maker component changes level when the flat per-contract maker fee gave way to a price-dependent curve, which a dollar view hides behind the growth in volume.</div>
 
 ```js
-const dr4 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total || 0, "#e6550d"));
+const dr4 = view(makeDateBrush(d => d.fees_total || 0, "#e6550d"));
 ```
 
 ```js
@@ -306,7 +304,7 @@ const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
 <div class="instruction-line"><strong>Useful trick:</strong> watch the slope, not just the height — a steeper stretch means Kalshi was collecting fees faster in that period.</div>
 
 ```js
-const dr2 = view(makeDateBrush(new Date("2021-06-01"), d => d.fees_total || 0, "#1a9641"));
+const dr2 = view(makeDateBrush(d => d.fees_total || 0, "#1a9641"));
 ```
 
 ```js
@@ -401,7 +399,7 @@ Plot.plot({
 <div class="instruction-line"><strong>Useful trick:</strong> after a volume spike, use this to tell whether revenue rose from more contracts or from each contract monetizing better.</div>
 
 ```js
-const dr3 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "var(--accent-secondary)"));
+const dr3 = view(makeDateBrush(d => d.fees_total / (d.contracts_total || 1) * 100, "var(--accent-secondary)"));
 ```
 
 ```js
@@ -595,7 +593,7 @@ const wideDailyFees = topDailyFees.map(row => {
 ```
 
 ```js
-const dr5 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total || 0, "#1a9641"));
+const dr5 = view(makeDateBrush(d => d.fees_total || 0, "#1a9641", "month"));
 ```
 
 <div class="control-strip">
@@ -685,7 +683,7 @@ Plot.plot({
 ### Daily view
 
 ```js
-const dr6 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total || 0, "#1a9641"));
+const dr6 = view(makeDateBrush(d => d.fees_total || 0, "#1a9641"));
 ```
 
 ```js
@@ -765,7 +763,7 @@ const catVolumeDaily = topDailyVolume.map(row => {
 ```
 
 ```js
-const dr7 = view(makeDateBrush(new Date("2025-01-01"), d => d.fees_total / (d.contracts_total || 1) * 100, "#1a9641"));
+const dr7 = view(makeDateBrush(d => d.fees_total / (d.contracts_total || 1) * 100, "#1a9641", "month"));
 ```
 
 ```js

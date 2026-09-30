@@ -15,7 +15,7 @@ display(DataAttachment.marker);
 const cme = await DataAttachment("data/cme_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 ```
 
@@ -65,28 +65,23 @@ const totalAll = d3.sum(rows, d => d.total);
   </div>
 </div>
 
-```js
-// A5 fix: guard against an empty/header-only cme_daily.csv -- rows[0].date would throw and take
-// down the brush + both Plot blocks below. Behaviour unchanged for the normal populated case.
-const cmeDateSel = Mutable(rows.length ? [rows[0].date, rows[rows.length - 1].date] : [new Date(), new Date()]);
-display(rows.length ? renderDateBrush({
-  data: rows, dateAccessor: d => d.date, valueAccessor: d => d.total,
-  initialRange: [rows[0].date, rows[rows.length - 1].date],
-  onSelect: r => { cmeDateSel.value = r; }, width
-}) : html`<p>No CME data available.</p>`);
-```
-
 ## Daily volume · calls and puts
 
 <p class="section-intro">Each bar is one CME Daily Bulletin, shown exactly as CME publishes it. <strong>Mondays look huge because they include the weekend.</strong> Gaps are days we couldn't collect, not zero-volume days.</p>
 
 ```js
-const inRange = rows.filter(d => d.date >= cmeDateSel[0] && d.date <= cmeDateSel[1]);
+// An empty/header-only cme_daily.csv draws no brush (and admits everything); say so instead.
+const cmeDateSel = view(dateBrush({data: rows, valueAccessor: d => d.total, color: CME_COLORS.Calls, width}));
+if (!rows.length) display(html`<p>No CME data available.</p>`);
+```
+
+```js
+const inRange = rows.filter(inDateRange(cmeDateSel));
 const tidy = inRange.flatMap(d => [
   {date: d.date, side: "Calls", vol: d.calls, total: d.total},
   {date: d.date, side: "Puts", vol: d.puts, total: d.total}
 ]);
-const volumeEvents = positionedVolumeEvents(ESTABLISHED_VOLUME_EVENTS, cmeDateSel[0], cmeDateSel[1], d3.max(inRange, d => d.total) || 1);
+const volumeEvents = inRange.length ? positionedVolumeEvents(ESTABLISHED_VOLUME_EVENTS, cmeDateSel[0], cmeDateSel[1], d3.max(inRange, d => d.total) || 1) : [];
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 300, marginLeft: 64,

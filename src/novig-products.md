@@ -11,6 +11,7 @@ title: Novig · Products
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryTotals, sportsSplit, fmtCount, fmtPct} from "./components/venue-modules.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const cats = await DataAttachment("data/novig_category_daily.csv").csv({typed: true});
@@ -38,7 +39,11 @@ const mixMeasure = view(Inputs.radio(["Share", "Contracts"], {label: "Measure", 
 </div>
 
 ```js
-display(categoryMix({rows, width, measure: mixMeasure, categories: present, colorOf: bucketColor}));
+const mixRange = view(dateBrush({data: rows, valueAccessor: d => +d.contracts, color: ACCENT, width}));
+```
+
+```js
+display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: mixMeasure, categories: present, colorOf: bucketColor}));
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>

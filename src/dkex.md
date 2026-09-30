@@ -10,7 +10,7 @@ title: DKeX (DraftKings)
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -421,21 +421,15 @@ const voidRate = daily
 const fmtPct = n => n == null || Number.isNaN(+n) ? "" : (100 * +n).toFixed(2) + "%";
 const settlementScaleMax = d3.max(settlementByDate, d => d.settlements) || 1;
 const voidRateScaled = voidRate.map(d => ({...d, scaled: d.void_rate * settlementScaleMax}));
-const settlementBrushSeries = settlementByDate.map(d => ({date: d.date, value: d.settlements}));
-const settlementDateSel = Mutable([d3.min(settlementBrushSeries, d => d.date), d3.max(settlementBrushSeries, d => d.date)]);
-display(renderDateBrush({
-  data: settlementBrushSeries,
-  initialRange: [d3.min(settlementBrushSeries, d => d.date), d3.max(settlementBrushSeries, d => d.date)],
-  onSelect: range => { settlementDateSel.value = range; },
-  color: DKEX,
-  width
-}));
 ```
 
 ```js
-const [settlementFrom, settlementTo] = settlementDateSel;
-const settlementTidyBrushed = settlementTidy.filter(d => d.date >= settlementFrom && d.date <= settlementTo);
-const voidRateScaledBrushed = voidRateScaled.filter(d => d.date >= settlementFrom && d.date <= settlementTo);
+const settlementRange = view(dateBrush({data: settlementByDate, valueAccessor: d => d.settlements, color: DKEX, width}));
+```
+
+```js
+const settlementTidyBrushed = settlementTidy.filter(inDateRange(settlementRange));
+const voidRateScaledBrushed = voidRateScaled.filter(inDateRange(settlementRange));
 ```
 
 ```js

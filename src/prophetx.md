@@ -10,7 +10,7 @@ title: ProphetX
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -45,21 +45,6 @@ const parlayContracts = d3.sum(complete, d => d.contracts_parlay);
 // Dollars parlay buyers paid. Complete days only, like every other figure quoted here.
 const parlayStakes = d3.sum(complete, d => d.stake_parlay);
 const meanDaily = totalContracts / complete.length;
-const pxBrushSeries = daily.map(d => ({date: d.date, value: d.contracts})).sort((a, b) => a.date - b.date);
-const pxDateSel = Mutable([d3.min(pxBrushSeries, d => d.date), d3.max(pxBrushSeries, d => d.date)]);
-display(renderDateBrush({
-  data: pxBrushSeries,
-  initialRange: [d3.min(pxBrushSeries, d => d.date), d3.max(pxBrushSeries, d => d.date)],
-  onSelect: range => { pxDateSel.value = range; },
-  color: PX,
-  width
-}));
-```
-
-```js
-const [pxBrushFrom, pxBrushTo] = pxDateSel;
-const completeBrushed = complete.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo);
-const partialBrushed = partial.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo);
 ```
 
 <div class="grid grid-cols-4">
@@ -72,6 +57,15 @@ const partialBrushed = partial.filter(d => d.date >= pxBrushFrom && d.date <= px
 ## Daily volume
 
 <div class="instruction-line">Calendar days, not the venue's trading sessions. A ProphetX session runs 16:30&ndash;16:30 ET, so its own session labels straddle two dates; using the execution timestamp instead keeps this series comparable with every other venue on the site. ${partial.length ? html`The final bar is <strong>still being collected</strong> and is drawn hollow.` : ""}</div>
+
+```js
+const pxVolRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts, color: PX, width}));
+```
+
+```js
+const completeBrushed = complete.filter(inDateRange(pxVolRange));
+const partialBrushed = partial.filter(inDateRange(pxVolRange));
+```
 
 ```js
 Plot.plot({
@@ -103,6 +97,14 @@ Plot.plot({
 ## How much of it is parlays
 
 ```js
+const pxShareRange = view(dateBrush({data: complete, valueAccessor: d => d.pct_parlay, color: PX, width}));
+```
+
+```js
+const completeShareBrushed = complete.filter(inDateRange(pxShareRange));
+```
+
+```js
 Plot.plot({
   width,
   height: 280,
@@ -112,8 +114,8 @@ Plot.plot({
   y: {label: "Parlay share of volume (%)", grid: true, zero: true},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
-    Plot.line(completeBrushed, {x: "date", y: "pct_parlay", stroke: PX, strokeWidth: 2, curve: "monotone-x"}),
-    Plot.dot(completeBrushed, {
+    Plot.line(completeShareBrushed, {x: "date", y: "pct_parlay", stroke: PX, strokeWidth: 2, curve: "monotone-x"}),
+    Plot.dot(completeShareBrushed, {
       x: "date", y: "pct_parlay", fill: PX, r: 3.5,
       stroke: "var(--theme-background)", strokeWidth: 2,
       title: d => `${fmtDate(d.date)}\n${d.pct_parlay.toFixed(2)}% of volume is parlays\n${d3.format(",.0f")(d.contracts_parlay)} of ${d3.format(",.0f")(d.contracts)} contracts`,
@@ -140,7 +142,12 @@ const pxParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metr
 ```
 
 ```js
-// Both metrics off the tape, on the page's shared window. The partial newest date is kept
+// snap: the Monthly view rolls these daily rows into months, so open on whole months.
+const pxParlayRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts_parlay, color: PX, width, snap: "month"}));
+```
+
+```js
+// Both metrics off the tape, on this chart's own window. The partial newest date is kept
 // rather than filtered out the way the charts above do it — parlayChart fades an unfinished
 // period instead of dropping it, which is the same disclosure without the gap.
 //
@@ -149,7 +156,7 @@ const pxParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metr
 // only 11 of 18,262 multi-print parlays ever show a price and its complement. That is why
 // this venue publishes a dollar figure for parlays and for nothing else.
 const pxParlayDaily = toDailyParlay(
-  daily.filter(d => d.date >= pxBrushFrom && d.date <= pxBrushTo),
+  daily.filter(inDateRange(pxParlayRange)),
   {date: "date", contracts: "contracts_parlay", stake: "stake_parlay", complete: "complete", venue: "contracts"}
 );
 display(parlayChart({

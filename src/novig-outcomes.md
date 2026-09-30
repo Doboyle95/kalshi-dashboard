@@ -12,6 +12,7 @@ title: Novig · Outcomes
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -60,13 +61,17 @@ if (!S) display(html`<div class="instruction-line" style="border-left-color:var(
 <div class="instruction-line">Cumulative gross taker P&amp;L on settled straight contracts; the shaded band is how much the live-straight fee could take off it.</div>
 
 ```js
+const nvPnlRange = view(dateBrush({data: pnlDaily, dateAccessor: d => asDate(d.date), valueAccessor: d => +d.decisive_contracts || 0, color: NV, width}));
+```
+
+```js
 if (pnlDaily.length) {
   let cg = 0, cl = 0;
   const rows = pnlDaily.slice().sort((a, b) => asDate(a.date) - asDate(b.date)).map(d => {
     cg += +d.gross_pnl || 0;
     cl += +d.net_pnl_lo || 0;
     return {date: asDate(d.date), grossCum: cg, netLoCum: cl, makerCum: -cg, gross: +d.gross_pnl || 0, contracts: +d.decisive_contracts || 0};
-  });
+  }).filter(inDateRange(nvPnlRange));
   display(Plot.plot({
     style: {fontFamily: "var(--font-sans)"}, width, height: 340, marginLeft: 72, marginBottom: 36,
     x: {label: null, type: "utc", tickFormat: "%b %d"},

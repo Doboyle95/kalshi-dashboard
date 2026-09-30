@@ -27,7 +27,7 @@ const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv"
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush} from "./components/date-brush.js";
 import {bestName, fmtStrike} from "./components/ticker-names.js";
 import {buildReportTickerToCat, estimateHistoricalTakerCategoryRows, reconcileTakerCategoryRows, TAKER_DETAIL_ORDER, TAKER_DETAIL_COLORS, TAKER_GENERAL_MAP, TAKER_GENERAL_ORDER, TAKER_GENERAL_COLORS} from "./components/taker-categories.js";
 ```
@@ -89,10 +89,6 @@ const recentPctYes  = d3.mean(recentRows, d => d.notional_total ? d.notional_yes
 </div>
 
 ```js
-const takerMaxDate = d3.max(taker, d => d.date);
-```
-
-```js
 // ── Category classification (report_ticker -> cat, sport-by-sport instead of Kalshi's own
 // coarse kalshi_category) is shared across this page and taker-pnl.md - see
 // components/taker-categories.js for the order/color/general-map definitions.
@@ -131,7 +127,6 @@ const takerCatDaily = Array.from(
   d3.rollup(takerCatRows, rows => d3.sum(rows, r => r.value), d => +d.date),
   ([t, value]) => ({date: new Date(t), value})
 ).sort((a, b) => a.date - b.date);
-const takerCatMaxDate = d3.max(takerCatDaily, d => d.date);
 ```
 
 ## Daily taker-side volume
@@ -141,13 +136,7 @@ const takerCatMaxDate = d3.max(takerCatDaily, d => d.date);
 <div class="instruction-line"><strong>Useful trick:</strong> when taker dollars spike but contract volume on the Volume page doesn't, the action moved into pricier, higher-conviction contracts — not just more of them.</div>
 
 ```js
-const dr = Mutable([new Date("2025-01-01"), takerMaxDate]);
-display(renderDateBrush({
-  data: taker, dateAccessor: d => d.date, valueAccessor: d => d.notional_total,
-  initialRange: [new Date("2025-01-01"), takerMaxDate],
-  onSelect: r => { dr.value = r; },
-  color: "var(--accent-kalshi)", width
-}));
+const dr = view(dateBrush({data: taker, valueAccessor: d => d.notional_total, color: "var(--accent-kalshi)", width}));
 ```
 
 ```js
@@ -205,13 +194,7 @@ Plot.plot({
 <p class="section-intro">Which way the aggressive money is leaning. A steady yes-side majority means buyers are pushing harder than sellers across the board.</p>
 
 ```js
-const drYesNo = Mutable([new Date("2025-01-01"), takerMaxDate]);
-display(renderDateBrush({
-  data: taker, dateAccessor: d => d.date, valueAccessor: d => d.notional_total,
-  initialRange: [new Date("2025-01-01"), takerMaxDate],
-  onSelect: r => { drYesNo.value = r; },
-  color: "var(--accent-kalshi)", width
-}));
+const drYesNo = view(dateBrush({data: taker, valueAccessor: d => d.notional_total, color: "var(--accent-kalshi)", width}));
 ```
 
 ```js
@@ -275,13 +258,7 @@ Plot.plot({
 <p class="chart-note">Before ${fmtDate(takerCategoryDirectStart)}, category shares are estimated from Kalshi's full contract mix and scaled to the daily taker-dollar total. From that date onward, the chart uses direct taker-side category data. Daily totals match the chart above throughout.</p>
 
 ```js
-const drCat = Mutable([new Date("2025-01-01"), takerCatMaxDate]);
-display(renderDateBrush({
-  data: takerCatDaily, dateAccessor: d => d.date, valueAccessor: d => d.value,
-  initialRange: [new Date("2025-01-01"), takerCatMaxDate],
-  onSelect: r => { drCat.value = r; },
-  color: "#8E24AA", width
-}));
+const drCat = view(dateBrush({data: takerCatDaily, valueAccessor: d => d.value, color: "#8E24AA", width}));
 ```
 
 <div class="control-strip">
@@ -359,18 +336,23 @@ Plot.plot({
 
 ## Yes/No skew by category
 
-<p class="section-intro">Which categories takers only want to bet one way on. A category near 50/50 means the aggressive money is split; a category leaning hard to one side means takers overwhelmingly buy Yes (or fade to No) there. Same brushed window and General/Detailed toggle as the chart above.</p>
+<p class="section-intro">Which categories takers only want to bet one way on. A category near 50/50 means the aggressive money is split; a category leaning hard to one side means takers overwhelmingly buy Yes (or fade to No) there. Same General/Detailed toggle as the chart above.</p>
 
 ```js
-// Same file, categories and brushed window (sCat/eCat) as "Taker volume by category" above,
-// split by taker side instead of summed.
+const drSkew = view(dateBrush({data: takerCatDaily, valueAccessor: d => d.value, color: "#8E24AA", width}));
+```
+
+```js
+// Same file and categories as "Taker volume by category" above, on this chart's own
+// window, split by taker side instead of summed.
+const [sSkew, eSkew] = drSkew;
 const takerSideRows = takerVolByCategory.flatMap(d => [
   {date: d.date, category: d.category || "Uncategorized", side: "yes", value: +d.taker_yes_usd || 0},
   {date: d.date, category: d.category || "Uncategorized", side: "no",  value: +d.taker_no_usd || 0}
 ]);
 
 const fdCatSide = takerSideRows
-  .filter(d => d.date >= sCat && d.date <= eCat)
+  .filter(d => d.date >= sSkew && d.date <= eSkew)
   .map(d => ({...d, category: takerCatDetail === "Detailed" ? d.category : (TAKER_GENERAL_MAP[d.category] || "Uncategorized")}));
 
 const skewByCategory = Array.from(

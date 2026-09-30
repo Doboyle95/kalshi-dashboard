@@ -67,7 +67,7 @@ const peakDay = split.reduce((best, d) => d.contracts_total > best.contracts_tot
 // Short axis format: "400M" instead of "400,000,000"
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
 
-function makeBrush(data, color, defaultStart) {
+function makeBrush(data, color) {
   const h = 60, mt = 4, mb = 20, ml = 8, mr = 8;
   const w = width;
   const x = d3.scaleUtc().domain(d3.extent(data, d => d.date)).range([ml, w - mr]);
@@ -89,11 +89,8 @@ function makeBrush(data, color, defaultStart) {
     .call(g => g.select(".domain").attr("stroke", "#ccc"))
     .call(g => g.selectAll("text").style("font-size", "10px").attr("fill", "#888"));
 
-  // Default brush start: clamp to available data
-  const dataMin = d3.min(data, d => d.date);
-  const dataMax = d3.max(data, d => d.date);
-  const start = defaultStart && +defaultStart > +dataMin ? defaultStart : dataMin;
-  const end = dataMax;
+  const start = d3.min(data, d => d.date);
+  const end = d3.max(data, d => d.date);
 
   const brush = d3.brushX()
     .extent([[ml, mt], [w - mr, h - mb]])
@@ -127,10 +124,10 @@ function makeBrush(data, color, defaultStart) {
 
 ## Daily volume
 
-<p class="section-intro">ForecastEx full exchange volume. Defaults to 2025+ since 2024's election days otherwise compress the view.</p>
+<p class="section-intro">ForecastEx full exchange volume.</p>
 
 ```js
-const brushVolume = view(makeBrush(split, "var(--accent-forecastex)", new Date("2025-01-01")));
+const brushVolume = view(makeBrush(split, "var(--accent-forecastex)"));
 ```
 
 ```js
@@ -167,7 +164,7 @@ Plot.plot({
 <p class="section-intro">How much of ForecastEx is sports versus everything else — once a thin slice, now mostly gone.</p>
 
 ```js
-const brushSports = view(makeBrush(split, "var(--accent-forecastex)", new Date("2025-01-01")));
+const brushSports = view(makeBrush(split, "var(--accent-forecastex)"));
 ```
 
 ```js
@@ -209,7 +206,7 @@ Plot.plot({
 <p class="section-intro">The themes carrying ForecastEx's volume, and the shift from politics toward weather.</p>
 
 ```js
-const brushCats = view(makeBrush(split, "var(--accent-forecastex)", new Date("2025-01-01")));
+const brushCats = view(makeBrush(split, "var(--accent-forecastex)"));
 ```
 
 ```js

@@ -6,7 +6,7 @@ title: Cross-Venue Parlays
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -206,19 +206,14 @@ const overTime = series.filter(d => longEnough.has(d.venue));
 const shown = headline.filter(d => longEnough.has(d.venue)).map(d => d.venue);
 const parlayBrushSeries = Array.from(d3.rollup(overTime, group => d3.max(group, d => d.share) ?? 0, d => +d.date), ([date, value]) => ({date: new Date(+date), value}))
   .sort((a, b) => a.date - b.date);
-const parlayDateSel = Mutable([d3.min(overTime, d => d.date), d3.max(overTime, d => d.date)]);
-display(renderDateBrush({
-  data: parlayBrushSeries,
-  initialRange: [d3.min(overTime, d => d.date), d3.max(overTime, d => d.date)],
-  onSelect: range => { parlayDateSel.value = range; },
-  color: "var(--accent-nadex)",
-  width
-}));
 ```
 
 ```js
-const [parlayBrushFrom, parlayBrushTo] = parlayDateSel;
-const overTimeBrushed = overTime.filter(d => d.date >= parlayBrushFrom && d.date <= parlayBrushTo);
+const parlayDateSel = view(dateBrush({data: parlayBrushSeries, valueAccessor: d => d.value, color: "var(--accent-nadex)", width}));
+```
+
+```js
+const overTimeBrushed = overTime.filter(inDateRange(parlayDateSel));
 ```
 
 ```js

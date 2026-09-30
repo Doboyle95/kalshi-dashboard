@@ -21,6 +21,7 @@ const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({t
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
+import {inDateRange} from "./components/date-brush.js";
 ```
 
 ```js
@@ -177,6 +178,14 @@ Plot.plot({
 <p class="section-intro">Contracts still outstanding at each day's close — the standing capital on the book, as opposed to the volume that passed through it.</p>
 
 ```js
+const oiRange = view(makeBrush(oiRows.map(d => ({date: d.date, contracts_total: d.oi})), "var(--accent-rothera)"));
+```
+
+```js
+const oiRowsBrushed = oiRows.filter(inDateRange(oiRange));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width,
@@ -185,9 +194,9 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: "Open interest (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   marks: [
-    Plot.areaY(oiRows, {x: "date", y: "oi", fill: "var(--accent-rothera)", fillOpacity: 0.2, curve: "monotone-x"}),
-    Plot.line(oiRows, {x: "date", y: "oi", stroke: "var(--accent-rothera)", strokeWidth: 1.8, curve: "monotone-x"}),
-    Plot.tip(oiRows, Plot.pointerX({
+    Plot.areaY(oiRowsBrushed, {x: "date", y: "oi", fill: "var(--accent-rothera)", fillOpacity: 0.2, curve: "monotone-x"}),
+    Plot.line(oiRowsBrushed, {x: "date", y: "oi", stroke: "var(--accent-rothera)", strokeWidth: 1.8, curve: "monotone-x"}),
+    Plot.tip(oiRowsBrushed, Plot.pointerX({
       x: "date", y: "oi",
       title: d => `${fmtDate(d.date)}\n${fmtCount(d.oi)} contracts outstanding`
     })),

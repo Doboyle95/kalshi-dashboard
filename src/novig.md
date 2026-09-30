@@ -10,7 +10,7 @@ title: Novig
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -76,19 +76,6 @@ const parlayAll = d3.sum(
 const maxLegs = d3.max(parlay, d => d.legs);
 // Dollars parlay takers paid, on the same rows as parlayTotal above.
 const parlayStakeTotal = d3.sum(parlay.filter(d => d.legs > 1), d => +d.taker_value || 0);
-const novigDateSel = Mutable([d3.min(daily, d => d.date), d3.max(daily, d => d.date)]);
-display(renderDateBrush({
-  data: daily.map(d => ({date: d.date, value: d.contracts})),
-  initialRange: [d3.min(daily, d => d.date), d3.max(daily, d => d.date)],
-  onSelect: range => { novigDateSel.value = range; },
-  color: NV,
-  width
-}));
-```
-
-```js
-const [novigBrushFrom, novigBrushTo] = novigDateSel;
-const dailyBrushed = daily.filter(d => d.date >= novigBrushFrom && d.date <= novigBrushTo);
 ```
 
 <div class="grid grid-cols-4">
@@ -99,6 +86,14 @@ const dailyBrushed = daily.filter(d => d.date >= novigBrushFrom && d.date <= nov
 </div>
 
 ## Daily volume
+
+```js
+const nvVolRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts, color: NV, width}));
+```
+
+```js
+const dailyBrushed = daily.filter(inDateRange(nvVolRange));
+```
 
 ```js
 Plot.plot({
@@ -147,10 +142,14 @@ const catUnknown = Array.from(new Set(category.map(d => d.category)))
 // on its own rather than showing an empty swatch.
 const catPresent = [...catUnknown, ...CAT_ORDER]
   .filter(c => category.some(d => d.category === c && d.contracts > 0));
-const categoryBrushed = category.filter(d => d.date >= novigBrushFrom && d.date <= novigBrushTo);
 ```
 
 ```js
+const nvCatRange = view(dateBrush({data: category, valueAccessor: d => d.contracts, color: NV, width}));
+```
+
+```js
+const categoryBrushed = category.filter(inDateRange(nvCatRange));
 display(catPresent.length
   ? Plot.plot({
       width,
@@ -357,21 +356,11 @@ display(Plot.plot({
 ```
 
 ```js
-const novigFeeDateSel = Mutable(feeT ? [feeT.from, feeT.to] : [new Date("2000-01-01T00:00:00Z"), new Date("2000-01-02T00:00:00Z")]);
-display(feeT
-  ? renderDateBrush({
-      data: fees.map(d => ({date: d.date, value: d.parlay_fees_taker + d.straight_fees_taker_max})),
-      initialRange: [feeT.from, feeT.to],
-      onSelect: range => { novigFeeDateSel.value = range; },
-      color: NV,
-      width
-    })
-  : html``);
+const novigFeeDateSel = view(dateBrush({data: fees, valueAccessor: d => d.parlay_fees_taker + d.straight_fees_taker_max, color: NV, width}));
 ```
 
 ```js
-const [novigFeeBrushFrom, novigFeeBrushTo] = novigFeeDateSel;
-const feesBrushed = fees.filter(d => d.date >= novigFeeBrushFrom && d.date <= novigFeeBrushTo);
+const feesBrushed = fees.filter(inDateRange(novigFeeDateSel));
 
 if (feeT) display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
@@ -423,6 +412,10 @@ const nvParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metr
 ```
 
 ```js
+const nvParlayRange = view(dateBrush({data: parlay.filter(d => d.legs > 1), valueAccessor: d => d.contracts, color: NV, width, snap: "month"}));
+```
+
+```js
 // The venue denominator is attached AFTER the daily rollup, never as a column. This file
 // has one row per leg count, and every one of them carries the same day total, so reading
 // it as a per-row field adds the denominator once per leg bucket and the share lands about
@@ -433,7 +426,7 @@ const nvDayTotal = d3.rollup(
   d => String(d.date)
 );
 const nvParlayDaily = toDailyParlay(
-  parlay.filter(d => d.legs > 1 && d.date >= novigBrushFrom && d.date <= novigBrushTo),
+  parlay.filter(d => d.legs > 1).filter(inDateRange(nvParlayRange)),
   {date: "date", contracts: "contracts", stake: "taker_value"}
 ).map(d => ({...d, venue: nvDayTotal.get(String(d.date)) ?? null}));
 display(parlayChart({

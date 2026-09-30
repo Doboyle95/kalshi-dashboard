@@ -11,6 +11,7 @@ title: Rothera · Products
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryTotals, sportsSplit, fmtCount, fmtPct} from "./components/venue-modules.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const cats = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
@@ -40,7 +41,11 @@ const mixMeasure = view(Inputs.radio(["Share", "Contracts"], {label: "Measure", 
 </div>
 
 ```js
-display(categoryMix({rows, width, measure: mixMeasure, categories: present, colorOf: bucketColor}));
+const mixRange = view(dateBrush({data: rows, valueAccessor: d => +d.contracts, color: ACCENT, width}));
+```
+
+```js
+display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: mixMeasure, categories: present, colorOf: bucketColor}));
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
@@ -48,7 +53,11 @@ display(categoryMix({rows, width, measure: mixMeasure, categories: present, colo
 ## Sports and everything else
 
 ```js
-display(sportsSplit({rows: split, width, color: ACCENT, measure: mixMeasure}));
+const splitRange = view(dateBrush({data: split, valueAccessor: d => +d.contracts_total || (+d.contracts_sports || 0) + (+d.contracts_nonsports || 0), color: ACCENT, width}));
+```
+
+```js
+display(sportsSplit({rows: split.filter(inDateRange(splitRange)), width, color: ACCENT, measure: mixMeasure}));
 ```
 
 ```js
@@ -89,6 +98,10 @@ const tenorBuckets = Array.from(new Set(tenorRows.map(d => d.bucket)))
 ```
 
 ```js
+const tenorRange = view(dateBrush({data: tenor, valueAccessor: d => +d.contracts, color: ACCENT, width}));
+```
+
+```js
 display(tenorRows.length
   ? Plot.plot({
       style: {fontFamily: "var(--font-sans)"},
@@ -99,7 +112,7 @@ display(tenorRows.length
       // categorical palette -- the same reasoning the shared trade-size chart uses.
       color: {legend: true, domain: tenorBuckets, type: "ordinal", scheme: "BuPu"},
       marks: [
-        Plot.areaY(tenorRows, {
+        Plot.areaY(tenorRows.filter(inDateRange(tenorRange)), {
           x: "date", y: "value", fill: "bucket", order: tenorBuckets,
           curve: "monotone-x", fillOpacity: 0.92, tip: true,
           title: d => `${d.bucket} to expiration\n${fmtCount(d.value)} ${tenorMeasure.toLowerCase()} · ${d.markets.toLocaleString()} markets`

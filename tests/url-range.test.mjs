@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {dateBrushFromUrl, formatDay, rangeParams, readRangeParams, urlDateRange} from "../src/components/url-range.js";
+import {dateBrushFromUrl, defaultWindow, formatDay, rangeParams, readRangeParams, urlDateRange} from "../src/components/url-range.js";
 
 const day = (s) => new Date(`${s}T00:00:00Z`);
 const domain = [day("2025-01-01"), day("2026-09-19")];
@@ -83,12 +83,28 @@ test("dateBrushFromUrl moves a page-local brush to the URL window and tags it", 
   assert.deepEqual(node.dateBrushParams(), {from: "2026-06-01", to: "2026-08-31"});
 });
 
-test("dateBrushFromUrl leaves a brush alone when the URL carries no window", () => {
+test("dateBrushFromUrl opens a page-local brush on the last 365 days when the URL carries no window", () => {
   const x = Object.assign((d) => +d, {domain: () => domain});
   const moves = [];
   const node = {value: fallback, setAttribute: () => {}};
-  dateBrushFromUrl(node, {x, brush: {move: "move"}, brushG: {call: (...a) => moves.push(a)}});
-  assert.equal(node.value, fallback);
-  assert.equal(moves.length, 0);
+  dateBrushFromUrl(node, {x, brush: {move: "move"}, brushG: {call: (fn, arg) => moves.push([fn, arg])}});
+  assert.deepEqual(node.value.map(formatDay), ["2025-09-20", "2026-09-19"]);
+  assert.deepEqual(moves, [["move", [+day("2025-09-20"), +day("2026-09-19")]]]);
   assert.deepEqual(node.dateBrushParams(), {});
+});
+
+test("defaultWindow is the newest 365 days, clamped to the data", () => {
+  assert.deepEqual(defaultWindow(domain).map(formatDay), ["2025-09-20", "2026-09-19"]);
+  // the same days as ?days=365 and the "365d" quick range
+  assert.deepEqual(urlDateRange(fallback, domain, readRangeParams("?days=365")).map(formatDay), ["2025-09-20", "2026-09-19"]);
+  // under a year of data: all of it
+  const short = [day("2026-06-01"), day("2026-09-19")];
+  assert.deepEqual(defaultWindow(short).map(formatDay), ["2026-06-01", "2026-09-19"]);
+  // snap: "month" moves a mid-month start to the next 1st (a monthly chart opens on whole months)
+  assert.deepEqual(defaultWindow(domain, {snap: "month"}).map(formatDay), ["2025-10-01", "2026-09-19"]);
+  const onFirst = [day("2024-01-01"), day("2026-08-31")];   // 365 days back is 2025-09-01 exactly
+  assert.deepEqual(defaultWindow(onFirst, {snap: "month"}).map(formatDay), ["2025-09-01", "2026-08-31"]);
+  // no data: handed back untouched
+  const empty = [undefined, undefined];
+  assert.equal(defaultWindow(empty), empty);
 });

@@ -20,7 +20,7 @@ const pct1     = n => (n == null ? "n/a" : n.toFixed(1) + "%");
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 // Only the toggle wording, so this chart and the five venue parlay charts that DO use the
 // shared builder cannot end up calling the same thing two different names. The chart itself
 // stays here: it is the one parlay chart fed by two producers on two bases, and it carries
@@ -200,25 +200,6 @@ const riseBasisNote = metric => {
 };
 ```
 
-<div class="instruction-line"><strong>Shared time window:</strong> drag the brush once to update every time-series chart on this page. The underlying tables and cross-sectional charts stay on their full available sample.</div>
-
-```js
-const parlayBrushSeries = volDay.map(d => ({date: d.date, value: d.total_vol}));
-const parlayDateSel = Mutable([d3.min(parlayBrushSeries, d => d.date), d3.max(parlayBrushSeries, d => d.date)]);
-display(renderDateBrush({
-  data: parlayBrushSeries,
-  initialRange: [d3.min(parlayBrushSeries, d => d.date), d3.max(parlayBrushSeries, d => d.date)],
-  onSelect: range => { parlayDateSel.value = range; },
-  color: "#f4a736",
-  width
-}));
-```
-
-```js
-const [parlayBrushFrom, parlayBrushTo] = parlayDateSel;
-const inParlayRange = row => row.date >= parlayBrushFrom && row.date <= parlayBrushTo;
-```
-
 ## The rise of multi-leg betting
 
 _From a standing start in late 2025 to billions of contracts a month. **Stakes** is the money bettors actually paid, and a long-shot ticket is a lot of contracts and very little of it${riseBasisNote(riseMetric)}._
@@ -226,6 +207,10 @@ _From a standing start in late 2025 to billions of contracts a month. **Stakes**
 ```js
 const riseGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Daily", label: "View"}));
 const riseMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", label: "Metric", format: metricLabel}));
+```
+
+```js
+const riseRange = view(dateBrush({data: volDay, valueAccessor: d => d.total_vol, color: "#f4a736", width}));
 ```
 
 ```js
@@ -244,9 +229,9 @@ display(Plot.plot({
     // Both numbers are in the tooltip on both settings, so flipping the toggle never hides
     // the one the reader was looking at.
     riseDaily
-      ? Plot.rectY(volDay.filter(inParlayRange), {x: "date", interval: d3.utcDay, y: riseKey, fill: "#f4a736",
+      ? Plot.rectY(volDay.filter(inDateRange(riseRange)), {x: "date", interval: d3.utcDay, y: riseKey, fill: "#f4a736",
           tip: true, title: d => `${d.day}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nTaker stakes: ${fmtUSD(d.taker_stake)}\nPending classification: ${pct1(d.pct_pending)}`})
-      : Plot.rectY(tline.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: riseKey, fill: "#f4a736",
+      : Plot.rectY(tline.filter(inDateRange(riseRange)), {x: "date", interval: d3.utcMonth, y: riseKey, fill: "#f4a736",
           tip: true, title: d => `${d.month}\nVolume: ${fmtCount(d.total_vol)} contracts (${d.total_vol.toLocaleString()})\nTaker stakes: ${fmtUSD(d.taker_stake)}\nParlays: ${d.n_parlays.toLocaleString()}\nMean legs: ${d.mean_legs}\nMedian legs: ${d.median_legs}`}),
     Plot.ruleY([0])
   ]
@@ -274,9 +259,13 @@ const legsGranularity = view(Inputs.radio(["Monthly", "Daily"], {value: "Monthly
 ```
 
 ```js
+const legsRange = view(dateBrush({data: legsDaily.length ? legsDaily : tline, valueAccessor: d => d.n_parlays, color: "#7048e8", width}));
+```
+
+```js
 const legsDailyView = legsGranularity === "Daily";
 const legsSeries = legsDailyView ? legsDaily : tline;
-const legsShown = legsSeries.filter(inParlayRange);
+const legsShown = legsSeries.filter(inDateRange(legsRange));
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 240, marginLeft: 56,
@@ -298,6 +287,10 @@ display(Plot.plot({
 _Composition on two different bases: share of **volume** in 4+-leg parlays, and share of **tickets** that are same-game (correlated). The same-game ticket share dipped sharply in Feb–Mar 2026._
 
 ```js
+const compRange = view(dateBrush({data: tline, valueAccessor: d => d.total_vol, color: "#f4a736", width}));
+```
+
+```js
 // pct_correlated is TICKET-based, not volume-weighted — the served file carries no
 // correlated-volume column, and the two bases differ by up to ~13pp (and swap
 // direction in Sep 2025), so the series is labelled by its real basis.
@@ -312,9 +305,9 @@ display(Plot.plot({
   y: {label: "Share", grid: true, domain: [0, 100], tickFormat: d => d + "%"},
   color: {legend: true, domain: ["% volume in 4+-leg", "% tickets same-game (correlated)"], range: ["#f4a736", "#e4572e"]},
   marks: [
-    Plot.line(compTidy.filter(inParlayRange), {x: "date", y: "value", stroke: "series", strokeWidth: 2.5, curve: "monotone-x"}),
-    Plot.dot(compTidy.filter(inParlayRange), {x: "date", y: "value", fill: "series", r: 3}),
-    Plot.tip(compTidy.filter(inParlayRange), Plot.pointerX({x: "date", y: "value", stroke: "series",
+    Plot.line(compTidy.filter(inDateRange(compRange)), {x: "date", y: "value", stroke: "series", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.dot(compTidy.filter(inDateRange(compRange)), {x: "date", y: "value", fill: "series", r: 3}),
+    Plot.tip(compTidy.filter(inDateRange(compRange)), Plot.pointerX({x: "date", y: "value", stroke: "series",
       title: d => `${d.month}\n${d.series}: ${pct1(d.value)}`}))
   ]
 }))
@@ -355,6 +348,10 @@ const fmtDay = d => (d instanceof Date ? d : new Date(d)).toLocaleDateString("en
 _Monthly parlay volume (contracts), split by **leg-level** correlation — **same-game (correlated)** tickets versus **multi-game (independent)** ones. Classified from the actual legs, not the ticker name; brand-new tickers still awaiting leg-mapping sit in a small "unclassified" band._
 
 ```js
+const vtRange = view(dateBrush({data: volTypeRaw, valueAccessor: d => +d.contracts || 0, color: "#e4572e", width}));
+```
+
+```js
 const VT_DOMAIN = ["same-game (correlated)", "multi-game (independent)", "unclassified (pending legs)"];
 const VT_COLORS = ["#e4572e", "#5b8def", "#adb5bd"];
 const vtMonthly = (() => {
@@ -377,7 +374,7 @@ display(Plot.plot({
   y: {label: "Monthly parlay volume (contracts)", grid: true, tickFormat: fmtCount},
   color: {legend: true, domain: VT_DOMAIN, range: VT_COLORS},
   marks: [
-    Plot.rectY(vtMonthly.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "contracts", fill: "parlay_class",
+    Plot.rectY(vtMonthly.filter(inDateRange(vtRange)), {x: "date", interval: d3.utcMonth, y: "contracts", fill: "parlay_class",
       order: VT_DOMAIN, tip: true,
       title: d => `${d.month} · ${d.parlay_class}\nVolume: ${fmtCount(d.contracts)} contracts`}),
     Plot.ruleY([0])
@@ -390,6 +387,10 @@ display(Plot.plot({
 _How much money parlay bettors have transferred to Kalshi (and market-makers) over the period, net of fees. Classified using the same audited correlated/non-correlated split as the charts above._
 
 ```js
+const pnlCorrRange = view(dateBrush({data: pnlRaw, valueAccessor: d => Math.abs(+d.net_pnl) || 0, color: "#5b8def", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 320, marginLeft: 80,
@@ -397,10 +398,10 @@ Plot.plot({
   y: {label: "Cumulative bettor P&L (net of fees)", grid: true, tickFormat: fmtSignedUSD},
   color: {legend: true, domain: KIND_DOMAIN, range: KIND_COLORS, tickFormat: kindShort},
   marks: [
-    Plot.line(pnlCum.filter(inParlayRange), {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
+    Plot.line(pnlCum.filter(inDateRange(pnlCorrRange)), {x: "date", y: "cum_pnl", stroke: "kind", strokeWidth: 2.5, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-faint)"}),
-    Plot.ruleX(pnlCum.filter(inParlayRange), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(pnlCum.filter(inParlayRange), Plot.pointerX({x: "date", y: "cum_pnl", stroke: "kind",
+    Plot.ruleX(pnlCum.filter(inDateRange(pnlCorrRange)), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(pnlCum.filter(inDateRange(pnlCorrRange)), Plot.pointerX({x: "date", y: "cum_pnl", stroke: "kind",
       title: d => `${fmtDay(d.date)}\n${kindShort(d.kind)}: ${fmtSignedUSD(d.cum_pnl)} cumulative\nDay: ${fmtSignedUSD(d.daily_net_pnl)}`}))
   ]
 })
@@ -457,6 +458,10 @@ const sportsShareStake = (() => {
 ```
 
 ```js
+const sportsShareRange = view(dateBrush({data: mixAll, valueAccessor: d => d.total_vol, color: "#1a9641", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 240, marginLeft: 60,
@@ -464,7 +469,7 @@ Plot.plot({
   y: {label: "Share of monthly volume (contracts)", percent: true, grid: true},
   color: {legend: true, domain: SHARE_DOMAIN, range: SHARE_COLORS, tickFormat: shareLabel},
   marks: [
-    Plot.rectY(mixAll.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix",
+    Plot.rectY(mixAll.filter(inDateRange(sportsShareRange)), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix",
                         offset: "expand", order: SHARE_DOMAIN}),
     Plot.ruleY([0, 1])
   ]
@@ -507,6 +512,10 @@ const mixLabel = k => k === "mixed" ? "Mixed (sports + non-sports legs)" : "All 
 ```
 
 ```js
+const mixRange = view(dateBrush({data: mixMonthly, valueAccessor: d => d.total_vol, color: "#7048e8", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
   width, height: 280, marginLeft: 80,
@@ -514,9 +523,9 @@ Plot.plot({
   y: {label: "Monthly parlay volume (contracts)", grid: true, tickFormat: d => d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k"},
   color: {legend: true, domain: MIX_DOMAIN, range: MIX_COLORS, tickFormat: mixLabel},
   marks: [
-    Plot.rectY(mixMonthly.filter(inParlayRange), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix", order: MIX_DOMAIN}),
-    Plot.ruleX(mixTipData.filter(inParlayRange), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
-    Plot.tip(mixTipData.filter(inParlayRange), Plot.pointerX({
+    Plot.rectY(mixMonthly.filter(inDateRange(mixRange)), {x: "date", interval: d3.utcMonth, y: "total_vol", fill: "sportmix", order: MIX_DOMAIN}),
+    Plot.ruleX(mixTipData.filter(inDateRange(mixRange)), Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.18})),
+    Plot.tip(mixTipData.filter(inDateRange(mixRange)), Plot.pointerX({
       x: "date",
       title: d => [
         d.month,
@@ -683,6 +692,10 @@ const lotteryMetric = view(Inputs.radio(["volume", "stakes"], {value: "volume", 
 </div>
 
 ```js
+const lotteryRange = view(dateBrush({data: lotteryDaily, valueAccessor: d => d.volume, color: "#9b59b6", width}));
+```
+
+```js
 const lotteryFmt = lotteryMetric === "volume" ? fmtCount : fmtUSD;
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"},
@@ -690,7 +703,7 @@ display(Plot.plot({
   x: {type: "utc", label: null},
   y: {label: lotteryMetric === "volume" ? "Daily volume (contracts)" : "Daily taker stakes ($)", grid: true, tickFormat: lotteryFmt},
   marks: [
-    Plot.rectY(lotteryDaily.filter(d => d[lotteryMetric] != null && inParlayRange(d)), {
+    Plot.rectY(lotteryDaily.filter(d => d[lotteryMetric] != null).filter(inDateRange(lotteryRange)), {
       x: "date", interval: d3.utcDay, y: lotteryMetric, fill: "#9b59b6",
       tip: true,
       title: d => `${d.date.toISOString().slice(0, 10)}\n`
@@ -945,8 +958,8 @@ Plot.plot({
 })
 ```
 
-_Daily markup — the one chart here that follows the date selector — with dashed averages before
-and after Kalshi started charging a maker fee on combos on 20 August 2026._
+_Daily markup, with dashed averages before and after Kalshi started charging a maker fee on
+combos on 20 August 2026._
 
 <div class="control-strip">
 
@@ -957,12 +970,16 @@ const pvlFeeChoice = view(Inputs.radio([...PVL_FEE_GROUPS.keys()], {value: "All 
 </div>
 
 ```js
+const pvlRange = view(dateBrush({data: pvlDays, valueAccessor: d => d.stake_usd, color: PVL_COLOR, width}));
+```
+
+```js
 // The daily file is one row per date x kind x fee_group; markup is a ratio of sums, so a
 // group is dropped by filtering rows and re-dividing — never by averaging its markups.
 const pvlFeeRows = PVL_FEE_GROUPS.get(pvlFeeChoice) == null
   ? pvlDays
   : pvlDays.filter(d => d.fee_group === PVL_FEE_GROUPS.get(pvlFeeChoice));
-const pvlShownRows = pvlFeeRows.filter(inParlayRange);
+const pvlShownRows = pvlFeeRows.filter(inDateRange(pvlRange));
 const pvlSeries = Array.from(d3.group(pvlShownRows, d => +d.date), ([, g]) => ({
     date: g[0].date, markup_pct: pvlRatio(g),
     stake_usd: d3.sum(g, d => d.stake_usd), n_trades: d3.sum(g, d => d.n_trades),

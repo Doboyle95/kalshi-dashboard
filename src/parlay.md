@@ -20,7 +20,7 @@ const uni = await DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed
 const cashoutDaily = await DataAttachment("data/parlay_cashout_daily.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 ```
 
 ```js
@@ -112,19 +112,6 @@ const provSpan = provDays.length === 1
 const provNote = provDays.length
   ? html`<p class="chart-note">○ The most recent ${provDays.length === 1 ? "day" : provDays.length + " days"} (<strong>${provSpan}</strong>) ${provDays.length === 1 ? "is" : "are"} <strong>provisional</strong> — covering only the parlays that have settled so far. Numerator and denominator move together, so the win rate stays honest; the figures fill in as the rest resolve.</p>`
   : html``;
-const parlayPnlDateSel = Mutable([d3.min(uniSorted, d => d.date), d3.max(uniSorted, d => d.date)]);
-display(renderDateBrush({
-  data: uniSorted.map(d => ({date: d.date, value: Math.abs(d.realized_net) || 0})),
-  initialRange: [d3.min(uniSorted, d => d.date), d3.max(uniSorted, d => d.date)],
-  onSelect: range => { parlayPnlDateSel.value = range; },
-  color: "#0A7B6C",
-  width
-}));
-```
-
-```js
-const [parlayPnlFrom, parlayPnlTo] = parlayPnlDateSel;
-const inParlayPnlRange = row => row.date >= parlayPnlFrom && row.date <= parlayPnlTo;
 ```
 
 ## What parlay bettors actually lost (after cash-outs)
@@ -132,6 +119,11 @@ const inParlayPnlRange = row => row.date >= parlayPnlFrom && row.date <= parlayP
 _Realized P&L for parlay bettors — and **after** accounting for everyone who cashed out early. This is the real money won and lost, including positions sold back before settlement. The two lines show it **before** Kalshi's fees and **after** fees; the gap between them is the fee drag. Settled parlays only; recent days fill in as their markets resolve._
 
 ```js
+const lostRange = view(dateBrush({data: uni, valueAccessor: d => Math.abs(d.realized_net) || 0, color: "#0A7B6C", width}));
+```
+
+```js
+const inLostRange = inDateRange(lostRange);
 const cumRealized = cumU.flatMap(d => [
   {date: d.date, v: d.realized_gross, s: "Before fees", prov: d.prov},
   {date: d.date, v: d.realized,       s: "After fees",  prov: d.prov}
@@ -142,13 +134,13 @@ display(Plot.plot({
   y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: fmtUSD},
   color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
   marks: [
-    Plot.areaY(cumU.filter(inParlayPnlRange), {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumRealized.filter(inParlayPnlRange), {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(cumU.filter(inLostRange), {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumRealized.filter(inLostRange), {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     // Provisional (unsealed) tail: hollow markers so it reads as "not final yet".
-    Plot.dot(provDays.filter(inParlayPnlRange), {x: "date", y: "realized_gross", r: 4, fill: "var(--theme-background)", stroke: "#5FD0C2", strokeWidth: 2}),
-    Plot.dot(provDays.filter(inParlayPnlRange), {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
+    Plot.dot(provDays.filter(inLostRange), {x: "date", y: "realized_gross", r: 4, fill: "var(--theme-background)", stroke: "#5FD0C2", strokeWidth: 2}),
+    Plot.dot(provDays.filter(inLostRange), {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
+    Plot.tip(cumU.filter(inLostRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 }))
 ```
@@ -162,16 +154,20 @@ display(provNote);
 _The same bettors' P&L in the counterfactual where **nobody cashed out** — every yes-side position held to the end. The gap between this line and the one above is the net effect of cashing out._
 
 ```js
+const heldRange = view(dateBrush({data: uni, valueAccessor: d => Math.abs(d.hold_to_settlement_net) || 0, color: "#0A7B6C", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: fmtUSD},
   color: {legend: true, domain: ["Realized (after cash-outs)", "Held to settlement"], range: ["#0A7B6C", "#5FD0C2"]},
   marks: [
-    Plot.lineY(cumU.filter(inParlayPnlRange).flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
+    Plot.lineY(cumU.filter(inDateRange(heldRange)).flatMap(d => [{date: d.date, v: d.realized, s: "Realized (after cash-outs)"}, {date: d.date, v: d.hold, s: "Held to settlement"}]),
       {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}\nCash-out effect: ${fmtUSD(d.realized - d.hold)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
+    Plot.tip(cumU.filter(inDateRange(heldRange)), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized (after cash-outs): ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}\nCash-out effect: ${fmtUSD(d.realized - d.hold)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 })
 ```
@@ -188,12 +184,16 @@ const byPrice = await DataAttachment("data/parlay_pnl_by_price_daily.csv").csv({
 _Share of stakes lost at each price, after cash-outs and fees, with the dollars under each bar — ${pbpSpan}._
 
 ```js
-// One bar per band of the price paid, summed from the daily rows over the page's date window.
+const pbpRange = view(dateBrush({data: byPrice, valueAccessor: d => d.staked_usd, color: "#0A7B6C", width}));
+```
+
+```js
+// One bar per band of the price paid, summed from the daily rows over this chart's date window.
 // Each cash-out is credited to the buy it closed (python/build_parlay_pnl_by_price.py), so a
 // band's net is what the people who paid that price actually made.
 const PBP_TICK = {1: "10¢\nand up", 2: "3¢\nto 10¢", 3: "1¢\nto 3¢", 4: "0.5¢\nto 1¢", 5: "0.1¢\nto 0.5¢", 6: "Under\n0.1¢"};
 const PBP_NAME = {1: "10¢ and up", 2: "3¢ to under 10¢", 3: "1¢ to under 3¢", 4: "0.5¢ to under 1¢", 5: "0.1¢ to under 0.5¢", 6: "Under 0.1¢"};
-const pbpRows = byPrice.filter(d => d.staked_usd > 0 && inParlayPnlRange(d));
+const pbpRows = byPrice.filter(d => d.staked_usd > 0).filter(inDateRange(pbpRange));
 const pbpFrom = d3.min(pbpRows, d => d.date), pbpTo = d3.max(pbpRows, d => d.date);
 const pbpSpan = pbpRows.length ? `parlays bought ${fmtDate(pbpFrom)} to ${fmtDate(pbpTo)}` : "nothing in this date range";
 const pbp = d3.rollups(pbpRows, rs => ({
@@ -288,12 +288,17 @@ const mkFeeWedge = -(mkNetTot + tkNetTot);
 
 _The same parlays seen from the other side of the trade — the market makers who sold them. **Before fees** this is the exact mirror of what bettors made: every dollar a bettor loses is a dollar the counterparty wins, so the two lines below are a single line until **${fmtDate(makerFeeStart)}**, when Kalshi began charging parlay makers. **After fees** it stops being a mirror. The exchange bills both sides, so bettors' losses and makers' gains no longer cancel._
 
-<div class="instruction-line"><strong>Why this isn't just the bettor chart flipped.</strong> Over this window makers made <strong>${fmtUSD(mkGrossTot)}</strong> before fees and <strong>${fmtUSD(mkNetTot)}</strong> after, while bettors lost <strong>${fmtUSD(tkNetTot)}</strong> on the same settled parlays. Those two figures no longer sum to zero — the <strong>${fmtUSD(mkFeeWedge)}</strong> difference is what Kalshi took from both sides together.</div>
+<div class="instruction-line"><strong>Why this isn't just the bettor chart flipped.</strong> Since ${fmtDate(mkFrom)} makers made <strong>${fmtUSD(mkGrossTot)}</strong> before fees and <strong>${fmtUSD(mkNetTot)}</strong> after, while bettors lost <strong>${fmtUSD(tkNetTot)}</strong> on the same settled parlays. Those two figures no longer sum to zero — the <strong>${fmtUSD(mkFeeWedge)}</strong> difference is what Kalshi took from both sides together.</div>
 
-<p class="chart-note">Same trade-level engine, same settled parlays and the same window as the bettor charts above (from ${fmtDate(mkFrom)}), so before fees this line is their exact mirror. Of the gap, ${fmtUSD(mkFeesTot)} is maker fees — all of it since ${fmtDate(makerFeeStart)} — and the rest is the takers' own fees.</p>
+<p class="chart-note">Same trade-level engine and the same settled parlays as the bettor charts above (from ${fmtDate(mkFrom)}), so before fees this line is their exact mirror. Of the gap, ${fmtUSD(mkFeesTot)} is maker fees — all of it since ${fmtDate(makerFeeStart)} — and the rest is the takers' own fees.</p>
 
 ```js
-const cumMakerVis = cumMaker.filter(inParlayPnlRange);
+const makerRange = view(dateBrush({data: uni, valueAccessor: d => Math.abs(d.realized_net + d.fees_total) || 0, color: "#0A7B6C", width}));
+```
+
+```js
+const inMakerRange = inDateRange(makerRange);
+const cumMakerVis = cumMaker.filter(inMakerRange);
 const mkLast = cumMakerVis[cumMakerVis.length - 1];
 display(cumMakerVis.length ? Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76, marginRight: 96,
@@ -306,9 +311,9 @@ display(cumMakerVis.length ? Plot.plot({
       {date: d.date, v: d.net,   s: "After fees"}
     ]), {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     // The instant the two series stop being one line.
-    Plot.ruleX(makerFeeStart && inParlayPnlRange({date: makerFeeStart}) ? [makerFeeStart] : [],
+    Plot.ruleX(makerFeeStart && inMakerRange({date: makerFeeStart}) ? [makerFeeStart] : [],
       {stroke: "var(--theme-foreground-faint)", strokeDasharray: "3,3"}),
-    Plot.text(makerFeeStart && inParlayPnlRange({date: makerFeeStart}) ? [makerFeeStart] : [],
+    Plot.text(makerFeeStart && inMakerRange({date: makerFeeStart}) ? [makerFeeStart] : [],
       // Bottom-left of the rule: the series climb into the TOP-right corner by this date,
       // so a top-anchored label collides with both lines (seen in the render probe).
       {x: d => d, frameAnchor: "bottom", dy: -8, dx: -6, textAnchor: "end",
@@ -336,15 +341,19 @@ display(cumMakerVis.length ? Plot.plot({
 _Cumulative cash-out edge: how much bettors gained or lost by cashing out versus holding to the end. Below zero means they left money on the table — selling winners back too cheaply outweighs the busts they dodged._
 
 ```js
+const cashoutRange = view(dateBrush({data: cashoutDaily, valueAccessor: d => Math.abs(d.cashout_edge_net) || 0, color: "var(--accent-negative)", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Cumulative cash-out edge (USD)", grid: true, tickFormat: fmtUSD},
   marks: [
-    Plot.areaY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", fill: "var(--accent-negative)", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumCo.filter(inParlayPnlRange), {x: "date", y: "edge", stroke: "var(--accent-negative)", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.areaY(cumCo.filter(inDateRange(cashoutRange)), {x: "date", y: "edge", fill: "var(--accent-negative)", fillOpacity: 0.1, curve: "monotone-x"}),
+    Plot.lineY(cumCo.filter(inDateRange(cashoutRange)), {x: "date", y: "edge", stroke: "var(--accent-negative)", strokeWidth: 2, curve: "monotone-x"}),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumCo.filter(inParlayPnlRange), Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
+    Plot.tip(cumCo.filter(inDateRange(cashoutRange)), Plot.pointerX({x: "date", y: "edge", title: d => `${fmtDate(d.date)}\nCash-out edge: ${fmtUSD(d.edge)}`}))
   ]
 })
 ```
@@ -365,13 +374,17 @@ const dailyDetail = uniSorted.map(d => {
 _Each bar is the money staked on parlays that day; its colour is how the day turned out for bettors — green for a win, red for a loss. The tallest bars are the heavy-action days around big games._
 
 ```js
+const stakesRange = view(dateBrush({data: uni, valueAccessor: d => d.handle_yes, color: "#0A7B6C", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Daily stakes (USD)", grid: true, tickFormat: fmtUSD},
   color: {type: "diverging", scheme: "RdYlGn", domain: [-50, 50], label: "Return %", legend: true},
   marks: [
-    Plot.rectY(dailyDetail.filter(d => d.stakes >= 1000 && inParlayPnlRange(d)), {
+    Plot.rectY(dailyDetail.filter(d => d.stakes >= 1000).filter(inDateRange(stakesRange)), {
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "stakes",
       fill: d => Math.max(-50, Math.min(50, d.ret)),
       fillOpacity: d => d.prov ? 0.45 : 1,           // provisional day reads as faded
@@ -392,12 +405,16 @@ Plot.plot({
 _Each day's parlay return for bettors. Mostly red — long-shot parlays usually miss — with the occasional big green day when enough of them cash._
 
 ```js
+const returnRange = view(dateBrush({data: uni, valueAccessor: d => d.handle_yes, color: "var(--accent-negative)", width}));
+```
+
+```js
 Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 260, marginLeft: 76,
   x: {type: "utc", label: null},
   y: {label: "Return (% of stakes)", domain: [-110, 150], grid: true, tickFormat: d => d + "%"},
   marks: [
-    Plot.rectY(dailyDetail.filter(d => d.stakes >= 25000 && inParlayPnlRange(d)), {
+    Plot.rectY(dailyDetail.filter(d => d.stakes >= 25000).filter(inDateRange(returnRange)), {
       x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5),
       y: d => Math.max(-110, Math.min(150, d.ret)),
       fill: d => d.ret >= 0 ? "var(--accent-positive)" : "var(--accent-negative)", fillOpacity: 0.75,

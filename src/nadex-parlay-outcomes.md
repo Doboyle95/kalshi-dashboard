@@ -10,7 +10,7 @@ title: OG/Crypto.com · Parlay outcomes
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {renderDateBrush} from "./components/date-brush.js";
+import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const parlayDaily = await DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
@@ -61,23 +61,17 @@ const pdProv = pdSorted.filter(d => d.prov).length;
 const fmtM = d => (d < 0 ? "−$" : "$") + (Math.abs(d) >= 1e6 ? (Math.abs(d) / 1e6).toFixed(2) + "M"
                        : Math.abs(d) >= 1e3 ? (Math.abs(d) / 1e3).toFixed(0) + "k"
                        : Math.abs(d).toFixed(0));
-const nadexPnlDateSel = Mutable([d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)]);
-display(renderDateBrush({
-  data: pdSorted.map(d => ({date: d.date, value: Math.abs(+d.gross_pnl) || 0})),
-  initialRange: [d3.min(pdSorted, d => d.date), d3.max(pdSorted, d => d.date)],
-  onSelect: range => { nadexPnlDateSel.value = range; },
-  color: "var(--accent-nadex)",
-  width
-}));
-```
-
-```js
-const [nadexPnlFrom, nadexPnlTo] = nadexPnlDateSel;
-const pdSortedBrushed = pdSorted.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
-const pdCumulBrushed = pdCumul.filter(d => d.date >= nadexPnlFrom && d.date <= nadexPnlTo);
 ```
 
 <div class="instruction-line">Over ${pdSorted.length} sessions, <strong>${pdParlays.toLocaleString()} settled parlays</strong> carrying ${(pdContracts / 1e6).toFixed(1)}M contracts lost their buyers <strong>${fmtM(Math.abs(pdTotal))}</strong> gross &mdash; ${fmtCentsMag(pdTotal / pdContracts)} per contract. <strong>The first ${pdProv} days are drawn faded and are provisional.</strong> A parlay is only counted when the window contains every print it ever traded, and a parlay settling in the opening days was often created before collection began, so those days hold less than their true volume. 80% of parlays settle within a day of being created and 99.9% within a fortnight, so the shortfall does not reach past it.</div>
+
+```js
+const nadexPnlDateSel = view(dateBrush({data: pdSorted, valueAccessor: d => Math.abs(+d.gross_pnl) || 0, color: "var(--accent-nadex)", width}));
+```
+
+```js
+const pdSortedBrushed = pdSorted.filter(inDateRange(nadexPnlDateSel));
+```
 
 ```js
 Plot.plot({
@@ -107,6 +101,14 @@ Coverage: ${(+d.coverage_pct).toFixed(1)}%`,
 ```
 
 _Green days are days the parlay bettors came out ahead; red days they did not. Because a parlay is settled as one contract, a single large winning combo can turn a day green on its own._
+
+```js
+const nadexCumDateSel = view(dateBrush({data: pdSorted, valueAccessor: d => Math.abs(+d.gross_pnl) || 0, color: "var(--accent-nadex)", width}));
+```
+
+```js
+const pdCumulBrushed = pdCumul.filter(inDateRange(nadexCumDateSel));
+```
 
 ```js
 Plot.plot({
@@ -142,9 +144,13 @@ const lossRows = await DataAttachment("data/competitor_parlay_pnl_by_price_daily
 _Share of stakes lost at each price after the exchange's standard 2¢-a-contract fee, with the dollars under each bar — ${ogLoss.span}. Prices start at 1¢, where the fee alone is bigger than the stake._
 
 ```js
+const ogLossRange = view(dateBrush({data: lossRows.filter(d => d.venue === "Crypto.com/Nadex"), valueAccessor: d => d.staked_usd, color: "var(--accent-nadex)", width}));
+```
+
+```js
 import {lossByPrice, lossByPriceChart} from "./components/parlay-loss-by-price.js";
-// Follows the page's date window, applied to the day each parlay was BOUGHT.
-const ogLoss = lossByPrice(lossRows, "Crypto.com/Nadex", [nadexPnlFrom, nadexPnlTo]);
+// Follows this chart's own date window, applied to the day each parlay was BOUGHT.
+const ogLoss = lossByPrice(lossRows, "Crypto.com/Nadex", ogLossRange);
 display(lossByPriceChart(ogLoss, {width, feeName: "the 2¢ fee"}));
 ```
 
