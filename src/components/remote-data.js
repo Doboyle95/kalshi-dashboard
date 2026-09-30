@@ -3,6 +3,16 @@ const GENERATION = /^[0-9a-f]{20}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 15000;
+// Timeouts are counted by a repeating tick, not by one setTimeout. Each tick adds the time since
+// the previous tick, but at most TIMEOUT_TICK_CAP_MS, so a main-thread long task costs a request
+// at most one cap of its budget. One setTimeout counted the whole stall: on /categories a
+// 15-19 s parse-and-compute task after daily_top_categories_fees.csv arrived (measured
+// 2026-09-30) expired the 15 s timer of a fetch whose bytes had already arrived, and the page
+// logged "The user aborted a request" after an HTTP 200 in 3 of 6 loads. With no stalls this
+// is wall-clock time to within a tick, so a dead endpoint still fails in bounded time. A
+// throttled background tab ticks less often, which can only make a timeout later.
+const TIMEOUT_TICK_MS = 1000;
+const TIMEOUT_TICK_CAP_MS = 2000;
 // Browsers may queue a burst of same-origin requests behind their own connection
 // limit. Keep the queue here so a data file's abort clock starts only when that file
 // actually receives a transfer slot. Manifest requests deliberately bypass this
@@ -59,13 +69,34 @@ function browserEndpoint() {
   return url.origin;
 }
 
-async function fetchBounded(fetchImpl, url, options, timeoutMs) {
+// Aborts `controller` once `timeoutMs` has been counted (see TIMEOUT_TICK_MS) and returns the
+// function that stops the clock. `clock` overrides the tick and cap; the tests shorten them.
+function startTimeoutClock(controller, timeoutMs, clock = {}) {
+  const tickMs = clock.tickMs ?? TIMEOUT_TICK_MS;
+  const capMs = clock.capMs ?? TIMEOUT_TICK_CAP_MS;
+  const now = () => (globalThis.performance ? performance.now() : Date.now());
+  let counted = 0;
+  let last = now();
+  const timer = setInterval(() => {
+    const at = now();
+    counted += Math.min(at - last, capMs);
+    last = at;
+    if (counted >= timeoutMs) {
+      clearInterval(timer);
+      const message = `dashboard data request timed out (${timeoutMs} ms)`;
+      controller.abort(typeof DOMException === "function" ? new DOMException(message, "TimeoutError") : new Error(message));
+    }
+  }, tickMs);
+  return () => clearInterval(timer);
+}
+
+async function fetchBounded(fetchImpl, url, options, timeoutMs, clock) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const stopClock = startTimeoutClock(controller, timeoutMs, clock);
   try {
     return await fetchImpl(url, {...options, signal: controller.signal});
   } finally {
-    clearTimeout(timer);
+    stopClock();
   }
 }
 
@@ -95,9 +126,9 @@ async function withDataFetchSlot(task) {
 // Hold the slot, signal and timeout through body consumption. Releasing at response
 // headers would let the next queued request start while the prior CSV still occupies
 // the connection, recreating the same browser-side queue one layer lower.
-async function fetchDataBytesBounded(fetchImpl, url, options, timeoutMs) {
+async function fetchDataBytesBounded(fetchImpl, url, options, timeoutMs, clock) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const stopClock = startTimeoutClock(controller, timeoutMs, clock);
   try {
     const response = await fetchImpl(url, {...options, signal: controller.signal});
     return {
@@ -105,7 +136,7 @@ async function fetchDataBytesBounded(fetchImpl, url, options, timeoutMs) {
       bytes: response.ok ? await response.arrayBuffer() : null
     };
   } finally {
-    clearTimeout(timer);
+    stopClock();
   }
 }
 
@@ -123,7 +154,7 @@ function validateManifest(value) {
   return value;
 }
 
-function manifestFor(endpoint, fetchImpl, timeoutMs) {
+function manifestFor(endpoint, fetchImpl, timeoutMs, clock) {
   const cacheKey = `${endpoint}|${timeoutMs}`;
   if (!manifestPromises.has(cacheKey)) {
     const promise = (async () => {
@@ -131,7 +162,8 @@ function manifestFor(endpoint, fetchImpl, timeoutMs) {
         fetchImpl,
         `${endpoint}/dashboard-data/current.json`,
         {cache: "no-store", credentials: "omit", mode: "cors", redirect: "error", referrerPolicy: "no-referrer"},
-        timeoutMs
+        timeoutMs,
+        clock
       );
       if (!response.ok) throw new Error(`dashboard data manifest returned ${response.status}`);
       return validateManifest(await response.json());
@@ -153,9 +185,10 @@ async function verifiedRemoteText(filename, options = {}) {
   const endpoint = options.endpoint ?? browserEndpoint();
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const clock = {tickMs: options.timeoutTickMs, capMs: options.timeoutTickCapMs};
   if (typeof fetchImpl !== "function") throw new Error("browser fetch is unavailable");
 
-  const manifest = await manifestFor(endpoint, fetchImpl, timeoutMs);
+  const manifest = await manifestFor(endpoint, fetchImpl, timeoutMs, clock);
   const record = manifest.files[filename];
   if (
     !record ||
@@ -172,7 +205,8 @@ async function verifiedRemoteText(filename, options = {}) {
     fetchImpl,
     url,
     {cache: "default", credentials: "omit", mode: "cors", redirect: "error", referrerPolicy: "no-referrer"},
-    dataTimeoutMs(record.size_bytes, timeoutMs)
+    dataTimeoutMs(record.size_bytes, timeoutMs),
+    clock
   ));
   if (!response.ok) throw new Error(`dashboard data file returned ${response.status}`);
   if (bytes.byteLength !== record.size_bytes) throw new Error(`dashboard data size mismatch for ${filename}`);

@@ -722,8 +722,7 @@ Plot.plot({
 ```js
 // The rate's denominator: contracts per ticker per day (~8.5 MB). Fetched only once
 // wideDailyFees is built (the void line), so it never shares the link with the 12 MB fees
-// file or sits in flight while that file is parsed and bucketed -- a main-thread stall a
-// pending fetch can outlive (see topDailyFees on categories.md).
+// file that the two charts above need first.
 void wideDailyFees;
 const topDailyVolume = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 ```

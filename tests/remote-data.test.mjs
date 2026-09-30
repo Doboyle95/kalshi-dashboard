@@ -172,6 +172,88 @@ test("manifest requests bypass a saturated data-transfer queue", async () => {
   await Promise.all([...blockers, probe]);
 });
 
+// Blocks the event loop, as a long task blocks a page's main thread.
+const stallFor = ms => {
+  const end = performance.now() + ms;
+  while (performance.now() < end);
+};
+
+// fetchImpl whose requests matching `matches` finish while the event loop is stalled for stallMs:
+// the stall starts 10 ms in, the response is ready 50 ms in, and it is handed over by setImmediate,
+// which runs after every timer that expired during the stall. A browser can likewise deliver a
+// transfer that finished during a long task after a timer that expired in it.
+function stalledFetch(mock, matches, stallMs) {
+  return async (url, options = {}) => {
+    if (!matches(url)) return mock.fetchImpl(url, options);
+    setTimeout(() => stallFor(stallMs), 10);
+    return new Promise((resolve, reject) => {
+      setTimeout(() => setImmediate(() => resolve(mock.fetchImpl(url, options))), 50);
+      options.signal?.addEventListener("abort", () => {
+        reject(options.signal.reason ?? new Error("aborted"));
+      }, {once: true});
+    });
+  };
+}
+
+const SHORT_CLOCK = {timeoutMs: 300, timeoutTickMs: 20, timeoutTickCapMs: 40};
+
+test("a main-thread stall does not use up a data file's timeout", async () => {
+  // The stall is twice the timeout and the bytes arrive during it. A single setTimeout(abort)
+  // fires first and fails this load, as it did on /categories on 2026-09-30.
+  const endpoint = "https://stalled-data.example";
+  const mock = transport(endpoint, {"stalled.csv": "value\n1\n"});
+  const result = await loadRemoteCsv("stalled.csv", {
+    endpoint,
+    fetchImpl: stalledFetch(mock, url => url.endsWith("/stalled.csv"), 600),
+    ...SHORT_CLOCK,
+    parse: text => text.trim()
+  });
+  assert.equal(result.source, "remote");
+  assert.equal(result.value, "value\n1");
+});
+
+test("a main-thread stall does not use up the manifest's timeout", async () => {
+  const endpoint = "https://stalled-manifest.example";
+  const mock = transport(endpoint, {"after.csv": "value\n2\n"});
+  const result = await loadRemoteCsv("after.csv", {
+    endpoint,
+    fetchImpl: stalledFetch(mock, url => url.endsWith("/dashboard-data/current.json"), 600),
+    ...SHORT_CLOCK,
+    parse: text => text.trim()
+  });
+  assert.equal(result.source, "remote");
+  assert.equal(result.value, "value\n2");
+});
+
+test("a request that never answers still times out, with or without stalls", async () => {
+  const endpoint = "https://never-answers.example";
+  const mock = transport(endpoint, {"dead.csv": "value\n3\n"});
+  const fetchImpl = async (url, options = {}) => {
+    if (url.endsWith("/dashboard-data/current.json")) return mock.fetchImpl(url, options);
+    return new Promise((_, reject) => {
+      options.signal?.addEventListener("abort", () => reject(options.signal.reason), {once: true});
+    });
+  };
+  const load = () => loadRemoteCsv("dead.csv", {endpoint, fetchImpl, ...SHORT_CLOCK, parse: text => text});
+
+  let began = performance.now();
+  await assert.rejects(load(), /timed out \(300 ms\)/);
+  const idleMs = performance.now() - began;
+  assert.ok(idleMs >= 300 && idleMs < 3000, `idle timeout took ${idleMs} ms`);
+
+  // A 100 ms stall on every turn of the event loop: each tick counts at most its 40 ms cap, so
+  // the timeout takes longer in wall-clock time but still fires.
+  const stalls = setInterval(() => stallFor(100), 1);
+  began = performance.now();
+  try {
+    await assert.rejects(load(), /timed out \(300 ms\)/);
+  } finally {
+    clearInterval(stalls);
+  }
+  const stalledMs = performance.now() - began;
+  assert.ok(stalledMs >= 300 && stalledMs < 20000, `stalled timeout took ${stalledMs} ms`);
+});
+
 test("hash or size mismatch falls back without returning corrupt data", async () => {
   const endpoint = "https://canary-two.example";
   const mock = transport(endpoint, {"tiny.csv": "a,b\n1,2\n"}, {corrupt: "tiny.csv"});
