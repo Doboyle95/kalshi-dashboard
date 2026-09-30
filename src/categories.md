@@ -60,6 +60,31 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 ```
 
 ```js
+// report_ticker -> its category_leaderboard.csv row. Keeps the FIRST row per ticker, the one the
+// leaderboard.find() calls this replaced returned.
+const leaderboardByTicker = new Map();
+for (const row of leaderboard) {
+  if (!leaderboardByTicker.has(row.report_ticker)) leaderboardByTicker.set(row.report_ticker, row);
+}
+
+// Sum of each column in `cols` over the rows with start <= date <= end, in ONE pass over the rows.
+// tmData and dailyAgg used to filter every row once per column (~1,955 columns x ~1,900 days, then
+// again for the fees file): ~7 s each in a CPU profile on 2026-09-30, most of the 15-19 s
+// main-thread stall after daily_top_categories_fees.csv arrived. Each column is still summed in
+// row order from 0, as the per-column reduce did, so the sums are bit-identical. Running totals
+// by date would make a brush move cheaper still, but a difference of two running totals rounds
+// differently from the direct sum.
+function windowColumnSums(rows, cols, start, end) {
+  const sums = new Float64Array(cols.length);
+  for (const r of rows) {
+    if (!(r.date >= start && r.date <= end)) continue;
+    for (let i = 0; i < cols.length; i++) sums[i] += +r[cols[i]] || 0;
+  }
+  return sums;
+}
+```
+
+```js
 const TM_CATEGORY_ORDER = [
   "NFL", "College Football", "NBA", "College Basketball", "Baseball",
   "Hockey", "Golf", "Tennis", "Soccer", "Cricket", "Combat Sports", "Racing", "Esports", "Parlay",
@@ -485,7 +510,7 @@ function classifyWithFallback(ticker, isSports) {
 }
 
 const tmTrackedMeta = topDailyCols.map(report_ticker => {
-  const meta = leaderboard.find(l => l.report_ticker === report_ticker) || {};
+  const meta = leaderboardByTicker.get(report_ticker) || {};
   return {
     report_ticker,
     fees: +meta.fees || 0,
@@ -528,11 +553,11 @@ function clearPinnedCategories() {
 
 ```js
 // Reported fees per ticker per day, read by the treemap's Fees metric and the All-time
-// leaderboard below. Fetched LAST -- the void line waits for the page's other loads. Parsing
-// this ~12 MB file and the treemap/leaderboard work it triggers hold the main thread for
-// 15-19 s on a loaded machine, and a fetch still in flight across that stall outlives
-// remote-data.js's 15 s abort timer. Measured 2026-09-30 with this load running in parallel:
-// parlay_volume_by_type_daily.csv aborted in 3 of 6 loads, taking the volume charts with it.
+// leaderboard below. Fetched after the page's other loads (the void line). That order was
+// added while parsing this ~12 MB file plus the treemap/leaderboard sums held the main thread
+// 15-19 s and aborted a fetch left in flight. The task is ~3 s now (windowColumnSums) and
+// remote-data.js no longer counts a stall against a fetch, so the order is not load-bearing:
+// dropping it drew the treemap ~1 s sooner but settled the page ~1 s later (6 loads, 2026-09-30).
 void [sportsSplit, parlayByType, marketTypeRaw];
 const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
 ```
@@ -578,15 +603,13 @@ display(renderDateBrush({
 ```js
 const tmData = (() => {
   const [s, e] = tmDateSel;
-  return topDailyCols.map(cat => {
-    const total = topDaily
-      .filter(d => d.date >= s && d.date <= e)
-      .reduce((acc, r) => acc + (+r[cat] || 0), 0);
+  const totals = windowColumnSums(topDaily, topDailyCols, s, e);
+  const feeTotals = windowColumnSums(topDailyFees, topDailyCols, s, e);
+  return topDailyCols.map((cat, i) => {
+    const total = totals[i];
     if (!total) return null;
-    const meta = leaderboard.find(l => l.report_ticker === cat) || {};
-    const fees = topDailyFees
-      .filter(d => d.date >= s && d.date <= e)
-      .reduce((acc, r) => acc + (+r[cat] || 0), 0);
+    const meta = leaderboardByTicker.get(cat) || {};
+    const fees = feeTotals[i];
     const value = tmMetric === "Volume"
       ? total
       : fees;
@@ -3039,21 +3062,19 @@ const isAllTime = +cutoff <= +lbMinDate && +cutoffTo >= +lbMaxDate;
 // Aggregate contracts and reported fees from their daily files for the selected period
 // (top 15 tickers). The old fee path multiplied period volume by an all-time fee rate,
 // which was exact only when the brush happened to cover that same all-time mix.
-const dailyAgg = catCols.map(cat => {
-  const total = topDaily
-    .filter(d => d.date >= cutoff && d.date <= cutoffTo)
-    .reduce((s, r) => s + (+r[cat] || 0), 0);
-  const fees = topDailyFees
-    .filter(d => d.date >= cutoff && d.date <= cutoffTo)
-    .reduce((s, r) => s + (+r[cat] || 0), 0);
-  const meta = leaderboard.find(l => l.report_ticker === cat) || {};
-  return {
-    report_ticker: cat,
-    contracts: total,
-    fees,
-    is_sports: meta.is_sports ?? "FALSE"
-  };
-}).filter(d => d.contracts > 0);
+const dailyAgg = (() => {
+  const totals = windowColumnSums(topDaily, catCols, cutoff, cutoffTo);
+  const feeTotals = windowColumnSums(topDailyFees, catCols, cutoff, cutoffTo);
+  return catCols.map((cat, i) => {
+    const meta = leaderboardByTicker.get(cat) || {};
+    return {
+      report_ticker: cat,
+      contracts: totals[i],
+      fees: feeTotals[i],
+      is_sports: meta.is_sports ?? "FALSE"
+    };
+  }).filter(d => d.contracts > 0);
+})();
 
 // Full leaderboard for all-time span; aggregated daily for any date filter
 const source = isAllTime ? leaderboard : dailyAgg;
