@@ -469,9 +469,8 @@ const feeRateView = view(Inputs.radio(["Overall", "Sports (excl. parlays)", "Non
 
 ```js
 // Moved here from categories.md (2026-09-30) with its three charts. These three files are
-// ~21 MB together against ~0.4 MB for everything above, so each loads in its OWN cell that
-// depends only on DataAttachment: the charts above never wait for them (volume.md does
-// the same with topDailyFees, for the same reason).
+// ~21 MB together against ~0.4 MB for everything above, so they load in their own cells and
+// the charts above never wait for them (volume.md does the same with topDailyFees).
 const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
 ```
 
@@ -723,7 +722,11 @@ Plot.plot({
 <p class="section-intro">Effective fee rate (¢ per contract charged) by category — the same per-category split as the fees chart above, but as a rate instead of a dollar total, so a category can be flagged as expensive-per-contract even if its total fee dollars are small. Kalshi's fee formula peaks at the 50¢ strike and falls off toward 1¢/99¢, so this mostly reflects each category's typical contract price. Same toggle and colors as the fees charts above.</p>
 
 ```js
-// The rate's denominator: contracts per ticker per day (~8.5 MB). Own cell, see above.
+// The rate's denominator: contracts per ticker per day (~8.5 MB). Fetched only once
+// wideDailyFees is built (the void line), so it never shares the link with the 12 MB fees
+// file or sits in flight while that file is parsed and bucketed -- a main-thread stall a
+// pending fetch can outlive (see topDailyFees on categories.md).
+void wideDailyFees;
 const topDailyVolume = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 ```
 

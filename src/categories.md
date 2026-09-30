@@ -528,7 +528,12 @@ function clearPinnedCategories() {
 
 ```js
 // Reported fees per ticker per day, read by the treemap's Fees metric and the All-time
-// leaderboard below. Own cell, so only those readers wait for this ~12 MB file.
+// leaderboard below. Fetched LAST -- the void line waits for the page's other loads. Parsing
+// this ~12 MB file and the treemap/leaderboard work it triggers hold the main thread for
+// 15-19 s on a loaded machine, and a fetch still in flight across that stall outlives
+// remote-data.js's 15 s abort timer. Measured 2026-09-30 with this load running in parallel:
+// parlay_volume_by_type_daily.csv aborted in 3 of 6 loads, taking the volume charts with it.
+void [sportsSplit, parlayByType, marketTypeRaw];
 const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
 ```
 
