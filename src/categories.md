@@ -1836,21 +1836,28 @@ const parlayTypeByDate = d3.rollup(
   r => (r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date))
 );
 
-// Build wide-category daily totals
+// Build wide-category daily totals. Each column's group is worked out once, not on every day's
+// row: wideCategoryForTicker on 1,955 columns x 1,916 days plus a sportsSplit.find() per day held
+// the main thread ~2.8 s (CPU profile, 2026-10-01). The columns keep the rows' own key order, so
+// every group adds its values in the same order as before and the totals are bit-identical.
+const newWideGroups = () => ({
+  NFL: 0, "College football": 0,
+  NBA: 0, "College basketball": 0,
+  Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
+  Soccer: 0, "Combat sports": 0,
+  Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
+});
+const wideColumnGroups = Object.keys(topDaily[0] ?? {})
+  .filter(cat => cat !== "date")
+  .map(cat => [cat, wideCategoryForTicker(cat)])
+  .filter(([, wg]) => wg && wg !== "_skip" && newWideGroups()[wg] !== undefined);
+// The FIRST sportsSplit row per day, which is what find() returned; a NaN date never matched.
+const sportsSplitByDate = new Map();
+for (const s of sportsSplit) if (!Number.isNaN(+s.date) && !sportsSplitByDate.has(+s.date)) sportsSplitByDate.set(+s.date, s);
 const wideDaily = topDaily.map(row => {
-  const sp = sportsSplit.find(s => +s.date === +row.date) || {};
-  const groups = {
-    NFL: 0, "College football": 0,
-    NBA: 0, "College basketball": 0,
-    Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
-    Soccer: 0, "Combat sports": 0,
-    Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
-  };
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const wg = wideCategoryForTicker(cat);
-    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
-  }
+  const sp = sportsSplitByDate.get(+row.date) || {};
+  const groups = newWideGroups();
+  for (const [cat, wg] of wideColumnGroups) groups[wg] += +row[cat] || 0;
   const parlay       = +sp.contracts_parlay              || 0;
   const totSports    = +sp.contracts_sports_nonparlay    || 0;
   const totNonSports = +sp.contracts_nonsports           || 0;

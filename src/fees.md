@@ -521,6 +521,22 @@ function wideCategoryForTicker(ticker) {
   if (fromR) return CAT_TO_WIDE_GROUP_KEY[fromR.cat] || fromR.cat;
   return wideMap[ticker];
 }
+// A day's display groups, and [column, group] for every ticker column of a file that lands in
+// one, worked out once per file. wideDailyFees and catVolumeDaily used to call
+// wideCategoryForTicker on every cell of every day: ~2.4 s and ~2.9 s of main thread (CPU
+// profile, 2026-10-01). The columns keep the rows' own key order, so each group adds its values
+// in the same order as before and the totals are bit-identical.
+const newWideGroups = () => ({
+  NFL: 0, "College football": 0, NBA: 0, "College basketball": 0,
+  Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0, Soccer: 0, "Combat sports": 0,
+  Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
+});
+function wideColumnGroups(rows) {
+  return Object.keys(rows[0] ?? {})
+    .filter(cat => cat !== "date")
+    .map(cat => [cat, wideCategoryForTicker(cat)])
+    .filter(([, wg]) => wg && wg !== "_skip" && newWideGroups()[wg] !== undefined);
+}
 ```
 
 ```js
@@ -564,18 +580,14 @@ const generalColors = {
 // Parlay is a single bucket (no per-leg fee data), derived as the residual
 // total_fees - sports_fees - nonsports_fees so the stack still sums to the day's fees.
 const catFeesTotalByDate = new Map(daily.map(d => [+d.date, +d.fees_total || 0]));
+// The FIRST sports row per day, which is what sports.find() returned; a NaN date never matched.
+const sportsByDate = new Map();
+for (const s of sports) if (!Number.isNaN(+s.date) && !sportsByDate.has(+s.date)) sportsByDate.set(+s.date, s);
+const feeColumnGroups = wideColumnGroups(topDailyFees);
 const wideDailyFees = topDailyFees.map(row => {
-  const sp = sports.find(s => +s.date === +row.date) || {};
-  const groups = {
-    NFL: 0, "College football": 0, NBA: 0, "College basketball": 0,
-    Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0, Soccer: 0, "Combat sports": 0,
-    Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
-  };
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const wg = wideCategoryForTicker(cat);
-    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
-  }
+  const sp = sportsByDate.get(+row.date) || {};
+  const groups = newWideGroups();
+  for (const [cat, wg] of feeColumnGroups) groups[wg] += +row[cat] || 0;
   const feesSports    = +sp.fees_sports_nonparlay || 0;
   const feesNonSports = +sp.fees_nonsports || 0;
   const feesParlay    = Math.max(0, (catFeesTotalByDate.get(+row.date) || 0) - feesSports - feesNonSports);
@@ -731,20 +743,11 @@ const topDailyVolume = await DataAttachment("data/daily_top_categories.csv").csv
 // Contracts by the same display groups as wideDailyFees. Built exactly as categories.md's
 // wideDaily builds these keys; its leg-based parlay split is left out because the rate uses
 // the single Parlay total.
+const volumeColumnGroups = wideColumnGroups(topDailyVolume);
 const catVolumeDaily = topDailyVolume.map(row => {
-  const sp = sports.find(s => +s.date === +row.date) || {};
-  const groups = {
-    NFL: 0, "College football": 0,
-    NBA: 0, "College basketball": 0,
-    Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
-    Soccer: 0, "Combat sports": 0,
-    Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
-  };
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const wg = wideCategoryForTicker(cat);
-    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
-  }
+  const sp = sportsByDate.get(+row.date) || {};
+  const groups = newWideGroups();
+  for (const [cat, wg] of volumeColumnGroups) groups[wg] += +row[cat] || 0;
   const parlay       = +sp.contracts_parlay              || 0;
   const totSports    = +sp.contracts_sports_nonparlay    || 0;
   const totNonSports = +sp.contracts_nonsports           || 0;
