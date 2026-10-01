@@ -191,7 +191,8 @@ function classifyTreemapTicker(ticker, isSports) {
            ticker.startsWith("KXDPWORLDTOUR") || ticker.startsWith("KXLPGA") ||
            ticker.startsWith("KXRYDER") || ticker.startsWith("KXTGL") ||
            ticker.startsWith("KXGENESISINVITATIONAL") ||
-           ticker.startsWith("KXKFTOUR"))                                       cat = "Golf";
+           ticker.startsWith("KXKFTOUR") ||
+           ticker.startsWith("KXPRESCUP"))                                      cat = "Golf";   // 2026-09-30: Presidents Cup, was Politics via KXPRES
   else if (ticker.startsWith("KXATP") || ticker.startsWith("KXWTA") ||
            ticker.startsWith("KXITF") || ticker.startsWith("KXUSO") ||
            ticker.startsWith("KXFOMEN") || ticker.startsWith("KXFOWOMEN") ||
