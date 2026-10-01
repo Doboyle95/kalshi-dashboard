@@ -221,15 +221,28 @@ const wideCatByReportTicker = new Map(
     .map(d => [d.report_ticker, d.wide_cat || NORMALIZE_WIDE_CAT[d.cat] || d.cat])
 );
 
+// A day's groups, and [column, group] for every ticker column of a file that lands in one,
+// worked out once per file. volWideDaily and feeWideDaily used to look up the group of every
+// cell of every day (Object.entries per row) plus run a sports.find() per day: ~4.0 s of main
+// thread for the pair (CPU profile, 2026-10-01). The columns keep the rows' own key order, so
+// each group adds its values in the same order as before and the totals are bit-identical.
+const newVolGroups = () => ({Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
+                             Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0});
+function volColumnGroups(rows) {
+  return Object.keys(rows[0] ?? {})
+    .filter(cat => cat !== "date")
+    .map(cat => [cat, wideCatByReportTicker.get(cat) || volWideMap[cat]])
+    .filter(([, wg]) => wg && wg !== "_skip" && newVolGroups()[wg] !== undefined);
+}
+// The FIRST sports row per day, which is what sports.find() returned; a NaN date never matched.
+const sportsByDate = new Map();
+for (const s of sports) if (!Number.isNaN(+s.date) && !sportsByDate.has(+s.date)) sportsByDate.set(+s.date, s);
+
+const volColumns = volColumnGroups(topDaily);
 const volWideDaily = topDaily.map(row => {
-  const sp = sports.find(s => +s.date === +row.date) || {};
-  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
-                  Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const wg = wideCatByReportTicker.get(cat) || volWideMap[cat];
-    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
-  }
+  const sp = sportsByDate.get(+row.date) || {};
+  const groups = newVolGroups();
+  for (const [cat, wg] of volColumns) groups[wg] += +row[cat] || 0;
   const parlay       = +sp.contracts_parlay              || 0;
   const totSports    = +sp.contracts_sports_nonparlay    || 0;
   const totNonSports = +sp.contracts_nonsports           || 0;
@@ -260,15 +273,11 @@ const parlayFeesFor = sp =>
 // non-sports fee totals pro rata by contracts, forcing every category to have the same
 // fee per contract. These are the fees actually reported for each ticker; residual bands
 // preserve reconciliation with the broad daily split and the parlay residual below.
+const feeColumns = volColumnGroups(topDailyFees);
 const feeWideDaily = topDailyFees.map(row => {
-  const sp = sports.find(s => +s.date === +row.date) || {};
-  const groups = {Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
-                  Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0};
-  for (const [cat, v] of Object.entries(row)) {
-    if (cat === "date") continue;
-    const wg = wideCatByReportTicker.get(cat) || volWideMap[cat];
-    if (wg && wg !== "_skip" && groups[wg] !== undefined) groups[wg] += +v || 0;
-  }
+  const sp = sportsByDate.get(+row.date) || {};
+  const groups = newVolGroups();
+  for (const [cat, wg] of feeColumns) groups[wg] += +row[cat] || 0;
   const knownSports = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
   const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
   return {
