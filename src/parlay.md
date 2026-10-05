@@ -427,3 +427,29 @@ Plot.plot({
 ```
 
 <p style="font-size:0.82em;color:#888">Return compares what bettors got back to what they staked, after fees. A 5¢ parlay that hits pays back about 19×, which is why one lucky day can send the line far past +100%.</p>
+
+## Daily P&L (dollars)
+
+_What parlay bettors won or lost each day, in dollars, after fees and cash-outs._
+
+```js
+const pnlUsdRange = view(dateBrush({data: uni, valueAccessor: d => d.handle_yes, color: "var(--accent-negative)", width}));
+```
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 300, marginLeft: 76,
+  x: {type: "utc", label: null},
+  y: {label: "Bettor P&L (USD)", grid: true, tickFormat: fmtUSD},
+  marks: [
+    Plot.rectY(dailyDetail.filter(inDateRange(pnlUsdRange)), {
+      x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "net",
+      fill: d => d.net >= 0 ? "var(--accent-positive)" : "var(--accent-negative)",
+      fillOpacity: d => d.prov ? 0.35 : 0.75,          // provisional day reads as faded
+      tip: true,
+      title: d => `${fmtDate(d.date)}\nNet P&L: ${fmtUSD(d.net)}\nBefore fees: ${fmtUSD(d.gross)}\nStakes: ${fmtUSD(d.stakes)}\nReturn: ${d.ret.toFixed(1)}%${d.prov ? "\n(provisional — settlements still arriving)" : ""}`
+    }),
+    Plot.ruleY([0])
+  ]
+})
+```
