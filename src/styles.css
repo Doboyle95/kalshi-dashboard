@@ -5759,3 +5759,23 @@ svg[class^="plot-"] [aria-label="x-grid"] line {
     padding: 0.1rem 0 0.1rem 0.85rem;
   }
 }
+/* Four-category fee revenue pie and its responsive legend. */
+.fee-mix-chart { max-width: 840px; margin: 0 auto; font-family: var(--font-sans, system-ui, sans-serif); }
+.fee-mix-total { padding: 8px 12px 0; font-size: 1.05rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.fee-mix-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 1fr); align-items: center; gap: 18px; }
+.fee-mix-grid > svg { display: block; width: 100%; max-width: 360px; height: auto; margin: 0 auto; overflow: visible; }
+.fee-mix-grid path { cursor: pointer; transition: opacity 120ms ease; }
+.fee-mix-grid path:focus { outline: none; stroke: var(--theme-foreground); stroke-width: 4px; }
+.fee-mix-legend { display: grid; gap: 6px; padding: 8px; min-width: 0; }
+.fee-mix-legend button { display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 10px; row-gap: 4px; width: 100%; text-align: left; padding: 10px; background: transparent; border: 1px solid transparent; border-radius: 5px; font: inherit; color: inherit; cursor: pointer; }
+.fee-mix-legend button:hover, .fee-mix-legend button:focus-visible, .fee-mix-legend button[data-active] { border-color: var(--theme-foreground-fainter); background: var(--theme-background-alt); }
+.fee-mix-swatch { width: 12px; height: 12px; border-radius: 2px; margin-top: 4px; grid-row: 1 / span 2; }
+.fee-mix-label { font-size: 0.88rem; font-weight: 650; line-height: 1.35; }
+.fee-mix-value { grid-column: 2; font-size: 0.82rem; color: var(--theme-foreground-muted); font-variant-numeric: tabular-nums; line-height: 1.4; }
+.fee-mix-detail { min-height: 3em; padding: 8px 12px; font-size: 0.8rem; line-height: 1.45; color: var(--theme-foreground-muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .fee-mix-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .fee-mix-grid > svg { max-width: 310px; }
+  .fee-mix-legend { padding-top: 0; }
+  .fee-mix-detail { min-height: 4.4em; }
+}

@@ -276,6 +276,25 @@ Plot.plot({
 
 <div class="chart-note">Hover over a month for each segment's fee revenue and share of that month's total. Data through ${fmtDate(latestFeeDate)}. Values include taker and maker fees; parlays are included with sports.</div>
 
+## Kalshi fee revenue mix over the past six months
+
+```js
+import {buildFeeRevenueMix, feeRevenueMixPie} from "./components/fee-revenue-mix.js";
+const sixMonthFeeMix = buildFeeRevenueMix(daily, sports, topDailyFees, catLeaderboard);
+```
+
+<p class="section-intro">${fmtDate(sixMonthFeeMix.start)} – ${fmtDate(sixMonthFeeMix.end)}. Total exchange fee revenue, including both taker and maker charges.</p>
+
+<div class="plot-shell">
+
+```js
+feeRevenueMixPie(sixMonthFeeMix, {d3})
+```
+
+</div>
+
+<div class="chart-note">Straight sports excludes parlays. The 15-minute slice combines crypto, financial and commodity price markets; other non-sports includes the remaining non-sports markets. ${sixMonthFeeMix.isPartial ? "The latest day is partial." : ""}</div>
+
 ## Daily non-sports fee revenue
 
 <p class="section-intro">Kalshi's non-sports fee revenue by day since January 1, 2026. Fees include both taker and maker charges, recorded on the trade date.</p>

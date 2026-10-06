@@ -93,7 +93,7 @@ export function fifteenMinuteFees(feesRows, metadataRows) {
   );
   const financeTickers = columns.filter(ticker =>
     !cryptoTickers.includes(ticker) && !commodityTickers.includes(ticker) &&
-    (VERIFIED_FINANCE_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Financials"))
+    (VERIFIED_FINANCE_15M.has(ticker) || (/15M$/.test(ticker) && ["Financials", "Finance"].includes(metadata.get(ticker)?.cat)))
   );
   const tickers = [...cryptoTickers, ...commodityTickers, ...financeTickers];
   if (!tickers.length) throw new Error("15-minute fee data is unavailable");
