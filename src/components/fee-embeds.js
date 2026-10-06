@@ -1,6 +1,7 @@
-export const NONSPORTS_FEE_CATEGORIES = ["Crypto", "Politics", "Finance", "Weather", "Mention", "Entertainment", "Other"];
+import {ECONOMIC_FEE_SERIES, FINANCIAL_FEE_SERIES} from "./fee-sector-series.js";
+export const NONSPORTS_FEE_CATEGORIES = ["Crypto", "Politics", "Finance", "Economics", "Weather", "Mention", "Entertainment", "Other"];
 // Distinct hues make small category bands easier to distinguish.
-export const NONSPORTS_FEE_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
+export const NONSPORTS_FEE_COLORS = ["#0072B2", "#D55E00", "#009E73", "#A65628", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
 
 export const FILTERED_FEE_CATEGORIES = ["Economics", "Politics", "Weather", "Mention", "Entertainment", "Other"];
 export const FILTERED_FEE_COLORS = ["#009E73", "#D55E00", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
@@ -34,13 +35,21 @@ export function filteredNonSportsFees(categoryRows) {
 export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, categoryForTicker) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
   const totals = new Map(sportsRows.map(d => [+d.date, d.fees_nonsports]));
+  const feeCategory = ticker => {
+    if (FINANCIAL_FEE_SERIES.has(ticker)) return "Finance";
+    if (ECONOMIC_FEE_SERIES.has(ticker)) return "Economics";
+    const source = metadata.get(ticker)?.cat;
+    if (["Financials", "Commodities"].includes(source)) return "Finance";
+    if (source === "Economics") return "Economics";
+    return categoryForTicker(ticker);
+  };
   const columns = Object.keys(feesRows[0] ?? {}).filter(ticker => {
     const m = metadata.get(ticker);
     // The broad source split uses is_sports. Some sports mention series have a
     // display category of Mention, so their display category alone is insufficient.
     return m && (m.is_sports === false || m.is_sports === "FALSE") &&
-      NONSPORTS_FEE_CATEGORIES.slice(0, -1).includes(categoryForTicker(ticker));
-  }).map(ticker => [ticker, categoryForTicker(ticker)]);
+      NONSPORTS_FEE_CATEGORIES.slice(0, -1).includes(feeCategory(ticker));
+  }).map(ticker => [ticker, feeCategory(ticker)]);
   return feesRows.filter(d => Number.isFinite(totals.get(+d.date))).map(d => {
     const cents = Object.fromEntries(NONSPORTS_FEE_CATEGORIES.map(c => [c, 0]));
     for (const [ticker, category] of columns) {

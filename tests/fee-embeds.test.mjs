@@ -3,6 +3,24 @@ import assert from "node:assert/strict";
 import {nonSportsFeesByCategory, fifteenMinuteFees, NONSPORTS_FEE_CATEGORIES, filteredNonSportsFees, FILTERED_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
 const date = new Date("2026-01-01");
 
+test("category chart separates macro releases from commodity, index, FX and yield prices", () => {
+  const row = {date, KXCPI: 1, KXU3: 2, KXFEDDECISION: 3, KXGOLD15M: 4,
+    KXINXU: 5, KXEURUSD15M: 6, KXAAAGASM: 7, KX10YRRATE15M: 8};
+  const metadata = Object.keys(row).filter(t => t !== "date").map(report_ticker => ({report_ticker, is_sports: "FALSE", cat: "Finance"}));
+  const [result] = nonSportsFeesByCategory([row], [{date, fees_nonsports: 38}], metadata, () => "Finance");
+  assert.equal(result.Economics, 6);
+  assert.equal(result.Finance, 30);
+  assert.equal(result.Other, 2);
+  assert.equal(result.total, 38);
+});
+
+test("category chart recognizes new Economics source labels and keeps sports exclusions", () => {
+  const [result] = nonSportsFeesByCategory([{date, NEWMACRO: 1, KXCPI: 999}], [{date, fees_nonsports: 1}],
+    [{report_ticker: "NEWMACRO", cat: "Economics", is_sports: false}, {report_ticker: "KXCPI", is_sports: true}], () => "Other");
+  assert.equal(result.Economics, 1);
+  assert.equal(result.total, 1);
+});
+
 test("filtered chart retains Economics and fully excludes crypto, financials, commodities and sports", () => {
   const rows = Object.entries({Economics: 6, Crypto: 100, Financials: 200, Commodities: 300,
     Sports: 999, "Non-sport parlays": 999, Entertainment: 4, "Science and Technology": 5,

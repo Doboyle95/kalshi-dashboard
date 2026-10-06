@@ -245,7 +245,7 @@ Plot.plot({
 
 ## Daily non-sports fee revenue by category
 
-<p class="section-intro">Kalshi's daily non-sports fee revenue since January 1, 2026, split into the volume map's categories. Each stacked bar adds up to the same daily total as the chart above.</p>
+<p class="section-intro">Kalshi's daily non-sports fee revenue since January 1, 2026, split by category. Finance covers commodity, stock index, currency, and yield prices; Economics covers Fed policy, unemployment, inflation, and other economic releases. Each stacked bar adds up to the same daily total as the chart above.</p>
 
 ```js
 import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, fifteenMinuteFees} from "./components/fee-embeds.js";
@@ -289,7 +289,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsCategoryFees2026))}. Other includes the remaining non-sports fees. Sports and parlays follow the same exclusions as the original non-sports total. A lighter bar marks a partial day.</div>
+<div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsCategoryFees2026))}. Finance and Economics use Kalshi's verified series metadata to separate asset prices from macroeconomic releases and policy. Other includes the remaining non-sports fees. Sports and parlays follow the same exclusions as the original non-sports total. A lighter bar marks a partial day.</div>
 
 ## Daily non-sports fees excluding crypto and financial markets
 
