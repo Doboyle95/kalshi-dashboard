@@ -2,6 +2,35 @@ export const NONSPORTS_FEE_CATEGORIES = ["Crypto", "Politics", "Finance", "Weath
 // Distinct hues make small category bands easier to distinguish.
 export const NONSPORTS_FEE_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
 
+export const FILTERED_FEE_CATEGORIES = ["Economics", "Politics", "Weather", "Mention", "Entertainment", "Other"];
+export const FILTERED_FEE_COLORS = ["#009E73", "#D55E00", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
+
+// Filter the complete source-category aggregate, not the top-ticker fee file:
+// its residual Other bucket can contain untracked crypto and financial fees.
+export function filteredNonSportsFees(categoryRows) {
+  const excluded = new Set(["Sports", "Non-sport parlays", "Crypto", "Financials", "Commodities"]);
+  const categories = new Map([
+    ["Economics", "Economics"], ["Politics", "Politics"], ["Elections", "Politics"],
+    ["Climate and Weather", "Weather"], ["Mentions", "Mention"], ["Entertainment", "Entertainment"]
+  ]);
+  const days = new Map();
+  for (const d of categoryRows) {
+    if (!Number.isFinite(+d.date) || !d.kalshi_category || !Number.isFinite(d.fees)) {
+      throw new Error("Invalid daily category fee data");
+    }
+    if (!days.has(+d.date)) days.set(+d.date, {
+      date: d.date, ...Object.fromEntries(FILTERED_FEE_CATEGORIES.map(c => [c, 0]))
+    });
+    if (excluded.has(d.kalshi_category)) continue;
+    days.get(+d.date)[categories.get(d.kalshi_category) ?? "Other"] += Math.round(d.fees * 100);
+  }
+  return [...days.values()].sort((a, b) => a.date - b.date).map(d => ({
+    date: d.date,
+    total: FILTERED_FEE_CATEGORIES.reduce((sum, c) => sum + d[c], 0) / 100,
+    ...Object.fromEntries(FILTERED_FEE_CATEGORIES.map(c => [c, d[c] / 100]))
+  }));
+}
+
 export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, categoryForTicker) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
   const totals = new Map(sportsRows.map(d => [+d.date, d.fees_nonsports]));

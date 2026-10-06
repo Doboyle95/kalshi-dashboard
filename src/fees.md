@@ -291,6 +291,53 @@ Plot.plot({
 
 <div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsCategoryFees2026))}. Other includes the remaining non-sports fees. Sports and parlays follow the same exclusions as the original non-sports total. A lighter bar marks a partial day.</div>
 
+## Daily non-sports fees excluding crypto and financial markets
+
+<p class="section-intro">Daily fee revenue since January 1, 2026, with crypto and financial price markets removed. Economics remains: CPI, unemployment, payrolls, GDP, and Fed policy.</p>
+
+```js
+import {FILTERED_FEE_CATEGORIES, FILTERED_FEE_COLORS, filteredNonSportsFees} from "./components/fee-embeds.js";
+const filteredCategoryDaily = await DataAttachment("data/category_daily.csv").csv({typed: true});
+const filteredNonSportsFees2026 = filteredNonSportsFees(filteredCategoryDaily.filter(d => d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01")));
+const filteredNonSportsBars = filteredNonSportsFees2026.flatMap(d => {
+  let baseline = 0;
+  return FILTERED_FEE_CATEGORIES.map(category => {
+    const y0 = baseline;
+    baseline += d[category];
+    return {date: d.date, category, y0, y1: baseline};
+  });
+});
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
+  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
+  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  color: {legend: true, domain: FILTERED_FEE_CATEGORIES, range: FILTERED_FEE_COLORS},
+  marks: [
+    Plot.rectY(filteredNonSportsBars, {
+      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
+      fillOpacity: 0.85
+    }),
+    Plot.ruleX(filteredNonSportsFees2026, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(filteredNonSportsFees2026, Plot.pointerX({
+      x: "date", title: d => [fmtDate(d.date),
+        ...FILTERED_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
+        `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`
+      ].filter(Boolean).join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">January 1 – ${fmtDate(latestDate(filteredNonSportsFees2026))}, latest available category-data day. Uses Kalshi's source categories, excluding Sports, Non-sport parlays, Crypto, Financials, and Commodities. Economics includes economic releases and Fed policy; Politics includes Elections. Other sums the remaining source categories.</div>
+
 ## Daily 15-minute crypto and commodity fee revenue
 
 <p class="section-intro">Kalshi's fee revenue from 15-minute crypto and commodity markets, totaled by trade date since January 1, 2026. Each bar combines both groups and includes taker and maker fees.</p>

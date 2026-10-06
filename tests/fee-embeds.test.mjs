@@ -1,7 +1,35 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {nonSportsFeesByCategory, cryptoCommodity15MinuteFees, NONSPORTS_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
+import {nonSportsFeesByCategory, cryptoCommodity15MinuteFees, NONSPORTS_FEE_CATEGORIES, filteredNonSportsFees, FILTERED_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
 const date = new Date("2026-01-01");
+
+test("filtered chart retains Economics and fully excludes crypto, financials, commodities and sports", () => {
+  const rows = Object.entries({Economics: 6, Crypto: 100, Financials: 200, Commodities: 300,
+    Sports: 999, "Non-sport parlays": 999, Entertainment: 4, "Science and Technology": 5,
+    Politics: 0.1, Elections: 0.2, Mentions: 2, "Climate and Weather": 3})
+    .map(([kalshi_category, fees]) => ({date, kalshi_category, fees}));
+  const [result] = filteredNonSportsFees(rows);
+  assert.equal(result.Economics, 6);
+  assert.equal(result.Entertainment, 4);
+  assert.equal(result.Other, 5);
+  assert.equal(result.Politics, 0.3);
+  assert.equal(result.Mention, 2);
+  assert.equal(result.Weather, 3);
+  assert.equal(result.total, 20.3);
+  assert.equal(FILTERED_FEE_CATEGORIES.reduce((sum, c) => sum + Math.round(result[c] * 100), 0), Math.round(result.total * 100));
+});
+
+test("filtered chart preserves zero-fee days and sorts by date", () => {
+  const next = new Date("2026-01-02");
+  const rows = filteredNonSportsFees([{date: next, kalshi_category: "Crypto", fees: 10},
+    {date, kalshi_category: "Economics", fees: 1}]);
+  assert.deepEqual(rows.map(d => [d.date, d.total]), [[date, 1], [next, 0]]);
+});
+
+test("filtered chart rejects missing source categories or fees", () => {
+  assert.throws(() => filteredNonSportsFees([{date, kalshi_category: "Economics", fees: null}]), /Invalid/);
+  assert.throws(() => filteredNonSportsFees([{date, kalshi_category: "", fees: 1}]), /Invalid/);
+});
 
 test("category bars reconcile in cents and keep sports mention fees out of non-sports", () => {
   const rows = [{date, BTC: 0.1, POLITICS: 0.2, SPORTSMENTION: 999, UNKNOWN: 12}];
