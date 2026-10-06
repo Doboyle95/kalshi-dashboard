@@ -66,7 +66,8 @@ export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, cate
 // also a 15-minute crypto series.
 const VERIFIED_CRYPTO_15M = new Set([
   "KXBNB15M", "KXBTC15M", "KXDOGE15M", "KXETH15M", "KXHYPE15M",
-  "KXSOL15M", "KXXRP15M", "KXZEC15M", "KXNEAR15M", "KXCRYPTOLEAD15M"
+  "KXSOL15M", "KXXRP15M", "KXZEC15M", "KXNEAR15M", "KXCRYPTOLEAD15M",
+  "KXCRYPTOCOMP15M", "KXADA15M", "KXBCH15M", "KXTON15M"
 ]);
 // These seven series also have API category Commodities and frequency fifteen_min.
 // The dashboard's broad taxonomy places them in Finance or Other, so use their
@@ -82,6 +83,40 @@ const VERIFIED_FINANCE_15M = new Set([
   "KX10YRRATE15M", "KX30YRRATE15M", "KXEURUSD15M", "KXUSDJPY15M",
   "KXGBPUSD15M", "KXAUDUSD15M", "KXUSDCAD15M"
 ]);
+// Remove series before category aggregation so 15-minute products classified as
+// Other (such as ZEC and NEAR) cannot survive in the residual Other segment.
+export function nonSportsFeesExcludingFifteenMinute(feesRows, sportsRows, metadataRows, categoryForTicker) {
+  const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
+  const verified = new Set([...VERIFIED_CRYPTO_15M, ...VERIFIED_COMMODITY_15M,
+    ...VERIFIED_FINANCE_15M, "KXGBPUSD15MTEST"]);
+  const tickers = Object.keys(feesRows[0] ?? {}).filter(ticker => {
+    const m = metadata.get(ticker);
+    if (m?.is_sports === true || m?.is_sports === "TRUE") return false;
+    return verified.has(ticker) || (/15M$/.test(ticker) &&
+      (m?.is_sports === false || m?.is_sports === "FALSE"));
+  });
+  if (!tickers.length) throw new Error("15-minute fee data is unavailable");
+  const removedByDate = new Map();
+  const remaining = feesRows.map(row => {
+    const copy = {...row};
+    let removed = 0;
+    for (const ticker of tickers) {
+      if (!Number.isFinite(row[ticker])) throw new Error(`Missing 15-minute fees for ${ticker}`);
+      removed += Math.round(row[ticker] * 100);
+      copy[ticker] = 0;
+    }
+    removedByDate.set(+row.date, removed);
+    return copy;
+  });
+  const totals = sportsRows.map(row => {
+    if (!removedByDate.has(+row.date)) return row;
+    const cents = Math.round(row.fees_nonsports * 100) - removedByDate.get(+row.date);
+    if (cents < 0) throw new Error("15-minute fees exceed the reported non-sports total");
+    return {...row, fees_nonsports: cents / 100};
+  });
+  return {rows: nonSportsFeesByCategory(remaining, totals, metadataRows, categoryForTicker), tickers};
+}
+
 export function fifteenMinuteFees(feesRows, metadataRows) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
   const columns = Object.keys(feesRows[0] ?? {});

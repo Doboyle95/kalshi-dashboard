@@ -443,6 +443,56 @@ Plot.plot({
 
 <div class="chart-note">${fmtDate(filteredFeesStart)} – ${fmtDate(latestDate(filteredNonSportsFeesSixMonths))} (latest six months), latest available category-data day. Uses Kalshi's source categories, excluding Sports, Non-sport parlays, Crypto, Financials, and Commodities. Economics includes economic releases and Fed policy; Politics includes Elections. Other sums the remaining source categories.</div>
 
+## Daily non-sports fees excluding 15-minute markets
+
+<p class="section-intro">Daily non-sports fee revenue over the latest six months, excluding only 15-minute markets. Longer-duration crypto, commodities, indices, currencies, and other financial markets remain, alongside Economics, Politics, Weather, Mention, Entertainment, and Other.</p>
+
+```js
+import {nonSportsFeesExcludingFifteenMinute} from "./components/fee-embeds.js";
+const nonFifteenMinuteFeeData = nonSportsFeesExcludingFifteenMinute(
+  topDailyFees.filter(d => d.date >= filteredFeesStart && d.date <= filteredFeesThrough),
+  sports, catLeaderboard, wideCategoryForTicker
+);
+const nonFifteenMinuteFees = nonFifteenMinuteFeeData.rows;
+const nonFifteenMinuteBars = nonFifteenMinuteFees.flatMap(d => {
+  let baseline = 0;
+  return NONSPORTS_FEE_CATEGORIES.map(category => {
+    const y0 = baseline;
+    baseline += d[category];
+    return {date: d.date, category, y0, y1: baseline};
+  });
+});
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
+  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
+  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  color: {legend: true, domain: NONSPORTS_FEE_CATEGORIES, range: NONSPORTS_FEE_COLORS},
+  marks: [
+    Plot.rectY(nonFifteenMinuteBars, {
+      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
+      fillOpacity: 0.85
+    }),
+    Plot.ruleX(nonFifteenMinuteFees, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(nonFifteenMinuteFees, Plot.pointerX({
+      x: "date", title: d => [fmtDate(d.date),
+        ...NONSPORTS_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
+        `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`
+      ].filter(Boolean).join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">${fmtDate(filteredFeesStart)} – ${fmtDate(latestDate(nonFifteenMinuteFees))} (latest six months). Starts with the full non-sports fee total and subtracts the ${nonFifteenMinuteFeeData.tickers.length} identified 15-minute series with published fee data, including products otherwise grouped into Other. Hourly, daily, and longer-duration markets remain. Sports and parlays follow the original non-sports exclusions. Fees include taker and maker charges.</div>
+
 ## Daily 15-minute crypto, commodity and finance fee revenue
 
 <p class="section-intro">Kalshi's fee revenue from 15-minute crypto, commodity, and financial markets, totaled by trade date since January 1, 2026. Each bar combines all three groups and includes taker and maker fees.</p>

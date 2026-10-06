@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {nonSportsFeesByCategory, fifteenMinuteFees, NONSPORTS_FEE_CATEGORIES, filteredNonSportsFees, FILTERED_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
+import {nonSportsFeesExcludingFifteenMinute, nonSportsFeesByCategory, fifteenMinuteFees, NONSPORTS_FEE_CATEGORIES, filteredNonSportsFees, FILTERED_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
 const date = new Date("2026-01-01");
 
 test("category chart separates macro releases from commodity, index, FX and yield prices", () => {
@@ -99,4 +99,28 @@ test("new 15M series in source metadata are included automatically without doubl
 
 test("missing crypto fees are not presented as zero", () => {
   assert.throws(() => fifteenMinuteFees([{date, KXBTC15M: null}], []), /Missing/);
+});
+
+test("excluding 15-minute markets preserves longer crypto, finance, Economics and residual fees", () => {
+  const source = {date, KXBTC15M:11, KXZEC15M:13, KXGOLD15M:17, KXEURUSD15M:19,
+    KXBTCD:5, KXBTC30M:2, KXINXU:7, KXCPI:3, SPORTS15M:999};
+  const metadata = Object.keys(source).filter(t => t !== "date").map(report_ticker => ({
+    report_ticker, is_sports:report_ticker === "SPORTS15M",
+    cat:/BTC/.test(report_ticker) ? "Crypto" : report_ticker === "KXCPI" ? "Economics" : report_ticker === "KXZEC15M" ? "Other" : "Finance"
+  }));
+  const {rows:[result],tickers} = nonSportsFeesExcludingFifteenMinute([source], [{date,fees_nonsports:77.5}], metadata,
+    ticker => metadata.find(m => m.report_ticker === ticker)?.cat);
+  assert.equal(result.total,17.5);
+  assert.equal(result.Crypto,7);
+  assert.equal(result.Finance,7);
+  assert.equal(result.Economics,3);
+  assert.equal(result.Other,0.5);
+  assert.equal(source.KXBTC15M,11);
+  assert.ok(!tickers.includes("SPORTS15M"));
+  assert.equal(NONSPORTS_FEE_CATEGORIES.reduce((sum,c)=>sum+Math.round(result[c]*100),0),1750);
+});
+
+test("excluding 15-minute fees refuses missing fees and impossible subtraction", () => {
+  assert.throws(()=>nonSportsFeesExcludingFifteenMinute([{date,KXBTC15M:null}],[],[],()=>"Crypto"),/Missing/);
+  assert.throws(()=>nonSportsFeesExcludingFifteenMinute([{date,KXBTC15M:2}],[{date,fees_nonsports:1}],[],()=>"Crypto"),/exceed/);
 });
