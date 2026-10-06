@@ -664,7 +664,8 @@ const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").
 ```
 
 ```js
-const catLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+import {splitCategoryRows, splitFinanceCategory, ECONOMICS_COLOR, FINANCE_COLOR} from "./components/non-sports-categories.js";
+const catLeaderboard = splitCategoryRows(await DataAttachment("data/category_leaderboard.csv").csv({typed: true}));
 ```
 
 ```js
@@ -710,7 +711,7 @@ function wideCategoryForTicker(ticker) {
   if (String(ticker || "").toUpperCase().includes("MENTION")) return "Mention";
   const fromR = classByReportTicker.get(ticker);
   if (fromR) return CAT_TO_WIDE_GROUP_KEY[fromR.cat] || fromR.cat;
-  return wideMap[ticker];
+  return splitFinanceCategory(ticker, wideMap[ticker]);
 }
 // A day's display groups, and [column, group] for every ticker column of a file that lands in
 // one, worked out once per file. wideDailyFees and catVolumeDaily used to call
@@ -720,7 +721,7 @@ function wideCategoryForTicker(ticker) {
 const newWideGroups = () => ({
   NFL: 0, "College football": 0, NBA: 0, "College basketball": 0,
   Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0, Soccer: 0, "Combat sports": 0,
-  Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
+  Crypto: 0, Politics: 0, Finance: 0, Economics: 0, Entertainment: 0, Mention: 0, Weather: 0
 });
 function wideColumnGroups(rows) {
   return Object.keys(rows[0] ?? {})
@@ -733,13 +734,13 @@ function wideColumnGroups(rows) {
 ```js
 // Detailed order/colors for fees — single "Parlay" bucket (no correlated/independent/pending split).
 const feesWideOrder = [
-  "Other non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
+  "Other non-sports", "Weather", "Mention", "Entertainment", "Economics", "Finance", "Politics", "Crypto",
   "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
   "College football", "NFL", "College basketball", "NBA", "Parlay"
 ];
 const feesWideColors = {
   "Other non-sports": "#e8eaf0", "Weather": "#b0bec5", "Entertainment": "#90a4ae",
-  "Mention": "#78909c", "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
+  "Mention": "#78909c", "Finance": FINANCE_COLOR, "Economics": ECONOMICS_COLOR, "Politics": "#455a64", "Crypto": "#263238",
   "Other sports": "#c8e6c9",
   "Combat sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
   "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
@@ -756,7 +757,7 @@ const generalMap = {
   "Hockey": "Other sports", "Golf": "Other sports", "Tennis": "Other sports",
   "Combat sports": "Other sports", "Other sports": "Other sports",
   "Parlay": "Parlay",
-  "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
+  "Crypto": "Non-sports", "Finance": "Non-sports", "Economics": "Non-sports", "Politics": "Non-sports",
   "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
 };
 const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay"];
@@ -784,7 +785,7 @@ const wideDailyFees = topDailyFees.map(row => {
   const feesParlay    = Math.max(0, (catFeesTotalByDate.get(+row.date) || 0) - feesSports - feesNonSports);
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
     groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Economics + groups.Entertainment + groups.Mention + groups.Weather;
   return {
     date: row.date,
     ...groups,
@@ -944,7 +945,7 @@ const catVolumeDaily = topDailyVolume.map(row => {
   const totNonSports = +sp.contracts_nonsports           || 0;
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
     groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Economics + groups.Entertainment + groups.Mention + groups.Weather;
   return {
     date: row.date,
     ...groups,

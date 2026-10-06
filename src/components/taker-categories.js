@@ -8,9 +8,11 @@
 // visible instead of silently dropped. General (default/broad) = categories.md's
 // generalMap/generalOrder/generalColors 6-bucket collapse.
 
+import {splitCategoryRows, ECONOMICS_COLOR, FINANCE_COLOR} from "./non-sports-categories.js";
+
 export function buildReportTickerToCat(categoryLeaderboard) {
   return new Map(
-    categoryLeaderboard.filter(d => d.report_ticker && d.cat).map(d => [d.report_ticker, d.cat])
+    splitCategoryRows(categoryLeaderboard).filter(d => d.report_ticker && d.cat).map(d => [d.report_ticker, d.cat])
   );
 }
 
@@ -78,14 +80,14 @@ export function estimateHistoricalTakerCategoryRows(wideRows, reportTickerToCat,
 }
 
 export const TAKER_DETAIL_ORDER = [
-  "Other Non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
+  "Other Non-sports", "Weather", "Mention", "Entertainment", "Economics", "Finance", "Politics", "Crypto",
   "Other Sports", "Esports", "Racing", "Cricket", "Combat Sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
   "College Football", "NFL", "College Basketball", "NBA", "Parlay", "Uncategorized"
 ];
 
 export const TAKER_DETAIL_COLORS = {
   "Other Non-sports": "#e8eaf0", "Weather": "#b0bec5", "Entertainment": "#90a4ae",
-  "Mention": "#78909c", "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
+  "Mention": "#78909c", "Finance": FINANCE_COLOR, "Economics": ECONOMICS_COLOR, "Politics": "#455a64", "Crypto": "#263238",
   "Other Sports": "#c8e6c9", "Esports": "#BCAAA4", "Racing": "#A1887F", "Cricket": "#FA8072",
   "Combat Sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
   "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
@@ -104,7 +106,7 @@ export const TAKER_GENERAL_MAP = {
   "Combat Sports": "Other sports", "Other Sports": "Other sports",
   "Cricket": "Other sports", "Racing": "Other sports", "Esports": "Other sports",
   "Parlay": "Parlay",
-  "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
+  "Crypto": "Non-sports", "Finance": "Non-sports", "Economics": "Non-sports", "Politics": "Non-sports",
   "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other Non-sports": "Non-sports",
   "Uncategorized": "Uncategorized"
 };

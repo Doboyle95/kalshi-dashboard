@@ -1,10 +1,10 @@
-import {ECONOMIC_FEE_SERIES, FINANCIAL_FEE_SERIES} from "./fee-sector-series.js";
+import {splitFinanceCategory} from "./non-sports-categories.js";
 export const NONSPORTS_FEE_CATEGORIES = ["Crypto", "Politics", "Finance", "Economics", "Weather", "Mention", "Entertainment", "Other"];
 // Distinct hues make small category bands easier to distinguish.
 export const NONSPORTS_FEE_COLORS = ["#0072B2", "#D55E00", "#009E73", "#A65628", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
 
 export const FILTERED_FEE_CATEGORIES = ["Economics", "Politics", "Weather", "Mention", "Entertainment", "Other"];
-export const FILTERED_FEE_COLORS = ["#009E73", "#D55E00", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
+export const FILTERED_FEE_COLORS = ["#A65628", "#D55E00", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
 
 // Filter the complete source-category aggregate, not the top-ticker fee file:
 // its residual Other bucket can contain untracked crypto and financial fees.
@@ -36,12 +36,8 @@ export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, cate
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
   const totals = new Map(sportsRows.map(d => [+d.date, d.fees_nonsports]));
   const feeCategory = ticker => {
-    if (FINANCIAL_FEE_SERIES.has(ticker)) return "Finance";
-    if (ECONOMIC_FEE_SERIES.has(ticker)) return "Economics";
     const source = metadata.get(ticker)?.cat;
-    if (["Financials", "Commodities"].includes(source)) return "Finance";
-    if (source === "Economics") return "Economics";
-    return categoryForTicker(ticker);
+    return splitFinanceCategory(ticker, ["Economics", "Financials", "Commodities"].includes(source) ? source : categoryForTicker(ticker));
   };
   const columns = Object.keys(feesRows[0] ?? {}).filter(ticker => {
     const m = metadata.get(ticker);

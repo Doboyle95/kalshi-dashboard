@@ -25,13 +25,16 @@ export function parseMarketDateFromKey(marketKey) {
 // Sports is split into Football / Basketball / Other sport for legibility.
 // Sports = warm family (reds ? oranges ? gold) so you can instantly tell sports vs non-sports.
 // Non-sports = cool family (blues ? purples ? teal).
+import {splitFinanceCategory, ECONOMICS_COLOR, FINANCE_COLOR} from "./non-sports-categories.js";
+
 export const CAT_COLORS = {
   "Football":        "#c0392b",  // deep red     -+
   "Basketball":      "#e67e22",  // orange       |
   "Soccer":          "#827717",  // olive        | warm = sports
   "Other sport":     "#f0b429",  // amber/gold   -+
   "Politics":        "#1565c0",  // deep blue    -+
-  "Economics":       "#0891b2",  // teal-blue - cool = non-sports
+  "Economics":       ECONOMICS_COLOR,
+  "Finance":         FINANCE_COLOR,  // teal-blue - cool = non-sports
   "Entertainment":   "#6d28d9",  // purple
   "Other non-sport": "#047857",  // dark green   -+
 };
@@ -1214,7 +1217,8 @@ export function fmtStrike(top_outcome, market_key) {
 // Map a row's Kalshi category to a display category used for row coloring:
 // Sports is split into Football / Basketball / Other sport for legibility.
 export function getSportDisplayCategory(d) {
-  const cat = (d.kalshi_category || "").trim();
+  const raw = (d.kalshi_category || "").trim();
+  const cat = raw === "Sports" ? raw : splitFinanceCategory(d.report_ticker || d.market_key, raw);
   // Merge Elections into Politics - they're the same concept on Kalshi
   if (cat === "Elections") return "Politics";
   // Fold Crypto and niche categories into Other non-sport

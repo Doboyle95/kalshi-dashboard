@@ -17,7 +17,8 @@ title: Categories
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const leaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+import {splitCategoryRows, splitFinanceCategory, ECONOMICS_COLOR, FINANCE_COLOR} from "./components/non-sports-categories.js";
+const leaderboard = splitCategoryRows(await DataAttachment("data/category_leaderboard.csv").csv({typed: true}));
 const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 const mktLeaderboard = await DataAttachment("data/market_leaderboard.csv").csv({typed: true});
 // Leg-based parlay correlation by (date, report_ticker): lets the treemap split each
@@ -88,7 +89,7 @@ function windowColumnSums(rows, cols, start, end) {
 const TM_CATEGORY_ORDER = [
   "NFL", "College Football", "NBA", "College Basketball", "Baseball",
   "Hockey", "Golf", "Tennis", "Soccer", "Cricket", "Combat Sports", "Racing", "Esports", "Parlay",
-  "Crypto", "Politics", "Finance", "Entertainment", "Mention", "Weather",
+  "Crypto", "Politics", "Finance", "Economics", "Entertainment", "Mention", "Weather",
   "Other Sports", "Other Non-sports"
 ];
 
@@ -110,7 +111,8 @@ const TM_CATEGORY_COLORS = {
   "Other Sports": "#8D6E63",
   "Crypto": "var(--cat-basketball)",
   "Politics": "#1A237E",
-  "Finance": "#1E88E5",
+  "Finance": FINANCE_COLOR,
+  "Economics": ECONOMICS_COLOR,
   "Weather": "#4FC3F7",
   "Entertainment": "#0097A7",
   "Mention": "#546E7A",
@@ -422,6 +424,7 @@ function classifyTreemapTicker(ticker, isSports) {
     mtype = "Other";
   }
 
+  if (grp === "Non-sports") cat = splitFinanceCategory(ticker, cat);
   return {grp, cat, wideCat: normalizeTreemapCategory(cat), mtype};
 }
 
@@ -477,7 +480,8 @@ function categoryFromKalshiCategory(rawCategory) {
   if (c.includes("election") || c.includes("politic")) return "Politics";
   // "commodit" added 2026-06-19: Kalshi tags KXBRENT/KXGOLD/KXNATGAS/etc. as "Commodities";
   // without it they fall to Other Non-sports. Mirrors R classify_market.R category_from_kalshi_category.
-  if (c.includes("economic") || c.includes("financial") || c.includes("companie") || c.includes("commodit")) return "Finance";
+  if (c.includes("economic")) return "Economics";
+  if (c.includes("financial") || c.includes("companie") || c.includes("commodit")) return "Finance";
   if (c.includes("entertainment")) return "Entertainment";
   if (c.includes("crypto")) return "Crypto";
   if (c.includes("weather") || c.includes("climate")) return "Weather";
@@ -1427,7 +1431,8 @@ const tmActiveMarketRowsByTicker = d3.group(
     "Other Sports":       "#8D6E63",  // warm tan
     "Crypto":             "var(--cat-basketball)",  // dark navy
     "Politics":           "#1A237E",  // very dark indigo
-    "Finance":            "#1E88E5",  // bright medium blue
+    "Finance":            FINANCE_COLOR,
+    "Economics":          ECONOMICS_COLOR,  // macroeconomic releases and policy
     "Weather":            "#4FC3F7",  // light sky blue
     "Entertainment":      "#0097A7",  // teal-blue
     "Mention":            "#546E7A",  // slate
@@ -1814,7 +1819,7 @@ function wideCategoryForTicker(ticker) {
   // for any report_ticker not yet in the leaderboard CSV.
   const fromR = classByReportTicker.get(ticker);
   if (fromR) return CAT_TO_WIDE_GROUP_KEY[fromR.cat] || fromR.cat;
-  return wideMap[ticker];
+  return splitFinanceCategory(ticker, wideMap[ticker]);
 }
 
 // Leg-based parlay split (correlated / independent / pending) for the Detailed view.
@@ -1845,7 +1850,7 @@ const newWideGroups = () => ({
   NBA: 0, "College basketball": 0,
   Baseball: 0, Hockey: 0, Golf: 0, Tennis: 0,
   Soccer: 0, "Combat sports": 0,
-  Crypto: 0, Politics: 0, Finance: 0, Entertainment: 0, Mention: 0, Weather: 0
+  Crypto: 0, Politics: 0, Finance: 0, Economics: 0, Entertainment: 0, Mention: 0, Weather: 0
 });
 const wideColumnGroups = Object.keys(topDaily[0] ?? {})
   .filter(cat => cat !== "date")
@@ -1863,7 +1868,7 @@ const wideDaily = topDaily.map(row => {
   const totNonSports = +sp.contracts_nonsports           || 0;
   const knownSports    = groups.NFL + groups["College football"] + groups.NBA + groups["College basketball"] +
     groups.Baseball + groups.Hockey + groups.Golf + groups.Tennis + groups.Soccer + groups["Combat sports"];
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Mention + groups.Weather;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Economics + groups.Entertainment + groups.Mention + groups.Weather;
   // Leg-based parlay split for this day, rescaled to the authoritative contracts_parlay total
   // so Detailed and General views stay the same height. Pre-2025-09 (no leg data): all -> pending.
   const dayKey = row.date.toISOString().slice(0, 10);
@@ -1895,7 +1900,7 @@ const wideDaily = topDaily.map(row => {
 // Football pair (warm): NFL dark, College football light
 // Basketball pair (blue): NBA dark, College basketball light
 const wideOrder = [
-  "Other non-sports", "Weather", "Mention", "Entertainment", "Finance", "Politics", "Crypto",
+  "Other non-sports", "Weather", "Mention", "Entertainment", "Economics", "Finance", "Politics", "Crypto",
   "Other sports", "Combat sports", "Soccer", "Hockey", "Tennis", "Golf", "Baseball",
   "College football", "NFL",
   "College basketball", "NBA",
@@ -1905,7 +1910,7 @@ const wideOrder = [
 // Color map - subcategory pairs share hue family
 const wideColors = {
   "Other non-sports": "#e8eaf0", "Weather": "#b0bec5", "Entertainment": "#90a4ae",
-  "Mention": "#78909c", "Finance": "#6b8cae", "Politics": "#455a64", "Crypto": "#263238",
+  "Mention": "#78909c", "Finance": FINANCE_COLOR, "Economics": ECONOMICS_COLOR, "Politics": "#455a64", "Crypto": "#263238",
   "Other sports": "#c8e6c9",
   "Combat sports": "#6d4c41", "Soccer": "#827717", "Hockey": "#006064",
   "Tennis": "#4a148c", "Golf": "#33691e", "Baseball": "#880e4f",
@@ -1952,7 +1957,7 @@ const generalMap = {
   "Combat sports": "Other sports", "Other sports": "Other sports",
   "Parlay": "Parlay",
   "Parlay (correlated)": "Parlay", "Parlay (independent)": "Parlay", "Parlay (pending)": "Parlay",
-  "Crypto": "Non-sports", "Finance": "Non-sports", "Politics": "Non-sports",
+  "Crypto": "Non-sports", "Finance": "Non-sports", "Economics": "Non-sports", "Politics": "Non-sports",
   "Entertainment": "Non-sports", "Mention": "Non-sports", "Weather": "Non-sports", "Other non-sports": "Non-sports"
 };
 const generalOrder  = ["Non-sports", "Other sports", "Baseball", "Soccer", "Basketball", "Football", "Parlay"];

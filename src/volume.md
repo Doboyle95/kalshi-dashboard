@@ -37,7 +37,8 @@ const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
 const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
-const catLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+import {splitCategoryRows, splitFinanceCategory, ECONOMICS_COLOR, FINANCE_COLOR} from "./components/non-sports-categories.js";
+const catLeaderboard = splitCategoryRows(await DataAttachment("data/category_leaderboard.csv").csv({typed: true}));
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
 ```
 
@@ -227,11 +228,11 @@ const wideCatByReportTicker = new Map(
 // thread for the pair (CPU profile, 2026-10-01). The columns keep the rows' own key order, so
 // each group adds its values in the same order as before and the totals are bit-identical.
 const newVolGroups = () => ({Football:0, Basketball:0, Baseball:0, Golf:0, Tennis:0, Soccer:0,
-                             Crypto:0, Politics:0, Finance:0, Entertainment:0, Weather:0});
+                             Crypto:0, Politics:0, Finance:0, Economics:0, Entertainment:0, Weather:0});
 function volColumnGroups(rows) {
   return Object.keys(rows[0] ?? {})
     .filter(cat => cat !== "date")
-    .map(cat => [cat, wideCatByReportTicker.get(cat) || volWideMap[cat]])
+    .map(cat => [cat, wideCatByReportTicker.get(cat) || splitFinanceCategory(cat, volWideMap[cat])])
     .filter(([, wg]) => wg && wg !== "_skip" && newVolGroups()[wg] !== undefined);
 }
 // The FIRST sports row per day, which is what sports.find() returned; a NaN date never matched.
@@ -252,7 +253,7 @@ const volWideDaily = topDaily.map(row => {
   // subtracted here. The old `shareSum > 1.01` test existed only because the
   // unsuffixed contracts_sports did not say whether parlay was inside it.
   const knownSports    = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Economics + groups.Entertainment + groups.Weather;
   return {
     date: row.date, ...groups, Parlay: parlay,
     "Other sports":     Math.max(0, totSports - knownSports),
@@ -279,7 +280,7 @@ const feeWideDaily = topDailyFees.map(row => {
   const groups = newVolGroups();
   for (const [cat, wg] of feeColumns) groups[wg] += +row[cat] || 0;
   const knownSports = groups.Football + groups.Basketball + groups.Baseball + groups.Golf + groups.Tennis + groups.Soccer;
-  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Entertainment + groups.Weather;
+  const knownNonSports = groups.Crypto + groups.Politics + groups.Finance + groups.Economics + groups.Entertainment + groups.Weather;
   return {
     date: row.date, ...groups, Parlay: parlayFeesFor(sp),
     "Other sports": Math.max(0, (+sp.fees_sports_nonparlay || 0) - knownSports),
@@ -467,7 +468,7 @@ const fd2 = daily.filter(d => d.date >= s2 && d.date <= e2);
 const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2);
 
 const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
-const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Finance", "Politics", "Crypto"];
+const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Economics", "Finance", "Politics", "Crypto"];
 
 const tidySports =
   sportsView === "Sports only"
@@ -546,7 +547,7 @@ Plot.plot({
   x: {type: "utc", label: null},
   y: {label: sportsMetric === "Fees" ? "Fees ($)" : "Volume (contracts)", grid: true, tickFormat: d => fmtAxisNum(d)},
   color: useTableau
-    ? {legend: true, columns: 4, scheme: "tableau10", domain: subOrder}
+    ? {legend: true, columns: 4, domain: subOrder, range: subOrder.map((category, i) => category === "Finance" ? FINANCE_COLOR : category === "Economics" ? ECONOMICS_COLOR : d3.schemeTableau10[i % 10])}
     : {legend: true, domain: ["Non-sports", "Sports (excl. parlays)", "Parlay"], range: ["#5b8def", "#1a9641", "#74c476"]},  // Non-sports = distinct blue; sports + Parlay = one green family (parlays are sports-dominated)
   marks: [
     Plot.areaY(tidySports, {
