@@ -377,13 +377,15 @@ Plot.plot({
 
 ## Daily non-sports fees excluding crypto and financial markets
 
-<p class="section-intro">Daily fee revenue since January 1, 2026, with crypto and financial price markets removed. Economics remains: CPI, unemployment, payrolls, GDP, and Fed policy.</p>
+<p class="section-intro">Daily fee revenue over the latest six months, with crypto and financial price markets removed. Economics remains: CPI, unemployment, payrolls, GDP, and Fed policy.</p>
 
 ```js
 import {FILTERED_FEE_CATEGORIES, FILTERED_FEE_COLORS, filteredNonSportsFees} from "./components/fee-embeds.js";
 const filteredCategoryDaily = await DataAttachment("data/category_daily.csv").csv({typed: true});
-const filteredNonSportsFees2026 = filteredNonSportsFees(filteredCategoryDaily.filter(d => d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01")));
-const filteredNonSportsBars = filteredNonSportsFees2026.flatMap(d => {
+const filteredFeesThrough = d3.max(filteredCategoryDaily, d => d.date);
+const filteredFeesStart = d3.utcMonth.offset(d3.utcDay.offset(filteredFeesThrough, 1), -6);
+const filteredNonSportsFeesSixMonths = filteredNonSportsFees(filteredCategoryDaily.filter(d => d.date >= filteredFeesStart && d.date <= filteredFeesThrough));
+const filteredNonSportsBars = filteredNonSportsFeesSixMonths.flatMap(d => {
   let baseline = 0;
   return FILTERED_FEE_CATEGORIES.map(category => {
     const y0 = baseline;
@@ -406,8 +408,8 @@ Plot.plot({
       x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
       fillOpacity: 0.85
     }),
-    Plot.ruleX(filteredNonSportsFees2026, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(filteredNonSportsFees2026, Plot.pointerX({
+    Plot.ruleX(filteredNonSportsFeesSixMonths, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(filteredNonSportsFeesSixMonths, Plot.pointerX({
       x: "date", title: d => [fmtDate(d.date),
         ...FILTERED_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
         `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`
@@ -420,7 +422,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">January 1 – ${fmtDate(latestDate(filteredNonSportsFees2026))}, latest available category-data day. Uses Kalshi's source categories, excluding Sports, Non-sport parlays, Crypto, Financials, and Commodities. Economics includes economic releases and Fed policy; Politics includes Elections. Other sums the remaining source categories.</div>
+<div class="chart-note">${fmtDate(filteredFeesStart)} – ${fmtDate(latestDate(filteredNonSportsFeesSixMonths))} (latest six months), latest available category-data day. Uses Kalshi's source categories, excluding Sports, Non-sport parlays, Crypto, Financials, and Commodities. Economics includes economic releases and Fed policy; Politics includes Elections. Other sums the remaining source categories.</div>
 
 ## Daily 15-minute crypto, commodity and finance fee revenue
 
