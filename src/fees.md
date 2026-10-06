@@ -192,6 +192,90 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--accent-tertiary)"></span>7-day average</span>
 </div>
 
+## Sports vs. non-sports fee revenue by month
+
+<p class="section-intro">Monthly exchange fee revenue for the latest 12 calendar months. Sports includes straight sports fees and parlays; the newest month may be partial.</p>
+
+```js
+const sportsFeesMonthByDate = new Map(sports.map(d => [+d.date, d]));
+const latestFeeDate = d3.max(daily, d => d.date);
+const latestFeeMonth = latestFeeDate.toISOString().slice(0, 7);
+const priorFeeMonth = (month, offset) => {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber - 1 + offset, 1)).toISOString().slice(0, 7);
+};
+const sportsNonSportsMonths = Array.from({length: 12}, (_, i) => priorFeeMonth(latestFeeMonth, i - 11));
+const sportsMonthlyTickFormat = month => {
+  const date = new Date(month + "-01T00:00:00Z");
+  const label = date.toLocaleDateString("en-US", {month: "short", timeZone: "UTC"});
+  return month === sportsNonSportsMonths[0] || month.endsWith("-01") ? `${label} '${month.slice(2, 4)}` : label;
+};
+const sportsMonthlyCents = new Map(sportsNonSportsMonths.map(month => [month, {sports: 0, nonsports: 0}]));
+for (const day of daily) {
+  const month = day.date.toISOString().slice(0, 7);
+  const monthly = sportsMonthlyCents.get(month);
+  const split = sportsFeesMonthByDate.get(+day.date);
+  if (!monthly) continue;
+  if (!split || !Number.isFinite(day.fees_total) || !Number.isFinite(split.fees_nonsports)) {
+    throw new Error("Monthly sports fee data is incomplete");
+  }
+  const totalCents = Math.round(day.fees_total * 100);
+  const nonsportsCents = Math.round(split.fees_nonsports * 100);
+  if (nonsportsCents > totalCents) throw new Error("Non-sports fees exceed the daily total");
+  // The remainder includes straight sports fees and the parlay residual, so
+  // the two bars reconcile exactly to the published total, including maker fees.
+  monthly.nonsports += nonsportsCents;
+  monthly.sports += totalCents - nonsportsCents;
+}
+const sportsNonSportsMonthly = sportsNonSportsMonths.map(month => {
+  const cents = sportsMonthlyCents.get(month);
+  const total = cents.sports + cents.nonsports;
+  return {month, sports: cents.sports / 100, nonsports: cents.nonsports / 100, total: total / 100,
+    sportsShare: total ? cents.sports / total : 0, nonsportsShare: total ? cents.nonsports / total : 0};
+});
+const sportsNonSportsBars = sportsNonSportsMonthly.flatMap(d => [
+  {month: d.month, category: "Non-sports", fees: d.nonsports},
+  {month: d.month, category: "Sports (including parlays)", fees: d.sports}
+]);
+const sportsNonSportsTip = d => {
+  const total = d.total || 0;
+  const dollars = value => "$" + fmtCount(value);
+  const monthLabel = new Date(d.month + "-01T00:00:00Z").toLocaleDateString("en-US", {month: "long", year: "numeric", timeZone: "UTC"});
+  return [
+    monthLabel,
+    ...(d.month === latestFeeMonth ? [`Data through ${fmtDate(latestFeeDate)}`] : []),
+    `Total: ${dollars(total)}`,
+    `Sports, including parlays: ${dollars(d.sports)} (${(d.sportsShare * 100).toFixed(1)}%)`,
+    `Non-sports: ${dollars(d.nonsports)} (${(d.nonsportsShare * 100).toFixed(1)}%)`
+  ].join("\n");
+};
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 330,
+  marginLeft: 66,
+  marginBottom: width < 620 ? 54 : 38,
+  color: {legend: true, domain: ["Non-sports", "Sports (including parlays)"], range: ["#377eb8", "#1b9e77"]},
+  x: {type: "band", domain: sportsNonSportsMonths, label: null, tickFormat: sportsMonthlyTickFormat, tickRotate: width < 620 ? -35 : 0},
+  y: {label: "Monthly fee revenue", grid: true, tickFormat: fmtUSD},
+  marks: [
+    Plot.barY(sportsNonSportsBars, {x: "month", y: "fees", fill: "category", order: ["Non-sports", "Sports (including parlays)"], fillOpacity: 0.9}),
+    Plot.ruleX(sportsNonSportsMonthly, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
+    Plot.tip(sportsNonSportsMonthly, Plot.pointerX({x: "month", fontSize: 11, lineHeight: 1.2, title: sportsNonSportsTip})),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">Hover over a month for each segment's fee revenue and share of that month's total. Data through ${fmtDate(latestFeeDate)}. Values include taker and maker fees; parlays are included with sports.</div>
+
 ## Daily non-sports fee revenue
 
 <p class="section-intro">Kalshi's non-sports fee revenue by day since January 1, 2026. Fees include both taker and maker charges, recorded on the trade date.</p>
