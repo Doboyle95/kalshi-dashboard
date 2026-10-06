@@ -192,6 +192,57 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--accent-tertiary)"></span>7-day average</span>
 </div>
 
+## Daily non-sports fee revenue
+
+<p class="section-intro">Kalshi's non-sports fee revenue by day since January 1, 2026. Fees include both taker and maker charges, recorded on the trade date.</p>
+
+```js
+// Keep this embed's requested 2026 window independent of the page's date brushes.
+// Missing fee values stay missing; a zero is shown only when the source reports zero.
+const nonSportsFees2026 = sports.filter(d =>
+  d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01") &&
+  Number.isFinite(d.fees_nonsports)
+).slice().sort((a, b) => a.date - b.date);
+const nonSportsPartialDates = new Set(daily.filter(isPartialFee).map(d => +d.date));
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 280,
+  marginLeft: 70,
+  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
+  y: {
+    label: "Daily fees (USD)", grid: true,
+    tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")
+  },
+  marks: [
+    Plot.rectY(nonSportsFees2026, {
+      x1: "date", x2: d => new Date(+d.date + 864e5),
+      y: "fees_nonsports", fill: "#377eb8",
+      fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
+    }),
+    Plot.ruleX(nonSportsFees2026, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(nonSportsFees2026, Plot.pointerX({
+      x: "date",
+      title: d => [
+        fmtDate(d.date),
+        `Non-sports fees: $${d.fees_nonsports.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        nonSportsPartialDates.has(+d.date) ? "Partial day" : null
+      ].filter(Boolean).join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsFees2026))}. The latest day may be partial; a lighter bar marks a partial day. Data updates with Predict Charts' published daily aggregates.</div>
+
 ## Taker vs maker fees
 
 <p class="section-intro">Kalshi bills the aggressor on almost every market, but it also charges the <strong>resting</strong> side on a named subset — soccer, tennis, rate and inflation markets. This splits the daily total above into those two parts.</p>
