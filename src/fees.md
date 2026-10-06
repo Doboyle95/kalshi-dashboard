@@ -248,7 +248,7 @@ Plot.plot({
 <p class="section-intro">Kalshi's daily non-sports fee revenue since January 1, 2026, split into the volume map's categories. Each stacked bar adds up to the same daily total as the chart above.</p>
 
 ```js
-import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, crypto15MinuteFees} from "./components/fee-embeds.js";
+import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, cryptoCommodity15MinuteFees} from "./components/fee-embeds.js";
 const embedFeeRows2026 = topDailyFees.filter(d => d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01"));
 const nonSportsCategoryFees2026 = nonSportsFeesByCategory(embedFeeRows2026, sports, catLeaderboard, wideCategoryForTicker);
 const nonSportsCategoryBars = nonSportsCategoryFees2026.flatMap(d => {
@@ -291,12 +291,16 @@ Plot.plot({
 
 <div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsCategoryFees2026))}. Other includes the remaining non-sports fees. Sports and parlays follow the same exclusions as the original non-sports total. A lighter bar marks a partial day.</div>
 
-## Daily 15-minute crypto fee revenue
+## Daily 15-minute crypto and commodity fee revenue
 
-<p class="section-intro">Kalshi's fee revenue from 15-minute crypto markets, totaled by trade date since January 1, 2026. Includes taker and maker fees.</p>
+<p class="section-intro">Kalshi's fee revenue from 15-minute crypto and commodity markets, totaled by trade date since January 1, 2026. Each bar combines both groups and includes taker and maker fees.</p>
 
 ```js
-const crypto15Fees2026 = crypto15MinuteFees(embedFeeRows2026, catLeaderboard);
+const cryptoCommodity15Fees2026 = cryptoCommodity15MinuteFees(embedFeeRows2026, catLeaderboard);
+const cryptoCommodity15Bars = cryptoCommodity15Fees2026.rows.flatMap(d => [
+  {date: d.date, category: "Crypto", y0: 0, y1: d.cryptoFees},
+  {date: d.date, category: "Commodities", y0: d.cryptoFees, y1: d.fees}
+]);
 ```
 
 <div class="plot-shell">
@@ -306,15 +310,18 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
   x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
   y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  color: {legend: true, domain: ["Crypto", "Commodities"], range: ["#0072B2", "#D55E00"]},
   marks: [
-    Plot.rectY(crypto15Fees2026.rows, {
-      x1: "date", x2: d => new Date(+d.date + 864e5), y: "fees", fill: "var(--cat-basketball)",
+    Plot.rectY(cryptoCommodity15Bars, {
+      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
       fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
     }),
-    Plot.ruleX(crypto15Fees2026.rows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(crypto15Fees2026.rows, Plot.pointerX({
+    Plot.ruleX(cryptoCommodity15Fees2026.rows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(cryptoCommodity15Fees2026.rows, Plot.pointerX({
       x: "date", title: d => [fmtDate(d.date),
-        `15-minute crypto fees: $${d.fees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        `Crypto: $${d.cryptoFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        `Commodities: $${d.commodityFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        `Total: $${d.fees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
         nonSportsPartialDates.has(+d.date) ? "Partial day" : null
       ].filter(Boolean).join("\n")
     })),
@@ -325,7 +332,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">January 1 – ${fmtDate(latestDate(crypto15Fees2026.rows))}. Includes ${crypto15Fees2026.tickers.length} tracked 15-minute crypto series, including Coin Race. A lighter bar marks a partial day.</div>
+<div class="chart-note">January 1 – ${fmtDate(latestDate(cryptoCommodity15Fees2026.rows))}. Includes ${cryptoCommodity15Fees2026.cryptoTickers.length} crypto and ${cryptoCommodity15Fees2026.commodityTickers.length} commodity series. A lighter bar marks a partial day.</div>
 
 ## Taker vs maker fees
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {nonSportsFeesByCategory, crypto15MinuteFees, NONSPORTS_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
+import {nonSportsFeesByCategory, cryptoCommodity15MinuteFees, NONSPORTS_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
 const date = new Date("2026-01-01");
 
 test("category bars reconcile in cents and keep sports mention fees out of non-sports", () => {
@@ -28,19 +28,23 @@ test("category over-allocation fails visibly rather than inflating a daily bar",
     [{report_ticker: "BTC", is_sports: false}], () => "Crypto"), /exceed/);
 });
 
-test("15-minute crypto includes ZEC, NEAR and Coin Race, excluding metals, FX and daily crypto", () => {
-  const [result] = crypto15MinuteFees([{date, KXBTC15M: 1, KXZEC15M: 2, KXNEAR15M: 3,
-    KXCRYPTOLEAD15M: 4, KXGOLD15M: 100, KXEURUSD15M: 200, KXBTCD: 300}], []).rows;
-  assert.equal(result.fees, 10);
+test("15-minute bars include crypto and seven commodities, excluding FX and daily crypto", () => {
+  const [result] = cryptoCommodity15MinuteFees([{date, KXBTC15M: 1, KXZEC15M: 2, KXNEAR15M: 3,
+    KXCRYPTOLEAD15M: 4, KXGOLD15M: 100, KXSILVER15M: 20, KXWTI15M: 6, KXCOPPER15M: 5,
+    KXNATGAS15M: 7, KXPALLADIUM15M: 8, KXPLATINUM15M: 9, KXEURUSD15M: 200, KXBTCD: 300}], []).rows;
+  assert.equal(result.cryptoFees, 10);
+  assert.equal(result.commodityFees, 155);
+  assert.equal(result.fees, 165);
 });
 
 test("new 15M crypto series in source metadata are included automatically", () => {
-  const result = crypto15MinuteFees([{date, KXNEWCOIN15M: 8, KXWTI15M: 999}],
-    [{report_ticker: "KXNEWCOIN15M", cat: "Crypto"}, {report_ticker: "KXWTI15M", cat: "Finance"}]);
-  assert.deepEqual(result.tickers, ["KXNEWCOIN15M"]);
-  assert.equal(result.rows[0].fees, 8);
+  const result = cryptoCommodity15MinuteFees([{date, KXNEWCOIN15M: 8, KXNEWMETAL15M: 9, KXEURUSD15M: 999}],
+    [{report_ticker: "KXNEWCOIN15M", cat: "Crypto"}, {report_ticker: "KXNEWMETAL15M", cat: "Commodities"}]);
+  assert.deepEqual(result.cryptoTickers, ["KXNEWCOIN15M"]);
+  assert.deepEqual(result.commodityTickers, ["KXNEWMETAL15M"]);
+  assert.equal(result.rows[0].fees, 17);
 });
 
 test("missing crypto fees are not presented as zero", () => {
-  assert.throws(() => crypto15MinuteFees([{date, KXBTC15M: null}], []), /Missing/);
+  assert.throws(() => cryptoCommodity15MinuteFees([{date, KXBTC15M: null}], []), /Missing/);
 });

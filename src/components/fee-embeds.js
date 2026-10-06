@@ -1,6 +1,6 @@
 export const NONSPORTS_FEE_CATEGORIES = ["Crypto", "Politics", "Finance", "Weather", "Mention", "Entertainment", "Other"];
-// Match the volume map's non-sports palette.
-export const NONSPORTS_FEE_COLORS = ["var(--cat-basketball)", "#1A237E", "#1E88E5", "#4FC3F7", "#546E7A", "#0097A7", "#7986CB"];
+// Distinct hues make small category bands easier to distinguish.
+export const NONSPORTS_FEE_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
 
 export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, categoryForTicker) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
@@ -29,24 +29,35 @@ export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, cate
 // Confirmed with Kalshi's public series metadata (category Crypto, frequency
 // fifteen_min), 2026-10-06. ZEC and NEAR currently fall into Other in the site's
 // broad display taxonomy, but are still crypto 15-minute products. Coin Race is
-// also a 15-minute crypto series. Commodity and FX 15M tickers are excluded.
+// also a 15-minute crypto series.
 const VERIFIED_CRYPTO_15M = new Set([
   "KXBNB15M", "KXBTC15M", "KXDOGE15M", "KXETH15M", "KXHYPE15M",
   "KXSOL15M", "KXXRP15M", "KXZEC15M", "KXNEAR15M", "KXCRYPTOLEAD15M"
 ]);
-export function crypto15MinuteFees(feesRows, metadataRows) {
+// These seven series also have API category Commodities and frequency fifteen_min.
+// The dashboard's broad taxonomy places them in Finance or Other, so use their
+// verified series identities rather than treating all Financials as commodities.
+const VERIFIED_COMMODITY_15M = new Set([
+  "KXGOLD15M", "KXSILVER15M", "KXWTI15M", "KXCOPPER15M", "KXNATGAS15M", "KXPALLADIUM15M", "KXPLATINUM15M"
+]);
+export function cryptoCommodity15MinuteFees(feesRows, metadataRows) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
-  const tickers = Object.keys(feesRows[0] ?? {}).filter(ticker =>
+  const columns = Object.keys(feesRows[0] ?? {});
+  const cryptoTickers = columns.filter(ticker =>
     VERIFIED_CRYPTO_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Crypto")
   );
-  if (!tickers.length) throw new Error("15-minute crypto fee data is unavailable");
+  const commodityTickers = columns.filter(ticker =>
+    VERIFIED_COMMODITY_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Commodities")
+  );
+  const tickers = [...cryptoTickers, ...commodityTickers];
+  if (!tickers.length) throw new Error("15-minute crypto and commodity fee data is unavailable");
   const rows = feesRows.map(d => {
-    let cents = 0;
-    for (const ticker of tickers) {
-      if (!Number.isFinite(d[ticker])) throw new Error(`Missing crypto fees for ${ticker}`);
-      cents += Math.round(d[ticker] * 100);
-    }
-    return {date: d.date, fees: cents / 100};
+    const sumCents = series => series.reduce((cents, ticker) => {
+      if (!Number.isFinite(d[ticker])) throw new Error(`Missing 15-minute fees for ${ticker}`);
+      return cents + Math.round(d[ticker] * 100);
+    }, 0);
+    const crypto = sumCents(cryptoTickers), commodities = sumCents(commodityTickers);
+    return {date: d.date, cryptoFees: crypto / 100, commodityFees: commodities / 100, fees: (crypto + commodities) / 100};
   });
-  return {rows, tickers};
+  return {rows, tickers, cryptoTickers, commodityTickers};
 }
