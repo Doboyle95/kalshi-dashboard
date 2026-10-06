@@ -21,6 +21,9 @@
   try { params = new URLSearchParams(location.search); } catch { return; }
   const target = params.get("embed");
   if (!target) return;
+  // Existing iframe codes keep their height-message identity after this chart expands.
+  const targetId = target === "daily-15-minute-crypto-and-commodity-fee-revenue"
+    ? "daily-15-minute-crypto-commodity-and-finance-fee-revenue" : target;
 
   const root = document.documentElement;
   root.classList.add("pc-embed");
@@ -66,7 +69,7 @@ html.pc-embed .pc-embed-missing { padding: 20px 0 8px; font: 15px/1.5 var(--font
     const canonical = document.querySelector('link[rel="canonical"]')?.href;
     const url = new URL(canonical || location.pathname, location.href);
     for (const [key, value] of params) if (key !== "embed" && key !== "theme") url.searchParams.set(key, value);
-    url.hash = target;
+    url.hash = targetId;
     return url.href;
   }
 
@@ -135,7 +138,7 @@ html.pc-embed .pc-embed-missing { padding: 20px 0 8px; font: 15px/1.5 var(--font
     // heading of the same id -- and getElementById returns the first, i.e. the empty div.
     function findTarget() {
       let found;
-      try { found = Array.from(main.querySelectorAll("#" + CSS.escape(target))); } catch { return null; }
+      try { found = Array.from(main.querySelectorAll("#" + CSS.escape(targetId))); } catch { return null; }
       found = found.filter((el) => el !== credit);
       return found.find((el) => /^H[1-6]$/.test(el.tagName)) || found[0] || null;
     }

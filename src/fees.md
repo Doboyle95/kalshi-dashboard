@@ -248,7 +248,7 @@ Plot.plot({
 <p class="section-intro">Kalshi's daily non-sports fee revenue since January 1, 2026, split into the volume map's categories. Each stacked bar adds up to the same daily total as the chart above.</p>
 
 ```js
-import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, cryptoCommodity15MinuteFees} from "./components/fee-embeds.js";
+import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, fifteenMinuteFees} from "./components/fee-embeds.js";
 const embedFeeRows2026 = topDailyFees.filter(d => d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01"));
 const nonSportsCategoryFees2026 = nonSportsFeesByCategory(embedFeeRows2026, sports, catLeaderboard, wideCategoryForTicker);
 const nonSportsCategoryBars = nonSportsCategoryFees2026.flatMap(d => {
@@ -338,15 +338,16 @@ Plot.plot({
 
 <div class="chart-note">January 1 – ${fmtDate(latestDate(filteredNonSportsFees2026))}, latest available category-data day. Uses Kalshi's source categories, excluding Sports, Non-sport parlays, Crypto, Financials, and Commodities. Economics includes economic releases and Fed policy; Politics includes Elections. Other sums the remaining source categories.</div>
 
-## Daily 15-minute crypto and commodity fee revenue
+## Daily 15-minute crypto, commodity and finance fee revenue
 
-<p class="section-intro">Kalshi's fee revenue from 15-minute crypto and commodity markets, totaled by trade date since January 1, 2026. Each bar combines both groups and includes taker and maker fees.</p>
+<p class="section-intro">Kalshi's fee revenue from 15-minute crypto, commodity, and financial markets, totaled by trade date since January 1, 2026. Each bar combines all three groups and includes taker and maker fees.</p>
 
 ```js
-const cryptoCommodity15Fees2026 = cryptoCommodity15MinuteFees(embedFeeRows2026, catLeaderboard);
+const cryptoCommodity15Fees2026 = fifteenMinuteFees(embedFeeRows2026, catLeaderboard);
 const cryptoCommodity15Bars = cryptoCommodity15Fees2026.rows.flatMap(d => [
   {date: d.date, category: "Crypto", y0: 0, y1: d.cryptoFees},
-  {date: d.date, category: "Commodities", y0: d.cryptoFees, y1: d.fees}
+  {date: d.date, category: "Commodities", y0: d.cryptoFees, y1: d.cryptoFees + d.commodityFees},
+  {date: d.date, category: "Finance", y0: d.cryptoFees + d.commodityFees, y1: d.fees}
 ]);
 ```
 
@@ -357,7 +358,7 @@ Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
   x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
   y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  color: {legend: true, domain: ["Crypto", "Commodities"], range: ["#0072B2", "#D55E00"]},
+  color: {legend: true, domain: ["Crypto", "Commodities", "Finance"], range: ["#0072B2", "#D55E00", "#009E73"]},
   marks: [
     Plot.rectY(cryptoCommodity15Bars, {
       x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
@@ -368,6 +369,7 @@ Plot.plot({
       x: "date", title: d => [fmtDate(d.date),
         `Crypto: $${d.cryptoFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
         `Commodities: $${d.commodityFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        `Finance: $${d.financeFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
         `Total: $${d.fees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
         nonSportsPartialDates.has(+d.date) ? "Partial day" : null
       ].filter(Boolean).join("\n")
@@ -379,7 +381,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">January 1 – ${fmtDate(latestDate(cryptoCommodity15Fees2026.rows))}. Includes ${cryptoCommodity15Fees2026.cryptoTickers.length} crypto and ${cryptoCommodity15Fees2026.commodityTickers.length} commodity series. A lighter bar marks a partial day.</div>
+<div class="chart-note">January 1 – ${fmtDate(latestDate(cryptoCommodity15Fees2026.rows))}. Includes ${cryptoCommodity15Fees2026.cryptoTickers.length} crypto, ${cryptoCommodity15Fees2026.commodityTickers.length} commodity, and ${cryptoCommodity15Fees2026.financeTickers.length} financial series with published fee data. Finance includes 15-minute currencies, stock indices, and Treasury yields as their data becomes available; hourly and daily markets are excluded. A lighter bar marks a partial day.</div>
 
 ## Taker vs maker fees
 

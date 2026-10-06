@@ -69,7 +69,15 @@ const VERIFIED_CRYPTO_15M = new Set([
 const VERIFIED_COMMODITY_15M = new Set([
   "KXGOLD15M", "KXSILVER15M", "KXWTI15M", "KXCOPPER15M", "KXNATGAS15M", "KXPALLADIUM15M", "KXPLATINUM15M"
 ]);
-export function cryptoCommodity15MinuteFees(feesRows, metadataRows) {
+// API category Financials, frequency fifteen_min, verified 2026-10-06.
+// Index and Treasury series are listed but currently have no trades; they enter
+// the chart automatically when their fee columns appear. Exclude the TEST series.
+const VERIFIED_FINANCE_15M = new Set([
+  "KXINX15M", "KXNDQ15M", "KXDJIA15M", "KX2YRRATE15M", "KX5YRRATE15M",
+  "KX10YRRATE15M", "KX30YRRATE15M", "KXEURUSD15M", "KXUSDJPY15M",
+  "KXGBPUSD15M", "KXAUDUSD15M", "KXUSDCAD15M"
+]);
+export function fifteenMinuteFees(feesRows, metadataRows) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
   const columns = Object.keys(feesRows[0] ?? {});
   const cryptoTickers = columns.filter(ticker =>
@@ -78,15 +86,20 @@ export function cryptoCommodity15MinuteFees(feesRows, metadataRows) {
   const commodityTickers = columns.filter(ticker =>
     VERIFIED_COMMODITY_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Commodities")
   );
-  const tickers = [...cryptoTickers, ...commodityTickers];
-  if (!tickers.length) throw new Error("15-minute crypto and commodity fee data is unavailable");
+  const financeTickers = columns.filter(ticker =>
+    !cryptoTickers.includes(ticker) && !commodityTickers.includes(ticker) &&
+    (VERIFIED_FINANCE_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Financials"))
+  );
+  const tickers = [...cryptoTickers, ...commodityTickers, ...financeTickers];
+  if (!tickers.length) throw new Error("15-minute fee data is unavailable");
   const rows = feesRows.map(d => {
     const sumCents = series => series.reduce((cents, ticker) => {
       if (!Number.isFinite(d[ticker])) throw new Error(`Missing 15-minute fees for ${ticker}`);
       return cents + Math.round(d[ticker] * 100);
     }, 0);
-    const crypto = sumCents(cryptoTickers), commodities = sumCents(commodityTickers);
-    return {date: d.date, cryptoFees: crypto / 100, commodityFees: commodities / 100, fees: (crypto + commodities) / 100};
+    const crypto = sumCents(cryptoTickers), commodities = sumCents(commodityTickers), finance = sumCents(financeTickers);
+    return {date: d.date, cryptoFees: crypto / 100, commodityFees: commodities / 100,
+      financeFees: finance / 100, fees: (crypto + commodities + finance) / 100};
   });
-  return {rows, tickers, cryptoTickers, commodityTickers};
+  return {rows, tickers, cryptoTickers, commodityTickers, financeTickers};
 }
