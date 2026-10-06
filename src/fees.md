@@ -243,6 +243,90 @@ Plot.plot({
 
 <div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsFees2026))}. The latest day may be partial; a lighter bar marks a partial day. Data updates with Predict Charts' published daily aggregates.</div>
 
+## Daily non-sports fee revenue by category
+
+<p class="section-intro">Kalshi's daily non-sports fee revenue since January 1, 2026, split into the volume map's categories. Each stacked bar adds up to the same daily total as the chart above.</p>
+
+```js
+import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, crypto15MinuteFees} from "./components/fee-embeds.js";
+const embedFeeRows2026 = topDailyFees.filter(d => d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01"));
+const nonSportsCategoryFees2026 = nonSportsFeesByCategory(embedFeeRows2026, sports, catLeaderboard, wideCategoryForTicker);
+const nonSportsCategoryBars = nonSportsCategoryFees2026.flatMap(d => {
+  let baseline = 0;
+  return NONSPORTS_FEE_CATEGORIES.map(category => {
+    const y0 = baseline;
+    baseline += d[category];
+    return {date: d.date, category, y0, y1: baseline};
+  });
+});
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
+  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
+  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  color: {legend: true, domain: NONSPORTS_FEE_CATEGORIES, range: NONSPORTS_FEE_COLORS},
+  marks: [
+    Plot.rectY(nonSportsCategoryBars, {
+      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
+      fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
+    }),
+    Plot.ruleX(nonSportsCategoryFees2026, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(nonSportsCategoryFees2026, Plot.pointerX({
+      x: "date", title: d => [fmtDate(d.date),
+        ...NONSPORTS_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
+        `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        nonSportsPartialDates.has(+d.date) ? "Partial day" : null
+      ].filter(Boolean).join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsCategoryFees2026))}. Other includes the remaining non-sports fees. Sports and parlays follow the same exclusions as the original non-sports total. A lighter bar marks a partial day.</div>
+
+## Daily 15-minute crypto fee revenue
+
+<p class="section-intro">Kalshi's fee revenue from 15-minute crypto markets, totaled by trade date since January 1, 2026. Includes taker and maker fees.</p>
+
+```js
+const crypto15Fees2026 = crypto15MinuteFees(embedFeeRows2026, catLeaderboard);
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
+  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
+  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
+  marks: [
+    Plot.rectY(crypto15Fees2026.rows, {
+      x1: "date", x2: d => new Date(+d.date + 864e5), y: "fees", fill: "var(--cat-basketball)",
+      fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
+    }),
+    Plot.ruleX(crypto15Fees2026.rows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(crypto15Fees2026.rows, Plot.pointerX({
+      x: "date", title: d => [fmtDate(d.date),
+        `15-minute crypto fees: $${d.fees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
+        nonSportsPartialDates.has(+d.date) ? "Partial day" : null
+      ].filter(Boolean).join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">January 1 – ${fmtDate(latestDate(crypto15Fees2026.rows))}. Includes ${crypto15Fees2026.tickers.length} tracked 15-minute crypto series, including Coin Race. A lighter bar marks a partial day.</div>
+
 ## Taker vs maker fees
 
 <p class="section-intro">Kalshi bills the aggressor on almost every market, but it also charges the <strong>resting</strong> side on a named subset — soccer, tennis, rate and inflation markets. This splits the daily total above into those two parts.</p>
