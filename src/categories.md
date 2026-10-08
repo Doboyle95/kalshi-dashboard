@@ -1466,7 +1466,9 @@ const tmActiveMarketRowsByTicker = d3.group(
   }
 
   // -- Render leaf tiles (market-type level) ---------------------------------
-  const leaves = root.leaves();
+  // An empty window (Fees before the fee history starts) gives a root with no children,
+  // and leaves() then returns the root itself, whose parent is null.
+  const leaves = root.children ? root.leaves() : [];
   const leafSel = svg.selectAll("rect.leaf")
     .data(leaves)
     .join("rect")
@@ -1703,7 +1705,12 @@ const tmActiveMarketRowsByTicker = d3.group(
   // Mount the tooltip as a sibling of the SVG. Page-fixed positioning means
   // it can render outside the wrapper bounds; pointer-events:none keeps it
   // from blocking the rect hover.
-  if (tmActiveCategory) {
+  if (!leaves.length) {
+    // Nothing to draw: one line saying why instead of a blank map.
+    const feeStart = d3.min(topDailyFees, d => d.date);
+    const beforeFees = tmMetric === "Fees" && tmDateSel[1] < feeStart;
+    display(html`<div class="chart-note">No ${tmMetric === "Fees" ? "fee" : "volume"} data for this window${beforeFees ? `; per-category fees start ${fmtDate(feeStart)}` : ""}.</div>`);
+  } else if (tmActiveCategory) {
     const wrapper = html`<div></div>`;
     const bar = html`<div class="zoom-toolbar"></div>`;
     bar.append(html`<span>Viewing ${displayTreemapCategory(tmActiveCategory)} markets. Click the map again to return to all categories.</span>`);
