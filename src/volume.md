@@ -12,7 +12,7 @@ title: Kalshi Volume
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 // Short axis format (no $ prefix): "400M" instead of "400,000,000"
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
-const fmtUSD   = n => "$" + fmtCount(n);
+const fmtUSD   = n => n > 0 && n < 0.5 ? "<$1" : "$" + fmtCount(n);
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 // is_partial in daily_overall.csv is the string "TRUE"/"FALSE" (uppercase) which
 // d3.autoType does not coerce to boolean, so naive truthiness fails. Use explicit check.

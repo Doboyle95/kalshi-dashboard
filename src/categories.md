@@ -57,6 +57,7 @@ display(askPageLink({
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
+const fmtUSD   = n => n > 0 && n < 0.5 ? "<$1" : "$" + fmtCount(n);
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -1490,7 +1491,7 @@ const tmActiveMarketRowsByTicker = d3.group(
   // pageX/pageY-driven; the tooltip is page-fixed and cleaned up when this
   // cell re-runs because it's appended to the same wrapper as the SVG.
   leafSel.append("title")
-    .text(d => `${displayTreemapCategory(d.parent.parent.data.name)} - ${displayTreemapCategory(d.parent.data.name)} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees: $" + fmtCount(d.value) : "Volume: " + fmtCount(d.value) + " contracts"}`);
+    .text(d => `${displayTreemapCategory(d.parent.parent.data.name)} - ${displayTreemapCategory(d.parent.data.name)} - ${d.data.name}\n${tmMetric === "Fees" ? "Fees: " + fmtUSD(d.value) : "Volume: " + fmtCount(d.value) + " contracts"}`);
 
   const tooltip = document.createElement("div");
   tooltip.className = "kd-treemap-tooltip";
@@ -1522,7 +1523,7 @@ const tmActiveMarketRowsByTicker = d3.group(
     tooltip.replaceChildren(
       tooltipLine("kd-tt-title", headline),
       tooltipLine("kd-tt-sub", grp),
-      tooltipRow(metricLabel, tmMetric === "Fees" ? "$" + fmtCount(d.value) : fmtCount(d.value) + " contracts"),
+      tooltipRow(metricLabel, tmMetric === "Fees" ? fmtUSD(d.value) : fmtCount(d.value) + " contracts"),
       tooltipRow("Share of view", `${pct.toFixed(2)}%`)
     );
   };
@@ -1608,7 +1609,7 @@ const tmActiveMarketRowsByTicker = d3.group(
     .attr("fill","rgba(255,255,255,0.65)")
     .attr("font-size","10px")
     .attr("pointer-events", "none")
-    .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? (tmMetric === "Fees" ? `$${fmtCount(d.value)}` : `${fmtCount(d.value)}`) : "");
+    .text(d => (d.x1-d.x0) > (isZoomed ? 88 : 60) && (d.y1-d.y0) > (isZoomed ? 46 : 36) ? (tmMetric === "Fees" ? fmtUSD(d.value) : `${fmtCount(d.value)}`) : "");
 
   // -- Market-type labels on large enough leaf tiles -------------------------
   const SKIP_LABEL = new Set(isZoomed ? [] : [
@@ -1747,7 +1748,7 @@ const tmActiveMarketRowsByTicker = d3.group(
         border-color:${color};
         background:${active ? color + "2e" : color + "14"};
         color:${active ? "var(--theme-foreground)" : "inherit"};
-      ">${displayTreemapCategory(category)} | ${tmMetric === "Fees" ? "$" + fmtCount(value) : fmtCount(value)}</button>`;
+      ">${displayTreemapCategory(category)} | ${tmMetric === "Fees" ? fmtUSD(value) : fmtCount(value)}</button>`;
       btn.addEventListener("click", () => { setSelectedCategory(category); });
       row.append(btn);
     }
@@ -3113,7 +3114,7 @@ Plot.plot({
       fill: d => d.is_sports === "TRUE" ? "#1a9641" : "var(--accent-kalshi)",
       sort: {y: "-x"},
       tip: true,
-      title: d => `${d.report_ticker}\n${metric === "contracts" ? fmtCount(d[metric]) + " contracts" : "$" + fmtCount(d[metric])}\nSports: ${d.is_sports}`
+      title: d => `${d.report_ticker}\n${metric === "contracts" ? fmtCount(d[metric]) + " contracts" : fmtUSD(d[metric])}\nSports: ${d.is_sports}`
     }),
     Plot.ruleX([0])
   ]

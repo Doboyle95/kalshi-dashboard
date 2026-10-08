@@ -35,7 +35,7 @@ display(askPageLink({
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
-const fmtUSD   = n => "$" + fmtCount(n);
+const fmtUSD   = n => n > 0 && n < 0.5 ? "<$1" : "$" + fmtCount(n);
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -696,9 +696,9 @@ const feeMonthTickFmt = mo => { const [y, m] = mo.split("-"); const a = ["Jan","
 const feeUSD = d => "$" + (d >= 1e9 ? (d/1e9).toFixed(1)+"B" : d >= 1e6 ? (d/1e6).toFixed(1)+"M" : (d/1e3).toFixed(0)+"k");
 const feeTipRows = (d, key) => {
   const rows = feeActiveOrder.filter(c => (d[c] || 0) > 0).sort((a, b) => (d[b] || 0) - (d[a] || 0));
-  const shown = rows.slice(0, 12).map(c => feeScale === "Normalized" ? `${c}: ${((d[c]||0)*100).toFixed(1)}%` : `${c}: $${fmtCount(d[c]||0)}`);
+  const shown = rows.slice(0, 12).map(c => feeScale === "Normalized" ? `${c}: ${((d[c]||0)*100).toFixed(1)}%` : `${c}: ${fmtUSD(d[c]||0)}`);
   const hidden = rows.length - shown.length;
-  return [key, feeScale === "Normalized" ? "Total: 100%" : `Total: $${fmtCount(d.total||0)}`, ...shown, ...(hidden > 0 ? [`+${hidden} more`] : [])].join("\n");
+  return [key, feeScale === "Normalized" ? "Total: 100%" : `Total: ${fmtUSD(d.total||0)}`, ...shown, ...(hidden > 0 ? [`+${hidden} more`] : [])].join("\n");
 };
 ```
 
