@@ -13,6 +13,8 @@ title: Novig · Outcomes
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
+import {latestDate} from "./components/freshness.js";
+import {staleNote} from "./components/stale-note.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -54,6 +56,14 @@ const asDate = d => d instanceof Date ? d : new Date(`${String(d).slice(0, 10)}T
 // KPI cards removed 2026-08-18 at Daniel's request; the sections below carry the same
 // figures in context. The not-yet-served notice stays: it is an error state, not a metric.
 if (!S) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>The settled-outcome series are not being served yet, so there are no numbers on this page.</strong> The producer is built and registered; the deployed transport allowlist does not carry these files yet. The framing below is true either way: Novig publishes an aggressor flag and, on straight contracts, a settled WIN/LOSS, which is what makes taker P&amp;L and calibration possible here at all.</div>`);
+// 2026-10-08: every series on this page stopped updating when Novig changed its data feed
+// (2026-09-20). Shown only while the settled data is more than a week old.
+{
+  const note = staleNote(latestDate(pnlDaily, d => asDate(d.date)), {
+    subject: "Novig's settled results", verb: "end on", reason: "updates stopped when Novig changed its data feed"
+  });
+  if (note) display(note);
+}
 ```
 
 ## How straight-contract takers did

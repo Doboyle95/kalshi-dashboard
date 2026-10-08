@@ -11,6 +11,8 @@ title: Novig
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
+import {fileUpdatedAt} from "./components/freshness.js";
+import {staleNote} from "./components/stale-note.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 
@@ -37,6 +39,15 @@ const gameBoard = await (async () => {
   } catch (error) {
     console.warn(`novig games: series unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
     return [];
+  }
+})();
+// Only used to date the game board's stale-data note; loaded defensively like the series above.
+const freshness = await (async () => {
+  try {
+    return await DataAttachment("data/freshness_manifest.json").json();
+  } catch (error) {
+    console.warn(`novig freshness manifest unavailable -- ${String(error?.message ?? error).slice(0, 200)}`);
+    return null;
   }
 })();
 ```
@@ -188,6 +199,17 @@ ${d3.format(",.0f")(d.contracts)} contracts · ${(+d.pct_of_day).toFixed(1)}% of
 const gameVol = gameBoard
   .filter(d => d.game && +d.contracts_all > 0)
   .sort((a, b) => +b.contracts_all - +a.contracts_all);
+// 2026-10-08: the board names games through Novig's old data feed, which it changed on
+// 2026-09-20. Dated by the file's last update, not by game_date: the board lists games
+// scheduled weeks ahead, so its newest game_date is in the future even when it is frozen.
+// The file is normally rebuilt daily, so the note shows once it is 3+ days old.
+{
+  const note = staleNote(fileUpdatedAt(freshness, "novig_game_leaderboard.csv"), {
+    maxAgeDays: 3, subject: "This board", verb: "was last updated on",
+    reason: "updates stopped when Novig changed its data feed"
+  });
+  if (note) display(note);
+}
 ```
 
 ```js

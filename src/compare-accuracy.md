@@ -12,6 +12,7 @@ title: Accuracy & Outcomes
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_COLORS} from "./components/venue-data.js";
 import {fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
+import {staleNote} from "./components/stale-note.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
@@ -148,6 +149,18 @@ const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.ve
 ```
 
 ## Actual vs implied win rate
+
+```js
+// 2026-10-08: Novig's calibration file stopped updating when Novig changed its data feed
+// (2026-09-20). It is normally rewritten daily, so the note shows once it is 3+ days old.
+{
+  const note = staleNote(fileUpdatedAt(freshness, "novig_calibration.csv"), {
+    maxAgeDays: 3, subject: "Novig's series on this page", verb: "was last updated on",
+    reason: "updates stopped when Novig changed its data feed"
+  });
+  if (note) display(note);
+}
+```
 
 <p class="section-intro">Every venue sits at the contract-weighted price actually paid; OG/Crypto.com covers the ~64% of its contracts that match a settlement here, the missing third mostly combos, and the DKeX bar is single markets only &mdash; its combos carry no event key and are excluded by construction.</p>
 
