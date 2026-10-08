@@ -111,6 +111,7 @@ const settledShare = ALL.contracts ? ALL.settled_contracts / ALL.contracts : 0;
   <p><strong>Two figures, and the fee one is the comparable.</strong> Buyers are down ${fmtUSD(ALL.pnl)} before fees and ${fmtUSD(netPnl)} after the DKeX taker charge plus DraftKings Predictions&rsquo; applicable introducing-broker commission &mdash; ${netPerContract != null ? netPerContract.toFixed(5) : "—"} per contract, the same net basis used for the comparable Kalshi and Polymarket US rows. The clustered 95% interval on the gross return per contract runs ${ciLo != null ? ciLo.toFixed(2) : "—"}% to ${ciHi != null ? ciHi.toFixed(2) : "—"}% &mdash; ${ciLo != null && ciHi != null && ciLo < 0 && ciHi > 0 ? "it <strong>includes zero</strong>, so the gross edge is a point estimate rather than a distinguishable one" : "it <strong>excludes zero</strong>, so the gross edge is distinguishable from noise at that level"}. The interval is clustered on the combo, because every print of one combo shares a single settlement.</p>
   <p>⚠ <strong>This page covers the combos in the trade records, which is about two thirds of them.</strong> DKeX&rsquo;s daily market report accounts for 16,594,228 combo contracts; its time-and-sales report carries 11,304,853 of them, and 26,558 settled combos with report volume appear in no time-and-sales file at all. That is DKeX&rsquo;s own publication, not a gap in collection &mdash; the files were re-downloaded from the source and match. P&amp;L needs an executed price and only the time-and-sales records include one, so every level on this page (stake, contracts) is a floor rather than the venue total. The rates &mdash; price paid, win rate, return on stake &mdash; are measured on 11.2M contracts and are not affected by the missing third unless it trades differently, which cannot be checked.</p>
   <p><strong>The breakdown by price paid</strong> scores every combo trade against its settlement, after DKeX&rsquo;s taker charge plus DraftKings Predictions&rsquo; commission &mdash; on a 1&cent; parlay those come to nearly 60% of the stake. DKeX prices combos in whole cents, so nothing trades below 1&cent;. Its records don&rsquo;t say whether a trade was a buy or a sell, so a parlay sold back before settlement can&rsquo;t be separated out the way Kalshi&rsquo;s cash-outs are: every trade counts as a bet held to the end.</p>
+  <p><strong>The parlay-versus-legs chart</strong> prices each leg at the last trade in its own single-leg market within the hour before the parlay traded, and counts only parlays whose legs are all in different games, as Kalshi&rsquo;s chart does. That covers ${dkPvlCoverage == null ? "–" : Math.round(100 * dkPvlCoverage) + "%"} of DKeX&rsquo;s settled parlay money: a parlay with a totals leg such as &ldquo;Over 3.5 runs&rdquo;, which doesn&rsquo;t say which game, two legs in the same game, or a leg with no recent trade is left out.</p>
   <p><strong>The settlement-as-mark trap does not apply here, and it was checked.</strong> On Polymarket a settlement price is a running mark until the contract matured on a prior day, and treating same-day rows as final reports parlay buyers <em>profiting</em>. Every one of DKeX's combo tickers appears in the settlement reports exactly once, so no price ever moves, and 99.6% land on $0.00 or $1.00.</p>
 </details>
 
@@ -241,6 +242,95 @@ _Share of stakes lost at each price after fees, with the dollars under each bar 
 import {lossByPrice, lossByPriceChart} from "./components/parlay-loss-by-price.js";
 const dkLoss = lossByPrice(lossRows, "DKeX");
 display(lossByPriceChart(dkLoss, {width}));
+```
+
+## What a multi-game parlay costs vs. multiplying its legs
+
+_A multi-game parlay is fairly priced at its legs' prices multiplied together, each taken at the
+moment the parlay traded. Over ${fmtDate(dkPvlFrom)} – ${fmtDate(dkPvlTo)} DKeX bettors paid
+**${dkPvlFmt(dkPvlMarkup)} more** than that: ${fmtUSD(dkPvlPaid)} for legs worth ${fmtUSD(dkPvlFair)}._
+
+```js
+// Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest
+// ## heading PRECEDING its DataAttachment call. A failed load leaves the empty-state note below.
+const dkPvlRaw = await DataAttachment("data/dkex_parlay_vs_legs_profile.csv").csv({typed: true}).catch(() => []);
+```
+
+```js
+// python/build_dkex_parlay_vs_legs.py: each leg priced at its own single-leg market's last trade
+// within the hour before the parlay, legs in different games only -- the same reading as the Kalshi
+// diagonal on /parlay-analytics. One dot per quarter-decade band of what the legs are worth.
+const dkPvlPrice = dkPvlRaw.filter(d => d.dim === "price");
+const dkPvlPoints = dkPvlPrice.filter(d => d.n_trades >= 500).sort((a, b) => a.avg_indep_cents - b.avg_indep_cents);
+const dkPvlPaid = d3.sum(dkPvlPrice, d => d.stake_usd), dkPvlFair = d3.sum(dkPvlPrice, d => d.indep_stake_usd);
+const dkPvlMarkup = dkPvlFair > 0 ? 100 * (dkPvlPaid / dkPvlFair - 1) : null;
+const dkPvlFrom = dkPvlRaw[0]?.first_date, dkPvlTo = dkPvlRaw[0]?.last_date;
+const dkPvlCoverage = dkPvlRaw.length ? dkPvlRaw[0].covered_stake_usd / dkPvlRaw[0].settled_stake_usd : null;
+// The square domain keeps "priced exactly at its legs" at 45°; it starts a decade below the
+// cheapest band drawn, so the 1¢ floor shows with room to its left.
+const DKPVL_MAX = 100;
+const DKPVL_MIN = 10 ** Math.floor(Math.log10(d3.min(dkPvlPoints, d => d.avg_indep_cents) ?? 0.01));
+const dkPvlTicks = d3.range(Math.round(Math.log10(DKPVL_MIN)), 3).map(e => 10 ** e);
+const dkPvlFmt = v => v == null ? "–" : (v >= 0.05 ? "+" : v <= -0.05 ? "−" : "")
+  + (Math.abs(v) >= 10 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1)) + "%";
+const dkPvlTimes = x => x >= 1000 ? `${(+x.toPrecision(2)).toLocaleString("en-US")}×` : x >= 10 ? `${Math.round(x)}×` : `${x.toFixed(1)}×`;
+const dkPvlCents = v => v >= 1 ? v.toFixed(1) + "¢" : v >= 0.1 ? v.toFixed(2) + "¢" : v.toFixed(3) + "¢";
+const dkPvlAxis = v => v >= 100 ? "$1" : v + "¢";
+const dkPvlNearest = cents => d3.least(dkPvlPoints, d => Math.abs(Math.log(d.avg_indep_cents / cents)));
+```
+
+_Each dot is a group of tickets with similar odds: across is what their legs are worth
+multiplied together, up is what bettors paid, and the shaded gap above the dashed line is the
+markup._
+
+```js
+{
+  if (!dkPvlPoints.length) {
+    display(html`<p class="chart-note">This chart's data did not load — try reloading the page.</p>`);
+  } else {
+    const H = Math.round(Math.min(500, Math.max(340, width * 0.66)));
+    const m = {left: 56, right: 24, top: 24, bottom: 44};
+    // Screen angle of the corner-to-corner diagonal, so its label runs along it.
+    const diagAngle = -Math.atan2(H - m.top - m.bottom, width - m.left - m.right) * 180 / Math.PI;
+    // Direct labels: the markup near 10¢ and 1¢, and how far above its legs the cheapest band sits.
+    const labelled = [...new Set(width >= 600 ? [dkPvlNearest(10), dkPvlNearest(1)] : [dkPvlNearest(10)])].filter(Boolean);
+    const floorDot = dkPvlPoints[0];
+    const ticks = width >= 600 ? dkPvlTicks : dkPvlTicks.filter((t, i) => i % 2 === (dkPvlTicks.length - 1) % 2);
+    const halo = {stroke: "var(--theme-background)", strokeWidth: 4, paintOrder: "stroke"};
+    display(Plot.plot({
+      style: {fontFamily: "var(--font-sans)", fontSize: "12px"},
+      width, height: H, marginLeft: m.left, marginRight: m.right, marginTop: m.top, marginBottom: m.bottom,
+      x: {type: "log", domain: [DKPVL_MIN, DKPVL_MAX], ticks, tickFormat: dkPvlAxis, tickSize: 0, grid: true,
+          label: "What the legs are worth together"},
+      y: {type: "log", domain: [DKPVL_MIN, DKPVL_MAX], ticks, tickFormat: dkPvlAxis, tickSize: 0, grid: true,
+          label: "What the parlay cost"},
+      marks: [
+        Plot.areaY(dkPvlPoints, {x: "avg_indep_cents", y1: "avg_indep_cents", y2: "avg_traded_cents",
+          fill: DKEX, fillOpacity: 0.18, curve: "monotone-x"}),
+        Plot.line([[DKPVL_MIN, DKPVL_MIN], [DKPVL_MAX, DKPVL_MAX]],
+          {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
+        Plot.text([[DKPVL_MIN * 10, DKPVL_MIN * 10]], {x: d => d[0], y: d => d[1], text: () => "Priced exactly at its legs",
+          rotate: diagAngle, dy: 14, fontSize: 11, fill: "var(--theme-foreground-muted)"}),
+        Plot.line(dkPvlPoints, {x: "avg_indep_cents", y: "avg_traded_cents", stroke: DKEX, strokeWidth: 2, curve: "monotone-x"}),
+        Plot.dot(dkPvlPoints, {x: "avg_indep_cents", y: "avg_traded_cents", r: 3.5, fill: DKEX,
+          stroke: "var(--theme-background)", strokeWidth: 1.5}),
+        Plot.text(labelled, {x: "avg_indep_cents", y: "avg_traded_cents", text: d => dkPvlFmt(d.markup_pct),
+          textAnchor: "end", dx: -8, dy: -9, fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)", ...halo}),
+        Plot.text([floorDot], {x: "avg_indep_cents", y: "avg_traded_cents",
+          text: d => `${(+(1 + d.markup_pct / 100).toPrecision(1)).toLocaleString("en-US")}× its legs`,
+          textAnchor: "start", dx: 2, dy: -12, fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)", ...halo}),
+        Plot.text([[DKPVL_MIN * 1.3, 4]], {x: d => d[0], y: d => d[1],
+          text: () => width >= 600 ? "Prices stop falling at 1¢,\nhowever little the legs are worth" : "Prices stop\nfalling at 1¢",
+          textAnchor: "start", lineAnchor: "bottom", fontSize: 11, fill: "var(--theme-foreground-muted)"}),
+        Plot.tip(dkPvlPoints, Plot.pointer({x: "avg_indep_cents", y: "avg_traded_cents",
+          title: d => `Legs worth ${dkPvlCents(d.avg_indep_cents)} together\n`
+            + `Paid ${dkPvlCents(d.avg_traded_cents)} · `
+            + (d.markup_pct >= 100 ? `${dkPvlTimes(1 + d.markup_pct / 100)} its legs` : `markup ${dkPvlFmt(d.markup_pct)}`) + `\n`
+            + `${fmtCount(d.n_trades)} trades · ${fmtUSD(d.stake_usd)} staked`}))
+      ]
+    }));
+  }
+}
 ```
 
 ## One sport or several
