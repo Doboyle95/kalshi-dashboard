@@ -102,7 +102,7 @@ const fmtCount = value => {
   const sign = n < 0 ? "−" : "";
   return sign + (a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : Math.round(a).toLocaleString());
 };
-const fmtUSD = value => `${value < 0 ? "−" : ""}$${fmtCount(Math.abs(value ?? 0))}`;
+const fmtUSD = value => { const a = Math.abs(value ?? 0); return `${value < 0 ? "−" : ""}${a > 0 && a < 0.5 ? "<$1" : "$" + fmtCount(a)}`; };
 const fmtPct = value => value == null ? "—" : `${value >= 0 ? "+" : ""}${(100 * value).toFixed(1)}%`;
 const fmtShare = value => value == null ? "—" : `${(100 * value).toFixed(1)}%`;
 const fmtDay = value => value?.toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"}) ?? "—";

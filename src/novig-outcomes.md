@@ -46,7 +46,7 @@ const NV = "#6366F1";
 const S = summaryRows.length ? summaryRows[0] : null;
 
 const fmtCount = d => Math.abs(d) >= 1e9 ? `${(d / 1e9).toFixed(2)}bn` : Math.abs(d) >= 1e6 ? `${(d / 1e6).toFixed(1)}M` : Math.abs(d) >= 1e3 ? `${(d / 1e3).toFixed(0)}k` : d3.format(",.0f")(d);
-const fmtUSD = d => { const a = Math.abs(d), s = d < 0 ? "−$" : "$"; return a >= 1e6 ? `${s}${(a / 1e6).toFixed(2)}M` : a >= 1e3 ? `${s}${(a / 1e3).toFixed(0)}k` : `${s}${a.toFixed(0)}`; };
+const fmtUSD = d => { const a = Math.abs(d), s = d < 0 ? "−$" : "$"; return a > 0 && a < 0.5 ? (d < 0 ? "−" : "") + "<$1" : a >= 1e6 ? `${s}${(a / 1e6).toFixed(2)}M` : a >= 1e3 ? `${s}${(a / 1e3).toFixed(0)}k` : `${s}${a.toFixed(0)}`; };
 const fmtCents = d => `${d >= 0 ? "+" : "−"}${Math.abs(d * 100).toFixed(3)}¢`;
 const fmtDate = d => d instanceof Date ? d.toLocaleDateString("en-US", {timeZone: "UTC", month: "short", day: "numeric"}) : String(d).slice(5);
 const asDate = d => d instanceof Date ? d : new Date(`${String(d).slice(0, 10)}T00:00:00Z`);

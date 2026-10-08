@@ -242,6 +242,7 @@ const fmtCents = d => `${d >= 0 ? "+" : "−"}${Math.abs(d * 100).toFixed(2)}¢`
 const fmtUSD = d => {
   const a = Math.abs(d);
   const s = d < 0 ? "−$" : "+$";
+  if (a > 0 && a < 0.5) return `${d < 0 ? "−" : "+"}<$1`;
   if (a >= 1e9) return `${s}${(a / 1e9).toFixed(2)}bn`;
   if (a >= 1e6) return `${s}${(a / 1e6).toFixed(1)}M`;
   if (a >= 1e3) return `${s}${(a / 1e3).toFixed(1)}k`;

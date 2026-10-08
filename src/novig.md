@@ -278,7 +278,8 @@ const fees = await (async () => {
 const kStraightLive = fees.length && fees[0].k_straight_live != null ? fees[0].k_straight_live : 0.03;
 const kParlay = fees.length && fees[0].k_parlay != null ? fees[0].k_parlay : 0.10;
 
-const fmtUSD = d3.format("$,.0f");
+const fmtUSDWhole = d3.format("$,.0f");
+const fmtUSD = d => Math.abs(d) > 0 && Math.abs(d) < 0.5 ? (d < 0 ? "−" : "") + "<$1" : fmtUSDWhole(d);
 const fmtUSDshort = d => d >= 1e6 ? `$${(d / 1e6).toFixed(2)}M` : d >= 1e3 ? `$${(d / 1e3).toFixed(0)}k` : fmtUSD(d);
 
 const feeT = fees.length ? {
@@ -391,7 +392,7 @@ if (feeT) display(Plot.plot({
   marginLeft: 76,
   marginBottom: 40,
   x: {label: null, type: "utc", tickFormat: "%b %d"},
-  y: {label: "Taker fees ($)", grid: true, tickFormat: d => fmtUSD(d)},
+  y: {label: "Taker fees ($)", grid: true, tickFormat: d => fmtUSDWhole(d)},
   marks: [
     Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
     // The uncertain remainder is drawn ON TOP of the exact floor and the two

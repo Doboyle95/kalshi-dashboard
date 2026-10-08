@@ -20,6 +20,7 @@ const daily = await DataAttachment("data/competitor_daily.csv").csv({typed: true
 const overall = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 const fmtUsd = d => d == null ? "—"
+  : d > 0 && d < 0.5 ? "<$1"
   : Math.abs(d) >= 1e9 ? "$" + (d / 1e9).toFixed(2) + "bn"
   : Math.abs(d) >= 1e6 ? "$" + (d / 1e6).toFixed(1) + "M"
   : Math.abs(d) >= 1e3 ? "$" + (d / 1e3).toFixed(0) + "k"

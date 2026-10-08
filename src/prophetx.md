@@ -253,7 +253,7 @@ Plot.plot({
     Plot.rectY(vap, {
       x1: d => d.price_bin, x2: d => d.price_bin + 5, y: "n_contracts",
       fill: PX, ry2: 4, insetLeft: 1, insetRight: 1,
-      title: d => `${d.price_bin}–${d.price_bin + 5}¢\n${d3.format(",.0f")(d.n_contracts)} contracts (${d.pct_contracts.toFixed(1)}%)\n${d3.format(",")(d.n_trades)} trades\n$${d3.format(",.0f")(d.dollars)}`,
+      title: d => `${d.price_bin}–${d.price_bin + 5}¢\n${d3.format(",.0f")(d.n_contracts)} contracts (${d.pct_contracts.toFixed(1)}%)\n${d3.format(",")(d.n_trades)} trades\n${d.dollars > 0 && d.dollars < 0.5 ? "<$1" : "$" + d3.format(",.0f")(d.dollars)}`,
       tip: true
     })
   ]

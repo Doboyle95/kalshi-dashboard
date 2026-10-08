@@ -36,6 +36,7 @@ display(askPageLink({
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(2)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 const fmtUSD   = n => n > 0 && n < 0.5 ? "<$1" : "$" + fmtCount(n);
+const fmtUSDWhole = n => n > 0 && n < 0.5 ? "<$1" : "$" + n.toLocaleString(undefined, {maximumFractionDigits: 0});
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 ```
 
@@ -176,8 +177,8 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Daily: $${(d.fees_total||0).toLocaleString(undefined, {maximumFractionDigits: 0})}`,
-        d.ma7_fees != null ? `7-day avg: $${d.ma7_fees.toLocaleString(undefined, {maximumFractionDigits: 0})}` : null
+        `Daily: ${fmtUSDWhole(d.fees_total||0)}`,
+        d.ma7_fees != null ? `7-day avg: ${fmtUSDWhole(d.ma7_fees)}` : null
       ].filter(Boolean).join("\n")
     })),
     Plot.ruleY([0])
@@ -259,9 +260,9 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        `Taker: $${d.taker.toLocaleString(undefined, {maximumFractionDigits: 0})} (${(100 * d.taker / (d.total || 1)).toFixed(1)}%)`,
-        `Maker: $${d.maker.toLocaleString(undefined, {maximumFractionDigits: 0})} (${(100 * d.maker / (d.total || 1)).toFixed(1)}%)`,
-        `Total: $${d.total.toLocaleString(undefined, {maximumFractionDigits: 0})}`
+        `Taker: ${fmtUSDWhole(d.taker)} (${(100 * d.taker / (d.total || 1)).toFixed(1)}%)`,
+        `Maker: ${fmtUSDWhole(d.maker)} (${(100 * d.maker / (d.total || 1)).toFixed(1)}%)`,
+        `Total: ${fmtUSDWhole(d.total)}`
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -381,8 +382,8 @@ Plot.plot({
       x: "date",
       title: d => [
         fmtDate(d.date),
-        ...FEE_BANDS.map(b => `${b}: $${(d[b]||0).toLocaleString(undefined,{maximumFractionDigits:0})}`),
-        `Bands shown: $${FEE_BANDS.reduce((t, b) => t + (d[b]||0), 0).toLocaleString(undefined,{maximumFractionDigits:0})}`
+        ...FEE_BANDS.map(b => `${b}: ${fmtUSDWhole(d[b]||0)}`),
+        `Bands shown: ${fmtUSDWhole(FEE_BANDS.reduce((t, b) => t + (d[b]||0), 0))}`
       ].join("\n")
     })),
     Plot.ruleY([0])
@@ -918,7 +919,8 @@ const nonSportsBars = nonSportsShown.flatMap(d => {
   });
 });
 // d3 formats: toLocaleString cost ~0.1 s here, since Plot builds every tip up front.
-const usd = d3.format("$,.0f");
+const usdFormat = d3.format("$,.0f");
+const usd = n => n > 0 && n < 0.5 ? "<$1" : usdFormat(n);
 const tipDay = d3.utcFormat("%b %-d, %Y");
 const nonSportsTip = d => [
   tipDay(d.date),

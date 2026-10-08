@@ -91,7 +91,8 @@ const fmtCount = n => {
   const a = Math.abs(n ?? 0), s = n < 0 ? "-" : "";
   return s + (a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "k" : String(Math.round(a)));
 };
-const fmtUSD = n => (n < 0 ? "-$" : "$") + fmtCount(Math.abs(n ?? 0));
+const fmtUSD = n => { const a = Math.abs(n ?? 0); return (n < 0 ? "-" : "") + (a > 0 && a < 0.5 ? "<$1" : "$" + fmtCount(a)); };
+const fmtUSDWhole = n => Math.abs(n) > 0 && Math.abs(n) < 0.5 ? (n < 0 ? "-" : "") + "<$1" : "$" + Math.round(n).toLocaleString();
 const fmtPct = n => `${(n ?? 0).toFixed(1)}%`;
 const fmtROI = n => `${(n ?? 0).toFixed(2)}%`;
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
@@ -861,10 +862,10 @@ Plot.plot({
 ```js
 Inputs.table(categoryRows.map(d => ({
   Category: d.category,
-  "Net taker P&L": "$" + Math.round(d.net).toLocaleString(),
-  "Gross taker P&L": "$" + Math.round(d.gross).toLocaleString(),
-  "Taker fees": "$" + Math.round(d.fees).toLocaleString(),
-  "Maker fees": "$" + Math.round(d.feesMaker).toLocaleString(),
+  "Net taker P&L": fmtUSDWhole(d.net),
+  "Gross taker P&L": fmtUSDWhole(d.gross),
+  "Taker fees": fmtUSDWhole(d.fees),
+  "Maker fees": fmtUSDWhole(d.feesMaker),
   "Settled contracts": Math.round(d.settled).toLocaleString(),
   "Net cents / $1 settled": d.netPerFace.toFixed(2),
   "Active days": d.n_days

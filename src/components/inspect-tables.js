@@ -14,7 +14,7 @@
 // own copies for now: they carry Kalshi-only fields (category, outcome, aggressor side,
 // block-trade flag) that no competitor file publishes, and folding those in would mean
 // one builder full of venue conditionals.
-import {LB_VENUES, fmtLbCount} from "./market-leaderboard.js";
+import {LB_VENUES, fmtLbCount, fmtLbUSD} from "./market-leaderboard.js";
 import {largeTradeRows, fmtCount, fmtUSD, fmtPct, fmtPrice} from "./venue-modules.js";
 
 const inspector = () => (typeof window === "undefined" ? null : window.PredictChartsInspector) || null;
@@ -40,7 +40,7 @@ export function marketDetail(row, source) {
   const evidence = [
     row.winner ? {label: "Winner", description: "Published or decoded settled outcome", value: row.winner} : null,
     row.top && spec?.topHeader ? {label: spec.topHeader, description: "Highest-volume contract or outcome", value: row.top} : null,
-    row.fees != null ? {label: "Fees", description: "One-side fees in the published market file", value: `$${fmtLbCount(row.fees)}`} : null
+    row.fees != null ? {label: "Fees", description: "One-side fees in the published market file", value: fmtLbUSD(row.fees)} : null
   ].filter(Boolean);
   return {
     crumb: row.name || row.marketKey,

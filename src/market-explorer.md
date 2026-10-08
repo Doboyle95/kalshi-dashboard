@@ -11,7 +11,7 @@ title: Market Explorer
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_COLORS, buildPlatformSeries, buildVenueScoreboard} from "./components/venue-data.js";
-import {LB_VENUES, fmtLbCount, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
+import {LB_VENUES, fmtLbCount, fmtLbUSD, marketLeaderboard, normalizeLeaderboard} from "./components/market-leaderboard.js";
 import {bestName, fmtStrike, fmtWinner} from "./components/ticker-names.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -79,7 +79,7 @@ function marketDetail(row) {
   const evidence = [
     row.winner ? {label: "Winner", description: "Published or decoded settled outcome", value: row.winner} : null,
     row.top ? {label: spec?.topHeader || "Busiest outcome", description: "Highest-volume contract or outcome", value: row.top} : null,
-    row.fees != null ? {label: "Fees", description: "One-side fees in the published market file", value: `$${fmtLbCount(row.fees)}`} : null
+    row.fees != null ? {label: "Fees", description: "One-side fees in the published market file", value: fmtLbUSD(row.fees)} : null
   ].filter(Boolean);
   return {
     crumb: row.name || row.marketKey,

@@ -58,7 +58,7 @@ const kalshiSinglePer = kalshiPerContract("NON_PARLAY");
 const fmtCentsMag = d => `${Math.abs(d * 100).toFixed(2)}¢`;
 const pdParlays = d3.sum(pdSorted, d => +d.parlays_settled);
 const pdProv = pdSorted.filter(d => d.prov).length;
-const fmtM = d => (d < 0 ? "−$" : "$") + (Math.abs(d) >= 1e6 ? (Math.abs(d) / 1e6).toFixed(2) + "M"
+const fmtM = d => Math.abs(d) > 0 && Math.abs(d) < 0.5 ? (d < 0 ? "−" : "") + "<$1" : (d < 0 ? "−$" : "$") + (Math.abs(d) >= 1e6 ? (Math.abs(d) / 1e6).toFixed(2) + "M"
                        : Math.abs(d) >= 1e3 ? (Math.abs(d) / 1e3).toFixed(0) + "k"
                        : Math.abs(d).toFixed(0));
 ```

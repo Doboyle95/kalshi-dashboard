@@ -11,7 +11,7 @@ const TICK = {1: "10¢\nand up", 2: "3¢\nto 10¢", 3: "1¢\nto 3¢", 4: "0.5¢\
 const NAME = {1: "10¢ and up", 2: "3¢ to under 10¢", 3: "1¢ to under 3¢", 4: "0.5¢ to under 1¢",
               5: "0.1¢ to under 0.5¢", 6: "Under 0.1¢"};
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
-const fmtUSD = n => ((n ?? 0) < 0 ? "−$" : "$") + fmtCount(Math.abs(n ?? 0));
+const fmtUSD = n => { const a = Math.abs(n ?? 0); return ((n ?? 0) < 0 ? "−" : "") + (a > 0 && a < 0.5 ? "<$1" : "$" + fmtCount(a)); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 const pct = r => `${r < 0 ? "−" : "+"}${Math.abs(r).toFixed(0)}%`;
 

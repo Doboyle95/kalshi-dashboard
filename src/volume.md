@@ -13,6 +13,7 @@ const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return
 // Short axis format (no $ prefix): "400M" instead of "400,000,000"
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
 const fmtUSD   = n => n > 0 && n < 0.5 ? "<$1" : "$" + fmtCount(n);
+const fmtUSDWhole = n => n > 0 && n < 0.5 ? "<$1" : "$" + Math.round(n).toLocaleString();
 const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 // is_partial in daily_overall.csv is the string "TRUE"/"FALSE" (uppercase) which
 // d3.autoType does not coerce to boolean, so naive truthiness fails. Use explicit check.
@@ -572,7 +573,7 @@ Plot.plot({
       curve: "monotone-x",
       tip: true,
       title: d => `7-day avg: ${sportsMetric === "Fees"
-        ? "$" + Math.round(d.ma||0).toLocaleString()
+        ? fmtUSDWhole(d.ma||0)
         : fmtCount(Math.round(d.ma||0)) + " contracts"}`
     })] : []),
     Plot.ruleY([0])

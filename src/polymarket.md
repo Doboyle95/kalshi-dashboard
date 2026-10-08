@@ -544,7 +544,7 @@ const parlayTotal = d3.sum(parlayRows, d => d.contracts);
 const parlayStakeTotal = d3.sum(parlayRows, d => d.stake);
 const parlayTotalTrades = d3.sum(parlayRows, d => d.trades);
 const parlayAvgPrice = parlayTotal > 0 ? parlayStakeTotal / parlayTotal : 0;
-const fmtUSD0 = n => n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}k` : `$${d3.format(",.0f")(n)}`;
+const fmtUSD0 = n => n > 0 && n < 0.5 ? "<$1" : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(0)}k` : `$${d3.format(",.0f")(n)}`;
 ```
 
 ```js

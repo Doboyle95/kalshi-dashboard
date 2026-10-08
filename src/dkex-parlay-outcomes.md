@@ -8,7 +8,7 @@ How DKeX's parlay buyers actually do: what they staked, what came back, and what
 
 ```js
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
-const fmtUSD = n => ((n ?? 0) < 0 ? "−$" : "$") + fmtCount(Math.abs(n ?? 0));
+const fmtUSD = n => { const a = Math.abs(n ?? 0); return ((n ?? 0) < 0 ? "−" : "") + (a > 0 && a < 0.5 ? "<$1" : "$" + fmtCount(a)); };
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 const pct = (n, dp = 1) => `${(n ?? 0) < 0 ? "−" : ""}${Math.abs(100 * (n ?? 0)).toFixed(dp)}%`;
 const DKEX = "var(--accent-dkex)";

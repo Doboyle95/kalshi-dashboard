@@ -22,7 +22,7 @@ export const fmtCount = n => {
   const a = Math.abs(n ?? 0), s = (n ?? 0) < 0 ? "−" : "";
   return s + (a >= 1e9 ? `${(a / 1e9).toFixed(2)}bn` : a >= 1e6 ? `${(a / 1e6).toFixed(1)}M` : a >= 1e3 ? `${(a / 1e3).toFixed(0)}k` : String(Math.round(a)));
 };
-export const fmtUSD = n => ((n ?? 0) < 0 ? "−$" : "$") + fmtCount(Math.abs(n ?? 0));
+export const fmtUSD = n => { const a = Math.abs(n ?? 0); return ((n ?? 0) < 0 ? "−" : "") + (a > 0 && a < 0.5 ? "<$1" : "$" + fmtCount(a)); };
 export const fmtPct = n => `${((n ?? 0) * 100).toFixed(Math.abs(n ?? 0) >= 0.1 ? 1 : 2)}%`;
 export const fmtPrice = p => (p == null || p === "" ? "—" : `${Number(p) % 1 === 0 ? Number(p).toFixed(0) : Number(p).toFixed(2)}¢`);
 export const fmtDate = d => {

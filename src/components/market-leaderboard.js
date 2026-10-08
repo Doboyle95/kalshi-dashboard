@@ -118,6 +118,9 @@ export function fmtLbCount(n) {
             : String(Math.round(a)));
 }
 
+/** Dollars in the same form; a positive amount under 50 cents reads "<$1", not "$0". */
+export const fmtLbUSD = n => +n > 0 && +n < 0.5 ? "<$1" : "$" + fmtLbCount(n);
+
 const fmtInt = n => (n == null || !Number.isFinite(+n)) ? "—" : (+n).toLocaleString("en-US");
 
 const fmtUTCDate = d => {
@@ -801,7 +804,7 @@ export function marketLeaderboard({
     if (any(d => d.fees != null)) {
       cols.push("fees");
       header.fees = "Fees (one side)"; align.fees = "right"; widths.fees = 120;
-      format.fees = v => v == null ? "—" : "$" + fmtLbCount(v);
+      format.fees = v => v == null ? "—" : fmtLbUSD(v);
     }
 
     if (any(d => d.outcomes != null)) {

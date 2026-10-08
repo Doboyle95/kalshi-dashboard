@@ -28,7 +28,7 @@ export const fmtCount = n => {
     : a >= 1e3 ? `${(a / 1e3).toFixed(0)}k`
     : d3.format(",.0f")(a));
 };
-export const fmtUSD = n => ((n ?? 0) < 0 ? "−$" : "$") + fmtCount(Math.abs(n ?? 0));
+export const fmtUSD = n => { const a = Math.abs(n ?? 0); return ((n ?? 0) < 0 ? "−" : "") + (a > 0 && a < 0.5 ? "<$1" : "$" + fmtCount(a)); };
 
 const asDate = v => (v instanceof Date ? v : new Date(`${String(v).slice(0, 10)}T00:00:00Z`));
 const dayKey = v => d3.utcFormat("%Y-%m-%d")(asDate(v));

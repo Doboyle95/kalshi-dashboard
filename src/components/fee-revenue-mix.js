@@ -48,7 +48,7 @@ export function buildFeeRevenueMix(daily, sports, bands, [from, to]) {
 export function feeRevenueMixPie(mix, {d3, document = globalThis.document}) {
   const root = document.createElement("div");
   root.className = "fee-mix-chart";
-  const money = n => n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` :
+  const money = n => n > 0 && n < 0.5 ? "<$1" : n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` :
     n >= 1e3 ? `$${(n / 1e3).toFixed(0)}k` : `$${n.toFixed(0)}`;
   const percent = n => (n * 100).toFixed(1) + "%";
   const day = d => d.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
