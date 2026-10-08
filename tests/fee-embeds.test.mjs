@@ -1,126 +1,86 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {nonSportsFeesExcludingFifteenMinute, nonSportsFeesByCategory, fifteenMinuteFees, NONSPORTS_FEE_CATEGORIES, filteredNonSportsFees, FILTERED_FEE_CATEGORIES} from "../src/components/fee-embeds.js";
+import {nonSportsFeeBander, nonSportsFeeBands, NONSPORTS_VIEWS, NONSPORTS_COLORS} from "../src/components/fee-embeds.js";
 const date = new Date("2026-01-01");
+const nonSports = (ticker, cat) => ({report_ticker: ticker, is_sports: "FALSE", cat});
+const ALL = NONSPORTS_VIEWS.get("All non-sports");
+const centsOf = (row, bands) => bands.reduce((sum, band) => sum + Math.round(row[band] * 100), 0);
 
-test("category chart separates macro releases from commodity, index, FX and yield prices", () => {
-  const row = {date, KXCPI: 1, KXU3: 2, KXFEDDECISION: 3, KXGOLD15M: 4,
-    KXINXU: 5, KXEURUSD15M: 6, KXAAAGASM: 7, KX10YRRATE15M: 8};
-  const metadata = Object.keys(row).filter(t => t !== "date").map(report_ticker => ({report_ticker, is_sports: "FALSE", cat: "Finance"}));
-  const [result] = nonSportsFeesByCategory([row], [{date, fees_nonsports: 38}], metadata, () => "Finance");
-  assert.equal(result.Economics, 6);
-  assert.equal(result.Finance, 30);
-  assert.equal(result.Other, 2);
-  assert.equal(result.total, 38);
+test("every band of every view has a colour, distinct within its view", () => {
+  for (const [view, bands] of NONSPORTS_VIEWS) {
+    for (const band of bands) assert.ok(NONSPORTS_COLORS[band], `${view}: ${band} has no colour`);
+    assert.equal(new Set(bands.map(b => NONSPORTS_COLORS[b])).size, bands.length, view);
+  }
 });
 
-test("category chart recognizes new Economics source labels and keeps sports exclusions", () => {
-  const [result] = nonSportsFeesByCategory([{date, NEWMACRO: 1, KXCPI: 999}], [{date, fees_nonsports: 1}],
+test("15-minute series form their own band; macro releases stay apart from asset prices", () => {
+  const row = {date, KXCPI: 1, KXU3: 2, KXFEDDECISION: 3, KXGOLD15M: 4,
+    KXINXU: 5, KXEURUSD15M: 6, KXAAAGASM: 7, KX10YRRATE15M: 8};
+  const metadata = Object.keys(row).filter(t => t !== "date").map(t => nonSports(t, "Finance"));
+  const [result] = nonSportsFeeBands([row], [{date, fees_nonsports: 38}], metadata, () => "Finance");
+  assert.equal(result["15-minute markets"], 18);
+  assert.equal(result["15-minute commodities"], 4);
+  assert.equal(result["15-minute finance"], 14);
+  assert.equal(result.Finance, 12);
+  assert.equal(result.Economics, 6);
+  assert.equal(result["Everything else"], 2);
+  assert.equal(result.total, 38);
+  assert.equal(centsOf(result, ALL), 3800);
+});
+
+test("the 15-minute band takes verified, test and newly listed 15M series, never sports or longer ones", () => {
+  const row = {date, KXBTC15M: 1, KXZEC15M: 2, KXGOLD15M: 3, KXEURUSD15M: 4, KXNEWCOIN15M: 5,
+    KXGBPUSD15MTEST: 6, KXBTCD: 7, KXBTC30M: 8, SPORTS15M: 999, KXMYSTERY15M: 0.25};
+  const metadata = [nonSports("KXBTC15M", "Crypto"), nonSports("KXZEC15M", "Other"), nonSports("KXNEWCOIN15M", "Crypto"),
+    nonSports("KXBTCD", "Crypto"), nonSports("KXBTC30M", "Crypto"), {report_ticker: "SPORTS15M", is_sports: "TRUE", cat: "Sports"}];
+  const [result] = nonSportsFeeBands([row], [{date, fees_nonsports: 36.5}], metadata,
+    ticker => /BTC|COIN/.test(ticker) ? "Crypto" : "Other");
+  assert.equal(result["15-minute markets"], 21);
+  assert.equal(result["15-minute crypto"], 8);
+  assert.equal(result["15-minute commodities"], 3);
+  assert.equal(result["15-minute finance"], 10);
+  assert.equal(result["Other crypto"], 15);
+  // A 15M id the metadata does not know is not assumed to be a 15-minute market.
+  assert.equal(result["Everything else"], 0.5);
+  assert.equal(centsOf(result, ALL), 3650);
+  assert.equal(centsOf(result, NONSPORTS_VIEWS.get("15-minute markets only")), 2100);
+});
+
+test("everything else is weather, mention, entertainment and the residual; sports mentions stay out", () => {
+  const rows = [{date, BTC: 0.1, POLITICS: 0.2, SPORTSMENTION: 999, WEATHER: 1.5, SHOW: 0.75, UNKNOWN: 12}];
+  const metadata = [nonSports("BTC", "Crypto"), {report_ticker: "POLITICS", is_sports: false, cat: "Politics"},
+    {report_ticker: "SPORTSMENTION", is_sports: "TRUE", cat: "Mention"}, nonSports("WEATHER", "Weather"),
+    nonSports("SHOW", "Entertainment")];
+  const classify = ticker => metadata.find(d => d.report_ticker === ticker)?.cat;
+  const [result] = nonSportsFeeBands(rows, [{date, fees_nonsports: 14.55}], metadata, classify);
+  assert.equal(result["Other crypto"], 0.1);
+  assert.equal(result.Politics, 0.2);
+  assert.equal(result.Weather, 1.5);
+  assert.equal(result.Entertainment, 0.75);
+  assert.equal(result.Mention, 0);
+  assert.equal(result.Other, 12);
+  assert.equal(result["Everything else"], 14.25);
+  assert.equal(centsOf(result, ALL), 1455);
+});
+
+test("new Economics source labels count as Economics", () => {
+  const [result] = nonSportsFeeBands([{date, NEWMACRO: 1, KXCPI: 999}], [{date, fees_nonsports: 1}],
     [{report_ticker: "NEWMACRO", cat: "Economics", is_sports: false}, {report_ticker: "KXCPI", is_sports: true}], () => "Other");
   assert.equal(result.Economics, 1);
   assert.equal(result.total, 1);
 });
 
-test("filtered chart retains Economics and fully excludes crypto, financials, commodities and sports", () => {
-  const rows = Object.entries({Economics: 6, Crypto: 100, Financials: 200, Commodities: 300,
-    Sports: 999, "Non-sport parlays": 999, Entertainment: 4, "Science and Technology": 5,
-    Politics: 0.1, Elections: 0.2, Mentions: 2, "Climate and Weather": 3})
-    .map(([kalshi_category, fees]) => ({date, kalshi_category, fees}));
-  const [result] = filteredNonSportsFees(rows);
-  assert.equal(result.Economics, 6);
-  assert.equal(result.Entertainment, 4);
-  assert.equal(result.Other, 5);
-  assert.equal(result.Politics, 0.3);
-  assert.equal(result.Mention, 2);
-  assert.equal(result.Weather, 3);
-  assert.equal(result.total, 20.3);
-  assert.equal(FILTERED_FEE_CATEGORIES.reduce((sum, c) => sum + Math.round(result[c] * 100), 0), Math.round(result.total * 100));
+test("dates without a reported non-sports total stay missing; a row is worked out once", () => {
+  assert.deepEqual(nonSportsFeeBands([{date}], [], [], () => null), []);
+  const row = {date, KXBTC15M: 1};
+  const band = nonSportsFeeBander([row], [{date, fees_nonsports: 2}], [], () => null);
+  assert.equal(band(row), band(row));
+  assert.equal(band(row)["Everything else"], 1);
 });
 
-test("filtered chart preserves zero-fee days and sorts by date", () => {
-  const next = new Date("2026-01-02");
-  const rows = filteredNonSportsFees([{date: next, kalshi_category: "Crypto", fees: 10},
-    {date, kalshi_category: "Economics", fees: 1}]);
-  assert.deepEqual(rows.map(d => [d.date, d.total]), [[date, 1], [next, 0]]);
-});
-
-test("filtered chart rejects missing source categories or fees", () => {
-  assert.throws(() => filteredNonSportsFees([{date, kalshi_category: "Economics", fees: null}]), /Invalid/);
-  assert.throws(() => filteredNonSportsFees([{date, kalshi_category: "", fees: 1}]), /Invalid/);
-});
-
-test("category bars reconcile in cents and keep sports mention fees out of non-sports", () => {
-  const rows = [{date, BTC: 0.1, POLITICS: 0.2, SPORTSMENTION: 999, UNKNOWN: 12}];
-  const metadata = [
-    {report_ticker: "BTC", is_sports: "FALSE", cat: "Crypto"},
-    {report_ticker: "POLITICS", is_sports: false, cat: "Politics"},
-    {report_ticker: "SPORTSMENTION", is_sports: "TRUE", cat: "Mention"}
-  ];
-  const classify = ticker => metadata.find(d => d.report_ticker === ticker)?.cat;
-  const [result] = nonSportsFeesByCategory(rows, [{date, fees_nonsports: 12.3}], metadata, classify);
-  assert.equal(result.Crypto, 0.1);
-  assert.equal(result.Politics, 0.2);
-  assert.equal(result.Mention, 0);
-  assert.equal(result.Other, 12);
-  assert.equal(NONSPORTS_FEE_CATEGORIES.reduce((n, c) => n + Math.round(result[c] * 100), 0), 1230);
-});
-
-test("category dates without a reported broad total stay missing", () => {
-  assert.deepEqual(nonSportsFeesByCategory([{date}], [], [], () => null), []);
-});
-
-test("category over-allocation fails visibly rather than inflating a daily bar", () => {
-  assert.throws(() => nonSportsFeesByCategory([{date, BTC: 20}], [{date, fees_nonsports: 10}],
-    [{report_ticker: "BTC", is_sports: false}], () => "Crypto"), /exceed/);
-});
-
-test("15-minute bars include crypto, commodities, indices, FX and yields while excluding other frequencies and tests", () => {
-  const [result] = fifteenMinuteFees([{date, KXBTC15M: 1, KXZEC15M: 2, KXNEAR15M: 3,
-    KXCRYPTOLEAD15M: 4, KXGOLD15M: 100, KXSILVER15M: 20, KXWTI15M: 6, KXCOPPER15M: 5,
-    KXNATGAS15M: 7, KXPALLADIUM15M: 8, KXPLATINUM15M: 9, KXEURUSD15M: 200,
-    KXINX15M: 10, KXNDQ15M: 20, KXDJIA15M: 30, KX2YRRATE15M: 40, KX5YRRATE15M: 50,
-    KX10YRRATE15M: 60, KX30YRRATE15M: 70, KXUSDJPY15M: 80, KXGBPUSD15M: 90,
-    KXAUDUSD15M: 100, KXUSDCAD15M: 110, KXGBPUSD15MTEST: 999, KXINXU: 999, KXBTCD: 300}], []).rows;
-  assert.equal(result.cryptoFees, 10);
-  assert.equal(result.commodityFees, 155);
-  assert.equal(result.financeFees, 860);
-  assert.equal(result.fees, 1025);
-});
-
-test("new 15M series in source metadata are included automatically without double-counting commodities", () => {
-  const result = fifteenMinuteFees([{date, KXNEWCOIN15M: 8, KXNEWMETAL15M: 9, KXNEWINDEX15M: 10, KXGOLD15M: 11}],
-    [{report_ticker: "KXNEWCOIN15M", cat: "Crypto"}, {report_ticker: "KXNEWMETAL15M", cat: "Commodities"},
-      {report_ticker: "KXNEWINDEX15M", cat: "Financials"}, {report_ticker: "KXGOLD15M", cat: "Financials"}]);
-  assert.deepEqual(result.cryptoTickers, ["KXNEWCOIN15M"]);
-  assert.deepEqual(result.commodityTickers, ["KXNEWMETAL15M", "KXGOLD15M"]);
-  assert.deepEqual(result.financeTickers, ["KXNEWINDEX15M"]);
-  assert.equal(result.rows[0].fees, 38);
-});
-
-test("missing crypto fees are not presented as zero", () => {
-  assert.throws(() => fifteenMinuteFees([{date, KXBTC15M: null}], []), /Missing/);
-});
-
-test("excluding 15-minute markets preserves longer crypto, finance, Economics and residual fees", () => {
-  const source = {date, KXBTC15M:11, KXZEC15M:13, KXGOLD15M:17, KXEURUSD15M:19,
-    KXBTCD:5, KXBTC30M:2, KXINXU:7, KXCPI:3, SPORTS15M:999};
-  const metadata = Object.keys(source).filter(t => t !== "date").map(report_ticker => ({
-    report_ticker, is_sports:report_ticker === "SPORTS15M",
-    cat:/BTC/.test(report_ticker) ? "Crypto" : report_ticker === "KXCPI" ? "Economics" : report_ticker === "KXZEC15M" ? "Other" : "Finance"
-  }));
-  const {rows:[result],tickers} = nonSportsFeesExcludingFifteenMinute([source], [{date,fees_nonsports:77.5}], metadata,
-    ticker => metadata.find(m => m.report_ticker === ticker)?.cat);
-  assert.equal(result.total,17.5);
-  assert.equal(result.Crypto,7);
-  assert.equal(result.Finance,7);
-  assert.equal(result.Economics,3);
-  assert.equal(result.Other,0.5);
-  assert.equal(source.KXBTC15M,11);
-  assert.ok(!tickers.includes("SPORTS15M"));
-  assert.equal(NONSPORTS_FEE_CATEGORIES.reduce((sum,c)=>sum+Math.round(result[c]*100),0),1750);
-});
-
-test("excluding 15-minute fees refuses missing fees and impossible subtraction", () => {
-  assert.throws(()=>nonSportsFeesExcludingFifteenMinute([{date,KXBTC15M:null}],[],[],()=>"Crypto"),/Missing/);
-  assert.throws(()=>nonSportsFeesExcludingFifteenMinute([{date,KXBTC15M:2}],[{date,fees_nonsports:1}],[],()=>"Crypto"),/exceed/);
+test("over-allocation and missing fees fail visibly instead of drawing a wrong bar", () => {
+  assert.throws(() => nonSportsFeeBands([{date, BTC: 20}], [{date, fees_nonsports: 10}],
+    [nonSports("BTC", "Crypto")], () => "Crypto"), /exceed/);
+  assert.throws(() => nonSportsFeeBands([{date, KXBTC15M: 2}], [{date, fees_nonsports: 1}], [], () => "Crypto"), /exceed/);
+  assert.throws(() => nonSportsFeeBands([{date, KXBTC15M: null}], [{date, fees_nonsports: 1}], [], () => "Crypto"), /Missing/);
 });

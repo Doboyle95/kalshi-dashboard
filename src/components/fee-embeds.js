@@ -1,64 +1,30 @@
 import {splitFinanceCategory} from "./non-sports-categories.js";
-export const NONSPORTS_FEE_CATEGORIES = ["Crypto", "Politics", "Finance", "Economics", "Weather", "Mention", "Entertainment", "Other"];
-// Distinct hues make small category bands easier to distinguish.
-export const NONSPORTS_FEE_COLORS = ["#0072B2", "#D55E00", "#009E73", "#A65628", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
 
-export const FILTERED_FEE_CATEGORIES = ["Economics", "Politics", "Weather", "Mention", "Entertainment", "Other"];
-export const FILTERED_FEE_COLORS = ["#A65628", "#D55E00", "#CC79A7", "#E69F00", "#7443AA", "#777777"];
+// Kalshi's daily non-sports fees, split into the parts below and counted in whole cents; the
+// parts add up to the day's reported non-sports total exactly. Two of the chart's bands are
+// sums of parts: "15-minute markets" (the three 15-minute parts) and "Everything else"
+// (weather, mention, entertainment and the residual "Other").
+const FIFTEEN_PARTS = ["15-minute crypto", "15-minute commodities", "15-minute finance"];
+const ELSE_PARTS = ["Weather", "Mention", "Entertainment", "Other"];
+const PARTS = [...FIFTEEN_PARTS, "Other crypto", "Politics", "Finance", "Economics", ...ELSE_PARTS];
 
-// Filter the complete source-category aggregate, not the top-ticker fee file:
-// its residual Other bucket can contain untracked crypto and financial fees.
-export function filteredNonSportsFees(categoryRows) {
-  const excluded = new Set(["Sports", "Non-sport parlays", "Crypto", "Financials", "Commodities"]);
-  const categories = new Map([
-    ["Economics", "Economics"], ["Politics", "Politics"], ["Elections", "Politics"],
-    ["Climate and Weather", "Weather"], ["Mentions", "Mention"], ["Entertainment", "Entertainment"]
-  ]);
-  const days = new Map();
-  for (const d of categoryRows) {
-    if (!Number.isFinite(+d.date) || !d.kalshi_category || !Number.isFinite(d.fees)) {
-      throw new Error("Invalid daily category fee data");
-    }
-    if (!days.has(+d.date)) days.set(+d.date, {
-      date: d.date, ...Object.fromEntries(FILTERED_FEE_CATEGORIES.map(c => [c, 0]))
-    });
-    if (excluded.has(d.kalshi_category)) continue;
-    days.get(+d.date)[categories.get(d.kalshi_category) ?? "Other"] += Math.round(d.fees * 100);
-  }
-  return [...days.values()].sort((a, b) => a.date - b.date).map(d => ({
-    date: d.date,
-    total: FILTERED_FEE_CATEGORIES.reduce((sum, c) => sum + d[c], 0) / 100,
-    ...Object.fromEntries(FILTERED_FEE_CATEGORIES.map(c => [c, d[c] / 100]))
-  }));
-}
-
-export function nonSportsFeesByCategory(feesRows, sportsRows, metadataRows, categoryForTicker) {
-  const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
-  const totals = new Map(sportsRows.map(d => [+d.date, d.fees_nonsports]));
-  const feeCategory = ticker => {
-    const source = metadata.get(ticker)?.cat;
-    return splitFinanceCategory(ticker, ["Economics", "Financials", "Commodities"].includes(source) ? source : categoryForTicker(ticker));
-  };
-  const columns = Object.keys(feesRows[0] ?? {}).filter(ticker => {
-    const m = metadata.get(ticker);
-    // The broad source split uses is_sports. Some sports mention series have a
-    // display category of Mention, so their display category alone is insufficient.
-    return m && (m.is_sports === false || m.is_sports === "FALSE") &&
-      NONSPORTS_FEE_CATEGORIES.slice(0, -1).includes(feeCategory(ticker));
-  }).map(ticker => [ticker, feeCategory(ticker)]);
-  return feesRows.filter(d => Number.isFinite(totals.get(+d.date))).map(d => {
-    const cents = Object.fromEntries(NONSPORTS_FEE_CATEGORIES.map(c => [c, 0]));
-    for (const [ticker, category] of columns) {
-      if (!Number.isFinite(d[ticker])) throw new Error(`Missing category fees for ${ticker}`);
-      cents[category] += Math.round(d[ticker] * 100);
-    }
-    const total = Math.round(totals.get(+d.date) * 100);
-    const known = Object.values(cents).reduce((a, b) => a + b, 0);
-    if (known > total) throw new Error("Category fees exceed the reported non-sports total");
-    cents.Other = total - known;
-    return {date: d.date, total: total / 100, ...Object.fromEntries(Object.entries(cents).map(([k, v]) => [k, v / 100]))};
-  });
-}
+// The non-sports chart's views: each names the bands it stacks, bottom first.
+export const NONSPORTS_VIEWS = new Map([
+  ["All non-sports", ["15-minute markets", "Other crypto", "Politics", "Finance", "Economics", "Everything else"]],
+  ["Without 15-minute markets", ["Other crypto", "Politics", "Finance", "Economics", "Everything else"]],
+  ["Without crypto & finance", ["Politics", "Economics", "Everything else"]],
+  ["15-minute markets only", FIFTEEN_PARTS]
+]);
+// One colour per band in every view, so switching views never repaints a band that stays. Each
+// view's set passes the dataviz palette validator on the chart surface in both themes (#f3efe6
+// light, #1b211d dark; 2026-10-07). Finance and Economics keep the category charts' colours
+// (non-sports-categories.js) and 15-minute markets the fee-mix pie's; inside the 15-minute view
+// its crypto part keeps that blue and its finance part the Finance green.
+export const NONSPORTS_COLORS = {
+  "15-minute markets": "#0072B2", "15-minute crypto": "#0072B2", "15-minute commodities": "#c98500",
+  "15-minute finance": "#009E73", "Other crypto": "#D55E00", "Politics": "#7443AA", "Finance": "#009E73",
+  "Economics": "#A65628", "Everything else": "#c2689a"
+};
 
 // Confirmed with Kalshi's public series metadata (category Crypto, frequency
 // fifteen_min), 2026-10-06. ZEC and NEAR currently fall into Other in the site's
@@ -69,77 +35,84 @@ const VERIFIED_CRYPTO_15M = new Set([
   "KXSOL15M", "KXXRP15M", "KXZEC15M", "KXNEAR15M", "KXCRYPTOLEAD15M",
   "KXCRYPTOCOMP15M", "KXADA15M", "KXBCH15M", "KXTON15M"
 ]);
-// These seven series also have API category Commodities and frequency fifteen_min.
-// The dashboard's broad taxonomy places them in Finance or Other, so use their
-// verified series identities rather than treating all Financials as commodities.
+// API category Commodities and frequency fifteen_min. The dashboard's broad taxonomy places
+// them in Finance or Other, so they are named here rather than found by category.
 const VERIFIED_COMMODITY_15M = new Set([
   "KXGOLD15M", "KXSILVER15M", "KXWTI15M", "KXCOPPER15M", "KXNATGAS15M", "KXPALLADIUM15M", "KXPLATINUM15M"
 ]);
-// API category Financials, frequency fifteen_min, verified 2026-10-06.
-// Index and Treasury series are listed but currently have no trades; they enter
-// the chart automatically when their fee columns appear. Exclude the TEST series.
+// API category Financials, frequency fifteen_min, verified 2026-10-06. Index and Treasury
+// series were listed with no trades yet; they count as soon as their fee columns appear.
+// KXGBPUSD15MTEST is Kalshi's test copy of a 15-minute FX series: counted as one, so it can
+// never land in the residual.
 const VERIFIED_FINANCE_15M = new Set([
   "KXINX15M", "KXNDQ15M", "KXDJIA15M", "KX2YRRATE15M", "KX5YRRATE15M",
   "KX10YRRATE15M", "KX30YRRATE15M", "KXEURUSD15M", "KXUSDJPY15M",
-  "KXGBPUSD15M", "KXAUDUSD15M", "KXUSDCAD15M"
+  "KXGBPUSD15M", "KXAUDUSD15M", "KXUSDCAD15M", "KXGBPUSD15MTEST"
 ]);
-// Remove series before category aggregation so 15-minute products classified as
-// Other (such as ZEC and NEAR) cannot survive in the residual Other segment.
-export function nonSportsFeesExcludingFifteenMinute(feesRows, sportsRows, metadataRows, categoryForTicker) {
-  const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
-  const verified = new Set([...VERIFIED_CRYPTO_15M, ...VERIFIED_COMMODITY_15M,
-    ...VERIFIED_FINANCE_15M, "KXGBPUSD15MTEST"]);
-  const tickers = Object.keys(feesRows[0] ?? {}).filter(ticker => {
-    const m = metadata.get(ticker);
-    if (m?.is_sports === true || m?.is_sports === "TRUE") return false;
-    return verified.has(ticker) || (/15M$/.test(ticker) &&
-      (m?.is_sports === false || m?.is_sports === "FALSE"));
-  });
-  if (!tickers.length) throw new Error("15-minute fee data is unavailable");
-  const removedByDate = new Map();
-  const remaining = feesRows.map(row => {
-    const copy = {...row};
-    let removed = 0;
-    for (const ticker of tickers) {
-      if (!Number.isFinite(row[ticker])) throw new Error(`Missing 15-minute fees for ${ticker}`);
-      removed += Math.round(row[ticker] * 100);
-      copy[ticker] = 0;
-    }
-    removedByDate.set(+row.date, removed);
-    return copy;
-  });
-  const totals = sportsRows.map(row => {
-    if (!removedByDate.has(+row.date)) return row;
-    const cents = Math.round(row.fees_nonsports * 100) - removedByDate.get(+row.date);
-    if (cents < 0) throw new Error("15-minute fees exceed the reported non-sports total");
-    return {...row, fees_nonsports: cents / 100};
-  });
-  return {rows: nonSportsFeesByCategory(remaining, totals, metadataRows, categoryForTicker), tickers};
+
+const isSports = m => m?.is_sports === true || m?.is_sports === "TRUE";
+const isNonSports = m => m?.is_sports === false || m?.is_sports === "FALSE";
+// Display categories summed column by column. Any other non-sports fee reaches "Other"
+// through the residual, as do columns the metadata does not know.
+const CATEGORY_PART = new Map([
+  ["Crypto", "Other crypto"], ["Politics", "Politics"], ["Finance", "Finance"], ["Economics", "Economics"],
+  ["Weather", "Weather"], ["Mention", "Mention"], ["Entertainment", "Entertainment"]
+]);
+
+// The part a fee column counts towards, or null when it only reaches the residual.
+// categoryForTicker is the page's display mapping (fees.md wideCategoryForTicker).
+function partOf(ticker, metadata, categoryForTicker) {
+  const m = metadata.get(ticker);
+  if (isSports(m)) return null;
+  const verified = VERIFIED_CRYPTO_15M.has(ticker) || VERIFIED_COMMODITY_15M.has(ticker) || VERIFIED_FINANCE_15M.has(ticker);
+  // A 15-minute market by Kalshi's series metadata, or any non-sports series whose id ends 15M.
+  // Its finance part takes every 15-minute series that is not crypto or a commodity: today that
+  // is the FX, index and yield series above.
+  if (verified || (/15M$/.test(ticker) && isNonSports(m))) {
+    if (VERIFIED_CRYPTO_15M.has(ticker) || m?.cat === "Crypto") return "15-minute crypto";
+    if (VERIFIED_COMMODITY_15M.has(ticker) || m?.cat === "Commodities") return "15-minute commodities";
+    return "15-minute finance";
+  }
+  if (!isNonSports(m)) return null;
+  // The leaderboard's own label wins for Economics / Financials / Commodities, then
+  // splitFinanceCategory's verified series lists separate Finance from Economics.
+  const source = ["Economics", "Financials", "Commodities"].includes(m.cat) ? m.cat : categoryForTicker(ticker);
+  return CATEGORY_PART.get(splitFinanceCategory(ticker, source)) ?? null;
 }
 
-export function fifteenMinuteFees(feesRows, metadataRows) {
+// row => {date, total, ...every part, "15-minute markets", "Everything else"}, or null for a
+// date with no reported non-sports total. Each column's part is worked out once, here, and each
+// row only when first asked for: a chart that shows a year never pays for the whole history.
+export function nonSportsFeeBander(feesRows, sportsRows, metadataRows, categoryForTicker) {
   const metadata = new Map(metadataRows.map(d => [d.report_ticker, d]));
-  const columns = Object.keys(feesRows[0] ?? {});
-  const cryptoTickers = columns.filter(ticker =>
-    VERIFIED_CRYPTO_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Crypto")
-  );
-  const commodityTickers = columns.filter(ticker =>
-    VERIFIED_COMMODITY_15M.has(ticker) || (/15M$/.test(ticker) && metadata.get(ticker)?.cat === "Commodities")
-  );
-  const financeTickers = columns.filter(ticker =>
-    !cryptoTickers.includes(ticker) && !commodityTickers.includes(ticker) &&
-    (VERIFIED_FINANCE_15M.has(ticker) || (/15M$/.test(ticker) && ["Financials", "Finance"].includes(metadata.get(ticker)?.cat)))
-  );
-  const tickers = [...cryptoTickers, ...commodityTickers, ...financeTickers];
-  if (!tickers.length) throw new Error("15-minute fee data is unavailable");
-  const rows = feesRows.map(d => {
-    const sumCents = series => series.reduce((cents, ticker) => {
-      if (!Number.isFinite(d[ticker])) throw new Error(`Missing 15-minute fees for ${ticker}`);
-      return cents + Math.round(d[ticker] * 100);
-    }, 0);
-    const crypto = sumCents(cryptoTickers), commodities = sumCents(commodityTickers), finance = sumCents(financeTickers);
-    return {date: d.date, cryptoFees: crypto / 100, commodityFees: commodities / 100,
-      financeFees: finance / 100, fees: (crypto + commodities + finance) / 100};
-  });
-  return {rows, tickers, cryptoTickers, commodityTickers, financeTickers};
+  const totals = new Map(sportsRows.map(d => [+d.date, d.fees_nonsports]));
+  const columns = Object.keys(feesRows[0] ?? {})
+    .filter(ticker => ticker !== "date")
+    .map(ticker => [ticker, partOf(ticker, metadata, categoryForTicker)])
+    .filter(([, part]) => part);
+  const done = new WeakMap();
+  const band = d => {
+    if (!Number.isFinite(totals.get(+d.date))) return null;
+    const cents = Object.fromEntries(PARTS.map(p => [p, 0]));
+    for (const [ticker, part] of columns) {
+      if (!Number.isFinite(d[ticker])) throw new Error(`Missing non-sports fees for ${ticker}`);
+      cents[part] += Math.round(d[ticker] * 100);
+    }
+    const total = Math.round(totals.get(+d.date) * 100);
+    const known = PARTS.reduce((sum, p) => sum + cents[p], 0);
+    if (known > total) throw new Error("Category fees exceed the reported non-sports total");
+    cents.Other += total - known;
+    const sum = parts => parts.reduce((s, p) => s + cents[p], 0) / 100;
+    return {date: d.date, total: total / 100, ...Object.fromEntries(PARTS.map(p => [p, cents[p] / 100])),
+      "15-minute markets": sum(FIFTEEN_PARTS), "Everything else": sum(ELSE_PARTS)};
+  };
+  return d => {
+    if (!done.has(d)) done.set(d, band(d));
+    return done.get(d);
+  };
+}
+
+// Every row at once: the dates with a reported non-sports total, in the order given.
+export function nonSportsFeeBands(feesRows, sportsRows, metadataRows, categoryForTicker) {
+  return feesRows.map(nonSportsFeeBander(feesRows, sportsRows, metadataRows, categoryForTicker)).filter(Boolean);
 }

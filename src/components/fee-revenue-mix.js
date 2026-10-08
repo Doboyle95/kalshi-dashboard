@@ -1,31 +1,23 @@
-import {fifteenMinuteFees} from "./fee-embeds.js";
-
 export const FEE_MIX_CATEGORIES = [
   {key: "straightSports", label: "Straight sports", color: "#1b9e77"},
   {key: "parlays", label: "Parlays", color: "#8963b3"},
-  {key: "fifteenMinute", label: "15-minute crypto / finance / commodities", color: "#0072B2"},
+  {key: "fifteenMinute", label: "15-minute markets", color: "#0072B2"},
   {key: "otherNonSports", label: "Other non-sports", color: "#74746f"}
 ];
 
-// Inclusive six-month window, matching the daily non-sports embed. Clamp the
-// target day for month ends rather than allowing February to overflow into March.
-export function sixMonthFeeStart(end) {
-  const exclusiveEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1));
-  const targetMonth = new Date(Date.UTC(exclusiveEnd.getUTCFullYear(), exclusiveEnd.getUTCMonth() - 6, 1));
-  const lastDay = new Date(Date.UTC(targetMonth.getUTCFullYear(), targetMonth.getUTCMonth() + 1, 0)).getUTCDate();
-  targetMonth.setUTCDate(Math.min(exclusiveEnd.getUTCDate(), lastDay));
-  return targetMonth;
-}
-
-export function buildFeeRevenueMix(daily, sports, tickerFees, metadata) {
-  const latest = rows => Math.max(...rows.map(d => +d.date).filter(Number.isFinite));
-  const end = new Date(Math.min(latest(daily), latest(sports), latest(tickerFees)));
-  if (!Number.isFinite(+end)) throw new Error("Six-month fee data is unavailable");
-  const start = sixMonthFeeStart(end);
+// Fee revenue by source over [from, to], cut to the days that all three inputs cover. `bands`
+// are nonSportsFeeBands rows (fee-embeds.js), so the 15-minute slice matches the non-sports
+// chart to the cent. Returns null when no day falls in the window.
+export function buildFeeRevenueMix(daily, sports, bands, [from, to]) {
+  const dates = rows => rows.map(d => +d.date).filter(Number.isFinite);
+  const first = Math.max(...[daily, sports, bands].map(rows => Math.min(...dates(rows))));
+  const last = Math.min(...[daily, sports, bands].map(rows => Math.max(...dates(rows))));
+  const start = new Date(Math.max(+from, first)), end = new Date(Math.min(+to, last));
+  if (!(start <= end)) return null;
   const inWindow = d => d.date >= start && d.date <= end;
   const totals = daily.filter(inWindow);
   const sportsByDay = new Map(sports.filter(inWindow).map(d => [+d.date, d]));
-  const fifteenByDay = new Map(fifteenMinuteFees(tickerFees.filter(inWindow), metadata).rows.map(d => [+d.date, d]));
+  const bandsByDay = new Map(bands.filter(inWindow).map(d => [+d.date, d]));
   const cents = Object.fromEntries(FEE_MIX_CATEGORIES.map(d => [d.key, 0]));
   const toCents = value => {
     if (!Number.isFinite(value) || value < 0) throw new Error("Invalid fee revenue value");
@@ -33,10 +25,10 @@ export function buildFeeRevenueMix(daily, sports, tickerFees, metadata) {
   };
   let totalCents = 0;
   for (const day of totals) {
-    const split = sportsByDay.get(+day.date), fifteen = fifteenByDay.get(+day.date);
-    if (!split || !fifteen) throw new Error("Six-month fee data has a missing day");
+    const split = sportsByDay.get(+day.date), band = bandsByDay.get(+day.date);
+    if (!split || !band) throw new Error("Fee mix data has a missing day");
     const total = toCents(day.fees_total), straight = toCents(split.fees_sports_nonparlay);
-    const nonsports = toCents(split.fees_nonsports), fast = toCents(fifteen.fees);
+    const nonsports = toCents(split.fees_nonsports), fast = toCents(band["15-minute markets"]);
     const parlay = total - straight - nonsports, other = nonsports - fast;
     if (parlay < 0 || other < 0) throw new Error("Fee mix components exceed their reported totals");
     cents.straightSports += straight;
@@ -45,7 +37,7 @@ export function buildFeeRevenueMix(daily, sports, tickerFees, metadata) {
     cents.otherNonSports += other;
     totalCents += total;
   }
-  if (!totalCents) throw new Error("No fee revenue in the six-month window");
+  if (!totalCents) return null;
   return {
     start, end, totalFees: totalCents / 100, dayCount: totals.length,
     isPartial: totals.some(d => +d.date === +end && (d.is_partial === true || d.is_partial === "TRUE")),
@@ -56,8 +48,11 @@ export function buildFeeRevenueMix(daily, sports, tickerFees, metadata) {
 export function feeRevenueMixPie(mix, {d3, document = globalThis.document}) {
   const root = document.createElement("div");
   root.className = "fee-mix-chart";
-  const money = n => n.toLocaleString("en-US", {style: "currency", currency: "USD", maximumFractionDigits: 2});
+  const money = n => n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` :
+    n >= 1e3 ? `$${(n / 1e3).toFixed(0)}k` : `$${n.toFixed(0)}`;
   const percent = n => (n * 100).toFixed(1) + "%";
+  const day = d => d.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
+  const span = `${day(mix.start)} to ${day(mix.end)}`;
   const summary = document.createElement("div");
   summary.className = "fee-mix-total";
   summary.textContent = `${money(mix.totalFees)} total fee revenue`;
@@ -67,8 +62,8 @@ export function feeRevenueMixPie(mix, {d3, document = globalThis.document}) {
   root.append(grid);
   const svg = d3.select(document.createElementNS("http://www.w3.org/2000/svg", "svg"))
     .attr("viewBox", "0 0 360 360").attr("width", 360).attr("height", 360)
-    .attr("role", "img").attr("aria-label", "Kalshi fee revenue by category over the past six months");
-  svg.append("title").text("Kalshi fee revenue over the past six months");
+    .attr("role", "img").attr("aria-label", `Kalshi fee revenue by source, ${span}`);
+  svg.append("title").text(`Kalshi fee revenue by source, ${span}`);
   const arcs = d3.pie().sort(null).value(d => d.fees)(mix.slices);
   const arc = d3.arc().innerRadius(0).outerRadius(155);
   const group = svg.append("g").attr("transform", "translate(180,180)");

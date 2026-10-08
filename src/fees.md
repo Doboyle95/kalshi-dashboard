@@ -192,352 +192,6 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--accent-tertiary)"></span>7-day average</span>
 </div>
 
-## Sports vs. non-sports fee revenue by month
-
-<p class="section-intro">Monthly exchange fee revenue for the latest 12 calendar months. Sports includes straight sports fees and parlays; the newest month may be partial.</p>
-
-```js
-const sportsFeesMonthByDate = new Map(sports.map(d => [+d.date, d]));
-const latestFeeDate = d3.max(daily, d => d.date);
-const latestFeeMonth = latestFeeDate.toISOString().slice(0, 7);
-const priorFeeMonth = (month, offset) => {
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, monthNumber - 1 + offset, 1)).toISOString().slice(0, 7);
-};
-const sportsNonSportsMonths = Array.from({length: 12}, (_, i) => priorFeeMonth(latestFeeMonth, i - 11));
-const sportsMonthlyTickFormat = month => {
-  const date = new Date(month + "-01T00:00:00Z");
-  const label = date.toLocaleDateString("en-US", {month: "short", timeZone: "UTC"});
-  return month === sportsNonSportsMonths[0] || month.endsWith("-01") ? `${label} '${month.slice(2, 4)}` : label;
-};
-const sportsMonthlyCents = new Map(sportsNonSportsMonths.map(month => [month, {sports: 0, nonsports: 0}]));
-for (const day of daily) {
-  const month = day.date.toISOString().slice(0, 7);
-  const monthly = sportsMonthlyCents.get(month);
-  const split = sportsFeesMonthByDate.get(+day.date);
-  if (!monthly) continue;
-  if (!split || !Number.isFinite(day.fees_total) || !Number.isFinite(split.fees_nonsports)) {
-    throw new Error("Monthly sports fee data is incomplete");
-  }
-  const totalCents = Math.round(day.fees_total * 100);
-  const nonsportsCents = Math.round(split.fees_nonsports * 100);
-  if (nonsportsCents > totalCents) throw new Error("Non-sports fees exceed the daily total");
-  // The remainder includes straight sports fees and the parlay residual, so
-  // the two bars reconcile exactly to the published total, including maker fees.
-  monthly.nonsports += nonsportsCents;
-  monthly.sports += totalCents - nonsportsCents;
-}
-const sportsNonSportsMonthly = sportsNonSportsMonths.map(month => {
-  const cents = sportsMonthlyCents.get(month);
-  const total = cents.sports + cents.nonsports;
-  return {month, sports: cents.sports / 100, nonsports: cents.nonsports / 100, total: total / 100,
-    sportsShare: total ? cents.sports / total : 0, nonsportsShare: total ? cents.nonsports / total : 0};
-});
-const sportsNonSportsBars = sportsNonSportsMonthly.flatMap(d => [
-  {month: d.month, category: "Non-sports", fees: d.nonsports},
-  {month: d.month, category: "Sports (including parlays)", fees: d.sports}
-]);
-const sportsNonSportsTip = d => {
-  const total = d.total || 0;
-  const dollars = value => "$" + fmtCount(value);
-  const monthLabel = new Date(d.month + "-01T00:00:00Z").toLocaleDateString("en-US", {month: "long", year: "numeric", timeZone: "UTC"});
-  return [
-    monthLabel,
-    ...(d.month === latestFeeMonth ? [`Data through ${fmtDate(latestFeeDate)}`] : []),
-    `Total: ${dollars(total)}`,
-    `Sports, including parlays: ${dollars(d.sports)} (${(d.sportsShare * 100).toFixed(1)}%)`,
-    `Non-sports: ${dollars(d.nonsports)} (${(d.nonsportsShare * 100).toFixed(1)}%)`
-  ].join("\n");
-};
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 330,
-  marginLeft: 66,
-  marginBottom: width < 620 ? 54 : 38,
-  color: {legend: true, domain: ["Non-sports", "Sports (including parlays)"], range: ["#377eb8", "#1b9e77"]},
-  x: {type: "band", domain: sportsNonSportsMonths, label: null, tickFormat: sportsMonthlyTickFormat, tickRotate: width < 620 ? -35 : 0},
-  y: {label: "Monthly fee revenue", grid: true, tickFormat: fmtUSD},
-  marks: [
-    Plot.barY(sportsNonSportsBars, {x: "month", y: "fees", fill: "category", order: ["Non-sports", "Sports (including parlays)"], fillOpacity: 0.9}),
-    Plot.ruleX(sportsNonSportsMonthly, Plot.pointerX({x: "month", stroke: "currentColor", strokeOpacity: 0.22})),
-    Plot.tip(sportsNonSportsMonthly, Plot.pointerX({x: "month", fontSize: 11, lineHeight: 1.2, title: sportsNonSportsTip})),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note">Hover over a month for each segment's fee revenue and share of that month's total. Data through ${fmtDate(latestFeeDate)}. Values include taker and maker fees; parlays are included with sports.</div>
-
-## Kalshi fee revenue mix over the past six months
-
-```js
-import {buildFeeRevenueMix, feeRevenueMixPie} from "./components/fee-revenue-mix.js";
-const sixMonthFeeMix = buildFeeRevenueMix(daily, sports, topDailyFees, catLeaderboard);
-```
-
-<p class="section-intro">${fmtDate(sixMonthFeeMix.start)} – ${fmtDate(sixMonthFeeMix.end)}. Total exchange fee revenue, including both taker and maker charges.</p>
-
-<div class="plot-shell">
-
-```js
-feeRevenueMixPie(sixMonthFeeMix, {d3})
-```
-
-</div>
-
-<div class="chart-note">Straight sports excludes parlays. The 15-minute slice combines crypto, financial and commodity price markets; other non-sports includes the remaining non-sports markets. ${sixMonthFeeMix.isPartial ? "The latest day is partial." : ""}</div>
-
-## Daily non-sports fee revenue
-
-<p class="section-intro">Kalshi's non-sports fee revenue by day since January 1, 2026. Fees include both taker and maker charges, recorded on the trade date.</p>
-
-```js
-// Keep this embed's requested 2026 window independent of the page's date brushes.
-// Missing fee values stay missing; a zero is shown only when the source reports zero.
-const nonSportsFees2026 = sports.filter(d =>
-  d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01") &&
-  Number.isFinite(d.fees_nonsports)
-).slice().sort((a, b) => a.date - b.date);
-const nonSportsPartialDates = new Set(daily.filter(isPartialFee).map(d => +d.date));
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"},
-  width,
-  height: 280,
-  marginLeft: 70,
-  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
-  y: {
-    label: "Daily fees (USD)", grid: true,
-    tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")
-  },
-  marks: [
-    Plot.rectY(nonSportsFees2026, {
-      x1: "date", x2: d => new Date(+d.date + 864e5),
-      y: "fees_nonsports", fill: "#377eb8",
-      fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
-    }),
-    Plot.ruleX(nonSportsFees2026, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(nonSportsFees2026, Plot.pointerX({
-      x: "date",
-      title: d => [
-        fmtDate(d.date),
-        `Non-sports fees: $${d.fees_nonsports.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
-        nonSportsPartialDates.has(+d.date) ? "Partial day" : null
-      ].filter(Boolean).join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsFees2026))}. The latest day may be partial; a lighter bar marks a partial day. Data updates with Predict Charts' published daily aggregates.</div>
-
-## Daily non-sports fee revenue by category
-
-<p class="section-intro">Kalshi's daily non-sports fee revenue since January 1, 2026, split by category. Finance covers commodity, stock index, currency, and yield prices; Economics covers Fed policy, unemployment, inflation, and other economic releases. Each stacked bar adds up to the same daily total as the chart above.</p>
-
-```js
-import {NONSPORTS_FEE_CATEGORIES, NONSPORTS_FEE_COLORS, nonSportsFeesByCategory, fifteenMinuteFees} from "./components/fee-embeds.js";
-const embedFeeRows2026 = topDailyFees.filter(d => d.date >= new Date("2026-01-01") && d.date < new Date("2027-01-01"));
-const nonSportsCategoryFees2026 = nonSportsFeesByCategory(embedFeeRows2026, sports, catLeaderboard, wideCategoryForTicker);
-const nonSportsCategoryBars = nonSportsCategoryFees2026.flatMap(d => {
-  let baseline = 0;
-  return NONSPORTS_FEE_CATEGORIES.map(category => {
-    const y0 = baseline;
-    baseline += d[category];
-    return {date: d.date, category, y0, y1: baseline};
-  });
-});
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
-  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
-  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  color: {legend: true, domain: NONSPORTS_FEE_CATEGORIES, range: NONSPORTS_FEE_COLORS},
-  marks: [
-    Plot.rectY(nonSportsCategoryBars, {
-      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
-      fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
-    }),
-    Plot.ruleX(nonSportsCategoryFees2026, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(nonSportsCategoryFees2026, Plot.pointerX({
-      x: "date", title: d => [fmtDate(d.date),
-        ...NONSPORTS_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
-        `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
-        nonSportsPartialDates.has(+d.date) ? "Partial day" : null
-      ].filter(Boolean).join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note">January 1 – ${fmtDate(latestDate(nonSportsCategoryFees2026))}. Finance and Economics use Kalshi's verified series metadata to separate asset prices from macroeconomic releases and policy. Other includes the remaining non-sports fees. Sports and parlays follow the same exclusions as the original non-sports total. A lighter bar marks a partial day.</div>
-
-## Daily non-sports fees excluding crypto and financial markets
-
-<p class="section-intro">Daily fee revenue over the latest six months, with crypto and financial price markets removed. Economics remains: CPI, unemployment, payrolls, GDP, and Fed policy.</p>
-
-```js
-import {FILTERED_FEE_CATEGORIES, FILTERED_FEE_COLORS, filteredNonSportsFees} from "./components/fee-embeds.js";
-const filteredCategoryDaily = await DataAttachment("data/category_daily.csv").csv({typed: true});
-const filteredFeesThrough = d3.max(filteredCategoryDaily, d => d.date);
-const filteredFeesStart = d3.utcMonth.offset(d3.utcDay.offset(filteredFeesThrough, 1), -6);
-const filteredNonSportsFeesSixMonths = filteredNonSportsFees(filteredCategoryDaily.filter(d => d.date >= filteredFeesStart && d.date <= filteredFeesThrough));
-const filteredNonSportsBars = filteredNonSportsFeesSixMonths.flatMap(d => {
-  let baseline = 0;
-  return FILTERED_FEE_CATEGORIES.map(category => {
-    const y0 = baseline;
-    baseline += d[category];
-    return {date: d.date, category, y0, y1: baseline};
-  });
-});
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
-  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
-  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  color: {legend: true, domain: FILTERED_FEE_CATEGORIES, range: FILTERED_FEE_COLORS},
-  marks: [
-    Plot.rectY(filteredNonSportsBars, {
-      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
-      fillOpacity: 0.85
-    }),
-    Plot.ruleX(filteredNonSportsFeesSixMonths, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(filteredNonSportsFeesSixMonths, Plot.pointerX({
-      x: "date", title: d => [fmtDate(d.date),
-        ...FILTERED_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
-        `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`
-      ].filter(Boolean).join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note">${fmtDate(filteredFeesStart)} – ${fmtDate(latestDate(filteredNonSportsFeesSixMonths))} (latest six months), latest available category-data day. Uses Kalshi's source categories, excluding Sports, Non-sport parlays, Crypto, Financials, and Commodities. Economics includes economic releases and Fed policy; Politics includes Elections. Other sums the remaining source categories.</div>
-
-## Daily non-sports fees excluding 15-minute markets
-
-<p class="section-intro">Daily non-sports fee revenue over the latest six months, excluding only 15-minute markets. Longer-duration crypto, commodities, indices, currencies, and other financial markets remain, alongside Economics, Politics, Weather, Mention, Entertainment, and Other.</p>
-
-```js
-import {nonSportsFeesExcludingFifteenMinute} from "./components/fee-embeds.js";
-const nonFifteenMinuteFeeData = nonSportsFeesExcludingFifteenMinute(
-  topDailyFees.filter(d => d.date >= filteredFeesStart && d.date <= filteredFeesThrough),
-  sports, catLeaderboard, wideCategoryForTicker
-);
-const nonFifteenMinuteFees = nonFifteenMinuteFeeData.rows;
-const nonFifteenMinuteBars = nonFifteenMinuteFees.flatMap(d => {
-  let baseline = 0;
-  return NONSPORTS_FEE_CATEGORIES.map(category => {
-    const y0 = baseline;
-    baseline += d[category];
-    return {date: d.date, category, y0, y1: baseline};
-  });
-});
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
-  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
-  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  color: {legend: true, domain: NONSPORTS_FEE_CATEGORIES, range: NONSPORTS_FEE_COLORS},
-  marks: [
-    Plot.rectY(nonFifteenMinuteBars, {
-      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
-      fillOpacity: 0.85
-    }),
-    Plot.ruleX(nonFifteenMinuteFees, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(nonFifteenMinuteFees, Plot.pointerX({
-      x: "date", title: d => [fmtDate(d.date),
-        ...NONSPORTS_FEE_CATEGORIES.map(c => `${c}: $${d[c].toLocaleString("en-US", {maximumFractionDigits: 2})}`),
-        `Total: $${d.total.toLocaleString("en-US", {maximumFractionDigits: 2})}`
-      ].filter(Boolean).join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note">${fmtDate(filteredFeesStart)} – ${fmtDate(latestDate(nonFifteenMinuteFees))} (latest six months). Starts with the full non-sports fee total and subtracts the ${nonFifteenMinuteFeeData.tickers.length} identified 15-minute series with published fee data, including products otherwise grouped into Other. Hourly, daily, and longer-duration markets remain. Sports and parlays follow the original non-sports exclusions. Fees include taker and maker charges.</div>
-
-## Daily 15-minute crypto, commodity and finance fee revenue
-
-<p class="section-intro">Kalshi's fee revenue from 15-minute crypto, commodity, and financial markets, totaled by trade date since January 1, 2026. Each bar combines all three groups and includes taker and maker fees.</p>
-
-```js
-const cryptoCommodity15Fees2026 = fifteenMinuteFees(embedFeeRows2026, catLeaderboard);
-const cryptoCommodity15Bars = cryptoCommodity15Fees2026.rows.flatMap(d => [
-  {date: d.date, category: "Crypto", y0: 0, y1: d.cryptoFees},
-  {date: d.date, category: "Commodities", y0: d.cryptoFees, y1: d.cryptoFees + d.commodityFees},
-  {date: d.date, category: "Finance", y0: d.cryptoFees + d.commodityFees, y1: d.fees}
-]);
-```
-
-<div class="plot-shell">
-
-```js
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 280, marginLeft: 70,
-  x: {type: "utc", label: null, ticks: Math.max(3, Math.floor(width / 100))},
-  y: {label: "Daily fees (USD)", grid: true, tickFormat: d => "$" + (d >= 1e6 ? (d / 1e6).toFixed(1) + "M" : (d / 1e3).toFixed(0) + "k")},
-  color: {legend: true, domain: ["Crypto", "Commodities", "Finance"], range: ["#0072B2", "#D55E00", "#009E73"]},
-  marks: [
-    Plot.rectY(cryptoCommodity15Bars, {
-      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1", fill: "category",
-      fillOpacity: d => nonSportsPartialDates.has(+d.date) ? 0.4 : 0.85
-    }),
-    Plot.ruleX(cryptoCommodity15Fees2026.rows, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
-    Plot.tip(cryptoCommodity15Fees2026.rows, Plot.pointerX({
-      x: "date", title: d => [fmtDate(d.date),
-        `Crypto: $${d.cryptoFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
-        `Commodities: $${d.commodityFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
-        `Finance: $${d.financeFees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
-        `Total: $${d.fees.toLocaleString("en-US", {maximumFractionDigits: 2})}`,
-        nonSportsPartialDates.has(+d.date) ? "Partial day" : null
-      ].filter(Boolean).join("\n")
-    })),
-    Plot.ruleY([0])
-  ]
-})
-```
-
-</div>
-
-<div class="chart-note">January 1 – ${fmtDate(latestDate(cryptoCommodity15Fees2026.rows))}. Includes ${cryptoCommodity15Fees2026.cryptoTickers.length} crypto, ${cryptoCommodity15Fees2026.commodityTickers.length} commodity, and ${cryptoCommodity15Fees2026.financeTickers.length} financial series with published fee data. Finance includes 15-minute currencies, stock indices, and Treasury yields as their data becomes available; hourly and daily markets are excluded. A lighter bar marks a partial day.</div>
-
 ## Taker vs maker fees
 
 <p class="section-intro">Kalshi bills the aggressor on almost every market, but it also charges the <strong>resting</strong> side on a named subset — soccer, tennis, rate and inflation markets. This splits the daily total above into those two parts.</p>
@@ -737,6 +391,32 @@ Plot.plot({
 ```
 
 </div>
+
+## Fee revenue mix
+
+<p class="section-intro">Where Kalshi's fee revenue came from over the selected dates, taker and maker fees combined.</p>
+
+```js
+import {dateBrush, inDateRange} from "./components/date-brush.js";
+// The quick ranges shared by the brushes below, as on the Compare pages.
+const QUICK_RANGES = [{label: "90d", days: 90}, {label: "365d", days: 365}, {label: "All", days: Infinity}];
+const feeMixRange = view(dateBrush({data: daily, valueAccessor: d => d.fees_total, color: "var(--accent-secondary)", width, quickRanges: QUICK_RANGES}));
+```
+
+```js
+import {buildFeeRevenueMix, feeRevenueMixPie} from "./components/fee-revenue-mix.js";
+const feeMix = buildFeeRevenueMix(daily, sports, nonSportsRowsIn(feeMixRange), feeMixRange);
+```
+
+<div class="plot-shell">
+
+```js
+feeMix ? feeRevenueMixPie(feeMix, {d3}) : html`<p>No fee data for these dates.</p>`
+```
+
+</div>
+
+<div class="chart-note">${feeMix ? `${fmtDate(feeMix.start)} – ${fmtDate(feeMix.end)}. ` : ""}Straight sports excludes parlays. 15-minute markets are crypto, commodity and financial price markets that each run for 15 minutes.</div>
 
 ## Fee rate (cents per contract)
 
@@ -1175,3 +855,91 @@ Plot.plot({
 </div>
 
 <div class="chart-note"><strong>Reading note:</strong> a month with zero contracts for a category is left as a gap in that line rather than a misleading 0¢ rate. <em>General</em>/<em>Detailed</em> match the toggle above; this chart ignores the <em>Normalized</em> scale control (a rate is already normalized).</div>
+
+## Non-sports fee revenue
+
+<p class="section-intro">Kalshi's daily non-sports fees by category, with 15-minute markets shown on their own.</p>
+
+```js
+const nonSportsRange = view(dateBrush({data: sports, valueAccessor: d => d.fees_nonsports, color: "#0072B2", width, quickRanges: QUICK_RANGES}));
+```
+
+<div class="control-strip">
+
+```js
+import {NONSPORTS_VIEWS, NONSPORTS_COLORS, nonSportsFeeBander} from "./components/fee-embeds.js";
+import {hashGet, hashInput} from "./components/hash-state.js";
+// Kept in the URL (#nonsports=...), so a link or an embed can open on any view.
+const nonSportsViewAsked = hashGet("nonsports", "All non-sports");
+const nonSportsView = view(hashInput("nonsports", Inputs.radio([...NONSPORTS_VIEWS.keys()],
+  {value: NONSPORTS_VIEWS.has(nonSportsViewAsked) ? nonSportsViewAsked : "All non-sports", label: "Show"})));
+```
+
+</div>
+
+```js
+// Each day is split into its bands only when a chart first shows it (the fee-mix pie above reads
+// its 15-minute slice from the same rows), so a year's view never pays for the whole history.
+// Complete days only: on the day still filling, the reported non-sports total runs ahead of the
+// per-market file and the gap would land in Everything else (73% of 2026-10-07 at 23:00 ET, vs
+// a 2.6% median on complete days). Built in a task of its own: the fees file's parse and the
+// category charts above already make one long main-thread task, and these two charts added
+// ~0.6 s to it (CPU profile, 2026-10-07).
+const nonSportsBand = await new Promise(resolve => setTimeout(() =>
+  resolve(nonSportsFeeBander(topDailyFees, sports, catLeaderboard, wideCategoryForTicker))));
+const completeFeeDays = new Set(daily.filter(d => !isPartialFee(d)).map(d => +d.date));
+const nonSportsRowsIn = range => {
+  const inRange = inDateRange(range);
+  return topDailyFees.filter(d => completeFeeDays.has(+d.date) && inRange(d)).map(nonSportsBand).filter(Boolean);
+};
+```
+
+```js
+const nonSportsBands = NONSPORTS_VIEWS.get(nonSportsView);
+const nonSportsShown = nonSportsRowsIn(nonSportsRange);
+const nonSportsBars = nonSportsShown.flatMap(d => {
+  let top = 0;
+  return nonSportsBands.map(band => {
+    const y0 = top;
+    top += d[band];
+    return {date: d.date, band, y0, y1: top};
+  });
+});
+// d3 formats: toLocaleString cost ~0.1 s here, since Plot builds every tip up front.
+const usd = d3.format("$,.0f");
+const tipDay = d3.utcFormat("%b %-d, %Y");
+const nonSportsTip = d => [
+  tipDay(d.date),
+  ...nonSportsBands.map(b => `${b}: ${usd(d[b])}`),
+  // Everything else is the biggest band once crypto and finance are out: itemise it.
+  ...(nonSportsView === "Without crypto & finance" ? ["Weather", "Mention", "Entertainment", "Other"].map(p => `  ${p}: ${usd(d[p])}`) : []),
+  nonSportsView === "All non-sports" ? `Total: ${usd(d.total)}` : `Shown: ${usd(d3.sum(nonSportsBands, b => d[b]))} of ${usd(d.total)}`
+].join("\n");
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 280,
+  marginLeft: 70,
+  x: {type: "utc", label: null},
+  y: {label: "Fees (USD)", grid: true, tickFormat: d => d >= 1e6 ? "$" + (d/1e6).toFixed(1) + "M" : d >= 1e3 ? "$" + (d/1e3).toFixed(0) + "k" : "$" + d},
+  color: {legend: true, domain: nonSportsBands, range: nonSportsBands.map(b => NONSPORTS_COLORS[b])},
+  marks: [
+    Plot.rectY(nonSportsBars, {
+      x1: "date", x2: d => new Date(+d.date + 864e5), y1: "y0", y2: "y1",
+      fill: "band", fillOpacity: 0.85
+    }),
+    Plot.ruleX(nonSportsShown, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(nonSportsShown, Plot.pointerX({x: "date", title: nonSportsTip})),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="chart-note">Everything else is weather, mention and entertainment markets plus smaller categories; 15-minute finance is currencies, stock indices and Treasury yields. The day still in progress is left out.</div>
