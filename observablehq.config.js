@@ -131,7 +131,10 @@ const VENUES = [
     ["Trading behavior", "/dkex-behavior"],
     ["Economics", "/dkex-economics"],
     ["Outcomes", "/dkex-outcomes"],
-    ["Parlays", "/dkex-parlays"]
+    ["Parlays", "/dkex-parlays"],
+    // Added 2026-10-08 (Daniel), mirroring Kalshi's and OG/Crypto.com's own "Parlay outcomes" tabs: buyer
+    // P&L over time, by day, and correlated vs non-correlated, which /dkex-parlays only had as one number.
+    ["Parlay outcomes", "/dkex-parlay-outcomes"]
   ]},
   {name: "Underdog Exchange", accent: "underdog", tabs: [
     ["Activity", "/underdog"],
