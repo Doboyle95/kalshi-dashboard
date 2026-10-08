@@ -22,7 +22,7 @@ const isPartial = d => d.is_partial === true || d.is_partial === "TRUE";
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
-import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {askPageLink, fileUpdatedAt, fileUpdatedDay, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -275,7 +275,12 @@ const parlayFeesFor = sp =>
 // fee per contract. These are the fees actually reported for each ticker; residual bands
 // preserve reconciliation with the broad daily split and the parlay residual below.
 const feeColumns = volColumnGroups(topDailyFees);
-const feeWideDaily = topDailyFees.map(row => {
+// Complete days only, by the fees page's rule: daily_top_categories_fees.csv is rebuilt once a day
+// (~07:30 ET), so its newest day holds just the hours before the rebuild, and next to the near-live
+// totals the rest of that day showed up as Other sports / Other non-sports fees.
+const feeFileDay = fileUpdatedDay(freshness, "daily_top_categories_fees.csv") ?? latestDate(topDailyFees);
+const completeFeeDays = new Set(daily.filter(d => !isPartial(d) && d.date < feeFileDay).map(d => +d.date));
+const feeWideDaily = topDailyFees.filter(row => completeFeeDays.has(+row.date)).map(row => {
   const sp = sportsByDate.get(+row.date) || {};
   const groups = newVolGroups();
   for (const [cat, wg] of feeColumns) groups[wg] += +row[cat] || 0;
@@ -466,13 +471,15 @@ const dr2 = view(makeDateBrush());
 const [s2, e2] = dr2;
 const fd2 = daily.filter(d => d.date >= s2 && d.date <= e2);
 const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2);
+// Fees by category stop where feeWideDaily does; on a later day every category but Parlay would read 0.
+const fd2Cat = sportsMetric === "Fees" ? fd2.filter(d => completeFeeDays.has(+d.date)) : fd2;
 
 const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
 const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Economics", "Finance", "Politics", "Crypto"];
 
 const tidySports =
   sportsView === "Sports only"
-    ? fd2.flatMap(d => {
+    ? fd2Cat.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
         const fw = feeWideDaily.find(r => +r.date === +d.date) || {};
         const sp = fs2.find(r => +r.date === +d.date) || {};
@@ -485,7 +492,7 @@ const tidySports =
         }));
       })
   : sportsView === "Non-sports only"
-    ? fd2.flatMap(d => {
+    ? fd2Cat.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
         const fw = feeWideDaily.find(r => +r.date === +d.date) || {};
         return nonSportsOrder.map(g => ({

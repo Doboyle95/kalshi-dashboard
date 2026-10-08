@@ -30,6 +30,17 @@ export function fileUpdatedAt(manifest, filename) {
   return manifest?.files?.[filename]?.last_write_time ?? null;
 }
 
+// The New York date of a file's last write, as a UTC midnight like the CSVs' own dates; null
+// without a usable manifest entry. A daily file rebuilt during day D has the days before D in full.
+export function fileUpdatedDay(manifest, filename) {
+  // The manifest writes microseconds; the Date format only promises to read milliseconds.
+  const t = Date.parse(String(fileUpdatedAt(manifest, filename) ?? "").replace(/(\.\d{3})\d+/, "$1"));
+  if (!Number.isFinite(t)) return null;
+  const part = Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone: "America/New_York", year: "numeric", month: "numeric", day: "numeric"})
+    .formatToParts(t).map(({type, value}) => [type, value]));
+  return new Date(Date.UTC(+part.year, +part.month - 1, +part.day));
+}
+
 export function latestDate(rows, accessor = d => d.date) {
   let latest = null;
   for (const row of rows ?? []) {

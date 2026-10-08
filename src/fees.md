@@ -15,7 +15,7 @@ display(DataAttachment.marker);
 const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
 const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
 const freshness = await DataAttachment("data/freshness_manifest.json").json();
-import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
+import {askPageLink, fileUpdatedAt, fileUpdatedDay, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 ```
 
@@ -603,7 +603,20 @@ const generalColors = {
 ```
 
 ```js
-// wideDailyFees — trade-date fees by display group.
+// The days every chart below takes from the per-market fee file: complete in BOTH sources. The
+// daily totals mark the day in progress, and daily_top_categories_fees.csv is rebuilt once a day
+// (07:21 ET on 2026-10-08), so its newest day holds just the hours before that rebuild; a missed
+// rebuild leaves it further behind. Next to the near-live totals the rest of that day showed up
+// as Other fees (2026-10-07 at 23:00 ET: Other sports $2.95M and Other non-sports $2.41M, against
+// ~$0.3M and ~$0.1M on complete days), and October's fee rates mixed part-day fees with whole-day
+// contracts (Other non-sports 2.6¢ against 0.7¢ in September). The cutoff is the New York date of
+// the rebuild, or without a manifest entry the file's own newest day.
+const feeFileDay = fileUpdatedDay(freshness, "daily_top_categories_fees.csv") ?? latestDate(topDailyFees);
+const completeFeeDays = new Set(daily.filter(d => !isPartialFee(d) && d.date < feeFileDay).map(d => +d.date));
+```
+
+```js
+// wideDailyFees — trade-date fees by display group, on complete fee days (completeFeeDays).
 // Parlay is a single bucket (no per-leg fee data), derived as the residual
 // total_fees - sports_fees - nonsports_fees so the stack still sums to the day's fees.
 const catFeesTotalByDate = new Map(daily.map(d => [+d.date, +d.fees_total || 0]));
@@ -611,7 +624,7 @@ const catFeesTotalByDate = new Map(daily.map(d => [+d.date, +d.fees_total || 0])
 const sportsByDate = new Map();
 for (const s of sports) if (!Number.isNaN(+s.date) && !sportsByDate.has(+s.date)) sportsByDate.set(+s.date, s);
 const feeColumnGroups = wideColumnGroups(topDailyFees);
-const wideDailyFees = topDailyFees.map(row => {
+const wideDailyFees = topDailyFees.filter(row => completeFeeDays.has(+row.date)).map(row => {
   const sp = sportsByDate.get(+row.date) || {};
   const groups = newWideGroups();
   for (const [cat, wg] of feeColumnGroups) groups[wg] += +row[cat] || 0;
@@ -717,7 +730,7 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note"><strong>Reading note:</strong> these are trade-date fees (charged when a trade executes), so they reconcile with the daily fee totals above. Parlay is one bucket — we don't have per-leg fee data to split it.</div>
+<div class="chart-note"><strong>Reading note:</strong> these are trade-date fees (charged when a trade executes), so they reconcile with the daily fee totals above. Parlay is one bucket — we don't have per-leg fee data to split it. Each day is added the morning after it ends.</div>
 
 ### Daily view
 
@@ -767,11 +780,12 @@ const topDailyVolume = await DataAttachment("data/daily_top_categories.csv").csv
 ```
 
 ```js
-// Contracts by the same display groups as wideDailyFees. Built exactly as categories.md's
+// Contracts by the same display groups as wideDailyFees, on the same days, so each month's rate
+// divides fees by the contracts of the days those fees cover. Built exactly as categories.md's
 // wideDaily builds these keys; its leg-based parlay split is left out because the rate uses
 // the single Parlay total.
 const volumeColumnGroups = wideColumnGroups(topDailyVolume);
-const catVolumeDaily = topDailyVolume.map(row => {
+const catVolumeDaily = topDailyVolume.filter(row => completeFeeDays.has(+row.date)).map(row => {
   const sp = sportsByDate.get(+row.date) || {};
   const groups = newWideGroups();
   for (const [cat, wg] of volumeColumnGroups) groups[wg] += +row[cat] || 0;
@@ -884,16 +898,8 @@ const nonSportsView = view(hashInput("nonsports", Inputs.radio([...NONSPORTS_VIE
 // one long main-thread task, and these two charts added ~0.6 s to it (CPU profile, 2026-10-07).
 const nonSportsBand = await new Promise(resolve => setTimeout(() =>
   resolve(nonSportsFeeBander(topDailyFees, sports, catLeaderboard, wideCategoryForTicker))));
-const feeFileWrite = fileUpdatedAt(freshness, "daily_top_categories_fees.csv");
-// Days complete in BOTH sources only. The daily totals mark the day in progress, and the per-market
-// fee file is rebuilt once a day (07:31 ET on 2026-10-07), so its newest day holds just the hours
-// before that rebuild; a missed rebuild leaves it further behind. The gap would land in Everything
-// else (75% of 2026-10-07 the night after, against a 2.6% median on complete days). The cutoff is
-// the New York date of the rebuild, or without a manifest entry the file's own newest day.
-const feeFileDay = feeFileWrite
-  ? new Date(new Date(feeFileWrite).toLocaleDateString("en-CA", {timeZone: "America/New_York"}))
-  : latestDate(topDailyFees);
-const completeFeeDays = new Set(daily.filter(d => !isPartialFee(d) && d.date < feeFileDay).map(d => +d.date));
+// Complete fee days only (completeFeeDays, above wideDailyFees): on the newest day of the per-market
+// file the gap to the near-live non-sports total would land in Everything else.
 const nonSportsRowsIn = range => {
   const inRange = inDateRange(range);
   return topDailyFees.filter(d => completeFeeDays.has(+d.date) && inRange(d)).map(nonSportsBand).filter(Boolean);
