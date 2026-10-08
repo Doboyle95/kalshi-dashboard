@@ -880,14 +880,20 @@ const nonSportsView = view(hashInput("nonsports", Inputs.radio([...NONSPORTS_VIE
 ```js
 // Each day is split into its bands only when a chart first shows it (the fee-mix pie above reads
 // its 15-minute slice from the same rows), so a year's view never pays for the whole history.
-// Complete days only: on the day still filling, the reported non-sports total runs ahead of the
-// per-market file and the gap would land in Everything else (73% of 2026-10-07 at 23:00 ET, vs
-// a 2.6% median on complete days). Built in a task of its own: the fees file's parse and the
-// category charts above already make one long main-thread task, and these two charts added
-// ~0.6 s to it (CPU profile, 2026-10-07).
+// Built in a task of its own: the fees file's parse and the category charts above already make
+// one long main-thread task, and these two charts added ~0.6 s to it (CPU profile, 2026-10-07).
 const nonSportsBand = await new Promise(resolve => setTimeout(() =>
   resolve(nonSportsFeeBander(topDailyFees, sports, catLeaderboard, wideCategoryForTicker))));
-const completeFeeDays = new Set(daily.filter(d => !isPartialFee(d)).map(d => +d.date));
+const feeFileWrite = fileUpdatedAt(freshness, "daily_top_categories_fees.csv");
+// Days complete in BOTH sources only. The daily totals mark the day in progress, and the per-market
+// fee file is rebuilt once a day (07:31 ET on 2026-10-07), so its newest day holds just the hours
+// before that rebuild; a missed rebuild leaves it further behind. The gap would land in Everything
+// else (75% of 2026-10-07 the night after, against a 2.6% median on complete days). The cutoff is
+// the New York date of the rebuild, or without a manifest entry the file's own newest day.
+const feeFileDay = feeFileWrite
+  ? new Date(new Date(feeFileWrite).toLocaleDateString("en-CA", {timeZone: "America/New_York"}))
+  : latestDate(topDailyFees);
+const completeFeeDays = new Set(daily.filter(d => !isPartialFee(d) && d.date < feeFileDay).map(d => +d.date));
 const nonSportsRowsIn = range => {
   const inRange = inDateRange(range);
   return topDailyFees.filter(d => completeFeeDays.has(+d.date) && inRange(d)).map(nonSportsBand).filter(Boolean);
@@ -942,4 +948,4 @@ Plot.plot({
 
 </div>
 
-<div class="chart-note">Everything else is weather, mention and entertainment markets plus smaller categories; 15-minute finance is currencies, stock indices and Treasury yields. The day still in progress is left out.</div>
+<div class="chart-note">Everything else is weather, mention and entertainment markets plus smaller categories; 15-minute finance is currencies, stock indices and Treasury yields. Each day is added the morning after it ends.</div>
