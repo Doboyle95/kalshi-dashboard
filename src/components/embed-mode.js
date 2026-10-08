@@ -21,9 +21,37 @@
   try { params = new URLSearchParams(location.search); } catch { return; }
   const target = params.get("embed");
   if (!target) return;
-  // Existing iframe codes keep their height-message identity after this chart expands.
-  const targetId = target === "daily-15-minute-crypto-and-commodity-fee-revenue"
-    ? "daily-15-minute-crypto-commodity-and-finance-fee-revenue" : target;
+  // Ids a section was published under before its heading changed: old -> current. The height
+  // message keeps sending `target` as given, which is what an old snippet's resize script checks.
+  const RENAMED = new Map([
+    ["daily-15-minute-crypto-fee-revenue", "daily-15-minute-crypto-commodity-and-finance-fee-revenue"],
+    ["daily-15-minute-crypto-and-commodity-fee-revenue", "daily-15-minute-crypto-commodity-and-finance-fee-revenue"]
+  ]);
+  const targetId = RENAMED.get(target) ?? target;
+
+  // Charts frozen for published articles (src/snapshots/). Their iframe codes still name the
+  // page they were made on, so the embed goes straight to the frozen copy, before this page
+  // loads any of its data. The copy keeps every section id, and the query string carries over,
+  // so `embed`, the height messages and the host's resize script all still match.
+  // page name -> [snapshot page, ids it holds]
+  const SNAPSHOTS = new Map([
+    ["fees", ["snapshots/fees-2026-10-06", [
+      "sports-vs-non-sports-fee-revenue-by-month",
+      "kalshi-fee-revenue-mix-over-the-past-six-months",
+      "daily-non-sports-fee-revenue",
+      "daily-non-sports-fee-revenue-by-category",
+      "daily-non-sports-fees-excluding-crypto-and-financial-markets",
+      "daily-non-sports-fees-excluding-15-minute-markets",
+      "daily-15-minute-crypto-commodity-and-finance-fee-revenue"
+    ]]]
+  ]);
+  const path = location.pathname.replace(/\.html$/, "");
+  const snapshot = SNAPSHOTS.get(path.slice(path.lastIndexOf("/") + 1));
+  if (snapshot && snapshot[1].includes(targetId)) {
+    document.documentElement.style.visibility = "hidden";
+    location.replace(path.slice(0, path.lastIndexOf("/") + 1) + snapshot[0] + location.search + location.hash);
+    return;
+  }
 
   const root = document.documentElement;
   root.classList.add("pc-embed");

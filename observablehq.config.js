@@ -223,7 +223,8 @@ const SITE_MAP = [
 // With the sidebar off, this map is the ONLY source of site-wide navigation, so a page
 // missing from it is unreachable except by URL — which is exactly the condition
 // this whole change exists to remove. A dangling entry is a 404 in the menu.
-// Both were silent before; neither can be now.
+// Both were silent before; neither can be now. Only top-level pages are checked: the frozen
+// article snapshots in src/snapshots/ are deliberately reachable only through their embeds.
 {
   const built = new Set(
     readdirSync(new URL("./src", import.meta.url))
@@ -434,7 +435,11 @@ export default {
   // per-page tag can be emitted without a browser cell that could fail silently. A page
   // can still override it with `head:` in its own front matter.
   head: ({path, title}) => {
-    const canonicalPath = path === "/index" ? "/" : path;
+    // src/snapshots/<page>-<date>.md are frozen copies of charts that published articles embed
+    // (components/embed-mode.js forwards their old embed URLs there). They stay out of search
+    // and point their canonical at the live page, which also keeps them out of the sitemap.
+    const snapshotOf = /^\/snapshots\/(.+)-\d{4}-\d{2}-\d{2}$/.exec(path)?.[1];
+    const canonicalPath = snapshotOf ? "/" + snapshotOf : path === "/index" ? "/" : path;
     const canonicalUrl = SITE_ORIGIN + canonicalPath;
     const socialTitle = title ? `${title} | Predict Charts` : "Predict Charts";
     return [
@@ -460,6 +465,7 @@ export default {
     // Framework names the home page "/index" (readPages: join("/", dirname, name)), so
     // it is normalised to "/" exactly as siteHeader does.
     '<link rel="canonical" href="' + escapeAttribute(canonicalUrl) + '">',
+    ...(snapshotOf ? ['<meta name="robots" content="noindex">'] : []),
     '<meta name="description" content="' + escapeAttribute(SITE_DESCRIPTION) + '">',
     '<meta property="og:type" content="website">',
     '<meta property="og:site_name" content="Predict Charts">',
