@@ -15,9 +15,12 @@ import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {attachTradeInspector, venueTradeRows} from "./components/inspect-tables.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const sizeAll = await DataAttachment("data/trade_size_daily.csv").csv({typed: true});
-const ltAll = await DataAttachment("data/competitor_large_trades.csv").csv({typed: true});
-const vapRaw = await DataAttachment("data/polymarket_price_distribution.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+// trade_size_daily_competitors.csv is trade_size_daily.csv without its Kalshi rows (~0.6 of 8.8 MB),
+// built by the publisher from the same copy; this page reads only its own venue's rows.
+const sizeAll = DataAttachment("data/trade_size_daily_competitors.csv").csv({typed: true});
+const ltAll = DataAttachment("data/competitor_large_trades.csv").csv({typed: true});
+const vapRaw = DataAttachment("data/polymarket_price_distribution.csv").csv({typed: true});
 ```
 
 ```js
