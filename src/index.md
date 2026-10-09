@@ -70,29 +70,30 @@ import {defaultWindow} from "./components/url-range.js";
 import {TAKER_GENERAL_MAP, buildReportTickerToCat} from "./components/taker-categories.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+// No await: each file is its own promise, which Framework awaits in every cell that reads it,
+// so the headline chart draws from its four small files instead of after all nineteen.
 
-const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
-const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
-const cmeDaily = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
-const takerSideVolume = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
-const takerPnl = await DataAttachment("data/taker_pnl_daily.csv").csv({typed: true});
-const parlayPnl = await DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
+const kalshi = DataAttachment("data/daily_overall.csv").csv({typed: true});
+const competitor = DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const prophetxDaily = DataAttachment("data/prophetx_daily.csv").csv({typed: true});
+const cmeDaily = DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
+const takerSideVolume = DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerPnl = DataAttachment("data/taker_pnl_daily.csv").csv({typed: true});
+const parlayPnl = DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
 
-const kCat = await DataAttachment("data/category_daily.csv").csv({typed: true});
-const kParlay = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const kCat = DataAttachment("data/category_daily.csv").csv({typed: true});
 // Kalshi publishes one undivided "Sports" in category_daily, so the sport-level
 // split comes from the same per-report_ticker join the categories/volume pages use.
-const kTickerDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
-const kCatLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
-const dkexCat = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
-const fxCat = await DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
-const nadexCat = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
-const pmCat = await DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
-const pxCat = await DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
-const rotheraCat = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
-const underdogCat = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
-const novigCat = await DataAttachment("data/novig_category_daily.csv").csv({typed: true});
+const kTickerDaily = DataAttachment("data/daily_top_categories.csv").csv({typed: true});
+const kCatLeaderboard = DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+const dkexCat = DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const fxCat = DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
+const nadexCat = DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
+const pmCat = DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
+const pxCat = DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
+const rotheraCat = DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
+const underdogCat = DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
+const novigCat = DataAttachment("data/novig_category_daily.csv").csv({typed: true});
 ```
 
 ```js
