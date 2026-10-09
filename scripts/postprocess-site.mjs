@@ -29,6 +29,21 @@ export function sitemapXml(urls) {
   ].join("\n");
 }
 
+// nearView() / embedNeeds() (components/near-view.js) hold a section's data back until that
+// section's heading id is near the viewport, and fail OPEN when the id is not on the page. A renamed
+// heading would quietly put the data back on the first screen, so every id a page gates on must exist.
+const LAZY_CALL_RE = /\b(?:nearView|embedNeeds)\(\s*(\[[^\]]*\]|"[^"]*"|'[^']*')/g;
+
+export function missingLazySectionIds(html) {
+  const missing = [];
+  for (const [, arg] of html.matchAll(LAZY_CALL_RE)) {
+    for (const [, id] of arg.matchAll(/["']([^"']+)["']/g)) {
+      if (!html.includes(`id="${id}"`) && !missing.includes(id)) missing.push(id);
+    }
+  }
+  return missing;
+}
+
 async function htmlFiles(root) {
   const found = [];
   for (const entry of await readdir(root, {withFileTypes: true})) {
@@ -54,12 +69,16 @@ export async function postprocessSite(root) {
     if (!DESCRIPTION_RE.test(html)) {
       throw new Error(`${path.relative(root, file)} has no meta description`);
     }
+    const missingIds = missingLazySectionIds(html);
+    if (missingIds.length) {
+      throw new Error(`${path.relative(root, file)} holds data for section id(s) not on the page: ${missingIds.join(", ")}`);
+    }
     if (html !== original) await writeFile(file, html, "utf8");
     urls.push(canonical);
   }
 
   await writeFile(path.join(root, "sitemap.xml"), sitemapXml(urls), "utf8");
-  console.log(`postprocess-site: ${files.length} page(s), lang=en, metadata validated, sitemap emitted.`);
+  console.log(`postprocess-site: ${files.length} page(s), lang=en, metadata and lazy-section ids validated, sitemap emitted.`);
   return {pages: files.length, urls: [...new Set(urls)].length};
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
-import {addDocumentLanguage, sitemapXml} from "../scripts/postprocess-site.mjs";
+import {addDocumentLanguage, missingLazySectionIds, sitemapXml} from "../scripts/postprocess-site.mjs";
 
 test("addDocumentLanguage adds lang=en without discarding html attributes", () => {
   assert.equal(
@@ -24,6 +24,13 @@ test("sitemapXml sorts, deduplicates, and XML-escapes canonical URLs", () => {
   assert.match(sitemap, /<loc>https:\/\/predict-charts\.com\/</);
   assert.match(sitemap, /view=a&amp;mode=b/);
   assert.equal((sitemap.match(/<url>/g) || []).length, 2);
+});
+
+test("missingLazySectionIds names a gated section id that is not on the page", () => {
+  const page = '<h2 id="kept" tabindex="-1">Kept</h2><script type="module">nearView("kept"); embedNeeds(["kept", "renamed"]);</script>';
+  assert.deepEqual(missingLazySectionIds(page), ["renamed"]);
+  assert.deepEqual(missingLazySectionIds('<h2 id="a"></h2><script>embedNeeds([\'a\']); nearView("a", {margin: "0px"});</script>'), []);
+  assert.deepEqual(missingLazySectionIds("<p>no gated data</p>"), []);
 });
 
 test("compare-accuracy closes prose before its Observable chart fence", () => {
