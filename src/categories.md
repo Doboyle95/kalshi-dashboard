@@ -558,14 +558,15 @@ function clearPinnedCategories() {
 <p class="section-intro">Start here. The treemap is the fastest read on which categories matter most in the window — click any tile to zoom into the biggest markets inside it.</p>
 
 ```js
-// Reported fees per ticker per day, read by the treemap's Fees metric and the All-time
-// leaderboard below. Fetched after the page's other loads (the void line). That order was
-// added while parsing this ~12 MB file plus the treemap/leaderboard sums held the main thread
-// 15-19 s and aborted a fetch left in flight. The task is ~3 s now (windowColumnSums) and
-// remote-data.js no longer counts a stall against a fetch, so the order is not load-bearing:
-// dropping it drew the treemap ~1 s sooner but settled the page ~1 s later (6 loads, 2026-09-30).
-void [sportsSplit, parlayByType, marketTypeRaw];
-const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
+// Reported fees per ticker per day (~12 MB, ~1,960 columns). Only a FEES view reads it: the
+// treemap's Metric = Fees, or the leaderboard's Metric = Fees over a date range (the all-time
+// leaderboard comes from category_leaderboard.csv). So it is fetched on first use, not with
+// the page: the default Volume views neither download nor parse it. Memoised -- the first Fees
+// request pays for it, every later one reuses the same promise.
+const loadTopDailyFees = (() => {
+  let once;
+  return () => (once ??= DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true}));
+})();
 ```
 
 <div class="control-strip">
@@ -607,15 +608,15 @@ display(renderDateBrush({
 ```
 
 ```js
-const tmData = (() => {
+const tmData = await (async () => {
   const [s, e] = tmDateSel;
   const totals = windowColumnSums(topDaily, topDailyCols, s, e);
-  const feeTotals = windowColumnSums(topDailyFees, topDailyCols, s, e);
+  const feeTotals = tmMetric === "Volume" ? null : windowColumnSums(await loadTopDailyFees(), topDailyCols, s, e);
   return topDailyCols.map((cat, i) => {
     const total = totals[i];
     if (!total) return null;
     const meta = leaderboardByTicker.get(cat) || {};
-    const fees = feeTotals[i];
+    const fees = feeTotals ? feeTotals[i] : 0;
     const value = tmMetric === "Volume"
       ? total
       : fees;
@@ -1706,8 +1707,9 @@ const tmActiveMarketRowsByTicker = d3.group(
   // it can render outside the wrapper bounds; pointer-events:none keeps it
   // from blocking the rect hover.
   if (!leaves.length) {
-    // Nothing to draw: one line saying why instead of a blank map.
-    const feeStart = d3.min(topDailyFees, d => d.date);
+    // Nothing to draw: one line saying why instead of a blank map. Only a Fees window asks for the
+    // fee file's first day; tmData has already loaded it for that view, so this does not fetch.
+    const feeStart = tmMetric === "Fees" ? d3.min(await loadTopDailyFees(), d => d.date) : undefined;
     const beforeFees = tmMetric === "Fees" && tmDateSel[1] < feeStart;
     display(html`<div class="chart-note">No ${tmMetric === "Fees" ? "fee" : "volume"} data for this window${beforeFees ? `; per-category fees start ${fmtDate(feeStart)}` : ""}.</div>`);
   } else if (tmActiveCategory) {
@@ -3083,15 +3085,16 @@ const isAllTime = +cutoff <= +lbMinDate && +cutoffTo >= +lbMaxDate;
 // Aggregate contracts and reported fees from their daily files for the selected period
 // (top 15 tickers). The old fee path multiplied period volume by an all-time fee rate,
 // which was exact only when the brush happened to cover that same all-time mix.
-const dailyAgg = (() => {
+const dailyAgg = await (async () => {
   const totals = windowColumnSums(topDaily, catCols, cutoff, cutoffTo);
-  const feeTotals = windowColumnSums(topDailyFees, catCols, cutoff, cutoffTo);
+  // Fees are only read when the bars rank by fees over a date range (see loadTopDailyFees).
+  const feeTotals = metric === "fees" && !isAllTime ? windowColumnSums(await loadTopDailyFees(), catCols, cutoff, cutoffTo) : null;
   return catCols.map((cat, i) => {
     const meta = leaderboardByTicker.get(cat) || {};
     return {
       report_ticker: cat,
       contracts: totals[i],
-      fees: feeTotals[i],
+      fees: feeTotals ? feeTotals[i] : 0,
       is_sports: meta.is_sports ?? "FALSE"
     };
   }).filter(d => d.contracts > 0);
