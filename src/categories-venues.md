@@ -11,17 +11,18 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {bucketOf, BUCKETS, BUCKET_COLORS} from "./components/venue-modules.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
 
-const kCat = await DataAttachment("data/category_daily.csv").csv({typed: true});
-const kParlay = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
-const dkex = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
-const fx = await DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
-const nadex = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
-const pm = await DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
-const px = await DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
-const roth = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
-const ud = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
-const novig = await DataAttachment("data/novig_category_daily.csv").csv({typed: true});
+const kCat = DataAttachment("data/category_daily.csv").csv({typed: true});
+const kParlay = DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const dkex = DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const fx = DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
+const nadex = DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
+const pm = DataAttachment("data/polymarket_categories_daily.csv").csv({typed: true});
+const px = DataAttachment("data/prophetx_categories_daily.csv").csv({typed: true});
+const roth = DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
+const ud = DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
+const novig = DataAttachment("data/novig_category_daily.csv").csv({typed: true});
 ```
 
 ```js

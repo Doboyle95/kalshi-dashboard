@@ -14,10 +14,11 @@ import {VENUE_COLORS, VENUE_ORDER, normalizeVenueName} from "./components/venue-
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const daily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const daily = DataAttachment("data/competitor_daily.csv").csv({typed: true});
 // Only for is_partial. Every fee number on this page comes from competitor_daily.csv so
 // that all venues sit on ONE lineage -- see the note under the daily chart.
-const overall = await DataAttachment("data/daily_overall.csv").csv({typed: true});
+const overall = DataAttachment("data/daily_overall.csv").csv({typed: true});
 const fmtDate = d => d?.toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"}) ?? "";
 const fmtUsd = d => d == null ? "—"
   : d > 0 && d < 0.5 ? "<$1"

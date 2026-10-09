@@ -20,11 +20,12 @@ const fmtPrice = p => p == null || p === "" ? "-" : `${Number(p) % 1 === 0 ? Num
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const taker = await DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
-const takerVolByCategory = await DataAttachment("data/taker_volume_by_category_daily.csv").csv({typed: true});
-const historicalCategoryMix = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
-const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const taker = DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const takerVolByCategory = DataAttachment("data/taker_volume_by_category_daily.csv").csv({typed: true});
+const historicalCategoryMix = DataAttachment("data/daily_top_categories.csv").csv({typed: true});
+const categoryLeaderboard = DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {hashGet, hashInput} from "./components/hash-state.js";
 import {dateBrush} from "./components/date-brush.js";

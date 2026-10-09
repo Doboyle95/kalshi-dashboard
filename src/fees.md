@@ -12,9 +12,10 @@ title: Kalshi Fee Revenue
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const daily = DataAttachment("data/daily_overall.csv").csv({typed: true});
+const sports = DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, fileUpdatedDay, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 ```

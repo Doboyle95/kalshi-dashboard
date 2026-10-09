@@ -9,17 +9,18 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
 
-const kParlay = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
-const kOverall = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-const px = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
-const pxLegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
-const nvParlay = await DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
-const pmParlay = await DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
-const udDaily = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
-const nadexCats = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
-const dkexCats = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
-const dkParlay = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
+const kParlay = DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const kOverall = DataAttachment("data/daily_overall.csv").csv({typed: true});
+const px = DataAttachment("data/prophetx_daily.csv").csv({typed: true});
+const pxLegs = DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
+const nvParlay = DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
+const pmParlay = DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
+const udDaily = DataAttachment("data/underdog_daily.csv").csv({typed: true});
+const nadexCats = DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
+const dkexCats = DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const dkParlay = DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
 ```
 
 ```js

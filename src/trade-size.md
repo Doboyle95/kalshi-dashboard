@@ -21,10 +21,11 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {VENUE_ORDER} from "./components/venue-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const tradeSizeRaw = await DataAttachment("data/trade_size_daily.csv").csv({typed: true});
-const largeTrades = await DataAttachment("data/large_trades.csv").csv({typed: true});
-const competitorLargeTrades = await DataAttachment("data/competitor_large_trades.csv").csv({typed: true});
-const categoryLeaderboard = await DataAttachment("data/category_leaderboard.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const tradeSizeRaw = DataAttachment("data/trade_size_daily.csv").csv({typed: true});
+const largeTrades = DataAttachment("data/large_trades.csv").csv({typed: true});
+const competitorLargeTrades = DataAttachment("data/competitor_large_trades.csv").csv({typed: true});
+const categoryLeaderboard = DataAttachment("data/category_leaderboard.csv").csv({typed: true});
 const priceFiles = await Promise.all([
   DataAttachment("data/volume_at_price_kalshi.csv").csv({typed: true}),
   DataAttachment("data/polymarket_price_distribution.csv").csv({typed: true}),
@@ -33,7 +34,7 @@ const priceFiles = await Promise.all([
   DataAttachment("data/underdog_volume_at_price.csv").csv({typed: true}),
   DataAttachment("data/prophetx_volume_at_price.csv").csv({typed: true})
 ]);
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 import {bestName, fmtStrike} from "./components/ticker-names.js";

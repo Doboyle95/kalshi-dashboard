@@ -15,12 +15,13 @@ import {LB_VENUES, fmtLbCount, fmtLbUSD, marketLeaderboard, normalizeLeaderboard
 import {bestName, fmtStrike, fmtWinner} from "./components/ticker-names.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
 
-const kalshiDaily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
-const prophetxDaily = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
-const cmeDaily = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
-const underdogDaily = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
+const kalshiDaily = DataAttachment("data/daily_overall.csv").csv({typed: true});
+const competitorDaily = DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const prophetxDaily = DataAttachment("data/prophetx_daily.csv").csv({typed: true});
+const cmeDaily = DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
+const underdogDaily = DataAttachment("data/underdog_daily.csv").csv({typed: true});
 
 const lbKalshi = await DataAttachment("data/market_leaderboard.csv").csv();
 const lbPolymarket = await DataAttachment("data/polymarket_market_leaderboard.csv").csv();
