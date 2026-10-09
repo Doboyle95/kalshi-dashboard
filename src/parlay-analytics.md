@@ -26,7 +26,6 @@ import {dateBrush, inDateRange} from "./components/date-brush.js";
 // stays here: it is the one parlay chart fed by two producers on two bases, and it carries
 // leg-count fields in its tooltip that no venue file has.
 import {metricLabel} from "./components/parlay-series.js";
-import {nearView} from "./components/near-view.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 // No await: each file is its own promise, and Framework awaits a promise-valued name in every
@@ -44,11 +43,21 @@ const volTypeRaw  = DataAttachment("data/parlay_volume_by_type_daily.csv").csv({
 const lotteryRaw  = DataAttachment("data/parlay_lottery_daily.csv").csv({typed: true});
 const lotterySummaryRaw = DataAttachment("data/parlay_lottery_summary.csv").csv({typed: true});
 const freshness = DataAttachment("data/freshness_manifest.json").json();
-// The popular-parlays table is ~20 MB of this page's ~21 MB and sits far below the fold: fetch
-// it only when a reader nears that section. An embed of any other section never fetches it.
-const popularNear = nearView("the-most-popular-parlays");
-const popDailyRaw = popularNear.then(() => DataAttachment("data/parlay_popular_daily.csv").csv({typed: true}));
-const popMetaRaw  = popularNear.then(() => DataAttachment("data/parlay_popular_meta.csv").csv({typed: true}));
+// The popular-parlays table draws its default view -- the top 30 over the pair's full date
+// range -- from parlay_popular_top_default.csv (~6 KB), which the publisher builds from the
+// same copy of the pair with this page's own ranking rules. The ~20 MB per-day pair is fetched
+// only when a reader moves the From/To range (loadPopFull; a failed fetch can be retried). If the
+// summary itself fails to load, the table falls back to ranking the pair, as it did before.
+const popDefault = DataAttachment("data/parlay_popular_top_default.csv").csv({typed: true}).catch(() => []);
+const loadPopFull = (() => {
+  let pending, loaded = false;
+  const load = () => (pending ??= Promise.all([
+    DataAttachment("data/parlay_popular_daily.csv").csv({typed: true}),
+    DataAttachment("data/parlay_popular_meta.csv").csv({typed: true})
+  ]).then(pair => { loaded = true; return pair; }, error => { pending = undefined; throw error; }));
+  load.loaded = () => loaded;
+  return load;
+})();
 import {askPageLink, fileUpdatedAt, fmtFreshDate, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -594,8 +603,13 @@ Plot.plot({
 _The 30 most-**traded** parlay tickets in the window you pick below, ranked by number of trades. The colored chip is the **audited leg-level correlation** (same classifier as the charts above) — not Kalshi's product family. **Taker stakes** is the money yes-takers actually put in (taker-yes dollars). **Avg price** is the stake-weighted price bettors paid to get in — parlays are longshots, so most sit at a few cents or less (a 1¢ ticket ≈ a 1% implied chance). **Result** is the settled outcome. Covers parlays with ≥100 lifetime trades; recent tickets may still be **pending**._
 
 ```js
-const popDmin = d3.min(popDailyRaw, d => d.date);
-const popDmax = d3.max(popDailyRaw, d => d.date);
+// The range the summary file was ranked over; with no summary rows, the full pair's own range.
+const [popDmin, popDmax] = popDefault.length
+  ? [popDefault[0].date_min, popDefault[0].date_max]
+  : await loadPopFull().then(([daily]) => [d3.min(daily, d => d.date), d3.max(daily, d => d.date)]);
+```
+
+```js
 const popRange = view(Inputs.form({
   from: Inputs.date({label: "From", value: popDmin, min: popDmin, max: popDmax}),
   to:   Inputs.date({label: "To",   value: popDmax, min: popDmin, max: popDmax})
@@ -603,23 +617,40 @@ const popRange = view(Inputs.form({
 ```
 
 ```js
-const popMetaById = new Map(popMetaRaw.map(d => [d.pid, d]));
 const popFrom = popRange.from ?? popDmin;
 const popTo   = popRange.to   ?? popDmax;
-const popAgg = d3.rollup(
-  popDailyRaw.filter(d => d.date >= popFrom && d.date <= popTo),
-  v => ({trades: d3.sum(v, d => d.trades),
-         yc: d3.sum(v, d => d.yes_contracts),
-         yn: d3.sum(v, d => d.yes_notional),
-         ct: d3.sum(v, d => d.contracts_total)}),
-  d => d.pid);
-const popTop = Array.from(popAgg, ([pid, a]) => {
-  const m = popMetaById.get(pid) ?? {};
-  return {trades: a.trades, ct: a.ct, yn: a.yn,
-          avg_c: a.yc > 0 ? 100 * a.yn / a.yc : null,
-          n_legs: m.n_legs, result: m.result, kind: m.kind,
-          label: String(m.label ?? "").trim(), pid};
-}).sort((a, b) => b.trades - a.trades).slice(0, 30).map((d, i) => ({...d, rank: i + 1}));
+// The default range is answered by the summary file; any other range ranks the full pair. The
+// first move downloads the pair, and until it lands the table says so rather than leaving the
+// default ranking under the new dates (popView is a generator: loading first, then the table).
+const popIsDefault = popDefault.length > 0 && +popFrom === +popDmin && +popTo === +popDmax;
+const popView = (async function* () {
+  if (popIsDefault) {
+    yield {size: popDefault[0].parlays_in_range,
+           top: popDefault.map((d, i) => ({trades: d.trades, ct: d.contracts_total, yn: d.yes_notional,
+             avg_c: d.yes_contracts > 0 ? 100 * d.yes_notional / d.yes_contracts : null,
+             n_legs: d.n_legs, result: d.result, kind: d.kind,
+             label: String(d.label ?? "").trim(), pid: d.pid, rank: i + 1}))};
+    return;
+  }
+  if (!loadPopFull.loaded()) yield {loading: true};
+  const [popDailyRaw, popMetaRaw] = await loadPopFull();
+  const popMetaById = new Map(popMetaRaw.map(d => [d.pid, d]));
+  const popAgg = d3.rollup(
+    popDailyRaw.filter(d => d.date >= popFrom && d.date <= popTo),
+    v => ({trades: d3.sum(v, d => d.trades),
+           yc: d3.sum(v, d => d.yes_contracts),
+           yn: d3.sum(v, d => d.yes_notional),
+           ct: d3.sum(v, d => d.contracts_total)}),
+    d => d.pid);
+  const top = Array.from(popAgg, ([pid, a]) => {
+    const m = popMetaById.get(pid) ?? {};
+    return {trades: a.trades, ct: a.ct, yn: a.yn,
+            avg_c: a.yc > 0 ? 100 * a.yn / a.yc : null,
+            n_legs: m.n_legs, result: m.result, kind: m.kind,
+            label: String(m.label ?? "").trim(), pid};
+  }).sort((a, b) => b.trades - a.trades).slice(0, 30).map((d, i) => ({...d, rank: i + 1}));
+  yield {size: popAgg.size, top};
+})();
 ```
 
 ```js
@@ -643,7 +674,9 @@ const popLegs = d => Number.isFinite(d.n_legs) ? d.n_legs : "—";
 ```
 
 ```js
-html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin:2px 0 8px;">Top ${popTop.length} of ${popAgg.size.toLocaleString()} parlays traded in range</div>
+popView.loading
+  ? html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin:2px 0 8px;">Loading the daily data for this range…</div>`
+  : html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin:2px 0 8px;">Top ${popView.top.length} of ${popView.size.toLocaleString()} parlays traded in range</div>
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
   <thead><tr style="text-align:left;border-bottom:2px solid var(--card-border, #ccc);">
     <th style="padding:5px 6px;width:26px;">#</th>
@@ -655,7 +688,7 @@ html`<div style="font-size:13px;color:var(--theme-foreground-muted, #666);margin
     <th style="padding:5px 6px;text-align:right;width:74px;">Avg price</th>
     <th style="padding:5px 6px;width:72px;">Result</th>
   </tr></thead>
-  <tbody>${popTop.map(d => html`<tr style="border-bottom:1px solid var(--theme-background-alt, #eee);">
+  <tbody>${popView.top.map(d => html`<tr style="border-bottom:1px solid var(--theme-background-alt, #eee);">
     <td style="padding:5px 6px;color:var(--theme-foreground-muted, #999);">${d.rank}</td>
     <td style="padding:5px 6px;" title=${d.label}>${popKindChip(d)}${popLabel(d)}</td>
     <td style="padding:5px 6px;text-align:right;">${popLegs(d)}</td>
