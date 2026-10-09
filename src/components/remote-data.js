@@ -56,6 +56,177 @@ function autoTypeRow(object) {
   return object;
 }
 
+// Typed CSV parse that yields exactly what d3.csvParse(text, autoTypeRow) yields -- the same
+// rows, keys in the same order, and Object.is-equal values (Dates by getTime) -- checked
+// field by field on every published CSV (2026-10-08). It is faster because each field is typed
+// once while its row object is built, instead of d3 building the row with string values and
+// autoTypeRow then walking it with for...in and rewriting every field; that walk, on rows too
+// wide for V8's fast objects (the 1,979-column category files), cost more than the parse.
+// Text with no double quote and no CR is cut at "\n" and "," directly, which gives exactly
+// d3-dsv's fields in that case; anything else goes through csvRows, a port of d3-dsv 3.0.1's
+// parseRows.
+const NEWLINE = 10;
+const RETURN = 13;
+const QUOTE = 34;
+const COMMA = 44;
+// Above this many columns V8 keeps a row object in dictionary mode whichever way it is built,
+// and filling an empty object key by key is faster than d3-dsv's compiled object literal.
+const WIDE_ROW_COLUMNS = 1020;
+
+// autoTypeRow's rule for one field. ToNumber skips the same surrounding whitespace that
+// trim() removes, so +raw equals +raw.trim(); a blank field is the only one that reads as 0
+// and must become null. A field starting with a letter other than t, f, N or I can be
+// neither a number, a boolean, NaN nor an ISO date, so it is returned as is. Each distinct
+// date string is parsed once per file; every field still gets its own Date.
+function autoTyper() {
+  const dateTimes = new Map();
+  return raw => {
+    const number = +raw;
+    if (number === number) return number === 0 && !raw.trim() ? null : number;
+    const c = raw.charCodeAt(0);
+    if (c >= 97 ? c <= 122 && c !== 102 && c !== 116 : c >= 65 && c <= 90 && c !== 73 && c !== 78) return raw;
+    const time = dateTimes.get(raw);
+    if (time !== undefined) return new Date(time);
+    const value = raw.trim();
+    if (value === "true") return true;
+    if (value === "false") return false;
+    if (value === "NaN") return NaN;
+    if (ISO_DATE.test(value)) {
+      const date = new Date(value);
+      dateTimes.set(raw, date.getTime());
+      return date;
+    }
+    return raw;
+  };
+}
+
+// Builds row objects with the keys d3-dsv's compiled object literal gives (same order, a
+// repeated name keeps its first position and its last value), typing each field as it is
+// placed. A "__proto__" column is skipped: in d3's literal it only tried to set the row's
+// prototype to a string, which does nothing, so it never became a key. The site's CSP allows
+// new Function ('unsafe-eval'); d3.csvParse already depends on it.
+function rowKeys(columns) {
+  const names = [];
+  const indexes = [];
+  columns.forEach((name, i) => {
+    if (name !== "__proto__") names.push(name), indexes.push(i);
+  });
+  return {names, indexes};
+}
+
+// fields array -> row
+function typedRowConverter(columns) {
+  const {names, indexes} = rowKeys(columns);
+  if (columns.length > WIDE_ROW_COLUMNS) {
+    const n = names.length;
+    return (d, t) => {
+      const row = {};
+      for (let k = 0; k < n; ++k) row[names[k]] = t(d[indexes[k]] || "");
+      return row;
+    };
+  }
+  return new Function("d", "t", "return {" + names.map((name, k) =>
+    JSON.stringify(name) + ": t(d[" + indexes[k] + "] || \"\")"
+  ).join(",") + "}");
+}
+
+// line with no double quote or CR -> row, for files up to WIDE_ROW_COLUMNS wide. Slices the
+// same fields line.split(",") gives (a missing field is "", extra fields are ignored) straight
+// from the line, without building an array per row: about half the cost of split on the
+// long narrow files.
+function typedLineConverter(columns) {
+  const {names, indexes} = rowKeys(columns);
+  let body = "const n = line.length;\nlet i = 0, j;\n";
+  columns.forEach((_, k) => {
+    body += `let f${k} = "";\nif (i <= n) { j = line.indexOf(",", i); if (j < 0) j = n; f${k} = line.slice(i, j); i = j + 1; }\n`;
+  });
+  body += "return {" + names.map((name, k) => JSON.stringify(name) + ": t(f" + indexes[k] + ")").join(",") + "};";
+  return new Function("line", "t", body);
+}
+
+function csvRows(text, convert) {
+  const EOL = {};
+  const EOF = {};
+  const rows = [];
+  let N = text.length;
+  let I = 0;
+  let n = 0;
+  let t;
+  let eof = N <= 0;
+  let eol = false;
+  if (text.charCodeAt(N - 1) === NEWLINE) --N;
+  if (text.charCodeAt(N - 1) === RETURN) --N;
+  function token() {
+    if (eof) return EOF;
+    if (eol) return (eol = false), EOL;
+    let i;
+    let c;
+    const j = I;
+    if (text.charCodeAt(j) === QUOTE) {
+      while ((I++ < N && text.charCodeAt(I) !== QUOTE) || text.charCodeAt(++I) === QUOTE);
+      if ((i = I) >= N) eof = true;
+      else if ((c = text.charCodeAt(I++)) === NEWLINE) eol = true;
+      else if (c === RETURN) {
+        eol = true;
+        if (text.charCodeAt(I) === NEWLINE) ++I;
+      }
+      return text.slice(j + 1, i - 1).replace(/""/g, "\"");
+    }
+    while (I < N) {
+      if ((c = text.charCodeAt((i = I++))) === NEWLINE) eol = true;
+      else if (c === RETURN) {
+        eol = true;
+        if (text.charCodeAt(I) === NEWLINE) ++I;
+      } else if (c !== COMMA) continue;
+      return text.slice(j, i);
+    }
+    return (eof = true), text.slice(j, N);
+  }
+  while ((t = token()) !== EOF) {
+    let row = [];
+    while (t !== EOL && t !== EOF) row.push(t), (t = token());
+    if ((row = convert(row, n++)) == null) continue;
+    rows.push(row);
+  }
+  return rows;
+}
+
+export function parseTypedCsv(text) {
+  let columns = [];
+  let convert = null;
+  const autoTypeValue = autoTyper();
+  const typedRow = fields => {
+    if (convert) return convert(fields, autoTypeValue);
+    columns = fields;
+    convert = typedRowConverter(fields);
+    return null;
+  };
+  let rows;
+  if (text.indexOf("\"") < 0 && text.indexOf("\r") < 0) {
+    rows = [];
+    if (text.length) {
+      let end = text.length;
+      if (text.charCodeAt(end - 1) === NEWLINE) --end;
+      let stop = text.indexOf("\n");
+      if (stop < 0 || stop > end) stop = end;
+      columns = text.slice(0, stop).split(",");
+      const convertFields = typedRowConverter(columns);
+      const convertLine = columns.length > WIDE_ROW_COLUMNS ? null : typedLineConverter(columns);
+      for (let start = stop + 1; start <= end;) {
+        stop = text.indexOf("\n", start);
+        if (stop < 0 || stop > end) stop = end;
+        const line = text.slice(start, stop);
+        rows.push(convertLine ? convertLine(line, autoTypeValue) : convertFields(line.split(","), autoTypeValue));
+        start = stop + 1;
+      }
+    }
+  } else {
+    rows = csvRows(text, typedRow);
+  }
+  rows.columns = columns;
+  return rows;
+}
+
 function browserEndpoint() {
   const raw = globalThis.window?.__CHAT_API__;
   if (typeof raw !== "string" || !raw.trim()) {
@@ -320,7 +491,7 @@ function createRemoteAttachment(fileAttachment, d3, options = {}) {
           filename,
           loadRemoteCsv(filename, {
             fallback: csvFallback(csvOptions),
-            parse: text => d3.csvParse(text, csvOptions.typed ? autoTypeRow : undefined),
+            parse: text => csvOptions.typed ? parseTypedCsv(text) : d3.csvParse(text),
             ...loadOptions,
           })
         );

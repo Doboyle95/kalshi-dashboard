@@ -6,7 +6,8 @@ import {
   createRemoteDataAttachment,
   createRemoteFileAttachment,
   loadRemoteCsv,
-  loadRemoteJson
+  loadRemoteJson,
+  parseTypedCsv
 } from "../src/components/remote-data.js";
 
 globalThis.crypto ??= webcrypto;
@@ -401,4 +402,37 @@ test("remote-only adapter fails visibly instead of returning stale data", async 
   );
   assert.equal(DataAttachment.marker.dataset.dashboardDataSource, "error");
   assert.equal(DataAttachment.marker.dataset.dashboardDataGeneration, "");
+});
+
+test("typed CSV parse keeps d3.csvParse + autoTypeRow values, keys and row count", () => {
+  const rows = parseTypedCsv("a,b,c\n 12 ,,x \ntrue,NaN,2024-01-05\n\"q,1\",\"he said \"\"hi\"\"\",0x1F\n\n7\n");
+  assert.deepEqual(rows.columns, ["a", "b", "c"]);
+  assert.equal(rows.length, 5);
+  assert.deepEqual(Object.keys(rows[0]), ["a", "b", "c"]);
+  assert.equal(rows[0].a, 12);
+  assert.equal(rows[0].b, null);
+  assert.equal(rows[0].c, "x ");
+  assert.equal(rows[1].a, true);
+  assert.ok(Number.isNaN(rows[1].b));
+  assert.equal(rows[1].c.getTime(), new Date("2024-01-05").getTime());
+  assert.notEqual(rows[1].c, parseTypedCsv("c\n2024-01-05\n")[0].c);
+  assert.equal(rows[2].a, "q,1");
+  assert.equal(rows[2].b, "he said \"hi\"");
+  assert.equal(rows[2].c, 31);
+  assert.deepEqual(rows[3], {a: null, b: null, c: null});
+  assert.deepEqual(rows[4], {a: 7, b: null, c: null});
+  assert.deepEqual(parseTypedCsv("a,b\r\n1,2\r\n").map(r => ({...r})), [{a: 1, b: 2}]);
+  assert.deepEqual(parseTypedCsv("").columns, []);
+  assert.deepEqual(parseTypedCsv("\n").columns, [""]);
+  const dup = parseTypedCsv("a,__proto__,a\n1,,3\n")[0];
+  assert.deepEqual(Object.keys(dup), ["a"]);
+  assert.equal(dup.a, 3);
+  assert.equal(Object.getPrototypeOf(dup), Object.prototype);
+  // rows wider than V8's fast-object limit take the key-by-key path
+  const names = Array.from({length: 1500}, (_, i) => "c" + i);
+  const wide = parseTypedCsv(`date,${names.join(",")}\n2024-01-05,${names.map((_, i) => (i % 2 ? i : "")).join(",")}\n`);
+  assert.deepEqual(Object.keys(wide[0]), ["date", ...names]);
+  assert.equal(wide[0].c3, 3);
+  assert.equal(wide[0].c4, null);
+  assert.ok(wide[0].date instanceof Date);
 });
