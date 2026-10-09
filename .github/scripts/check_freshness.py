@@ -218,6 +218,10 @@ KNOWN_UNMONITORED = {
     # Superseded by novig_fees_daily.csv on the live Novig page and retained only as a
     # queryable historical snapshot.
     "novig_taker_maker_daily.csv",
+    # Built by KalshiData's python/sync_dashboard_data.py inside the mirror from published
+    # files that ARE threshold-monitored above (parlay_popular_daily/_meta, trade_size_daily).
+    # They are rewritten only when their bytes change, so their mtime is not a freshness signal.
+    "parlay_popular_top_default.csv", "trade_size_daily_competitors.csv",
 }
 
 
