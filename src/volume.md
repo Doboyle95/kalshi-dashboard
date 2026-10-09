@@ -25,6 +25,7 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 import {askPageLink, fileUpdatedAt, fileUpdatedDay, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
+import {embedNeeds} from "./components/near-view.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 ```
@@ -34,13 +35,23 @@ display(DataAttachment.marker);
 // see the cell below. Splitting the loader out of this cell is what lets the two run
 // concurrently: both depend only on the DataAttachment cell above, so neither waits
 // on the other.
-const daily = await DataAttachment("data/daily_overall.csv").csv({typed: true});
-const hourly = await DataAttachment("data/trades_by_hour.csv").csv({typed: true});
-const sports = await DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
-const topDaily = await DataAttachment("data/daily_top_categories.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it,
+// so the daily charts draw from daily_overall.csv alone instead of after all six files.
+// In an embed, the hourly and category files load only if the embedded section reads them.
+const daily = DataAttachment("data/daily_overall.csv").csv({typed: true});
+const sports = DataAttachment("data/daily_sports_vs_nonsports.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
+const hourly = embedNeeds(["trading-activity-today", "typical-trading-week"])
+  .then(() => DataAttachment("data/trades_by_hour.csv").csv({typed: true}));
+// The two ~21 MB category tables are functions, not cell values: a cell that mentioned them would
+// wait for them. The freshness panel reads them (as before); the Sports-vs-non-sports chart reads
+// them only in its Sports-only / Non-sports-only views (loadVolWide / loadFeeWide below).
+const onceOnly = fn => { let p; return () => (p ??= fn()); };
+const loadTopDaily = onceOnly(() => embedNeeds(["sports-vs-non-sports-volume"])
+  .then(() => DataAttachment("data/daily_top_categories.csv").csv({typed: true})));
 import {splitCategoryRows, splitFinanceCategory, ECONOMICS_COLOR, FINANCE_COLOR} from "./components/non-sports-categories.js";
-const catLeaderboard = splitCategoryRows(await DataAttachment("data/category_leaderboard.csv").csv({typed: true}));
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+const catLeaderboard = embedNeeds(["sports-vs-non-sports-volume"])
+  .then(() => DataAttachment("data/category_leaderboard.csv").csv({typed: true})).then(splitCategoryRows);
 ```
 
 ```js
@@ -52,10 +63,12 @@ const freshness = await DataAttachment("data/freshness_manifest.json").json();
 //
 // Its OWN cell, depending only on the DataAttachment cell, so it is fetched in parallel
 // and only its two consumers wait for it. Do NOT fold this back into the cell above.
-const topDailyFees = await DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true});
+const loadTopDailyFees = onceOnly(() => embedNeeds(["sports-vs-non-sports-volume"])
+  .then(() => DataAttachment("data/daily_top_categories_fees.csv").csv({typed: true})));
 ```
 
 ```js
+const [topDaily, topDailyFees] = await Promise.all([loadTopDaily(), loadTopDailyFees()]);
 display(freshnessPanel({
   items: [
     {label: "Daily volume", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "daily_overall.csv"), meta: "Can be within 15 minutes locally when the collector is running"},
@@ -240,8 +253,10 @@ function volColumnGroups(rows) {
 const sportsByDate = new Map();
 for (const s of sports) if (!Number.isNaN(+s.date) && !sportsByDate.has(+s.date)) sportsByDate.set(+s.date, s);
 
+const loadVolWide = onceOnly(async () => {
+const topDaily = await loadTopDaily();
 const volColumns = volColumnGroups(topDaily);
-const volWideDaily = topDaily.map(row => {
+return topDaily.map(row => {
   const sp = sportsByDate.get(+row.date) || {};
   const groups = newVolGroups();
   for (const [cat, wg] of volColumns) groups[wg] += +row[cat] || 0;
@@ -261,6 +276,7 @@ const volWideDaily = topDaily.map(row => {
     "Other non-sports": Math.max(0, totNonSports - knownNonSports)
   };
 });
+});
 
 // daily_sports_vs_nonsports.csv builds fees_sports/fees_nonsports with parlay tickets
 // excluded and carries no fees_parlay, so parlay fees are the residual against
@@ -275,13 +291,15 @@ const parlayFeesFor = sp =>
 // non-sports fee totals pro rata by contracts, forcing every category to have the same
 // fee per contract. These are the fees actually reported for each ticker; residual bands
 // preserve reconciliation with the broad daily split and the parlay residual below.
+const loadFeeWide = onceOnly(async () => {
+const topDailyFees = await loadTopDailyFees();
 const feeColumns = volColumnGroups(topDailyFees);
 // Complete days only, by the fees page's rule: daily_top_categories_fees.csv is rebuilt once a day
 // (~07:30 ET), so its newest day holds just the hours before the rebuild, and next to the near-live
 // totals the rest of that day showed up as Other sports / Other non-sports fees.
 const feeFileDay = fileUpdatedDay(freshness, "daily_top_categories_fees.csv") ?? latestDate(topDailyFees);
 const completeFeeDays = new Set(daily.filter(d => !isPartial(d) && d.date < feeFileDay).map(d => +d.date));
-const feeWideDaily = topDailyFees.filter(row => completeFeeDays.has(+row.date)).map(row => {
+const rows = topDailyFees.filter(row => completeFeeDays.has(+row.date)).map(row => {
   const sp = sportsByDate.get(+row.date) || {};
   const groups = newVolGroups();
   for (const [cat, wg] of feeColumns) groups[wg] += +row[cat] || 0;
@@ -292,6 +310,8 @@ const feeWideDaily = topDailyFees.filter(row => completeFeeDays.has(+row.date)).
     "Other sports": Math.max(0, (+sp.fees_sports_nonparlay || 0) - knownSports),
     "Other non-sports": Math.max(0, (+sp.fees_nonsports || 0) - knownNonSports)
   };
+});
+return {rows, completeFeeDays};
 });
 ```
 
@@ -472,14 +492,20 @@ const dr2 = view(makeDateBrush());
 const [s2, e2] = dr2;
 const fd2 = daily.filter(d => d.date >= s2 && d.date <= e2);
 const fs2 = sports.filter(d => d.date >= s2 && d.date <= e2);
-// Fees by category stop where feeWideDaily does; on a later day every category but Parlay would read 0.
-const fd2Cat = sportsMetric === "Fees" ? fd2.filter(d => completeFeeDays.has(+d.date)) : fd2;
 
 const sportsOrder    = ["Other sports", "Soccer", "Golf", "Tennis", "Baseball", "Basketball", "Football", "Parlay"];
 const nonSportsOrder = ["Other non-sports", "Weather", "Entertainment", "Economics", "Finance", "Politics", "Crypto"];
 
-const tidySports =
-  sportsView === "Sports only"
+const tidySports = await (async () => {
+  // The default stacked view reads daily + sports only. The wide tables (and the ~21 MB behind them)
+  // are built only for the two category views.
+  const wideNeeded = sportsView === "Sports only" || sportsView === "Non-sports only";
+  const volWideDaily = wideNeeded ? await loadVolWide() : [];
+  const feeWide = wideNeeded && sportsMetric === "Fees" ? await loadFeeWide() : null;
+  const feeWideDaily = feeWide?.rows ?? [];
+  // Fees by category stop where feeWideDaily does; on a later day every category but Parlay would read 0.
+  const fd2Cat = feeWide ? fd2.filter(d => feeWide.completeFeeDays.has(+d.date)) : fd2;
+  return sportsView === "Sports only"
     ? fd2Cat.flatMap(d => {
         const w  = volWideDaily.find(r => +r.date === +d.date) || {};
         const fw = feeWideDaily.find(r => +r.date === +d.date) || {};
@@ -512,6 +538,7 @@ const tidySports =
         {date: d.date, category: "Parlay",     value: sportsMetric === "Fees" ? parlayFeesFor(d) : (+d.contracts_parlay || 0)}
       ];
     });
+})();
 
 const subOrder =
   sportsView === "Sports only"    ? sportsOrder
