@@ -26,20 +26,29 @@ import {dateBrush, inDateRange} from "./components/date-brush.js";
 // stays here: it is the one parlay chart fed by two producers on two bases, and it carries
 // leg-count fields in its tooltip that no venue file has.
 import {metricLabel} from "./components/parlay-series.js";
+import {nearView} from "./components/near-view.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const heRaw   = await DataAttachment("data/parlay_house_edge_by_legs.csv").csv({typed: true});
-const timeRaw = await DataAttachment("data/parlay_legs_over_time.csv").csv({typed: true});
-const gamesRaw= await DataAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
-const mispRaw = await DataAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
-const pnlRaw  = await DataAttachment("data/parlay_pnl_daily_by_corr_v2.csv").csv({typed: true});
-const mixRaw  = await DataAttachment("data/parlay_sportsmix_v2.csv").csv({typed: true});
-const popDailyRaw = await DataAttachment("data/parlay_popular_daily.csv").csv({typed: true});
-const popMetaRaw  = await DataAttachment("data/parlay_popular_meta.csv").csv({typed: true});
-const volTypeRaw  = await DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
-const lotteryRaw  = await DataAttachment("data/parlay_lottery_daily.csv").csv({typed: true});
-const lotterySummaryRaw = await DataAttachment("data/parlay_lottery_summary.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, and Framework awaits a promise-valued name in every
+// cell that reads it, so each chart waits for ITS files only -- not for all twelve fetched one
+// after another (that sequence put every chart on this page behind ~21 MB, 2026-10-08).
+// Issue order is transfer order (remote-data.js: 4 at a time, first come first served), so the
+// two ~10 MB popular-parlay files go last and cannot hold up the small ones.
+const heRaw   = DataAttachment("data/parlay_house_edge_by_legs.csv").csv({typed: true});
+const timeRaw = DataAttachment("data/parlay_legs_over_time.csv").csv({typed: true});
+const gamesRaw= DataAttachment("data/parlay_top_games_by_volume.csv").csv({typed: true});
+const mispRaw = DataAttachment("data/parlay_mispricing_by_correlation.csv").csv({typed: true});
+const pnlRaw  = DataAttachment("data/parlay_pnl_daily_by_corr_v2.csv").csv({typed: true});
+const mixRaw  = DataAttachment("data/parlay_sportsmix_v2.csv").csv({typed: true});
+const volTypeRaw  = DataAttachment("data/parlay_volume_by_type_daily.csv").csv({typed: true});
+const lotteryRaw  = DataAttachment("data/parlay_lottery_daily.csv").csv({typed: true});
+const lotterySummaryRaw = DataAttachment("data/parlay_lottery_summary.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
+// The popular-parlays table is ~20 MB of this page's ~21 MB and sits far below the fold: fetch
+// it only when a reader nears that section. An embed of any other section never fetches it.
+const popularNear = nearView("the-most-popular-parlays");
+const popDailyRaw = popularNear.then(() => DataAttachment("data/parlay_popular_daily.csv").csv({typed: true}));
+const popMetaRaw  = popularNear.then(() => DataAttachment("data/parlay_popular_meta.csv").csv({typed: true}));
 import {askPageLink, fileUpdatedAt, fmtFreshDate, freshnessPanel, latestDate} from "./components/freshness.js";
 ```
 
@@ -781,8 +790,8 @@ moment the parlay traded. Over ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo
 **${pvlFmt(pvlMarkup)} more** than that: ${fmtUSD(pvlPaid)} for legs worth ${fmtUSD(pvlFair)}._
 
 ```js
-const pvlDailyRaw   = await DataAttachment("data/parlay_vs_legs_daily.csv").csv({typed: true});
-const pvlProfileRaw = await DataAttachment("data/parlay_vs_legs_profile.csv").csv({typed: true});
+const pvlDailyRaw   = DataAttachment("data/parlay_vs_legs_daily.csv").csv({typed: true});
+const pvlProfileRaw = DataAttachment("data/parlay_vs_legs_profile.csv").csv({typed: true});
 ```
 
 ```js
