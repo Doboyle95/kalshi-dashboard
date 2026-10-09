@@ -16,10 +16,11 @@ const fmtDate  = d => d?.toLocaleDateString("en-US", {month: "short", day: "nume
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const bins     = await DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true});
-const daily    = await DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
-const dailyPnl = await DataAttachment("data/polymarket_parlay_pnl_daily.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const bins     = DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true});
+const daily    = DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
+const dailyPnl = DataAttachment("data/polymarket_parlay_pnl_daily.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 ```

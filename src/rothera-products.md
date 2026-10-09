@@ -14,9 +14,10 @@ import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryTotals, sportsSplit
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const cats = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
-const split = await DataAttachment("data/rothera_sports_split_daily.csv").csv({typed: true});
-const tenor = await DataAttachment("data/rothera_tenor_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const cats = DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
+const split = DataAttachment("data/rothera_sports_split_daily.csv").csv({typed: true});
+const tenor = DataAttachment("data/rothera_tenor_daily.csv").csv({typed: true});
 ```
 
 ```js

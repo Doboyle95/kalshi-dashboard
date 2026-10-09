@@ -13,12 +13,13 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const catDaily  = await DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
-const split     = await DataAttachment("data/rothera_sports_split_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const catDaily  = DataAttachment("data/rothera_categories_daily.csv").csv({typed: true});
+const split     = DataAttachment("data/rothera_sports_split_daily.csv").csv({typed: true});
 // Open interest is published in the shared competitor file, not in Rothera's own
 // exports -- it is the same series /compare-scale draws this venue's line from.
-const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+const competitorDaily = DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 import {inDateRange} from "./components/date-brush.js";

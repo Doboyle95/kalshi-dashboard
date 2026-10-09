@@ -13,9 +13,10 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const daily    = await DataAttachment("data/underdog_daily.csv").csv({typed: true});
-const catDaily = await DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
-const split    = await DataAttachment("data/underdog_sports_split_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const daily    = DataAttachment("data/underdog_daily.csv").csv({typed: true});
+const catDaily = DataAttachment("data/underdog_categories_daily.csv").csv({typed: true});
+const split    = DataAttachment("data/underdog_sports_split_daily.csv").csv({typed: true});
 // Bet-type mix reads the pre-aggregated multi-venue file, NOT the per-market report.
 // underdog_market_daily.csv is one row per market per day -- 154,476 rows / 15.4 MB as of
 // 2026-08-18, growing ~1.5 MB a day -- and the only thing this page ever did with it was
@@ -27,7 +28,7 @@ const split    = await DataAttachment("data/underdog_sports_split_daily.csv").cs
 // underdog_market_leaderboard.csv, which the Top markets table below reads.
 const betType = (await DataAttachment("data/bet_type_daily.csv").csv({typed: true}))
   .filter(d => d.venue === "Underdog");
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 ```

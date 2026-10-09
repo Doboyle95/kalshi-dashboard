@@ -14,8 +14,9 @@ import {feeRows, feesDaily, realizedRate, fmtCount, fmtUSD, fmtPct, fmtDate} fro
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const competitorDaily = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
-const feesFile = await DataAttachment("data/rothera_fees_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const competitorDaily = DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const feesFile = DataAttachment("data/rothera_fees_daily.csv").csv({typed: true});
 ```
 
 ```js

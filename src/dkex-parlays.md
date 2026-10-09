@@ -18,9 +18,10 @@ const DKEX = "var(--accent-dkex)";
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const rows = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
-const pnlBins = await DataAttachment("data/dkex_parlay_pnl.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const rows = DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
+const pnlBins = DataAttachment("data/dkex_parlay_pnl.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 ```

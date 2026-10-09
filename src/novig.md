@@ -15,10 +15,11 @@ import {fileUpdatedAt} from "./components/freshness.js";
 import {staleNote} from "./components/stale-note.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
 
-const daily = await DataAttachment("data/novig_daily.csv").csv({typed: true});
-const parlay = await DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
-const board = await DataAttachment("data/novig_market_leaderboard.csv").csv({typed: true});
+const daily = DataAttachment("data/novig_daily.csv").csv({typed: true});
+const parlay = DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
+const board = DataAttachment("data/novig_market_leaderboard.csv").csv({typed: true});
 // Categories are loaded defensively because this file is the newest of the set and
 // the deployed allowlist -- not the repository one -- decides what is actually
 // served. If it is ever absent the section below says so and the rest of the page

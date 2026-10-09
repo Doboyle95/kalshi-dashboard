@@ -14,7 +14,8 @@ import {renderDateBrush} from "./components/date-brush.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const catDaily  = await DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const catDaily  = DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
 // nadex_sports_split_daily.csv's upstream builder has appended a second,
 // out-of-chronological-order block of rows (backfilled weekends + the most
 // recent days) rather than merging them in sorted - without this sort, the
@@ -22,7 +23,7 @@ const catDaily  = await DataAttachment("data/nadex_categories_daily.csv").csv({t
 // x order) draw a line that zigzags backward through time.
 const split     = (await DataAttachment("data/nadex_sports_split_daily.csv").csv({typed: true}))
   .sort((a, b) => a.date - b.date);
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 ```

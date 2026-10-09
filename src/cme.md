@@ -12,8 +12,9 @@ title: CME (FanDuel + DraftKings)
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const cme = await DataAttachment("data/cme_daily.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const cme = DataAttachment("data/cme_daily.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";

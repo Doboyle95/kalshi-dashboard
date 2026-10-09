@@ -14,11 +14,12 @@ import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {ESTABLISHED_VOLUME_EVENTS, positionedVolumeEvents, volumeEventMarks} from "./components/volume-events.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const daily      = await DataAttachment("data/dkex_daily.csv").csv({typed: true});
-const catDaily   = await DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
-const split      = await DataAttachment("data/dkex_sports_split_daily.csv").csv({typed: true});
-const settlement = await DataAttachment("data/dkex_settlement_daily.csv").csv({typed: true});
-const freshness  = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const daily      = DataAttachment("data/dkex_daily.csv").csv({typed: true});
+const catDaily   = DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
+const split      = DataAttachment("data/dkex_sports_split_daily.csv").csv({typed: true});
+const settlement = DataAttachment("data/dkex_settlement_daily.csv").csv({typed: true});
+const freshness  = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 ```

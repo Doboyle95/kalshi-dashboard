@@ -21,11 +21,12 @@ title: Robinhood on Kalshi
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const monthly = await DataAttachment("data/rh_monthly_estimates.csv").csv({typed: true});
-const weekly  = await DataAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
-const reported = await DataAttachment("data/rh_actual_vs_estimate.csv").csv({typed: true});
-const filing = await DataAttachment("data/rh_daily_filing.csv").csv({typed: true});
-const fcmCmp = await DataAttachment("data/fcm_comparison.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const monthly = DataAttachment("data/rh_monthly_estimates.csv").csv({typed: true});
+const weekly  = DataAttachment("data/rh_weekly_estimates.csv").csv({typed: true});
+const reported = DataAttachment("data/rh_actual_vs_estimate.csv").csv({typed: true});
+const filing = DataAttachment("data/rh_daily_filing.csv").csv({typed: true});
+const fcmCmp = DataAttachment("data/fcm_comparison.csv").csv({typed: true});
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 import {freshnessPanel, latestDate} from "./components/freshness.js";
 ```

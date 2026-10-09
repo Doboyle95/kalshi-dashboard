@@ -13,10 +13,11 @@ import {createRemoteDataAttachment} from "./components/remote-data.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const parlayDaily = await DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const parlayDaily = DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
 // The Kalshi comparators below come from the SAME file /compare-accuracy derives every
 // venue from, so the two pages cannot drift apart.
-const kalshiPnlBins = await DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true});
+const kalshiPnlBins = DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true});
 ```
 
 ## Parlay P&L

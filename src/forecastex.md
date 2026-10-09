@@ -12,9 +12,10 @@ title: ForecastEx
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const catDaily  = await DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
-const split     = await DataAttachment("data/forecastex_sports_split_daily.csv").csv({typed: true});
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
+// No await: each file is its own promise, which Framework awaits in every cell that reads it.
+const catDaily  = DataAttachment("data/forecastex_categories_daily.csv").csv({typed: true});
+const split     = DataAttachment("data/forecastex_sports_split_daily.csv").csv({typed: true});
+const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrushFromUrl} from "./components/url-range.js";
 ```
