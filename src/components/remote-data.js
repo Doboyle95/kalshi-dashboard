@@ -325,8 +325,10 @@ function validateManifest(value) {
   return value;
 }
 
+const manifestKey = (endpoint, timeoutMs) => `${endpoint}|${timeoutMs}`;
+
 function manifestFor(endpoint, fetchImpl, timeoutMs, clock) {
-  const cacheKey = `${endpoint}|${timeoutMs}`;
+  const cacheKey = manifestKey(endpoint, timeoutMs);
   if (!manifestPromises.has(cacheKey)) {
     const promise = (async () => {
       const response = await fetchBounded(
@@ -359,26 +361,44 @@ async function verifiedRemoteText(filename, options = {}) {
   const clock = {tickMs: options.timeoutTickMs, capMs: options.timeoutTickCapMs};
   if (typeof fetchImpl !== "function") throw new Error("browser fetch is unavailable");
 
-  const manifest = await manifestFor(endpoint, fetchImpl, timeoutMs, clock);
-  const record = manifest.files[filename];
-  if (
-    !record ||
-    !Number.isInteger(record.size_bytes) ||
-    record.size_bytes < 0 ||
-    record.size_bytes > MAX_FILE_BYTES ||
-    !SHA256.test(record.sha256 ?? "")
-  ) {
-    throw new Error(`dashboard data manifest has no valid record for ${filename}`);
-  }
+  const fetchFrom = async manifest => {
+    const record = manifest.files[filename];
+    if (
+      !record ||
+      !Number.isInteger(record.size_bytes) ||
+      record.size_bytes < 0 ||
+      record.size_bytes > MAX_FILE_BYTES ||
+      !SHA256.test(record.sha256 ?? "")
+    ) {
+      throw new Error(`dashboard data manifest has no valid record for ${filename}`);
+    }
+    const url = `${endpoint}/dashboard-data/generations/${manifest.generation}/${encodeURIComponent(filename)}`;
+    const fetched = await withDataFetchSlot(() => fetchDataBytesBounded(
+      fetchImpl,
+      url,
+      {cache: "default", credentials: "omit", mode: "cors", redirect: "error", referrerPolicy: "no-referrer"},
+      dataTimeoutMs(record.size_bytes, timeoutMs),
+      clock
+    ));
+    return {record, ...fetched};
+  };
 
-  const url = `${endpoint}/dashboard-data/generations/${manifest.generation}/${encodeURIComponent(filename)}`;
-  const {response, bytes} = await withDataFetchSlot(() => fetchDataBytesBounded(
-    fetchImpl,
-    url,
-    {cache: "default", credentials: "omit", mode: "cors", redirect: "error", referrerPolicy: "no-referrer"},
-    dataTimeoutMs(record.size_bytes, timeoutMs),
-    clock
-  ));
+  const manifestPromise = manifestFor(endpoint, fetchImpl, timeoutMs, clock);
+  let manifest = await manifestPromise;
+  let {record, response, bytes} = await fetchFrom(manifest);
+  // The server keeps only the newest few generations (about an hour of publishing), and a page
+  // fetches some files late: when a reader first opens a view that needs them. A page open longer
+  // than that asks for a generation that is gone. On a 404, re-read current.json once (shared by
+  // every load that hit the same stale manifest) and, if a newer generation is live, fetch from it.
+  if (response.status === 404) {
+    const cacheKey = manifestKey(endpoint, timeoutMs);
+    if (manifestPromises.get(cacheKey) === manifestPromise) manifestPromises.delete(cacheKey);
+    const fresh = await manifestFor(endpoint, fetchImpl, timeoutMs, clock);
+    if (fresh.generation !== manifest.generation) {
+      manifest = fresh;
+      ({record, response, bytes} = await fetchFrom(manifest));
+    }
+  }
   if (!response.ok) throw new Error(`dashboard data file returned ${response.status}`);
   if (bytes.byteLength !== record.size_bytes) throw new Error(`dashboard data size mismatch for ${filename}`);
   if ((await sha256Hex(bytes)) !== record.sha256) throw new Error(`dashboard data hash mismatch for ${filename}`);

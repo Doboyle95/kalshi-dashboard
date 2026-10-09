@@ -255,6 +255,52 @@ test("a request that never answers still times out, with or without stalls", asy
   assert.ok(stalledMs >= 300 && stalledMs < 20000, `stalled timeout took ${stalledMs} ms`);
 });
 
+function prunedTransport(body, generations) {
+  let manifestReads = 0;
+  const requests = [];
+  const fetchImpl = async url => {
+    requests.push(url.split("/").slice(-2).join("/"));
+    if (url.endsWith("/dashboard-data/current.json")) {
+      const generation = generations[Math.min(manifestReads++, generations.length - 1)];
+      return new Response(JSON.stringify({
+        schema_version: 1, generation, published_at: "2026-10-09T03:00:00+00:00",
+        file_count: 1, files: {"tiny.csv": record(body)}
+      }), {status: 200, headers: {"content-type": "application/json"}});
+    }
+    // only the LAST generation still exists on the server
+    return url.includes(`/generations/${generations.at(-1)}/`) ? new Response(body, {status: 200}) : new Response("gone", {status: 404});
+  };
+  return {fetchImpl, requests, reads: () => manifestReads};
+}
+
+test("a file from a pruned generation is fetched from the live one after one manifest re-read", async () => {
+  const endpoint = "https://canary-pruned.example";
+  const body = "date,value\n2026-10-09,3\n";
+  const [old, live] = ["a".repeat(20), "b".repeat(20)];
+  const mock = prunedTransport(body, [old, live]);
+  const result = await loadRemoteCsv("tiny.csv", {endpoint, fetchImpl: mock.fetchImpl, parse: text => text});
+  assert.equal(result.source, "remote");
+  assert.equal(result.generation, live);
+  assert.equal(result.value, body);
+  assert.equal(mock.reads(), 2);
+  assert.deepEqual(mock.requests, ["dashboard-data/current.json", `${old}/tiny.csv`, "dashboard-data/current.json", `${live}/tiny.csv`]);
+  // the re-read manifest is the cached one from now on
+  await loadRemoteCsv("tiny.csv", {endpoint, fetchImpl: mock.fetchImpl, parse: text => text});
+  assert.equal(mock.reads(), 2);
+});
+
+test("a 404 with no newer generation still fails, after one manifest re-read", async () => {
+  const endpoint = "https://canary-gone.example";
+  const gone = "c".repeat(20);
+  const mock = prunedTransport("x\n1\n", [gone, gone, "d".repeat(20)]);
+  await assert.rejects(
+    loadRemoteCsv("tiny.csv", {endpoint, fetchImpl: mock.fetchImpl, parse: text => text}),
+    /returned 404/
+  );
+  assert.equal(mock.reads(), 2);
+  assert.deepEqual(mock.requests, ["dashboard-data/current.json", `${gone}/tiny.csv`, "dashboard-data/current.json"]);
+});
+
 test("hash or size mismatch falls back without returning corrupt data", async () => {
   const endpoint = "https://canary-two.example";
   const mock = transport(endpoint, {"tiny.csv": "a,b\n1,2\n"}, {corrupt: "tiny.csv"});
