@@ -1,10 +1,10 @@
 {
   "status": "ready",
-  "generated_at": "2026-10-09T22:51:46.150Z",
-  "data_through": "2026-10-08",
-  "service_through": null,
+  "generated_at": "2026-10-10T22:00:22.929Z",
+  "data_through": "2026-10-09",
+  "service_through": "2026-10-10",
   "title": "What changed in prediction markets",
-  "insights": "- **Novig ran above its recent pace:** It traded 82.6M contracts on Oct. 8, 37% above its 60.2M average over the prior month, for roughly 2.9% of the market.\n- **OG/Crypto.com dropped well below its monthly average:** Its 34.9M contracts on Oct. 8 were 40% below its 57.8M average over the prior month, for about 1.2% of the market.\n- **Kalshi’s volume eased as player props grew:** Its 2.27B contracts on Oct. 8 were 14.5% below the prior week’s average, while player props reached 19.3M—32.6% above their prior-month average, but just 1.05% of sports-market volume.",
+  "insights": "- **Kalshi volume eased, with crypto activity rising:** Kalshi traded 2.41B contracts on Oct. 9, 8.5% below its prior-seven-day average of 2.63B and outside its five biggest days; crypto accounted for 352.3M contracts, 10.8% above its 30-day average and 14.9% of Kalshi volume.\n- **Novig topped its recent average:** It traded 82.6M contracts on Oct. 8, 37.2% above its 30-day average of 60.2M—about 2.7% of the market.\n- **Underdog also ran above its monthly pace:** Its 47.7M contracts on Oct. 9 were 42.0% above its 30-day average of 33.6M, or roughly 1.6% of the market.",
   "coverage": {
     "venues_expected": 10,
     "venues_covered": 10,
@@ -12,75 +12,69 @@
     "degraded": true
   },
   "notes": [
-    "health check failed: /health: duckdb health refresh still running after 15s; serving stale db fields (server alive)"
+    "briefing checks unmet after retry: one bullet must carry Kalshi data from beyond plain volume, normally alongside its headline volume -- taker P&L, fee revenue, settlement accuracy, parlay economics, sports versus non-sports mix, or an unusually large trade -- for the latest reported day or the past week against a recent baseline, never an all-time or months-old cumulative total"
   ],
   "evidence": [
     {
       "label": "Additional context 1",
       "source": "llm_generated",
-      "summary": "venue              report_date          latest_volume    prior_30_day_average      prior_30_day_reports  change_vs_prior_30_day_average_pct\n-----------------  -------------------  ---------------  ----------------------  ----------------------  ------------------------------------\nNovig              2026-10-08 00:00:00  82,603,433.55    60,226,907.70                               30  37.15\nUnderdog Exchange  2026-10-08 00:00:00  43,998,973.20    32,647,667.61                               30  34.77\nDKeX               2026-10-08 00:00:00  92,949,415.00    79,168,395.70                               30  17.41\nProphetX           2026-10-08 00:00:00  9,230,739.88     8,959,647.92                                30  3.03\nForecastEx         2026-10-08 00:00:00  579,351.00       625,755.73                                  30  -7.42\nPolymarket US      2026-10-07 00:00:00  305,245,508.86   341,031,469.68                              30  -10.49\nRothera            2026-10-08 00:00:00  29,698,092.00    41,246,206.50                               30  -28.00\nOG/Crypto.com      2026-10-08 00:00:00  34,877,690.00    57,813,894.93                               30  -39.67\nCME                2026-10-07 00:00:00  70,508.00        1,328,676.00                                15  -94.69",
-      "sql": "WITH venue_days AS (\n    SELECT\n        CASE platform\n            WHEN 'Polymarket_US' THEN 'Polymarket US'\n            WHEN 'Crypto.com/Nadex' THEN 'OG/Crypto.com'\n            ELSE platform\n        END AS venue,\n        date AS report_date,\n        contracts AS volume\n    FROM competitor_daily\n    WHERE platform <> 'Kalshi'\n      AND COALESCE(complete, TRUE) = TRUE\n\n    UNION ALL\n\n    SELECT 'ProphetX', date, contracts\n    FROM prophetx_daily\n    WHERE COALESCE(complete, TRUE) = TRUE\n\n    UNION ALL\n\n    SELECT 'CME', date, cme_total_vol\n    FROM cme_daily\n),\nlatest AS (\n    SELECT venue, MAX(report_date) AS report_date\n    FROM venue_days\n    GROUP BY venue\n)\nSELECT\n    l.venue,\n    l.report_date,\n    d.volume AS latest_volume,\n    AVG(h.volume) AS prior_30_day_average,\n    COUNT(h.report_date) AS prior_30_day_reports,\n    (d.volume / NULLIF(AVG(h.volume), 0) - 1) * 100 AS change_vs_prior_30_day_average_pct\nFROM latest l\nJOIN venue_days d\n  ON d.venue = l.venue AND d.report_date = l.report_date\nLEFT JOIN venue_days h\n  ON h.venue = l.venue\n AND h.report_date >= l.report_date - INTERVAL 30 DAY\n AND h.report_date < l.report_date\nGROUP BY l.venue, l.report_date, d.volume\nORDER BY change_vs_prior_30_day_average_pct DESC;"
+      "summary": "report_date          kalshi_category        contracts_on_report_date  share_of_kalshi_volume_pct    prior_30_day_daily_average    change_vs_prior_30_day_average_pct\n-------------------  -------------------  --------------------------  ----------------------------  ----------------------------  ------------------------------------\n2026-10-09 00:00:00  Sports                            1,940,564,808  81.88                         1,895,424,334.73              2.38\n2026-10-09 00:00:00  Crypto                              352,278,602  14.86                         317,826,038.43                10.84\n2026-10-09 00:00:00  Commodities                          46,942,566  1.98                          32,916,143.57                 42.61\n2026-10-09 00:00:00  Elections                            11,110,933  0.4688                        5,757,447.57                  92.98\n2026-10-09 00:00:00  Financials                            6,404,813  0.2702                        4,516,799.70                  41.80\n2026-10-09 00:00:00  Climate and Weather                   4,195,939  0.177                         3,568,700.70                  17.58\n2026-10-09 00:00:00  Economics                             2,507,666  0.1058                        4,445,603.63                  -43.59\n2026-10-09 00:00:00  Politics                              2,288,912  0.09658                       1,466,802.97                  56.05\n2026-10-09 00:00:00  Mentions                              1,575,690  0.06649                       1,233,437.83                  27.75\n2026-10-09 00:00:00  Entertainment                         1,425,961  0.06017                       1,748,557.13                  -18.45",
+      "sql": "WITH latest AS (\n    SELECT MAX(date) AS report_date\n    FROM category_daily\n    WHERE date <= DATE '2026-10-09'\n),\ncurrent_day AS (\n    SELECT c.kalshi_category, c.contracts\n    FROM category_daily c\n    JOIN latest l ON c.date = l.report_date\n    WHERE c.kalshi_category IS NOT NULL\n      AND c.kalshi_category <> ''\n),\nrecent_average AS (\n    SELECT c.kalshi_category, AVG(c.contracts) AS avg_daily_contracts\n    FROM category_daily c\n    CROSS JOIN latest l\n    WHERE c.date >= l.report_date - INTERVAL 30 DAY\n      AND c.date < l.report_date\n      AND c.kalshi_category IS NOT NULL\n      AND c.kalshi_category <> ''\n    GROUP BY c.kalshi_category\n)\nSELECT\n    l.report_date,\n    d.kalshi_category,\n    d.contracts AS contracts_on_report_date,\n    d.contracts / NULLIF(SUM(d.contracts) OVER (), 0) * 100 AS share_of_kalshi_volume_pct,\n    a.avg_daily_contracts AS prior_30_day_daily_average,\n    (d.contracts / NULLIF(a.avg_daily_contracts, 0) - 1) * 100 AS change_vs_prior_30_day_average_pct\nFROM current_day d\nJOIN recent_average a USING (kalshi_category)\nCROSS JOIN latest l\nORDER BY d.contracts DESC\nLIMIT 15;"
     },
     {
       "label": "Additional context 2",
       "source": "llm_generated",
-      "summary": "report_date          latest_taker_side_notional    latest_taker_yes_notional    latest_taker_no_notional      latest_contracts  prior_30_day_average_taker_side_notional    prior_30_day_average_contracts\n-------------------  ----------------------------  ---------------------------  --------------------------  ------------------  ------------------------------------------  --------------------------------\n2026-10-08 00:00:00  548,229,102.02                279,612,991.99               268,616,110.02                   2,267,966,292  535,311,879.87                              2,254,607,139.50",
-      "sql": "WITH latest AS (\n    SELECT MAX(date) AS report_date\n    FROM taker_notional_daily\n    WHERE date <= DATE '2026-10-08'\n),\nwindow_data AS (\n    SELECT t.*, d.contracts_total\n    FROM taker_notional_daily t\n    JOIN daily_overall d USING (date)\n    CROSS JOIN latest l\n    WHERE t.date >= l.report_date - INTERVAL 30 DAY\n      AND t.date <= l.report_date\n)\nSELECT\n    MAX(date) AS report_date,\n    MAX(notional_total) FILTER (WHERE date = (SELECT report_date FROM latest)) AS latest_taker_side_notional,\n    MAX(notional_yes) FILTER (WHERE date = (SELECT report_date FROM latest)) AS latest_taker_yes_notional,\n    MAX(notional_no) FILTER (WHERE date = (SELECT report_date FROM latest)) AS latest_taker_no_notional,\n    MAX(contracts_total) FILTER (WHERE date = (SELECT report_date FROM latest)) AS latest_contracts,\n    AVG(notional_total) FILTER (WHERE date < (SELECT report_date FROM latest)) AS prior_30_day_average_taker_side_notional,\n    AVG(contracts_total) FILTER (WHERE date < (SELECT report_date FROM latest)) AS prior_30_day_average_contracts\nFROM window_data;"
-    },
-    {
-      "label": "Additional context 3",
-      "source": "llm_generated",
-      "summary": "market_type    report_date          latest_contracts    prior_30_day_average_contracts    change_vs_prior_30_day_average_pct    share_of_sports_market_type_volume_pct\n-------------  -------------------  ------------------  --------------------------------  ------------------------------------  ----------------------------------------\nPlayer Prop    2026-10-08 00:00:00  19,257,148.00       14,525,573.50                     32.57                                 1.05\nEsports        2026-10-08 00:00:00  9,813,293.00        8,201,164.03                      19.66                                 0.5343\nOther          2026-10-08 00:00:00  23,632,283.00       21,961,175.07                     7.61                                  1.29\nParlay         2026-10-08 00:00:00  1,393,726,034.00    1,376,436,615.40                  1.26                                  75.88\nFutures/Award  2026-10-08 00:00:00  10,388,332.00       11,700,729.33                     -11.22                                0.5656\nMoneyline      2026-10-08 00:00:00  301,223,186.00      343,647,284.33                    -12.35                                16.40\nSpread         2026-10-08 00:00:00  36,615,548.00       43,731,597.83                     -16.27                                1.99\nCricket        2026-10-08 00:00:00  2,233,776.00        2,753,869.33                      -18.89                                0.1216\nOver/Under     2026-10-08 00:00:00  34,246,151.00       47,995,107.43                     -28.65                                1.86\nGame Prop      2026-10-08 00:00:00  5,387,862.00        12,743,333.67                     -57.72                                0.2933",
-      "sql": "WITH type_daily AS (\n    SELECT\n        date,\n        CASE WHEN market_type LIKE 'Parlay%' THEN 'Parlay' ELSE market_type END AS market_type,\n        SUM(contracts) AS contracts\n    FROM sports_market_type_daily\n    WHERE date <= DATE '2026-10-08'\n    GROUP BY date, 2\n),\nlatest AS (\n    SELECT MAX(date) AS report_date FROM type_daily\n),\nlatest_total AS (\n    SELECT SUM(contracts) AS contracts\n    FROM type_daily\n    WHERE date = (SELECT report_date FROM latest)\n)\nSELECT\n    t.market_type,\n    l.report_date,\n    t.contracts AS latest_contracts,\n    AVG(h.contracts) AS prior_30_day_average_contracts,\n    (t.contracts / NULLIF(AVG(h.contracts), 0) - 1) * 100 AS change_vs_prior_30_day_average_pct,\n    t.contracts * 100.0 / NULLIF(lt.contracts, 0) AS share_of_sports_market_type_volume_pct\nFROM type_daily t\nCROSS JOIN latest l\nCROSS JOIN latest_total lt\nLEFT JOIN type_daily h\n  ON h.market_type = t.market_type\n AND h.date >= l.report_date - INTERVAL 30 DAY\n AND h.date < l.report_date\nWHERE t.date = l.report_date\nGROUP BY t.market_type, l.report_date, t.contracts, lt.contracts\nORDER BY change_vs_prior_30_day_average_pct DESC;"
+      "summary": "platform           report_date          latest_contracts    prior_30_day_daily_average    prior_30_day_low    prior_30_day_high    change_vs_prior_30_day_average_pct\n-----------------  -------------------  ------------------  ----------------------------  ------------------  -------------------  ------------------------------------\nCrypto.com/Nadex   2026-10-09 00:00:00  46,212,955.00       58,141,543.53                 25,394,164.00       181,567,111.00       -20.52\nDKeX               2026-10-09 00:00:00  68,921,821.00       81,479,328.87                 33,668,662.00       217,775,016.00       -15.41\nForecastEx         2026-10-08 00:00:00  579,351.00          625,755.73                    269,728.00          1,228,023.00         -7.42\nNovig              2026-10-08 00:00:00  82,603,433.55       60,226,907.70                 30,068,575.81       157,807,811.45       37.15\nPolymarket_US      2026-10-07 00:00:00  305,245,508.86      341,031,469.68                172,630,620.38      639,006,148.15       -10.49\nRothera            2026-10-09 00:00:00  39,344,090.00       41,020,357.27                 8,420,623.00        73,412,821.00        -4.09\nUnderdog Exchange  2026-10-09 00:00:00  47,698,888.95       33,602,772.25                 7,363,404.40        91,635,475.50        41.95",
+      "sql": "WITH platform_dates AS (\n    SELECT platform, MAX(date) AS report_date\n    FROM competitor_daily\n    WHERE platform <> 'Kalshi'\n      AND date <= DATE '2026-10-09'\n      AND COALESCE(complete, TRUE)\n    GROUP BY platform\n),\nrecent AS (\n    SELECT\n        c.platform,\n        p.report_date,\n        c.date,\n        c.contracts\n    FROM competitor_daily c\n    JOIN platform_dates p ON c.platform = p.platform\n    WHERE c.date >= p.report_date - INTERVAL 30 DAY\n      AND c.date <= p.report_date\n      AND COALESCE(c.complete, TRUE)\n)\nSELECT\n    platform,\n    report_date,\n    MAX(contracts) FILTER (WHERE date = report_date) AS latest_contracts,\n    AVG(contracts) FILTER (WHERE date < report_date) AS prior_30_day_daily_average,\n    MIN(contracts) FILTER (WHERE date < report_date) AS prior_30_day_low,\n    MAX(contracts) FILTER (WHERE date < report_date) AS prior_30_day_high,\n    (MAX(contracts) FILTER (WHERE date = report_date)\n      / NULLIF(AVG(contracts) FILTER (WHERE date < report_date), 0) - 1) * 100\n        AS change_vs_prior_30_day_average_pct\nFROM recent\nGROUP BY platform, report_date\nORDER BY platform;"
     }
   ],
   "anchor": {
     "question": "Build the anchor table for today's Predict Charts industry briefing. For each prediction-market venue, use its latest complete reported day and return venue, report date, reported contract volume, the average of its prior seven complete reported days, and percent change versus that average. Use daily_overall for Kalshi and exclude rows where is_partial is true. Use competitor_daily only for platforms other than Kalshi, add ProphetX from prophetx_daily, and add CME from cme_daily. Never use competitor_daily's Kalshi row; it is not the authoritative Kalshi total. In competitor_daily the `complete` column is only populated for Polymarket_US and is NULL for every other platform, where NULL means the row IS complete. Filter it as COALESCE(complete, TRUE) or omit the filter entirely; never write `complete = TRUE`, which silently discards every platform whose flag is NULL. Exclude partial days. CME is the sparse bulletin series; a normal seven-day lookback spanning seven calendar days is regular, not sparse. Resolve the latest complete reported day SEPARATELY FOR EACH VENUE. Do not filter the whole result to one shared calendar date, and do not require a venue to have a row on the newest date any venue reported: a venue whose most recent complete day is a few days old is reporting normally and still belongs in the table, on its own date. Each venue's prior-seven-day baseline is its own prior seven REPORTED days, which for an irregular reporter spans more than seven calendar days. Every one of these ten venues must appear in the result: Kalshi, Polymarket US, ForecastEx, DKeX, Underdog Exchange, OG/Crypto.com, ProphetX, Novig, Rothera, CME. OG/Crypto.com is the platform stored as 'Crypto.com/Nadex'.",
-    "sql": "WITH venue_days AS (\n    SELECT 'Kalshi' AS venue, date AS report_date, contracts_total AS reported_contract_volume\n    FROM daily_overall\n    WHERE COALESCE(is_partial, FALSE) = FALSE\n\n    UNION ALL\n\n    SELECT CASE platform\n               WHEN 'Polymarket_US' THEN 'Polymarket US'\n               WHEN 'Crypto.com/Nadex' THEN 'OG/Crypto.com'\n               ELSE platform\n           END AS venue,\n           date AS report_date,\n           contracts AS reported_contract_volume\n    FROM competitor_daily\n    WHERE platform IN (\n        'Polymarket_US', 'ForecastEx', 'DKeX', 'Underdog Exchange',\n        'Crypto.com/Nadex', 'Novig', 'Rothera'\n    )\n      AND COALESCE(complete, TRUE) = TRUE\n\n    UNION ALL\n\n    SELECT 'ProphetX' AS venue, date AS report_date, contracts AS reported_contract_volume\n    FROM prophetx_daily\n    WHERE COALESCE(complete, TRUE) = TRUE\n\n    UNION ALL\n\n    SELECT 'CME' AS venue, date AS report_date, cme_total_vol AS reported_contract_volume\n    FROM cme_daily\n),\nranked_days AS (\n    SELECT *,\n           ROW_NUMBER() OVER (\n               PARTITION BY venue\n               ORDER BY report_date DESC\n           ) AS day_rank\n    FROM venue_days\n),\nvenue_summary AS (\n    SELECT venue,\n           MAX(report_date) FILTER (WHERE day_rank = 1) AS report_date,\n           MAX(reported_contract_volume) FILTER (WHERE day_rank = 1) AS reported_contract_volume,\n           AVG(reported_contract_volume) FILTER (WHERE day_rank BETWEEN 2 AND 8) AS prior_7_reported_day_avg\n    FROM ranked_days\n    GROUP BY venue\n)\nSELECT venue,\n       report_date,\n       reported_contract_volume,\n       prior_7_reported_day_avg,\n       (reported_contract_volume / NULLIF(prior_7_reported_day_avg, 0) - 1) * 100\n           AS percent_change_vs_prior_7_avg\nFROM venue_summary\nORDER BY venue;",
+    "sql": "WITH venue_days AS (\n    SELECT\n        'Kalshi' AS venue,\n        date AS report_date,\n        contracts_total AS reported_contract_volume\n    FROM daily_overall\n    WHERE is_partial IS NOT TRUE\n\n    UNION ALL\n\n    SELECT\n        CASE platform\n            WHEN 'Polymarket_US' THEN 'Polymarket US'\n            WHEN 'Crypto.com/Nadex' THEN 'OG/Crypto.com'\n            ELSE platform\n        END AS venue,\n        date AS report_date,\n        contracts AS reported_contract_volume\n    FROM competitor_daily\n    WHERE platform IN (\n        'Polymarket_US', 'ForecastEx', 'DKeX', 'Underdog Exchange',\n        'Crypto.com/Nadex', 'Novig', 'Rothera'\n    )\n      AND COALESCE(complete, TRUE)\n\n    UNION ALL\n\n    SELECT\n        'ProphetX' AS venue,\n        date AS report_date,\n        contracts AS reported_contract_volume\n    FROM prophetx_daily\n    WHERE COALESCE(complete, TRUE)\n\n    UNION ALL\n\n    SELECT\n        'CME' AS venue,\n        date AS report_date,\n        cme_total_vol AS reported_contract_volume\n    FROM cme_daily\n),\nranked_days AS (\n    SELECT\n        venue,\n        report_date,\n        reported_contract_volume,\n        ROW_NUMBER() OVER (\n            PARTITION BY venue\n            ORDER BY report_date DESC\n        ) AS day_rank,\n        AVG(reported_contract_volume) OVER (\n            PARTITION BY venue\n            ORDER BY report_date\n            ROWS BETWEEN 7 PRECEDING AND 1 PRECEDING\n        ) AS prior_seven_reported_day_average\n    FROM venue_days\n)\nSELECT\n    venue,\n    report_date,\n    reported_contract_volume,\n    prior_seven_reported_day_average,\n    (reported_contract_volume / NULLIF(prior_seven_reported_day_average, 0) - 1) * 100\n        AS percent_change_vs_prior_seven_day_average\nFROM ranked_days\nWHERE day_rank = 1\nORDER BY venue;",
     "rows": [
       {
         "venue": "CME",
         "report_date": "2026-10-07T00:00:00",
         "reported_contract_volume": 70508,
-        "prior_7_reported_day_avg": 31099.714285714286,
-        "percent_change_vs_prior_7_avg": 126.71590919530726,
+        "prior_seven_reported_day_average": 31099.714285714286,
+        "percent_change_vs_prior_seven_day_average": 126.71590919530726,
         "reporting_density": "sparse bulletin",
-        "days_behind_newest_venue": 1,
-        "reporting_recency": "1 day behind — normal reporting lag",
+        "days_behind_newest_venue": 2,
+        "reporting_recency": "2 days behind — normal reporting lag",
         "approx_market_share_pct": 0.002
       },
       {
         "venue": "DKeX",
-        "report_date": "2026-10-08T00:00:00",
-        "reported_contract_volume": 92949415,
-        "prior_7_reported_day_avg": 98008013.28571428,
-        "percent_change_vs_prior_7_avg": -5.16141294586534,
+        "report_date": "2026-10-09T00:00:00",
+        "reported_contract_volume": 68921821,
+        "prior_seven_reported_day_average": 101222420.42857143,
+        "percent_change_vs_prior_seven_day_average": -31.910518728767855,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 3.242
+        "approx_market_share_pct": 2.29
       },
       {
         "venue": "ForecastEx",
         "report_date": "2026-10-08T00:00:00",
         "reported_contract_volume": 579351,
-        "prior_7_reported_day_avg": 509980.4285714286,
-        "percent_change_vs_prior_7_avg": 13.602594833471194,
+        "prior_seven_reported_day_average": 509980.4285714286,
+        "percent_change_vs_prior_seven_day_average": 13.602594833471194,
         "reporting_density": "regular",
-        "days_behind_newest_venue": 0,
-        "reporting_recency": "current",
-        "approx_market_share_pct": 0.02
+        "days_behind_newest_venue": 1,
+        "reporting_recency": "1 day behind — normal reporting lag",
+        "approx_market_share_pct": 0.019
       },
       {
         "venue": "Kalshi",
-        "report_date": "2026-10-08T00:00:00",
-        "reported_contract_volume": 2267966292,
-        "prior_7_reported_day_avg": 2653077734.142857,
-        "percent_change_vs_prior_7_avg": -14.515648644093604,
+        "report_date": "2026-10-09T00:00:00",
+        "reported_contract_volume": 2408622310,
+        "prior_seven_reported_day_average": 2631132751.428571,
+        "percent_change_vs_prior_seven_day_average": -8.456830667618709,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 79.1,
+        "approx_market_share_pct": 80.039,
         "all_time_rank": "below its 5 biggest days",
         "highest_earlier_day": "2026-10-04",
         "highest_earlier_day_contracts": 3679416910
@@ -89,75 +83,75 @@
         "venue": "Novig",
         "report_date": "2026-10-08T00:00:00",
         "reported_contract_volume": 82603433.55,
-        "prior_7_reported_day_avg": 84193636.28999999,
-        "percent_change_vs_prior_7_avg": -1.8887445774673939,
+        "prior_seven_reported_day_average": 84193636.28999999,
+        "percent_change_vs_prior_seven_day_average": -1.8887445774673939,
         "reporting_density": "regular",
-        "days_behind_newest_venue": 0,
-        "reporting_recency": "current",
-        "approx_market_share_pct": 2.881
+        "days_behind_newest_venue": 1,
+        "reporting_recency": "1 day behind — normal reporting lag",
+        "approx_market_share_pct": 2.745
       },
       {
         "venue": "OG/Crypto.com",
-        "report_date": "2026-10-08T00:00:00",
-        "reported_contract_volume": 34877690,
-        "prior_7_reported_day_avg": 58534822.28571428,
-        "percent_change_vs_prior_7_avg": -40.415484940300104,
+        "report_date": "2026-10-09T00:00:00",
+        "reported_contract_volume": 46212955,
+        "prior_seven_reported_day_average": 58793961.71428572,
+        "percent_change_vs_prior_seven_day_average": -21.39846737225193,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 1.216
+        "approx_market_share_pct": 1.536
       },
       {
         "venue": "Polymarket US",
         "report_date": "2026-10-07T00:00:00",
         "reported_contract_volume": 305245508.86,
-        "prior_7_reported_day_avg": 379944245.15714294,
-        "percent_change_vs_prior_7_avg": -19.660446828520307,
+        "prior_seven_reported_day_average": 379944245.1571428,
+        "percent_change_vs_prior_seven_day_average": -19.660446828520286,
         "reporting_density": "regular",
-        "days_behind_newest_venue": 1,
-        "reporting_recency": "1 day behind — normal reporting lag",
-        "approx_market_share_pct": 10.646
+        "days_behind_newest_venue": 2,
+        "reporting_recency": "2 days behind — normal reporting lag",
+        "approx_market_share_pct": 10.143
       },
       {
         "venue": "ProphetX",
-        "report_date": "2026-10-08T00:00:00",
-        "reported_contract_volume": 9230739.88,
-        "prior_7_reported_day_avg": 9514317.257142859,
-        "percent_change_vs_prior_7_avg": -2.9805331215959074,
+        "report_date": "2026-10-09T00:00:00",
+        "reported_contract_volume": 10017887.39,
+        "prior_seven_reported_day_average": 9722681.484285714,
+        "percent_change_vs_prior_seven_day_average": 3.0362601736096506,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 0.322
+        "approx_market_share_pct": 0.333
       },
       {
         "venue": "Rothera",
-        "report_date": "2026-10-08T00:00:00",
-        "reported_contract_volume": 29698092,
-        "prior_7_reported_day_avg": 37129949.85714286,
-        "percent_change_vs_prior_7_avg": -20.015803645673813,
+        "report_date": "2026-10-09T00:00:00",
+        "reported_contract_volume": 39344090,
+        "prior_seven_reported_day_average": 37723386.571428575,
+        "percent_change_vs_prior_seven_day_average": 4.296282958325204,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 1.036
+        "approx_market_share_pct": 1.307
       },
       {
         "venue": "Underdog Exchange",
-        "report_date": "2026-10-08T00:00:00",
-        "reported_contract_volume": 43998973.200004,
-        "prior_7_reported_day_avg": 49838182.6114293,
-        "percent_change_vs_prior_7_avg": -11.716336963872765,
+        "report_date": "2026-10-09T00:00:00",
+        "reported_contract_volume": 47698888.949996,
+        "prior_seven_reported_day_average": 51812270.478573,
+        "percent_change_vs_prior_seven_day_average": -7.939010374536837,
         "reporting_density": "regular",
         "days_behind_newest_venue": 0,
         "reporting_recency": "current",
-        "approx_market_share_pct": 1.535
+        "approx_market_share_pct": 1.585
       }
     ],
     "columns": [
       "venue",
       "report_date",
       "reported_contract_volume",
-      "prior_7_reported_day_avg",
-      "percent_change_vs_prior_7_avg",
+      "prior_seven_reported_day_average",
+      "percent_change_vs_prior_seven_day_average",
       "reporting_density",
       "days_behind_newest_venue",
       "reporting_recency",
@@ -167,5 +161,5 @@
       "highest_earlier_day_contracts"
     ]
   },
-  "model": null
+  "model": "gpt-6-luna"
 }
