@@ -331,8 +331,8 @@ const detail0 = parlayDetail[0] ?? {};
   venues are drawn.</p>
   <p><strong>DKeX single markets</strong> &mdash; no aggressor flag (its trade records include date, symbol,
   timestamp, price, quantity), so the named-side result is price bias rather than what the
-  taker earned. Fees can reverse that result's sign, and customer cost now includes both the
-  DKeX exchange charge and DraftKings Predictions' applicable introducing-broker commission;
+  taker earned. Fees can reverse that result's sign, and customer cost now is
+  DraftKings Predictions' all-in fee, which includes the DKeX exchange charge;
   neither fact supplies the missing aggressor identity. DKeX parlays are different: they are
   RFQ-quoted, so their buyer is the taker, and that separate net series remains on the chart.
   <strong>ProphetX</strong> &mdash; no aggressor flag; its single-market number was the priced
@@ -359,7 +359,7 @@ const detail0 = parlayDetail[0] ?? {};
 
 ## What a contract costs its buyer
 
-<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX's RFQ-parlay row is net of both the DKeX taker charge and DraftKings Predictions' applicable introducing-broker commission.</strong> Crypto.com is net of its standard $0.02 direct-member exchange benchmark, not an exact reconstruction of the app's retail fee: the app changed on June 30, 2026 to a published 1–1.75&cent; taker range with maker and settlement fees at zero, while the historical bulletin cannot identify which point in that range applied. The precise fee, side and price-basis treatment for every row is disclosed above and in its tooltip.</div>
+<div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX's RFQ-parlay row is net of DraftKings Predictions' all-in fee, which includes the DKeX taker charge.</strong> Crypto.com is net of its standard $0.02 direct-member exchange benchmark, not an exact reconstruction of the app's retail fee: the app changed on June 30, 2026 to a published 1–1.75&cent; taker range with maker and settlement fees at zero, while the historical bulletin cannot identify which point in that range applied. The precise fee, side and price-basis treatment for every row is disclosed above and in its tooltip.</div>
 
 ```js
 Plot.plot({

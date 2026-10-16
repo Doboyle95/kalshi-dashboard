@@ -5,7 +5,7 @@ title: DKeX · Economics
 <div class="page-hero" data-accent="dkex">
   <div class="page-eyebrow">DKeX</div>
   <h1>What it charges</h1>
-  <p class="page-lead">Modeled DraftKings customer cost on DKeX trades, and what that works out to per dollar of contract.</p>
+  <p class="page-lead">Modeled customer cost on DKeX trades, and what that works out to per contract. All DKeX volume is routed through DraftKings, so the customer fee is DraftKings' all-in fee.</p>
 </div>
 
 ```js
@@ -67,17 +67,18 @@ if (rows.length) display(realizedRate({rows: rows.filter(inDateRange(rateRange))
 
 ```js
 // This page deliberately does not infer schedule changes from the shape of the
-// realized-rate line. The exchange schedule is unchanged; the modeled customer-cost
-// series has two explicit DraftKings retail boundaries instead.
-if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>Three disclosed regimes, applied by trade date.</strong> Before DraftKings' June 26 retail launch, the public trade records include DKeX's exchange fee only. June 26 through September 1 adds DraftKings Predictions' prior flat 1¢ introducing-broker commission. From September 2, the first day the new disclosure was observed, it adds the current price ladder instead. The DKeX exchange schedule itself has not changed; movement inside each regime comes from the day's price mix and per-execution rounding.</div>`);
+// realized-rate line. The exchange schedule changes only for combination makers, from
+// October 1; the modeled customer-cost series has three DraftKings windows, and their
+// dates are estimates.
+if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>The customer fee is DraftKings' all-in fee, and its dates are estimates.</strong> DraftKings' variable fee includes the exchange fee: its customer email of 2026-05-11 said all fees continue to include applicable exchange fees. All DKeX volume is routed through DraftKings. From DKeX's retail launch on June 26 to September 1 the fee is the May tiers. From September 2 it is the September ladder, first seen that day. From October 5 it is the latest ladder. None of these has a published effective date. Movement inside each window comes from the day's price mix and per-execution rounding.</div>`);
 ```
 
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
-  <p><strong>Fees here are computed, not reported.</strong> DKeX publishes no fee field. Its <a href="https://www.cftc.gov/filings/orgrules/rules0515263470.pdf">filed exchange schedule</a>, effective June 1, 2026, and the applicable DraftKings broker schedule are applied to each print before division by contracts. The schedule arithmetic is exact at execution grain; treating the printed side as the customer side is a modeled convention because those records have no aggressor or member identity.</p>
-  <p><strong>Customer cost and exchange revenue are separate.</strong> From DraftKings' June 26 retail launch, customer cost adds DraftKings Predictions' introducing-broker commission to the DKeX taker fee. DKeX exchange revenue is its own taker-plus-maker charge and excludes the broker; use the measure toggle on the comparison page to see it.</p>
-  <p><strong>Both charges are price-banded and rounded independently.</strong> DKeX charges the taker $0.0100 per contract at 3&ndash;98&cent;, $0.0050 at 1&cent; and 99&cent;, and $0.0085 at 2&cent;, plus $0.0025 to the maker. Each execution is rounded up to the nearest cent. DraftKings' current broker ladder is also multiplied by execution quantity and rounded up to the nearest cent, so neither fee is recomputed from daily totals.</p>
-  <p><strong>The <a href="https://myaccount.draftkings.com/documents/fee-disclosure?product=predict">new broker ladder</a> has no published effective date.</strong> It is applied from September 2, 2026, the first date we observed it, so it cannot rewrite earlier trades. The source currently prints $0.0880 at 97–98¢; that evident missing-zero typo is modeled as $0.0088 and called out on the comparison chart.</p>
+  <p><strong>Fees here are computed, not reported.</strong> DKeX publishes no fee field. Its <a href="https://www.cftc.gov/filings/orgrules/rules0515263470.pdf">filed exchange schedule</a>, effective June 1, 2026, gives the exchange's taker and maker charges, which feed exchange revenue. DraftKings' all-in fee is applied to each print as the customer fee. Both are divided by contracts afterwards. The schedule arithmetic is exact at execution grain; treating the printed side as the customer side is a modeled convention because those records have no aggressor or member identity.</p>
+  <p><strong>Customer cost and exchange revenue are separate.</strong> Customer cost is DraftKings' all-in fee, which already includes the exchange fee. Exchange revenue is the exchange's own taker-plus-maker charge; use the measure toggle on the comparison page to see it. The fee is per side, so a buyer pays it on entry; the fee on a seller's exit is not modeled separately.</p>
+  <p><strong>Each fee is price-banded and rounded up per execution.</strong> The exchange's taker charge is $0.0100 per contract at 3&ndash;98&cent;, $0.0050 at 1&cent; and 99&cent;, and $0.0085 at 2&cent;. The maker pays $0.0025, or from October 1 on a combination contract round-up(0.035 &times; C &times; P &times; (1 &minus; P)). DraftKings' all-in fee is multiplied by execution quantity and rounded up the same way, so neither is recomputed from daily totals.</p>
+  <p><strong>None of DraftKings' <a href="https://myaccount.draftkings.com/documents/fee-disclosure?product=predict">schedules</a> has a published effective date.</strong> Each window is estimated from when a schedule was first seen. The September ladder was first seen on September 2, 2026, and archived on September 24 and 25. The latest text is undated and was supplied on October 16. The September text printed $0.0880 at 97–98¢, a missing-zero typo we modeled as $0.0088. The latest text prints $0.0045 at 97–99¢.</p>
   
 </details>
 
