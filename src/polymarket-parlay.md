@@ -237,7 +237,7 @@ display(Plot.plot({
 
 ## Parlays as a share of Polymarket volume
 
-_Parlays went from nothing to roughly a quarter of everything traded on the venue in under three weeks._
+_Parlays went from nothing to a quarter of the contracts traded on the venue in under three weeks, and have since run at roughly half._
 
 ```js
 const pmShareRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts, color: "var(--accent-polymarket)", width}));
@@ -263,5 +263,5 @@ display(Plot.plot({
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
   <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is the buyer and buyer P&L is taker P&L. Every bet counts at the price it traded at on the venue's time-and-sales records. Those records carry no buy/sell flag, so a later trade of exactly the same size at a different price is read as that bet being cashed out, and the bet makes the cash-out price rather than the result. Held to settlement instead, the same bets would have returned ${heldPct} before fees.</p>
-  <p>Results come from the daily market report where it gives one, and otherwise from the venue's own settlement record for each parlay; the report never gives one for about a seventh of the money, and those parlays win more often than the rest. ${meta.pct_resolved?.toFixed(1)}% of stakes have a result so far. Voided parlays and the few settled at an in-between price (${meta.pct_terminated?.toFixed(2)}% of contracts) are left out. Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract, charged again on a cash-out), since combos have no published schedule of their own. Everything is dated by the day the parlay was bought.</p>
+  <p>Results come from the daily market report where it gives one, and otherwise from the venue's own settlement record for each parlay; the report never gives one for about 30% of the money, and those parlays win more often than the rest. ${meta.pct_resolved?.toFixed(1)}% of stakes have a result so far. Voided parlays and the few settled at an in-between price (${meta.pct_terminated?.toFixed(2)}% of contracts) are left out. Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract, charged again on a cash-out), since combos have no published schedule of their own. Everything is dated by the day the parlay was bought.</p>
 </details>
