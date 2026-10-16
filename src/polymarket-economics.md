@@ -83,7 +83,7 @@ if (shape) display(html`<div class="instruction-line" style="border-left-color:v
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
   <p><strong>Reported fees divided by reported contracts</strong>, on days carrying both. Days without a defensible numerator are absent, not drawn as zero.</p>
-  <p><strong>Why a fee rate moves at all.</strong> Most of these venues charge a parabola in price &mdash; roughly <code>&Theta; &times; contracts &times; p &times; (1&minus;p)</code> &mdash; which peaks at 50&cent; and falls to nearly nothing in the tails. So an effective rate tracks <em>where on the probability axis the venue traded</em>, not a change in its published schedule.</p>
+  <p><strong>Why a fee rate moves at all.</strong> Most of these venues charge a parabola in price &mdash; roughly <code>&Theta; &times; contracts &times; p &times; (1&minus;p)</code> &mdash; which peaks at 50&cent; and falls to nearly nothing in the tails. So an effective rate tracks <em>where on the probability axis the venue traded</em>, not a change in its published schedule. Polymarket's schedule did change, on 17 September 2026 (the coefficient) and 25 September 2026 (a surcharge on parlays).</p>
   
 </details>
 

@@ -95,7 +95,7 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
 </div>
 
 ```js
-display(html`<div class="chart-note">Every bet counts at the price paid, and a cashed-out bet at the price it was cashed out at. Fees are estimated at Polymarket's standard taker rate.</div>`);
+display(html`<div class="chart-note">Every bet counts at the price paid, and a cashed-out bet at the price it was cashed out at. Fees follow Polymarket's published taker schedule, including the parlay surcharge from 25 September 2026.</div>`);
 ```
 
 ## What parlay bettors realized, before and after fees
@@ -263,5 +263,5 @@ display(Plot.plot({
 <details class="surface-card compact-details">
   <summary>How this is measured</summary>
   <p>Parlays are the venue's <code>caoc</code> contracts. They are quoted by the house on request, so the customer is the buyer and buyer P&L is taker P&L. Every bet counts at the price it traded at on the venue's time-and-sales records. Those records carry no buy/sell flag, so a later trade of exactly the same size at a different price is read as that bet being cashed out, and the bet makes the cash-out price rather than the result. Held to settlement instead, the same bets would have returned ${heldPct} before fees.</p>
-  <p>Results come from the daily market report where it gives one, and otherwise from the venue's own settlement record for each parlay; the report never gives one for about 30% of the money, and those parlays win more often than the rest. ${meta.pct_resolved?.toFixed(1)}% of stakes have a result so far. Voided parlays and the few settled at an in-between price (${meta.pct_terminated?.toFixed(2)}% of contracts) are left out. Fees are estimated at the venue's standard taker rate (<code>6% × p × (1−p)</code> per contract, charged again on a cash-out), since combos have no published schedule of their own. Everything is dated by the day the parlay was bought.</p>
+  <p>Results come from the daily market report where it gives one, and otherwise from the venue's own settlement record for each parlay; the report never gives one for about 30% of the money, and those parlays win more often than the rest. ${meta.pct_resolved?.toFixed(1)}% of stakes have a result so far. Voided parlays and the few settled at an in-between price (${meta.pct_terminated?.toFixed(2)}% of contracts) are left out. Fees follow the venue's published taker schedule, applied to each trade at its own price and rounded to the cent: <code>6% × p × (1−p)</code> per contract until 17 September 2026, <code>6.95% × p × (1−p)</code> from then. Parlays are combos, which from 25 September also pay <code>4% × p × (1−p)⁴</code> per contract, so their fee is <code>p × [6.95% × (1−p) + 4% × (1−p)⁴]</code>. Each cash-out is charged again. Source: two CFTC filings by QCX LLC, dated 21 and 29 September 2026. Everything is dated by the day the parlay was bought.</p>
 </details>

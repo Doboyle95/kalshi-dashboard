@@ -267,7 +267,8 @@ const dkexExchangeFeeCents = p => {
 const feeCurves = [
   {name: "Kalshi", f: p => 7 * p * (1 - p)},
   {name: "Underdog Exchange", f: p => 7 * p * (1 - p), dash: "5,4"},
-  {name: "Polymarket US", f: p => 6 * p * (1 - p)},
+  {name: "Polymarket US", f: p => 6.95 * p * (1 - p)},
+  {name: "Polymarket US · combos", f: p => 6.95 * p * (1 - p) + 4 * p * Math.pow(1 - p, 4), color: "#3B7DD8", dash: "5,4"},
   {name: "Novig · parlay", f: p => 10 * p * (1 - p), color: "#6366F1"},
   {name: "Novig · live straight", f: p => 3 * p * (1 - p), color: "#A5B4FC", dash: "5,4"},
   {name: "Rothera", f: p => 2 * p * (1 - p)},
