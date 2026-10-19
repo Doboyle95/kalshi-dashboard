@@ -321,3 +321,68 @@ Plot.plot({
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">OG/Crypto.com, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero. DKeX publishes none either, but its settlement report names every leg, so the count is recovered rather than reported.</div>
+
+## Parlay stakes by exchange
+
+<div class="instruction-line">Dollars staked on parlays over the 30 days to 17 October 2026, by exchange. Each exchange reports its own stake: Kalshi's parlay handle, Polymarket US's bets with cash-outs left out, and the parlay stake each other exchange publishes. Novig counts only parlays of two or more legs.</div>
+
+```js
+import {VENUE_COLORS} from "./components/venue-data.js";
+const pieLo = Date.UTC(2026, 8, 18), pieHi = Date.UTC(2026, 9, 17);
+const pieInWindow = d => +d.date >= pieLo && +d.date <= pieHi;
+const pieM = v => "$" + (v / 1e6).toLocaleString("en-US", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + "M";
+const piePct = v => (100 * v).toFixed(1) + "%";
+const pieKalshiRows = DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
+const piePmRows = DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: true});
+const pieDkRows = DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
+const pieUdRows = DataAttachment("data/underdog_daily.csv").csv({typed: true});
+const pieNvRows = DataAttachment("data/novig_parlay_daily.csv").csv({typed: true});
+const piePxRows = DataAttachment("data/prophetx_daily.csv").csv({typed: true});
+const pieOgRows = DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
+```
+
+```js
+const pieVenues = [
+  {venue: "Kalshi", stake: d3.sum(pieKalshiRows.filter(pieInWindow), d => +d.handle_yes || 0)},
+  {venue: "Polymarket US", stake: d3.sum(piePmRows.filter(pieInWindow), d => +d.buy_stake_usd || 0)},
+  {venue: "DKeX", stake: d3.sum(pieDkRows.filter(pieInWindow), d => +d.stake_usd || 0)},
+  {venue: "Underdog Exchange", stake: d3.sum(pieUdRows.filter(pieInWindow), d => +d.stake_parlay || 0)},
+  {venue: "Novig", stake: d3.sum(pieNvRows.filter(d => pieInWindow(d) && +d.legs > 1), d => +d.taker_value || 0)},
+  {venue: "ProphetX", stake: d3.sum(piePxRows.filter(pieInWindow), d => +d.stake_parlay || 0)},
+  {venue: "OG/Crypto.com", stake: d3.sum(pieOgRows.filter(pieInWindow), d => +d.stake_usd || 0)}
+].filter(d => d.stake > 0).sort((a, b) => b.stake - a.stake);
+const pieTotal = d3.sum(pieVenues, d => d.stake);
+pieVenues.forEach(d => { d.share = d.stake / pieTotal; });
+```
+
+```js
+{
+  const R = Math.min(150, width * 0.35);
+  const svg = d3.create("svg")
+    .attr("viewBox", `${-R} ${-R} ${2 * R} ${2 * R}`)
+    .attr("width", 2 * R).attr("height", 2 * R)
+    .style("max-width", "100%").style("height", "auto");
+  const arc = d3.arc().innerRadius(0).outerRadius(R);
+  svg.append("g").selectAll("path")
+    .data(d3.pie().sort(null).value(d => d.stake)(pieVenues))
+    .join("path")
+      .attr("d", arc)
+      .attr("fill", d => VENUE_COLORS[d.data.venue])
+      .attr("stroke", "var(--theme-background)").attr("stroke-width", 1.5)
+    .append("title")
+      .text(d => `${d.data.venue}: ${pieM(d.data.stake)}, ${piePct(d.data.share)} of stakes`);
+  display(html`<div style="display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+    ${svg.node()}
+    <ul style="list-style:none;margin:0;padding:0;min-width:260px;flex:1;font-size:14px">
+      ${pieVenues.map(d => html`<li style="display:flex;align-items:center;gap:8px;padding:3px 0">
+        <span style="width:12px;height:12px;border-radius:2px;background:${VENUE_COLORS[d.venue]};flex:none"></span>
+        <span style="flex:1">${d.venue}</span>
+        <span style="font-variant-numeric:tabular-nums">${pieM(d.stake)}</span>
+        <span style="width:56px;text-align:right;font-variant-numeric:tabular-nums">${piePct(d.share)}</span>
+      </li>`)}
+    </ul>
+  </div>`);
+}
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Seven exchanges, about ${pieM(pieTotal)} in total. Shares compare sizes; each exchange measures its stake its own way, so they are not like-for-like.</div>
