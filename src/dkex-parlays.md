@@ -121,7 +121,12 @@ const settledShare = ALL.contracts ? ALL.settled_contracts / ALL.contracts : 0;
 <p class="section-intro">Stake per day, split by how many legs the combo carried.</p>
 
 ```js
-const byDayLegs = d3.rollup(rows, total, d => +d.date, d => +d.legs);
+// A parlay settled from DraftKings' market report has no leg names (its settlement report is missing), so its
+// leg count is blank. It counts in every total on this page, but cannot be placed in a leg breakdown.
+const hasLegs = d => +d.legs > 0;
+const legRows = rows.filter(hasLegs);
+const noLegs = total(rows.filter(d => !hasLegs(d)));
+const byDayLegs = d3.rollup(legRows, total, d => +d.date, d => +d.legs);
 const legStack = [...byDayLegs].flatMap(([t, m]) => [...m].map(([legs, o]) => ({
   date: new Date(t), legs, label: `${legs} legs`, ...o
 })));
@@ -166,12 +171,14 @@ Plot.plot({
 
 <div class="instruction-line">${dupes === 0 ? `${days.length} days, ${fmtUSD(ALL.stake_usd)} staked in total.` : `⚠ ${dupes} duplicate (date, leg) rows — this chart is drawing sails; the producer is not aggregating.`}</div>
 
+<div class="instruction-line">${noLegs.stake_usd > 0 ? `${fmtUSD(noLegs.stake_usd)} staked on ${noLegs.trades.toLocaleString("en-US")} trades has no leg count. Those parlays settled from DraftKings' market report on days whose settlement report is missing. They count in every total on this page, but not in these leg breakdowns.` : ""}</div>
+
 ## What a leg costs
 
 <p class="section-intro">Buyers pay the light bar and win the dark one; the gap between them is the house edge.</p>
 
 ```js
-const byLegs = [...d3.rollup(rows, total, d => +d.legs)]
+const byLegs = [...d3.rollup(legRows, total, d => +d.legs)]
   .map(([legs, o]) => ({legs, ...withRates(o)}))
   .filter(d => d.settled_contracts > 0)
   .sort((a, b) => a.legs - b.legs);
