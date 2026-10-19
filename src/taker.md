@@ -22,6 +22,7 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 // No await: each file is its own promise, which Framework awaits in every cell that reads it.
 const taker = DataAttachment("data/taker_notional_daily.csv").csv({typed: true});
+const cashoutDaily = DataAttachment("data/parlay_cashout_daily.csv").csv({typed: true});
 const takerVolByCategory = DataAttachment("data/taker_volume_by_category_daily.csv").csv({typed: true});
 const historicalCategoryMix = DataAttachment("data/daily_top_categories.csv").csv({typed: true});
 const categoryLeaderboard = DataAttachment("data/category_leaderboard.csv").csv({typed: true});
@@ -187,6 +188,82 @@ Plot.plot({
 
 <div class="inline-legend">
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--accent-kalshi)"></span>Daily taker-side volume</span>
+  <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
+</div>
+
+## Daily taker stakes excluding parlay cash-outs
+
+<p class="section-intro">The daily taker-side volume above, with the trades we infer to be parlay cash-outs taken out. A cash-out is a bettor selling a parlay back before it settles, and it shows up as a no-side taker buying. The inference is ours, not Kalshi's, and it only runs from 4 September 2025, so this chart starts there.</p>
+
+```js
+// parlay_cashout_daily.csv covers 2025-09-04 onward. cashout_notional is the no-side taker's cost,
+// the same unit as taker-side volume, so it comes straight off the day's total. Days the inference
+// has not classified are left out rather than shown as if they had no cash-outs.
+const takerByDate = new Map(taker.map(d => [+d.date, d]));
+const isCashoutProv = d => String(d.is_provisional).toLowerCase() === "true";
+const takerExCashout = cashoutDaily
+  .filter(d => takerByDate.has(+d.date))
+  .map(d => {
+    const total = takerByDate.get(+d.date).notional_total || 0;
+    const cashout = d.cashout_notional || 0;
+    return {date: d.date, total, cashout, net: total - cashout, prov: isCashoutProv(d)};
+  })
+  .sort((a, b) => a.date - b.date);
+const exCashoutMa7 = rollingMean(takerExCashout, "net");
+```
+
+```js
+const ecr = view(dateBrush({data: takerExCashout, valueAccessor: d => d.net, color: "var(--accent-kalshi)", width}));
+```
+
+```js
+const [es, ee] = ecr;
+const ecFd  = takerExCashout.filter(d => d.date >= es && d.date <= ee);
+const ecMa  = exCashoutMa7.filter(d => d.date >= es && d.date <= ee);
+```
+
+<div class="plot-shell">
+
+```js
+Plot.plot({
+  style: {fontFamily: "var(--font-sans)"},
+  width,
+  height: 360,
+  marginLeft: 80,
+  x: {type: "utc", label: null},
+  y: {label: "Taker stakes excl. cash-outs ($)", grid: true},
+  marks: [
+    Plot.rectY(ecFd, {
+      x1: d => d.date,
+      x2: d => new Date(d.date.getTime() + 864e5),
+      y: d => d.net || 0,
+      fill: "var(--accent-kalshi)",
+      fillOpacity: 0.6
+    }),
+    Plot.lineY(ecMa, {
+      x: "date", y: "ma",
+      stroke: "#e15759", strokeWidth: 2, curve: "monotone-x"
+    }),
+    Plot.ruleX(ecFd, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
+    Plot.tip(ecFd, Plot.pointerX({
+      x: "date",
+      title: d => [
+        fmtDate(d.date),
+        `Taker-side volume: ${fmtUSD(d.total)}`,
+        `Inferred parlay cash-outs: −${fmtUSD(d.cashout)}`,
+        `Excluding cash-outs: ${fmtUSD(d.net)} (${(d.total ? d.net/d.total*100 : 0).toFixed(1)}%)`,
+        d.prov ? "Provisional day: cash-outs use the older, broader rule" : ""
+      ].filter(Boolean).join("\n")
+    })),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+</div>
+
+<div class="inline-legend">
+  <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:var(--accent-kalshi)"></span>Taker stakes excluding cash-outs</span>
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
