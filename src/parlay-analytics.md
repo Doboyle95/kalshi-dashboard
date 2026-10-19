@@ -835,15 +835,13 @@ const PVL_COLOR = KIND_COLORS[0];   // the page's non-correlated blue
 const pvlIndepProfile = pvlProfileRaw.filter(d => d.kind === "independent");
 const pvlPriceRows = pvlIndepProfile.filter(d => d.dim === "price");
 // The diagonal chart: one dot per price band, across = what its legs were worth on average,
-// up = what was actually paid. Both axes run down to 0.0001¢ (legs worth 1 in a million) so the
-// floor shows: the legs keep getting worth less, the price stays at ~0.1¢, and the gap reaches
-// ~1,000x. Daniel 2026-09-25: the tail is "one of the most interesting findings", but 10⁻⁸¢ was
-// "a little too far" -- 10⁻⁴. Bands below keep the same ~0.1¢ price all the way to ~10⁻¹⁰⁹¢;
-// they are counted in every figure, just not drawn. The square domain keeps the "priced exactly
-// at its legs" line at 45°. Thin bands (a few hundred trades out of millions) are noise, not drawn.
-const PVL_X_MIN = 1e-4, PVL_X_MAX = 100;
-const PVL_TICKS = [1e-4, 1e-3, 0.01, 0.1, 1, 10, 100];
-const PVL_TICKS_NARROW = [1e-4, 0.01, 1, 100];
+// up = what was actually paid. Both axes start at 0.01¢ and run to $1; the square domain keeps the
+// "priced exactly at its legs" line at 45°. Bands whose legs were worth less than 0.01¢ are still
+// counted in every figure, just not drawn: the empty space to their left was not telling anything.
+// Thin bands (a few hundred trades out of millions) are noise, not drawn.
+const PVL_X_MIN = 0.01, PVL_X_MAX = 100;
+const PVL_TICKS = [0.01, 0.1, 1, 10, 100];
+const PVL_TICKS_NARROW = [0.01, 1, 100];
 const pvlPoints = pvlPriceRows
   .filter(d => d.n_trades >= 500 && d.avg_indep_cents >= PVL_X_MIN)
   .sort((a, b) => a.avg_indep_cents - b.avg_indep_cents);
@@ -923,12 +921,10 @@ markup._
   const m = {left: 56, right: 24, top: 24, bottom: 44};
   // Screen angle of the corner-to-corner diagonal, so its label runs along it.
   const diagAngle = -Math.atan2(H - m.top - m.bottom, width - m.left - m.right) * 180 / Math.PI;
-  // Direct labels: the small markups where most money is, then the gap growing a hundredfold per
-  // two decades along the floor. Floor labels sit to the RIGHT of their dot (the left edge is near).
+  // Direct labels: the small markups where most money is, and the widest gap still drawn, at the
+  // leftmost band. Floor labels sit to the RIGHT of their dot (the left edge is near).
   const labelled = [...new Set(width >= 600 ? [pvlNearest(10), pvlNearest(1)] : [pvlNearest(10)])].filter(Boolean);
-  const floorLabelled = [...new Set(width >= 600
-    ? [pvlNearest(0.01), pvlNearest(1e-4)]
-    : [pvlNearest(1e-4)])].filter(Boolean);
+  const floorLabelled = [pvlNearest(PVL_X_MIN)].filter(Boolean);
   // Floor labels are orders of magnitude, so one significant figure ("1,000×", not "983×");
   // the tooltip keeps two.
   const roundTimes = x => x >= 1e6 ? `${+(x / 1e6).toPrecision(1)} million×`
@@ -948,7 +944,7 @@ markup._
       Plot.line([[PVL_X_MIN, PVL_X_MIN], [PVL_X_MAX, PVL_X_MAX]],
         {stroke: "var(--theme-foreground-faint)", strokeDasharray: "4 4"}),
       // Below the line in the empty lower-left, clear of the dots and the shaded gap.
-      Plot.text([[1e-3, 1e-3]], {x: d => d[0], y: d => d[1], text: () => "Priced exactly at its legs",
+      Plot.text([[PVL_X_MIN * 10, PVL_X_MIN * 10]], {x: d => d[0], y: d => d[1], text: () => "Priced exactly at its legs",
         rotate: diagAngle, dy: 14, fontSize: 11, fill: "var(--theme-foreground-muted)"}),
       Plot.line(pvlPoints, {x: "avg_indep_cents", y: "avg_traded_cents", stroke: PVL_COLOR,
         strokeWidth: 2, curve: "monotone-x"}),
@@ -959,8 +955,7 @@ markup._
       Plot.text(floorLabelled, {x: "avg_indep_cents", y: "avg_traded_cents", text: d => roundTimes(1 + d.markup_pct / 100) + " its legs",
         textAnchor: "start", dx: 2, dy: -12, fontSize: 11, fontWeight: 600, fill: "var(--theme-foreground)", ...halo}),
       Plot.text([[PVL_X_MIN * 1.3, 4]], {x: d => d[0], y: d => d[1],
-        text: () => width >= 600 ? "Prices stop falling near 0.1¢,\nhowever little the legs are worth"
-          : "Prices stop falling\nnear 0.1¢",
+        text: () => "Prices stop falling\nnear 0.1¢",
         textAnchor: "start", lineAnchor: "bottom", fontSize: 11, fill: "var(--theme-foreground-muted)"}),
       Plot.tip(pvlPoints, Plot.pointer({x: "avg_indep_cents", y: "avg_traded_cents",
         title: d => `Legs worth ${pvlCentsTip(d.avg_indep_cents)} together\n`
