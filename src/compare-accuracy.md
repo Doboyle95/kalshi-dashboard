@@ -15,27 +15,15 @@ import {fileUpdatedAt, freshnessPanel} from "./components/freshness.js";
 import {staleNote} from "./components/stale-note.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-const freshness = await DataAttachment("data/freshness_manifest.json").json();
-const kCurve = await DataAttachment("data/calibration_three_way.csv").csv({typed: true});
-const kClusters = await DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true});
-const pm = await DataAttachment("data/calibration_polymarket.csv").csv({typed: true});
-const fx = await DataAttachment("data/forecastex_calibration.csv").csv({typed: true});
-const dk = await DataAttachment("data/dkex_calibration.csv").csv({typed: true});
-const px = await DataAttachment("data/prophetx_calibration.csv").csv({typed: true});
 // THE WHOLE CONTRACT SUITE, not just parlays. Calibration asks whether a contract
 // trading at price p resolves that way p% of the time, which needs no aggressor flag --
 // so crypto strikes, sports events and combos all qualify. (P&L is the opposite case and
 // stays parlays-only: buyer-equals-taker holds only for a house-quoted combo.)
-const nd = await DataAttachment("data/nadex_calibration.csv").csv({typed: true});
 // Novig STRAIGHT contracts, added 2026-08-17. Loaded on a SECOND attachment instance with a
 // try/catch so that until novig_calibration.csv reaches the transport allowlist this page
 // renders every other venue instead of erroring outright. Same pattern, same reasoning as
 // novig.md's fee section.
 const NovigCal = createRemoteDataAttachment(d3);
-const nv = await (async () => {
-  try { return await NovigCal("data/novig_calibration.csv").csv({typed: true}); }
-  catch (error) { console.warn(`novig calibration unavailable — ${String(error?.message ?? error).slice(0, 160)}`); return []; }
-})();
 
 // Cross-venue P&L, rehomed here 2026-08-24. /pnl-venues was DELETED on 2026-08-20 and its
 // charts were not moved anywhere, so competitor_pnl_by_bin.csv has been published to no
@@ -43,10 +31,26 @@ const nv = await (async () => {
 // mispricing cost the people on the other side of it. Same venues, same price axis, so they
 // belong under the curve rather than on a page of their own.
 // Reuses the DataAttachment above -- declaring a second one collides.
-const pnl = await DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true});
 // Parlay detail carries the disclosure fields the shared schema drops: resolved share,
 // effective sample size, interval.
-const parlayDetail = await DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true});
+// Every file in this block is requested together and the block waits for all of them. Each
+// one used to be awaited after the one before it, so the page paid the sum of the transfers.
+const [freshness, kCurve, kClusters, pm, fx, dk, px, nd, nv, pnl, parlayDetail] = await Promise.all([
+  DataAttachment("data/freshness_manifest.json").json(),
+  DataAttachment("data/calibration_three_way.csv").csv({typed: true}),
+  DataAttachment("data/calibration_three_way_clusters.csv").csv({typed: true}),
+  DataAttachment("data/calibration_polymarket.csv").csv({typed: true}),
+  DataAttachment("data/forecastex_calibration.csv").csv({typed: true}),
+  DataAttachment("data/dkex_calibration.csv").csv({typed: true}),
+  DataAttachment("data/prophetx_calibration.csv").csv({typed: true}),
+  DataAttachment("data/nadex_calibration.csv").csv({typed: true}),
+  (async () => {
+    try { return await NovigCal("data/novig_calibration.csv").csv({typed: true}); }
+    catch (error) { console.warn(`novig calibration unavailable — ${String(error?.message ?? error).slice(0, 160)}`); return []; }
+  })(),
+  DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true}),
+  DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true})
+]);
 
 const number = value => value == null || value === "" || Number.isNaN(+value) ? null : +value;
 const kClusterMap = new Map(kClusters.map(d => [`${d.group}|${d.price_bin}`, d]));
