@@ -35,7 +35,7 @@ export function lossByPrice(rows, venue, [from, to] = [], {minShare = 0} = {}) {
   return {bands: kept, first, span: rs.length ? `parlays bought ${fmtDate(first)} to ${fmtDate(last)}` : "nothing in this date range"};
 }
 
-// The bar chart. `feeName` names the fee in the tooltip ("fees", "the 2¢ fee").
+// The bar chart. `feeName` names the fee in the tooltip ("fees", "the taker fee").
 export function lossByPriceChart({bands, first}, {width, feeName = "fees"} = {}) {
   if (!bands.length) {
     const p = document.createElement("p");

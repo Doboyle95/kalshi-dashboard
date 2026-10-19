@@ -142,7 +142,7 @@ That day: ${fmtM(+d.gross_pnl)}`,
 const lossRows = await DataAttachment("data/competitor_parlay_pnl_by_price_daily.csv").csv({typed: true}).catch(() => []);
 ```
 
-_Share of stakes lost at each price after the exchange's standard 2¢-a-contract fee, with the dollars under each bar — ${ogLoss.span}. Prices start at 1¢, where the fee alone is bigger than the stake._
+_Share of stakes lost at each price after the taker fee, with the dollars under each bar — ${ogLoss.span}._
 
 ```js
 const ogLossRange = view(dateBrush({data: lossRows.filter(d => d.venue === "Crypto.com/Nadex"), valueAccessor: d => d.staked_usd, color: "var(--accent-nadex)", width}));
@@ -152,10 +152,10 @@ const ogLossRange = view(dateBrush({data: lossRows.filter(d => d.venue === "Cryp
 import {lossByPrice, lossByPriceChart} from "./components/parlay-loss-by-price.js";
 // Follows this chart's own date window, applied to the day each parlay was BOUGHT.
 const ogLoss = lossByPrice(lossRows, "Crypto.com/Nadex", ogLossRange);
-display(lossByPriceChart(ogLoss, {width, feeName: "the 2¢ fee"}));
+display(lossByPriceChart(ogLoss, {width, feeName: "the taker fee"}));
 ```
 
 <details class="surface-card compact-details">
   <summary>How the price breakdown is measured</summary>
-  <p>Every COMBO trade is scored against its settlement and grouped by the price paid, on the day it was bought. The fee is the exchange's standard 2¢ a contract; the Crypto.com app has charged its own customers 1&ndash;1.75¢ since June 30, so for them the losses after fees are somewhat smaller. The venue's records don't say whether a trade was a buy or a sell, so a parlay sold back before settlement can't be separated out the way Kalshi's cash-outs are: every trade counts as a bet held to the end.</p>
+  <p>Every COMBO trade is scored against its settlement and grouped by the price paid, on the day it was bought. The fee is the taker fee Crypto.com publishes for combos: 0.07 &times; price &times; (1 &minus; price) per contract, which is 1.75¢ at 50¢ and under 0.1¢ at 1¢. It applies from June 30; before that the fee was 2¢ a contract. The data has no time of day for each trade, so the switch is applied by trading day. The venue's records don't say whether a trade was a buy or a sell, so a parlay sold back before settlement can't be separated out the way Kalshi's cash-outs are: every trade counts as a bet held to the end.</p>
 </details>
