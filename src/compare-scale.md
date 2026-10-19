@@ -14,15 +14,11 @@ import {VENUE_COLORS, VENUE_ORDER, buildPlatformSeries, buildVenueScoreboard, no
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
-// The five files are requested together and the block waits for all of them, so it pays the
-// slowest transfer rather than the sum of the five.
-const [kalshi, competitor, prophetx, cme, kalshiOi] = await Promise.all([
-  DataAttachment("data/daily_overall.csv").csv({typed: true}),
-  DataAttachment("data/competitor_daily.csv").csv({typed: true}),
-  DataAttachment("data/prophetx_daily.csv").csv({typed: true}),
-  DataAttachment("data/cme_daily_distributed.csv").csv({typed: true}),
-  DataAttachment("data/kalshi_oi_daily.csv").csv({typed: true})
-]);
+const kalshi = await DataAttachment("data/daily_overall.csv").csv({typed: true});
+const competitor = await DataAttachment("data/competitor_daily.csv").csv({typed: true});
+const prophetx = await DataAttachment("data/prophetx_daily.csv").csv({typed: true});
+const cme = await DataAttachment("data/cme_daily_distributed.csv").csv({typed: true});
+const kalshiOi = await DataAttachment("data/kalshi_oi_daily.csv").csv({typed: true});
 
 const fmtCount = value => {
   const n = +value || 0, a = Math.abs(n), sign = n < 0 ? "−" : "";
