@@ -49,6 +49,13 @@ export function estimateHistoricalTakerCategoryRows(wideRows, reportTickerToCat,
   const cutoff = +beforeDate;
   const estimatedRows = [];
 
+  // Every row of one wide CSV has the same columns, so the column list and each column's category are
+  // worked out once here. Object.entries(row) built a short-lived array of ~2,000 pairs for each of
+  // ~1,900 rows, which dominated the call. The columns keep the header's order, so each category adds
+  // its values in the same order and the totals are bit-identical.
+  const tickers = Object.keys(wideRows[0] ?? {}).filter(name => name !== "date");
+  const categories = tickers.map(reportTicker => reportTickerToCat.get(reportTicker) || "Uncategorized");
+
   for (const row of wideRows) {
     const date = +row.date;
     const dailyTotal = dailyByDate.get(date) || 0;
@@ -56,11 +63,10 @@ export function estimateHistoricalTakerCategoryRows(wideRows, reportTickerToCat,
 
     const byCategory = new Map();
     let sourceTotal = 0;
-    for (const [reportTicker, rawValue] of Object.entries(row)) {
-      if (reportTicker === "date") continue;
-      const value = +rawValue || 0;
+    for (let i = 0; i < tickers.length; ++i) {
+      const value = +row[tickers[i]] || 0;
       if (value <= 0) continue;
-      const category = reportTickerToCat.get(reportTicker) || "Uncategorized";
+      const category = categories[i];
       byCategory.set(category, (byCategory.get(category) || 0) + value);
       sourceTotal += value;
     }
