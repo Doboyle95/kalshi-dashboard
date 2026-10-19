@@ -24,6 +24,11 @@
   // Ids a section was published under before its heading changed: old -> current. The height
   // message keeps sending `target` as given, which is what an old snippet's resize script checks.
   const RENAMED = new Map([
+    ["what-parlay-bettors-realized-before-and-after-fees", "polymarket-us-what-parlay-bettors-realized-before-and-after-fees"],
+    ["daily-realized-p-and-l", "polymarket-us-daily-realized-p-and-l"],
+    ["what-parlay-buyers-lost-before-and-after-fees", "d-ke-x-what-parlay-buyers-lost-before-and-after-fees"],
+    ["daily-buyer-p-and-l", "d-ke-x-daily-buyer-p-and-l"],
+    ["what-a-multi-game-parlay-costs-vs-multiplying-its-legs", "d-ke-x-what-a-multi-game-parlay-costs-vs-multiplying-its-legs"],
     ["daily-15-minute-crypto-fee-revenue", "daily-15-minute-crypto-commodity-and-finance-fee-revenue"],
     ["daily-15-minute-crypto-and-commodity-fee-revenue", "daily-15-minute-crypto-commodity-and-finance-fee-revenue"]
   ]);

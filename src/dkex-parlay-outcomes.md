@@ -91,7 +91,7 @@ const unclassifiedShare = ALL.settled_stake_usd ? kindStake("unclassified") / AL
   <p>&#9888; DKeX&rsquo;s trade records carry about two thirds of its combos (see <a href="./dkex-parlays">Parlays</a>), so the dollar levels here are floors; the rates are measured on what is published.</p>
 </details>
 
-## What parlay buyers lost, before and after fees
+## DKeX: What parlay buyers lost, before and after fees
 
 _Running total of buyer P&L on DKeX parlays, by the day they were bought; the gap between the lines is fees._
 
@@ -125,7 +125,7 @@ const cumRange = view(dateBrush({data: byDate, valueAccessor: d => Math.abs(d.ne
 }
 ```
 
-## Daily buyer P&L
+## DKeX: Daily buyer P&L
 
 _What buyers made or lost after fees on the parlays bought each day; faded bars are still settling._
 

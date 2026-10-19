@@ -98,7 +98,7 @@ const latestShare     = settled.length ? settled[settled.length - 1].pct_of_venu
 display(html`<div class="chart-note">Every bet counts at the price paid, and a cashed-out bet at the price it was cashed out at. Fees follow Polymarket's published taker schedule, including the parlay surcharge from 25 September 2026.</div>`);
 ```
 
-## What parlay bettors realized, before and after fees
+## Polymarket US: What parlay bettors realized, before and after fees
 
 _Running total by the day each parlay was bought; the dashed line is before fees. Recent days keep moving as their parlays settle._
 
@@ -129,7 +129,7 @@ display(Plot.plot({
 }))
 ```
 
-## Daily realized P&L
+## Polymarket US: Daily realized P&L
 
 _What the parlays bought each day made or lost, after fees. Green days beat the house; red days didn't._
 

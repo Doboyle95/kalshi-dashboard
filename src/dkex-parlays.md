@@ -252,7 +252,7 @@ const dkLoss = lossByPrice(lossRows, "DKeX");
 display(lossByPriceChart(dkLoss, {width}));
 ```
 
-## What a multi-game parlay costs vs. multiplying its legs
+## DKeX: What a multi-game parlay costs vs. multiplying its legs
 
 _A multi-game parlay is fairly priced at its legs' prices multiplied together, each taken at the
 moment the parlay traded. Over ${fmtDate(dkPvlFrom)} – ${fmtDate(dkPvlTo)} DKeX bettors paid
