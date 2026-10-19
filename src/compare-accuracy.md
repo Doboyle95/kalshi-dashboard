@@ -25,14 +25,6 @@ display(DataAttachment.marker);
 // novig.md's fee section.
 const NovigCal = createRemoteDataAttachment(d3);
 
-// Cross-venue P&L, rehomed here 2026-08-24. /pnl-venues was DELETED on 2026-08-20 and its
-// charts were not moved anywhere, so competitor_pnl_by_bin.csv has been published to no
-// reader since. A calibration curve says a market was mispriced; these say what the
-// mispricing cost the people on the other side of it. Same venues, same price axis, so they
-// belong under the curve rather than on a page of their own.
-// Reuses the DataAttachment above -- declaring a second one collides.
-// Parlay detail carries the disclosure fields the shared schema drops: resolved share,
-// effective sample size, interval.
 // Every file in this block is requested together and the block waits for all of them. Each
 // one used to be awaited after the one before it, so the page paid the sum of the transfers.
 const [freshness, kCurve, kClusters, pm, fx, dk, px, nd, nv, pnl, parlayDetail] = await Promise.all([
@@ -48,7 +40,15 @@ const [freshness, kCurve, kClusters, pm, fx, dk, px, nd, nv, pnl, parlayDetail] 
     try { return await NovigCal("data/novig_calibration.csv").csv({typed: true}); }
     catch (error) { console.warn(`novig calibration unavailable — ${String(error?.message ?? error).slice(0, 160)}`); return []; }
   })(),
+  // Cross-venue P&L, rehomed here 2026-08-24. /pnl-venues was DELETED on 2026-08-20 and its
+  // charts were not moved anywhere, so competitor_pnl_by_bin.csv has been published to no
+  // reader since. A calibration curve says a market was mispriced; these say what the
+  // mispricing cost the people on the other side of it. Same venues, same price axis, so they
+  // belong under the curve rather than on a page of their own.
+  // Reuses the DataAttachment above -- declaring a second one collides.
   DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true}),
+  // Parlay detail carries the disclosure fields the shared schema drops: resolved share,
+  // effective sample size, interval.
   DataAttachment("data/polymarket_parlay_pnl.csv").csv({typed: true})
 ]);
 
