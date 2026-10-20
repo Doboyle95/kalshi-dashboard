@@ -20,7 +20,6 @@ const pmParlay = DataAttachment("data/polymarket_parlay_daily.csv").csv({typed: 
 const udDaily = DataAttachment("data/underdog_daily.csv").csv({typed: true});
 const nadexCats = DataAttachment("data/nadex_categories_daily.csv").csv({typed: true});
 const dkexCats = DataAttachment("data/dkex_categories_daily.csv").csv({typed: true});
-const dkParlay = DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
 ```
 
 ```js
