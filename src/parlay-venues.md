@@ -246,6 +246,105 @@ Plot.plot({
 })
 ```
 
+## Parlay volume and stakes by day
+
+```js
+const dkParlay = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
+const ndPnl = await DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
+```
+
+```js
+// Each venue's own daily parlay numbers, from the files that already feed its page. Contracts
+// are the parlay product only; stakes are dollars of trade value (contracts x price), except where
+// the venue names a taker side, which only Kalshi and Novig do.
+//
+// Kalshi's taker-YES stake and Novig's taker value are taker-side. A parlay is RFQ-priced with the
+// taker on YES, so on Kalshi the taker-YES stake is the same dollar amount as trade value; on the
+// venues without a side flag it is trade value by construction. The chart says which is which.
+const pvKByDay = d3.rollup(kParlay, v => ({contracts: d3.sum(v, d => d.contracts), stake: d3.sum(v, d => d.taker_yes_stake)}), d => iso(d.date));
+const pvNvByDay = d3.rollup(nvParlay.filter(d => d.legs > 1), v => ({contracts: d3.sum(v, d => d.contracts), stake: d3.sum(v, d => d.taker_value)}), d => iso(d.date));
+const pvDkByDay = d3.rollup(dkParlay, v => ({contracts: d3.sum(v, d => d.contracts), stake: d3.sum(v, d => d.stake_usd)}), d => iso(d.date));
+const pvNdStake = new Map(ndPnl.filter(d => d.coverage_pct >= 99).map(d => [iso(d.date), d.stake_usd]));
+
+const pvRows = [];
+const pvAdd = (venue, date, contracts, stake, taker = null) => pvRows.push({
+  venue, date: new Date(iso(date)), contracts: +contracts || 0, stake: stake == null ? null : +stake, taker
+});
+for (const [date, o] of pvKByDay) pvAdd("Kalshi", date, o.contracts, o.stake, o.stake);
+for (const [date, o] of pvNvByDay) pvAdd("Novig", date, o.contracts, o.stake, o.stake);
+for (const [date, o] of pvDkByDay) pvAdd("DKeX", date, o.contracts, o.stake);
+for (const [date, o] of ndByDay) pvAdd("Crypto.com/Nadex", date, o.parlay, pvNdStake.get(date));
+for (const d of pmParlay.filter(d => d.complete === 1)) pvAdd("Polymarket US", d.date, d.contracts, d.stake_usd);
+for (const d of udDaily.filter(d => udFirst != null && d.date >= udFirst)) pvAdd("Underdog", d.date, d.contracts_parlay, d.stake_parlay);
+for (const d of px.filter(d => d.complete === 1)) pvAdd("ProphetX", d.date, d.contracts_parlay, d.stake_parlay);
+
+// One cut for every venue: the last day all of them have complete. Polymarket and ProphetX carry
+// partial newest days (the report lags), so the minimum of each venue's last day is the honest end.
+const pvLast = d3.rollup(pvRows, v => d3.max(v, d => d.date), d => d.venue);
+const pvCut = d3.min(pvLast.values());
+const pvVenues = ["Kalshi", "Polymarket US", "Crypto.com/Nadex", "DKeX", "Novig", "Underdog", "ProphetX"];
+const pvColor = {...C, "DKeX": "var(--accent-dkex)"};
+const pvSeries = pvRows.filter(d => d.date <= pvCut && d.contracts > 0).sort((a, b) => a.date - b.date);
+const pvTaker = pvSeries.filter(d => d.taker != null);
+```
+
+```js
+const pvScale = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label: "Scale"}));
+```
+
+```js
+// One chart builder for both volume measures. Log drops zero days rather than drawing them at -inf.
+function pvChart(rows, field, label, fmt, venues) {
+  const logY = pvScale === "Log";
+  const data = logY ? rows.filter(d => d[field] > 0) : rows;
+  return Plot.plot({
+    width,
+    height: 340,
+    marginLeft: 64,
+    marginRight: 18,
+    marginBottom: 40,
+    x: {label: null, type: "utc", tickFormat: "%b %y"},
+    y: {label, grid: true, zero: !logY, type: logY ? "log" : "linear", tickFormat: fmt},
+    color: {legend: true, domain: venues, range: venues.map(v => pvColor[v])},
+    marks: [
+      logY ? null : Plot.ruleY([0], {stroke: "var(--theme-foreground)", strokeWidth: 1.5}),
+      Plot.line(data, {x: "date", y: field, stroke: "venue", strokeWidth: 2, curve: "monotone-x", defined: d => d[field] > 0}),
+      Plot.dot(data.filter(d => d[field] > 0), {
+        x: "date", y: field, fill: "venue", r: 2,
+        title: d => `${d.venue}\n${iso(d.date)}\n${fmtCount(d.contracts)} parlay contracts`
+          + (d.stake != null ? `\n$${fmtCount(d.stake)} stake` : "")
+          + (d.taker != null ? `\n$${fmtCount(d.taker)} taker-side` : ""),
+        tip: true
+      })
+    ].filter(Boolean)
+  });
+}
+```
+
+## Parlay contracts per day
+
+<div class="instruction-line">Every venue with a parlay product, through ${iso(pvCut)}. Kalshi is on a far larger scale, so the log view is the one that shows the smaller venues.</div>
+
+```js
+pvChart(pvSeries, "contracts", "Parlay contracts per day", fmtCount, pvVenues)
+```
+
+## Parlay dollar stakes per day
+
+<div class="instruction-line">Dollars of trade value: contracts × price. Kalshi shows its taker-YES stake, Novig its taker value; the other venues publish no side, so their figure is the same trade value without that label.</div>
+
+```js
+pvChart(pvSeries, "stake", "Parlay stake per day (USD)", d => `$${fmtCount(d)}`, pvVenues)
+```
+
+## Taker-side parlay stakes per day
+
+<div class="instruction-line">Only Kalshi and Novig name a taker. No other venue on this page does, so no other taker series can be drawn here, and nothing is drawn as a stand-in.</div>
+
+```js
+pvChart(pvTaker, "taker", "Taker-side parlay stake per day (USD)", d => `$${fmtCount(d)}`, ["Kalshi", "Novig"])
+```
+
 ## How many legs
 
 ```js

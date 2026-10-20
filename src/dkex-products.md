@@ -10,7 +10,7 @@ title: DKeX · Products
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryTotals, sportsSplit, fmtCount, fmtPct} from "./components/venue-modules.js";
+import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryBars, categoryTotals, sportsSplit, fmtCount, fmtPct} from "./components/venue-modules.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -63,6 +63,14 @@ display(sportsSplit({rows: split.filter(inDateRange(splitRange)), width, color: 
 ```js
 display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Sports is ${fmtPct(d3.sum(split, d => +d.contracts_sports || 0) / Math.max(1, d3.sum(split, d => +d.contracts_total || 0)))} of all contracts this venue has published.</div>`);
 ```
+
+## Volume by category
+
+```js
+display(categoryBars({rows, width, categories: present, colorOf: bucketColor}));
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">All time, in contracts. Share is of this venue's whole volume, so the bars add to 100%.</div>
 
 ## Every bucket, all time
 

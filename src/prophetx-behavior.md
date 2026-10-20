@@ -150,3 +150,28 @@ display(smallRows.length
 </details>
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./prophetx">ProphetX &middot; Activity</a>, and <a href="./trade-size">Trading behavior across venues</a> for the comparison.</div>
+
+## When it trades
+
+<div class="section-intro">ProphetX time stamps carry no zone. They are read as Eastern because their hour profile matches Underdog's (quiet from about 4 to 7 a.m., busy through the afternoon and evening), so treat the exact hour labels as approximate.</div>
+
+```js
+const hourRows = await DataAttachment("data/competitor_trades_by_hour.csv").csv({typed: true});
+```
+
+```js
+import {HOUR_WINDOWS, HOUR_METRICS, windowRows, hourOfDay, weekHourGrid, hourBars, weekGrid} from "./components/hour-profile.js";
+const hourWindow = view(Inputs.radio(HOUR_WINDOWS, {value: "90 days", label: "Window"}));
+const hourMetric = view(Inputs.radio(HOUR_METRICS, {value: "Contracts", label: "Measure"}));
+```
+
+```js
+const hourWin = windowRows(hourRows.filter(d => d.venue === "ProphetX"), hourWindow);
+display(hourBars({profile: hourOfDay(hourWin.rows, hourMetric), nDays: hourWin.nDays, color: "#DB2777", metric: hourMetric, width}));
+```
+
+```js
+display(weekGrid({cells: weekHourGrid(hourWin.rows, hourMetric), color: "#DB2777", metric: hourMetric, width}));
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">${hourWin.nDays} complete days, ${fmtDate(hourWin.from)} to ${fmtDate(hourWin.to)}. Times are Eastern.</div>

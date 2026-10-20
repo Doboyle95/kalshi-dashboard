@@ -10,7 +10,7 @@ title: ProphetX · Products
 
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
-import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryTotals, sportsSplit, fmtCount, fmtPct} from "./components/venue-modules.js";
+import {bucketOf, BUCKETS, bucketColor, categoryMix, categoryBars, categoryTotals, sportsSplit, fmtCount, fmtPct} from "./components/venue-modules.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
 const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
@@ -47,6 +47,14 @@ display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: m
 ```
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
+
+## Volume by category
+
+```js
+display(categoryBars({rows, width, categories: present, colorOf: bucketColor}));
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">All time, in contracts. Share is of this venue's whole volume, so the bars add to 100%.</div>
 
 ## Every bucket, all time
 

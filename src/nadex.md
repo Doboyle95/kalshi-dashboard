@@ -173,6 +173,37 @@ Plot.plot({
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of OG/Crypto.com's own daily bulletins. OG/Crypto.com redenominated twice — contracts were $100 through May 12, 2025, $10 through Aug 4, 2025 and $1 since — so a contract count is not comparable across those dates. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
 
+## Parlays: volume and stakes per day
+
+<p class="section-intro">The COMBOS parlay line from the daily bulletin, and the stake the settlement file records for the same day. Crypto.com/Nadex names no taker side, so the dollar figure is trade value.</p>
+
+```js
+import {GRANULARITIES, METRICS, metricLabelFor, parlayChart, parlayTotals, toDailyParlay, fmtUSD} from "./components/parlay-series.js";
+const ndParlayPnl = await DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed: true});
+const ndParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
+const ndParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabelFor("Trade value")}));
+```
+
+```js
+// Stakes exist only from the days the settlement file covers, and only where its coverage is
+// complete. Volume is restricted to those same days, so the two series describe one window.
+const ndStakeByDay = new Map(ndParlayPnl.filter(d => d.coverage_pct >= 99).map(d => [+d.date, d.stake_usd]));
+const ndParlayRows = catDaily
+  .filter(d => d.category === "Parlays" && ndStakeByDay.has(+d.date))
+  .map(d => ({date: d.date, contracts: d.contracts, stake: ndStakeByDay.get(+d.date)}));
+const ndParlayDaily = toDailyParlay(ndParlayRows, {date: "date", contracts: "contracts", stake: "stake"});
+display(parlayChart({
+  daily: ndParlayDaily, granularity: ndParlayGranularity, metric: ndParlayMetric,
+  color: "var(--accent-nadex)", width, height: 280, stakeName: "Trade value"
+}));
+```
+
+```js
+const ndParlayTot = parlayTotals(ndParlayDaily);
+```
+
+<p class="chart-note">From ${fmtDate(ndParlayTot.from)} to ${fmtDate(ndParlayTot.to)}, COMBOS total ${fmtCount(ndParlayTot.contracts)} contracts and ${fmtUSD(ndParlayTot.stake)} of trade value. Days before the settlement file's coverage are not drawn rather than shown as zero stake.</p>
+
 ## Top sport events (all time)
 
 _The biggest individual sports events on OG/Crypto.com by all-time contract volume, from the daily bulletin events feed._

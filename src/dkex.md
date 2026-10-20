@@ -232,6 +232,32 @@ const bandTip = (d, bands) => [`${fmtDate(d.date)}  ${fmtCount(d.total)} contrac
   .join("\n");
 ```
 
+## Parlays: volume and stakes per day
+
+<p class="section-intro">DKeX's parlay product (COMBO- contracts, since 2026-08-26) from its public trade reports. DKeX names no taker side, so the dollar figure is trade value: contracts times price.</p>
+
+```js
+import {GRANULARITIES, METRICS, metricLabelFor, parlayChart, parlayTotals, toDailyParlay, fmtUSD} from "./components/parlay-series.js";
+const dkParlayRows = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
+const dkParlayGranularity = view(Inputs.radio(GRANULARITIES, {value: "Daily", label: "View"}));
+const dkParlayMetric = view(Inputs.radio(METRICS, {value: "volume", label: "Metric", format: metricLabelFor("Trade value")}));
+```
+
+```js
+// One row per date x legs x sport mix in the producer, so sum to a day before drawing.
+const dkParlayDaily = toDailyParlay(dkParlayRows, {date: "date", contracts: "contracts", stake: "stake_usd"});
+display(parlayChart({
+  daily: dkParlayDaily, granularity: dkParlayGranularity, metric: dkParlayMetric,
+  color: DKEX, width, height: 280, stakeName: "Trade value"
+}));
+```
+
+```js
+const dkParlayTot = parlayTotals(dkParlayDaily);
+```
+
+<p class="chart-note">Since ${fmtDate(dkParlayTot.from)}, DKeX parlays total ${fmtCount(dkParlayTot.contracts)} contracts and ${fmtUSD(dkParlayTot.stake)} of trade value, an average of ${(100 * dkParlayTot.avgPrice).toFixed(1)}&cent; per contract.</p>
+
 ## League mix
 
 <p class="section-intro">Baseball split by its three leagues, everything else by category &mdash; the whole book, with nothing left unnamed.</p>

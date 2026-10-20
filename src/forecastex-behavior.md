@@ -150,3 +150,28 @@ display(smallRows.length
 </details>
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./forecastex">ForecastEx &middot; Activity</a>, and <a href="./trade-size">Trading behavior across venues</a> for the comparison.</div>
+
+## When it trades
+
+<div class="section-intro">One row per matched pair. Pair times are UTC and are shown here in Eastern time.</div>
+
+```js
+const hourRows = await DataAttachment("data/competitor_trades_by_hour.csv").csv({typed: true});
+```
+
+```js
+import {HOUR_WINDOWS, HOUR_METRICS, windowRows, hourOfDay, weekHourGrid, hourBars, weekGrid} from "./components/hour-profile.js";
+const hourWindow = view(Inputs.radio(HOUR_WINDOWS, {value: "90 days", label: "Window"}));
+const hourMetric = view(Inputs.radio(HOUR_METRICS, {value: "Contracts", label: "Measure"}));
+```
+
+```js
+const hourWin = windowRows(hourRows.filter(d => d.venue === "ForecastEx"), hourWindow);
+display(hourBars({profile: hourOfDay(hourWin.rows, hourMetric), nDays: hourWin.nDays, color: "var(--accent-forecastex)", metric: hourMetric, width}));
+```
+
+```js
+display(weekGrid({cells: weekHourGrid(hourWin.rows, hourMetric), color: "var(--accent-forecastex)", metric: hourMetric, width}));
+```
+
+<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">${hourWin.nDays} complete days, ${fmtDate(hourWin.from)} to ${fmtDate(hourWin.to)}. Times are Eastern.</div>

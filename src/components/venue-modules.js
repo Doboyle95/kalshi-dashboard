@@ -140,6 +140,34 @@ export function categoryTotals(rows) {
   ).sort((a, b) => b.contracts - a.contracts);
 }
 
+// Volume by category, all time, as bars. The area chart above answers how the mix moved; a
+// stack of thin bands cannot answer which categories a venue IS in one glance, so this does.
+// It reads the same rows and the same bucket taxonomy, so the two charts cannot disagree.
+export function categoryBars({rows, width, categories, colorOf, height}) {
+  const totals = categoryTotals(rows.filter(d => categories.includes(d.category)));
+  return Plot.plot({
+    style: {fontFamily: "var(--font-sans)"},
+    width,
+    height: height ?? 60 + totals.length * 28,
+    marginLeft: 170,
+    marginRight: 64,
+    x: {label: "Contracts, all time", grid: true, tickFormat: d => fmtCount(d)},
+    y: {label: null, domain: totals.map(d => d.category)},
+    color: {domain: categories, range: categories.map(colorOf)},
+    marks: [
+      Plot.barX(totals, {
+        y: "category", x: "contracts", fill: "category", rx: 3, tip: true,
+        title: d => `${d.category}\n${fmtCount(d.contracts)} contracts · ${fmtPct(d.share)} of all\n${d.days} days, ${d.firstSeen} to ${d.lastSeen}`
+      }),
+      Plot.text(totals, {
+        y: "category", x: "contracts", text: d => fmtPct(d.share),
+        dx: 6, textAnchor: "start", fontSize: 11, fill: "var(--theme-foreground)"
+      }),
+      Plot.ruleX([0])
+    ]
+  });
+}
+
 // Sports vs everything else. Kept separate from the category chart because on most
 // of these venues it is THE structural fact and a 2-band chart states it directly.
 export function sportsSplit({rows, width, color, height = 300, measure = "Share", sportsLabel = "Sports", secondLabel = "Everything else"}) {

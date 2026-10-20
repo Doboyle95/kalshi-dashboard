@@ -20,6 +20,9 @@ import * as d3 from "npm:d3";
 export const GRANULARITIES = ["Monthly", "Daily"];
 export const METRICS = ["volume", "stakes"];
 export const metricLabel = m => (m === "volume" ? "Volume (contracts)" : "Taker stakes ($)");
+// Only a venue that publishes a taker side may say "taker stakes". Everywhere else the stake is
+// trade value (contracts x price), so the page passes its own name to parlayChart and metricLabelFor.
+export const metricLabelFor = stakeName => m => (m === "volume" ? "Volume (contracts)" : `${stakeName} ($)`);
 
 export const fmtCount = n => {
   const a = Math.abs(n ?? 0), s = (n ?? 0) < 0 ? "−" : "";
@@ -154,6 +157,7 @@ export function parlayChart({
   width = 640,
   height = 300,
   volumeUnit = "contracts",
+  stakeName = "Taker stakes",
   extraTip = null,
   marginLeft = 76
 } = {}) {
@@ -185,7 +189,7 @@ export function parlayChart({
         title: d => [
           d.label,
           `Volume: ${fmtVol(d.contracts)}${volIsUSD ? "" : " contracts"}`,
-          d.stake == null ? null : `Taker stakes: ${fmtUSD(d.stake)}`,
+          d.stake == null ? null : `${stakeName}: ${fmtUSD(d.stake)}`,
           d.stake == null || !d.contracts ? null
             : `Average price paid: ${(100 * d.stake / d.contracts).toFixed(1)}¢`,
           d.venue ? `${(100 * d.contracts / d.venue).toFixed(2)}% of the venue's contracts` : null,

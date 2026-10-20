@@ -27,6 +27,9 @@ const CRYPTO = new Set(["Crypto"]);
 // of the day's contracts, all landing in the grey bucket until the feed learned the
 // COMBO prefix on 08-31. When a venue ships a parlay book, it needs a line HERE too.
 const PARLAY_VALUE = {
+  // Polymarket US: the producer names its caoc- (combinatoric) contracts "Parlays" (2026-10-19).
+  // Before that they were in the "Unclassified" residual, which the page drew as "Other".
+  "Polymarket US": new Set(["Parlays"]),
   "DKeX": new Set(["Parlays"]),
   "Nadex": new Set(["Parlays"]),
   "Novig": new Set(["Parlay"]),
