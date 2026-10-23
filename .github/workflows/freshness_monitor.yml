@@ -30,7 +30,7 @@ jobs:
           # deliberately absent from Git after the data-plane cutover.
           ref: main
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
