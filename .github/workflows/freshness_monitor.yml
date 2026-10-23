@@ -24,7 +24,7 @@ jobs:
       contents: read
       issues: write            # to create/update the "Stale" issue
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Need the watchdog and the endpoint configuration. Generated data is
           # deliberately absent from Git after the data-plane cutover.
