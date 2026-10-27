@@ -201,14 +201,36 @@ Plot.plot({
 // has not classified are left out rather than shown as if they had no cash-outs.
 const takerByDate = new Map(taker.map(d => [+d.date, d]));
 const isCashoutProv = d => String(d.is_provisional).toLowerCase() === "true";
-const takerExCashout = cashoutDaily
-  .filter(d => takerByDate.has(+d.date))
-  .map(d => {
-    const total = takerByDate.get(+d.date).notional_total || 0;
-    const cashout = d.cashout_notional || 0;
-    return {date: d.date, total, cashout, net: total - cashout, prov: isCashoutProv(d)};
-  })
-  .sort((a, b) => a.date - b.date);
+// parlay_cashout_daily.csv covers 2025-09-04 onward. cashout_notional is the no-side taker's cost, the same
+// unit as taker-side volume. A day is measured only once its cash-out count is sealed. A day that is still
+// provisional, or has no row yet, is estimated from the median cash-out share of the 14 most recent sealed
+// days, and drawn lighter. Before the first sealed day there is nothing to estimate from, so nothing is drawn.
+const SHARE_WINDOW = 14;
+const cashByDate = new Map(cashoutDaily.map(d => [+d.date, d]));
+const sealedRow = t => {
+  const c = cashByDate.get(+t.date);
+  return c && !isCashoutProv(c) ? c : null;
+};
+const medianOf = xs => {
+  const s = xs.slice().sort((a, b) => a - b), m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+const takerExCashout = [];
+const sealedShares = [];
+for (const t of [...taker].sort((a, b) => a.date - b.date)) {
+  const total = t.notional_total || 0;
+  const row = sealedRow(t);
+  if (row) {
+    const cashout = row.cashout_notional || 0;
+    const share = total ? cashout / total : 0;
+    if (total) sealedShares.push(share);
+    takerExCashout.push({date: t.date, total, cashout, net: total - cashout, estimate: false, share});
+  } else if (sealedShares.length >= 5) {
+    const share = medianOf(sealedShares.slice(-SHARE_WINDOW));
+    const cashout = total * share;
+    takerExCashout.push({date: t.date, total, cashout, net: total - cashout, estimate: true, share});
+  }
+}
 const exCashoutMa7 = rollingMean(takerExCashout, "net");
 ```
 
@@ -238,7 +260,7 @@ Plot.plot({
       x2: d => new Date(d.date.getTime() + 864e5),
       y: d => d.net || 0,
       fill: "var(--accent-kalshi)",
-      fillOpacity: 0.6
+      fillOpacity: d => (d.estimate ? 0.25 : 0.6)
     }),
     Plot.lineY(ecMa, {
       x: "date", y: "ma",
@@ -252,7 +274,7 @@ Plot.plot({
         `Taker-side volume: ${fmtUSD(d.total)}`,
         `Inferred parlay cash-outs: −${fmtUSD(d.cashout)}`,
         `Excluding cash-outs: ${fmtUSD(d.net)} (${(d.total ? d.net/d.total*100 : 0).toFixed(1)}%)`,
-        d.prov ? "Provisional day: cash-outs use the older, broader rule" : ""
+        d.estimate ? `Estimated: this day's cash-outs aren't sealed yet, so they use the median share of the last ${SHARE_WINDOW} sealed days (${(d.share * 100).toFixed(1)}%)` : ""
       ].filter(Boolean).join("\n")
     })),
     Plot.ruleY([0])
