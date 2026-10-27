@@ -665,6 +665,48 @@ display(smallMarketRows.length
 
 <p class="chart-note">Every row here already clears Kalshi's 25,000-contract block minimum, so each one <em>could</em> have been a block &mdash; which makes an em dash in that column a gap in coverage rather than evidence either way.</p>
 
+## Known block trades
+
+<p class="section-intro">Every Kalshi print that Kalshi itself flags as a block trade, across the largest-trade rankings above. Each trade appears once, newest first.</p>
+
+```js
+const blockTrades = DataAttachment("data/block_trades.csv").csv({typed: true});
+const blockRows = await blockTrades;
+const knownBlockTrades = blockRows
+  .slice()
+  .sort((a, b) => new Date(b.date) - new Date(a.date) || b.contracts_traded - a.contracts_traded)
+  .map(d => ({
+    date: d.date,
+    market: d.ticker_name,
+    contracts: d.contracts_traded,
+    source: d.source
+  }));
+```
+
+```js
+Inputs.table(knownBlockTrades, {
+  columns: ["date", "market", "contracts", "source"],
+  header: {
+    date: "Date",
+    market: "Contract ticker",
+    contracts: "Contracts",
+    source: "Source"
+  },
+  format: {
+    date: fmtDate,
+    contracts: fmtCount,
+    source: value => value === "api_backfill" ? "API backfill" : "Trade store"
+  },
+  align: {contracts: "right"},
+  rows: knownBlockTrades.length
+})
+```
+
+<p class="chart-note">${knownBlockTrades.length
+  ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Price, taker side and market share are not in this file, so they are not shown.`
+  : html`No block-flagged trades are in the published file at the moment.`}</p>
+
+
 <details class="surface-card compact-details">
   <summary>How this is calculated</summary>
   <p>A trade qualifies here when it was at least 100,000 contracts <strong>and</strong> at least 20% of that market's entire lifetime volume in that one print, excluding parlays. Parlays are left out because a parlay combo is by construction its own tiny market, so almost any parlay trade looks like a huge share of a thin one — and the per-combo volume totals behind that ratio aren't reliable at that granularity. Parlays still appear in the table above, which has no market-share requirement.</p>
