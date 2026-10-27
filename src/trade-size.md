@@ -874,6 +874,46 @@ Inputs.table(smallMarketRows, {
   <p>A market must also have traded at least 20 separate times to appear at all. Without that rule the table degenerates on venues whose market identifier is close to one-per-trade — Novig's median market carries a single print, and its first build returned trades sitting at exactly 100% of "their market", which is true and tells you nothing. It is the venue-neutral form of Kalshi's parlay exclusion.</p>
 </details>
 
+## Known block trades
+
+<p class="section-intro">Every Kalshi print that Kalshi itself flags as a block trade, across the largest-trade rankings above. Each trade appears once, newest first.</p>
+
+```js
+const blockTrades = await DataAttachment("data/block_trades.csv").csv({typed: true});
+const knownBlockTrades = blockTrades
+  .slice()
+  .sort((a, b) => new Date(b.date) - new Date(a.date) || b.contracts_traded - a.contracts_traded)
+  .map(d => ({
+    date: d.date,
+    market: d.ticker_name,
+    contracts: d.contracts_traded,
+    source: d.source
+  }));
+```
+
+```js
+Inputs.table(knownBlockTrades, {
+  columns: ["date", "market", "contracts", "source"],
+  header: {
+    date: "Date",
+    market: "Contract ticker",
+    contracts: "Contracts",
+    source: "Source"
+  },
+  format: {
+    date: fmtDate,
+    contracts: fmtCount,
+    source: value => value === "api_backfill" ? "API backfill" : "Trade store"
+  },
+  align: {contracts: "right"},
+  rows: knownBlockTrades.length
+})
+```
+
+<p class="chart-note">${knownBlockTrades.length
+  ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Price, taker side and market share are not in this file, so they are not shown.`
+  : html`No block-flagged trades are in the published file at the moment.`}</p>
+
 ## Volume by probability
 
 <p class="section-intro">The share of each venue's observed volume traded in each five-cent price bin.</p>
