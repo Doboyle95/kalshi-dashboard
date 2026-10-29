@@ -5,15 +5,15 @@ title: Robinhood on Kalshi
 <div class="page-hero" data-accent="robinhood">
   <div class="page-eyebrow">Robinhood</div>
   <h1>Robinhood on Kalshi</h1>
-  <p class="page-lead">Robinhood distributes event contracts through Kalshi and, since June 2026, through its own exchange Rothera. This page estimates how much goes to Kalshi.</p>
+  <p class="page-lead">Robinhood distributes event contracts through Kalshi, through its own exchange Rothera since June 2026, and through Crypto.com since September 2026. This page estimates how much goes to Kalshi.</p>
 </div>
 
 <details class="surface-card compact-details">
   <summary>Methodology</summary>
-  <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient that converts a share of positions held into a share of volume traded: <strong>5.38</strong> through May 2026 and <strong>4.68</strong> from June, when Robinhood's own exchange, Rothera, launched and the relationship shifted.</p>
+  <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient that converts a share of positions held into a share of volume traded: <strong>5.40</strong> through May 2026 and <strong>4.56</strong> from June, when Robinhood's own exchange, Rothera, launched and the relationship shifted.</p>
   <p><strong>Rothera is subtracted first.</strong> It clears through the same firm, so from June 2026 its open positions sit inside the same filing. Left in, June 2026 estimates 66% high.</p>
-  <p><strong>What the estimate covers.</strong> It is fitted against Robinhood's announced total less Rothera, so it predicts everything Robinhood sends anywhere except Rothera. ForecastEx sports and weather volume — which we attribute to Robinhood — is then taken off to leave Kalshi alone. That is an attribution, not a second estimate: the coefficient is not refitted and the total does not change.</p>
-  <p><strong>Accuracy.</strong> The coefficient is calibrated against the ten months where Robinhood published an actual figure. Mean error across those months is <strong>4.2%</strong>.</p>
+  <p><strong>What the estimate covers.</strong> It is fitted against Robinhood's announced total less Rothera, so it predicts everything Robinhood sends anywhere except Rothera, Crypto.com included. ForecastEx sports and weather volume, and Crypto.com's estimated football volume, are then taken off to leave Kalshi. Both are attributions of a total that is already fixed: they change the split, not the total.</p>
+  <p><strong>Accuracy.</strong> The coefficients are calibrated against the months where Robinhood published an actual figure, including September. Leave-one-out error across the Rothera-era months is <strong>6.7%</strong>.</p>
   <p>Robinhood does not file at weekends. Weekend volume is already reflected in the open-interest level either side of it.</p>
 </details>
 
@@ -125,19 +125,19 @@ const rhGrain = view(Inputs.radio(["Weekly", "Monthly"], {label: "Period", value
 const rhMetric = view(Inputs.radio(["Estimated volume", "Share of Kalshi"], {label: "Metric", value: "Estimated volume"}));
 ```
 
-<p class="section-intro">Robinhood does not report per-venue figures. Rothera and ForecastEx are measured; OG/Crypto.com is estimated from its football volume, and Kalshi from Robinhood's CFTC filings.</p>
+<p class="section-intro">Robinhood does not report per-venue figures. The total is estimated from Robinhood's CFTC filings. Rothera and ForecastEx are measured, Crypto.com is estimated from its football volume from September 8, and Kalshi is what remains.</p>
 
 ```js
 // Monthly is the same method at a monthly window, not a sum of the weekly rows -- weeks
 // straddle month ends.
 const rhSeries = rhGrain === "Monthly"
   ? monthlyParsed.map(d => ({
-      date: d.month_date, value: d.rh_est_billions, share: d.rh_share_pct,
+      date: d.month_date, value: d.rh_est_billions - (d.og_billions ?? 0), share: (d.kalshi_billions ?? 0) > 0 ? (d.rh_est_billions - (d.og_billions ?? 0)) / d.kalshi_billions * 100 : 0,
       rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0, og: d.og_billions ?? 0,
       kalshi: d.kalshi_billions, label: fmtDate(d.month_date)
     }))
   : (rhMetric === "Estimated volume" ? weeklyComplete : weekly).map(d => ({
-      date: weekEnd(d.week_start), value: d.rh_est_billions, share: d.rh_share_pct,
+      date: weekEnd(d.week_start), value: d.rh_est_billions - (d.og_billions ?? 0), share: (d.kalshi_billions ?? 0) > 0 ? (d.rh_est_billions - (d.og_billions ?? 0)) / d.kalshi_billions * 100 : 0,
       rothera: d.rothera_billions ?? 0, fx: d.fx_billions ?? 0, og: d.og_billions ?? 0,
       kalshi: d.kalshi_billions, label: weekLabel(d)
     }));
@@ -178,7 +178,7 @@ const rhLast = rhView.length ? rhView[rhView.length - 1] : null;
 const rhSel = view(dateBrush({
   data: weekly,
   dateAccessor: d => weekEnd(d.week_start),
-  valueAccessor: d => (d.rh_est_billions ?? 0) + (d.rothera_billions ?? 0) + (d.og_billions ?? 0) + (d.fx_billions ?? 0),
+  valueAccessor: d => (d.rh_est_billions ?? 0) + (d.rothera_billions ?? 0) + (d.fx_billions ?? 0),
   color: "var(--accent-robinhood)",
   width
 }));
@@ -242,7 +242,17 @@ Plot.plot({
 
 ## Where Robinhood's volume goes
 
-<p class="section-intro">Robinhood reports an all-venue total each month. Take off the Rothera and ForecastEx volume we measure, and from September 8 the OG/Crypto.com volume we estimate, and what remains is Kalshi. Faded bars are months Robinhood has not reported yet.</p>
+<p class="section-intro">Robinhood reports an all-venue total each month. Take off the Rothera and ForecastEx volume we measure, and what remains is Kalshi and OG/Crypto.com together. That combined figure is measured. Splitting it between the two is our estimate: OG/Crypto.com is estimated from its football volume from September 8, and Kalshi is what is left. Faded bars are months Robinhood has not reported yet.</p>
+
+```js
+// Measured for every reported month: Robinhood's announced total less Rothera and
+// ForecastEx. The OG/Crypto.com slice inside it is our estimate, so the split is too.
+const latestReported = reportedParsed.filter(d => d.is_actual).sort((a, b) => b.month_date - a.month_date)[0];
+const combinedLatest = latestReported ? (latestReported.rh_kalshi_billions ?? 0) + (latestReported.og_billions ?? 0) : null;
+display(html`<p class="section-intro">${latestReported
+  ? `Latest reported month, ${fmtDate(latestReported.month_date)}: Kalshi and OG/Crypto.com together come to ${fmtB(combinedLatest)}. That is Robinhood's reported total of ${fmtB(latestReported.rh_total_billions)}, less Rothera (${fmtB(latestReported.rothera_billions)}) and ForecastEx (${fmtB(latestReported.forecastex_billions)}), so it is measured. Within it, our estimate is Kalshi ${fmtB(latestReported.rh_kalshi_billions)} and OG/Crypto.com ${fmtB(latestReported.og_billions)}.`
+  : ""}</p>`);
+```
 
 ```js
 // Long form, one row per destination, so Plot stacks them. Rothera is OBSERVED in every
@@ -293,13 +303,16 @@ Plot.plot({
         // Robinhood reports the TOTAL, never the Kalshi slice -- so an "actual" Kalshi bar
         // is that total less the other venues, and says so.
         Basis: d => d.dest === "Kalshi"
-          ? (d.is_actual ? "Robinhood's reported total, less the other venues" : "Estimated")
+          ? (d.is_actual ? "Robinhood's reported total, less the other venues; the OG/Crypto.com share is our estimate" : "Estimated")
           : d.dest === "OG/Crypto.com"
             ? "Estimated from OG/Crypto.com's football volume"
             : "Measured from " + d.dest,
         "All venues": d => d.rh_total_billions > 0
           ? fmtB(d.rh_total_billions) + " contracts"
-          : "not yet reported"
+          : "not yet reported",
+        // Kalshi plus OG/Crypto.com is measured for reported months and estimated otherwise.
+        "Kalshi + OG/Crypto.com": d => fmtB((d.rh_kalshi_billions ?? 0) + (d.og_billions ?? 0))
+          + (d.is_actual ? " (measured; split estimated)" : " (estimated)")
       },
       // fillOpacity carries reported-vs-estimated visually and is named in the Basis
       // row already; without suppressing it Plot adds a raw "0.9"/"0.4" line to the tip.
