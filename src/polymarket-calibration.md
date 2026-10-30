@@ -86,7 +86,7 @@ const verdict = calibrationVerdict(rows, {eventNoun: "effective contests"});
 if (!hasPaid) display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>The served calibration file does not yet carry the price actually paid.</strong> This page draws nothing rather than fall back to the bin midpoint, which would overstate the error in the cheap bins by more than double.</div>`);
 ```
 
-## Actual vs price paid
+<h2 id="actual-vs-price-paid" tabindex="-1">Polymarket US: actual win rate vs price paid</h2>
 
 <div class="instruction-line">Each dot is a 5&cent; band; the diagonal is a perfectly priced contract. Bars are &plusmn;2 event-clustered standard errors, so a bar crossing the diagonal is not measurably mispriced.</div>
 
@@ -98,7 +98,7 @@ if (rows.length) display(actualVsImplied({rows, color: PM, width, eventNoun: "ef
 if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Circle area is proportional to independent contests, not trades &mdash; thousands of prints on one match are one observation. <strong>${verdict.measurable} of ${verdict.bands}</strong> bands have enough independent contests for inference; <strong>${verdict.clearing}</strong> of those are distinguishable from a fair price. Bands without enough coverage remain visible for context but have no whisker and do not count as findings.</div>`);
 ```
 
-## Calibration error by price
+<h2 id="calibration-error-by-price" tabindex="-1">Polymarket US: calibration error by price</h2>
 
 <div class="instruction-line">Actual minus the price paid. <span style="color:var(--accent-positive);font-weight:600">Green</span> means the contract was underpriced, <span style="color:var(--accent-negative);font-weight:600">red</span> overpriced.</div>
 

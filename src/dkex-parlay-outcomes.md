@@ -150,7 +150,7 @@ Plot.plot({
 })
 ```
 
-## Buyer P&L: correlated vs non-correlated parlays
+<h2 id="buyer-p-and-l-correlated-vs-non-correlated-parlays" tabindex="-1">DKeX: cumulative buyer P&amp;L after fees, correlated vs non-correlated</h2>
 
 _Running total after fees, split by whether any two legs are in the same game; the ${pct(unclassifiedShare, 0)} of money whose legs can't be placed in a game is left out._
 

@@ -145,7 +145,7 @@ function makeBrush(data, color, {value = d => d.contracts_total ?? d.contracts ?
 }
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">Underdog Exchange: daily volume (contracts)</h2>
 
 <p class="section-intro">Underdog contract volume from the public daily market reports. Gaps between bars are real — the exchange had no reported trades those days.</p>
 
@@ -190,7 +190,7 @@ Plot.plot({
 })
 ```
 
-## Single-game vs. parlay
+<h2 id="single-game-vs-parlay" tabindex="-1">Underdog Exchange: single-game vs parlay volume</h2>
 
 <p class="section-intro">Everything Underdog has reported so far is a sports contract, so the useful split is not sports vs. non-sports but single-game markets vs. multi-leg parlays.</p>
 
@@ -244,7 +244,7 @@ Plot.plot({
 })
 ```
 
-## Parlay volume and stakes
+<h2 id="parlay-volume-and-stakes" tabindex="-1">Underdog Exchange: parlay volume and stakes</h2>
 
 <p class="section-intro">The same parlay band on its own, in contracts and in the money bettors put up for them.</p>
 
@@ -282,7 +282,7 @@ const udAllContracts = d3.sum(daily, d => +d.contracts || 0);
 
 <p class="chart-note">Parlays are ${(100 * udParlayContracts / udAllContracts).toFixed(1)}% of Underdog's contracts but only $${fmtCount(udParlayStake)} of stake, bought at ${(100 * udParlayStake / udParlayContracts).toFixed(1)}&cent; each.</p>
 
-## Category mix
+<h2 id="category-mix" tabindex="-1">Underdog Exchange: category mix</h2>
 
 <p class="section-intro">Volume by sport, parsed from each contract's ticker.</p>
 
@@ -353,7 +353,7 @@ Plot.plot({
 })
 ```
 
-## Bet type mix
+<h2 id="bet-type-mix" tabindex="-1">Underdog Exchange: bet type mix</h2>
 
 <p class="section-intro">Underdog Exchange lists moneyline, spread, total and matchwin contracts on the same games.</p>
 

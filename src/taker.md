@@ -131,7 +131,7 @@ const takerCatDaily = Array.from(
 ).sort((a, b) => a.date - b.date);
 ```
 
-## Daily taker-side volume
+<h2 id="daily-taker-side-volume" tabindex="-1">Kalshi: daily taker-side volume ($)</h2>
 
 <p class="section-intro">Dollars staked by the aggressor on each trade — the handle equivalent. Because it weighs each bet by what it cost, a 99¢ contract counts for far more than a 1¢ one.</p>
 
@@ -191,7 +191,7 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
-## Daily taker stakes excluding parlay cash-outs
+<h2 id="daily-taker-stakes-excluding-parlay-cash-outs" tabindex="-1">Kalshi: daily taker stakes, excluding parlay cash-outs</h2>
 
 <p class="section-intro">The daily taker-side volume above, with the trades we infer to be parlay cash-outs taken out. A cash-out is a bettor selling a parlay back before it settles, and it shows up as a no-side taker buying. The inference is ours, not Kalshi's, and it only runs from 4 September 2025, so this chart starts there.</p>
 
@@ -289,7 +289,7 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid #e15759"></span>7-day average</span>
 </div>
 
-## Yes vs No takers
+<h2 id="yes-vs-no-takers" tabindex="-1">Kalshi: taker-side volume, yes vs no</h2>
 
 <p class="section-intro">Which way the aggressive money is leaning. A steady yes-side majority means buyers are pushing harder than sellers across the board.</p>
 
@@ -351,7 +351,7 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#e15759"></span>No-side takers</span>
 </div>
 
-## Taker volume by category
+<h2 id="taker-volume-by-category" tabindex="-1">Kalshi: taker-side volume by category</h2>
 
 <p class="section-intro">Which categories the aggressive (taker) money is actually flowing into, in the same taker-side volume dollars as the chart above — just broken out by category. Sports are broken out sport-by-sport rather than lumped into Kalshi's single "Sports" bucket — switch to Detailed for the sport-by-sport split.</p>
 
@@ -434,7 +434,7 @@ Plot.plot({
 
 <p class="chart-note">Top categories in the brushed window: ${catTotalsInRange.slice(0, 5).map(d => `${d.category} (${fmtUSD(d.value)})`).join(", ")}.</p>
 
-## Yes/No skew by category
+<h2 id="yes-no-skew-by-category" tabindex="-1">Kalshi: yes/no skew by category</h2>
 
 <p class="section-intro">Which categories takers only want to bet one way on. A category near 50/50 means the aggressive money is split; a category leaning hard to one side means takers overwhelmingly buy Yes (or fade to No) there. Same General/Detailed toggle as the chart above.</p>
 

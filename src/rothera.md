@@ -137,7 +137,7 @@ function makeBrush(data, color) {
 }
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">Rothera: daily volume (contracts)</h2>
 
 <p class="section-intro">Daily event-contract volume on Rothera since the clearing files began.</p>
 
@@ -174,7 +174,7 @@ Plot.plot({
 })
 ```
 
-## Open interest
+<h2 id="open-interest" tabindex="-1">Rothera: open interest (contracts)</h2>
 
 <p class="section-intro">Contracts still outstanding at each day's close — the standing capital on the book, as opposed to the volume that passed through it.</p>
 

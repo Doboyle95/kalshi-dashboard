@@ -20,7 +20,7 @@ const parlayDaily = DataAttachment("data/nadex_parlay_pnl_daily.csv").csv({typed
 const kalshiPnlBins = DataAttachment("data/competitor_pnl_by_bin.csv").csv({typed: true});
 ```
 
-## Parlay P&L
+<h2 id="parlay-p-and-l" tabindex="-1">OG/Crypto.com parlays: daily and cumulative P&amp;L, gross</h2>
 
 ```js
 const pdSorted = parlayDaily
@@ -134,7 +134,7 @@ That day: ${fmtM(+d.gross_pnl)}`,
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./nadex-parlays">Parlays</a> for adoption and volume, <a href="./nadex-outcomes">OG/Crypto.com &middot; Outcomes</a> for whole-suite price calibration, and <a href="./nadex">OG/Crypto.com &middot; Activity</a>.</div>
 
-## What bettors lost, by the price they paid
+<h2 id="what-bettors-lost-by-the-price-they-paid" tabindex="-1">OG/Crypto.com parlays: share of stakes lost, by price paid</h2>
 
 ```js
 // Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest

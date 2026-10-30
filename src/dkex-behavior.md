@@ -44,7 +44,7 @@ const openTrade = attachTradeInspector({source: "dkex-trades", venue: VENUE, lar
 const tradeCell = (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTrade(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`;
 ```
 
-## Trade size mix
+<h2 id="trade-size-mix" tabindex="-1">DKeX: trade size mix</h2>
 
 <div class="control-strip">
 
@@ -66,7 +66,7 @@ display(size.length
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share of contracts, not of trade count — a book can be almost all small trades by count and still be majority block-traded by volume.</div>
 
-## Volume by probability
+<h2 id="volume-by-probability" tabindex="-1">DKeX: volume by implied probability</h2>
 
 <div class="control-strip">
 
@@ -151,7 +151,7 @@ display(smallRows.length
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./dkex">DKeX &middot; Activity</a>, and <a href="./trade-size">Trading behavior across venues</a> for the comparison.</div>
 
-## When it trades
+<h2 id="when-it-trades" tabindex="-1">DKeX: when trades happen, by hour and weekday</h2>
 
 <div class="section-intro">One row per print. DKeX time stamps are already Eastern.</div>
 

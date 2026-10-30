@@ -28,7 +28,7 @@ const fmtUsd = d => d == null ? "—"
   : "$" + d.toFixed(0);
 ```
 
-## Fees by day
+<h2 id="fees-by-day" tabindex="-1">Fees per day, across exchanges</h2>
 
 <p class="section-intro">Modeled one-side customer cost or exchange revenue, in dollars, day by day. Use the measure toggle to keep those two questions separate.</p>
 
@@ -139,7 +139,7 @@ Plot.plot({
 
 <p class="chart-note">Every venue here is read from one file on one lineage. For DKeX, "fee cost" is DraftKings Predictions' all-in fee, which includes the DKeX taker charge; "exchange revenue" is DKeX's filed taker-plus-maker charge. Before that launch, the public DKeX trade records include exchange fees only. OG/Crypto.com remains the standard direct-member exchange benchmark: Crypto.com's app changed to a 1–1.75¢ taker range on June 30, but the daily bulletin has neither prices nor member roles needed to reconstruct a retail point. <strong>Two venues are absent rather than zero, and a third is mostly absent.</strong> Novig publishes its straight-book fee as a bounded range rather than a point estimate, so it has no single defensible daily number to rank against the others. ProphetX charges on a trader's net gains per market rather than per contract, so a daily fee cannot be derived from its trade records at all. Rothera's fee estimate only starts ${fmtDate(rotheraFeeStart)}, so the ${(100 * rotheraUncovered).toFixed(0)}% of its contracts traded before that carry no fee and are not drawn.</p>
 
-## Cumulative fees
+<h2 id="cumulative-fees" tabindex="-1">Cumulative fees to date, across exchanges</h2>
 
 <p class="section-intro">The same series, accumulated over the window you pick below. Kalshi is roughly an order of magnitude above the field, so untick it — or switch to a log scale — to read the competitors against each other.</p>
 
@@ -232,7 +232,7 @@ Plot.plot({
 
 <div class="chart-note">Accumulated from the start of the window set just above, not from each venue’s first day, so the lines answer "who collected more over this window". Still-filling days are excluded. Window totals: ${cumVenues.map(v => `${v} ${fmtUsd(d3.sum(cumWindow.filter(d => d.venue === v), feeValue))}`).join(" · ")}.</div>
 
-## Published fee schedules
+<h2 id="published-fee-schedules" tabindex="-1">Published fee schedules, across exchanges</h2>
 
 <p class="section-intro">Published fee per contract for one side of a $1 binary at each price, before order-level rounding. The DraftKings-on-DKeX line is one customer's all-in cost on every trade: the latest disclosed ladder, which includes DKeX's exchange fee.</p>
 
@@ -300,7 +300,7 @@ Plot.plot({
 
 <p class="chart-note"><a href="https://www.draftkings.com/predictions-terms">DraftKings Predictions</a> is an introducing broker, not an FCM. Its DKeX customer line is the broker's latest <a href="https://myaccount.draftkings.com/documents/fee-disclosure?product=predict">disclosed price ladder</a> which includes DKeX's <a href="https://www.cftc.gov/filings/orgrules/rules0515263470.pdf">exchange fee</a>; DKeX exchange revenue is the gray exchange-only line. The September text printed 8.80¢ at 97–98¢, a tenfold break in an otherwise descending tail that would make a winning 98¢ contract cost more than its $1 payout; it was read as a missing zero (0.88¢). The latest text prints 0.45¢ at 97–99¢, and the line follows that. None of DraftKings' ladders has a published effective date, so the windows the book uses are estimates (see <a href="./dkex-economics">What it charges</a>). <a href="https://help.crypto.com/en/articles/11373970-prediction-trading">Crypto.com's app</a> publishes only a 1–1.75¢ range, so both bounds are drawn rather than an invented curve; the separate 2¢ line is <a href="https://www.nadex.com/pricing/">OG/Crypto.com's standard direct-member exchange fee</a>. Kalshi and Underdog have the same one-side curve, but Underdog charges both sides. ProphetX is absent because its published charge is based on a trader's net gains per market, not contract price. Novig pre-game straight trades are free and are stated here rather than drawn as a zero line.</p>
 
-## Realized fee per contract
+<h2 id="realized-fee-per-contract" tabindex="-1">Realized fee per $1 traded, across exchanges</h2>
 
 <p class="section-intro">Modeled one-side fees divided by reported contracts, with OG/Crypto.com restated per $1 of contract because it redenominated twice. DKeX is DraftKings' all-in fee on every trade; OG/Crypto.com is the direct-member exchange benchmark, not the app's newer retail range. Venues without a defensible daily numerator are absent, not zero.</p>
 

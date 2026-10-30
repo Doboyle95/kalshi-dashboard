@@ -152,7 +152,7 @@ const selectedAccuracyVenues = view(Inputs.checkbox(venues, {label: "Venues", va
 const accuracyRows = normalized.filter(d => selectedAccuracyVenues.includes(d.venue));
 ```
 
-## Actual vs implied win rate
+<h2 id="actual-vs-implied-win-rate" tabindex="-1">Actual vs implied win rate, across exchanges</h2>
 
 ```js
 // 2026-10-08: Novig's calibration file stopped updating when Novig changed its data feed
@@ -361,7 +361,7 @@ const detail0 = parlayDetail[0] ?? {};
   <p><strong>What ProphetX still cannot show.</strong> Even that unpublished series covers only <strong>80.13% of ProphetX&rsquo;s single-market contracts</strong> (191,575,583 of 239,095,073). The other 19.87% sits behind 194,030 prints that could not be joined to an outcome &mdash; 193,271 on contracts still unresolved at the end of the window, 657 on contracts never listed in the bulletin, 102 priced off-scale &mdash; and is excluded, not imputed. Its <strong>parlays are absent entirely</strong>: 31,899,248 contracts with no derivable outcome, for the reason set out above. So ProphetX has no bar on this page at all; its price-paid calibration is where its outcomes appear.</p>
 </details>
 
-## What a contract costs its buyer
+<h2 id="what-a-contract-costs-its-buyer" tabindex="-1">Buyer P&amp;L per contract, across exchanges</h2>
 
 <div class="instruction-line">Bars run left from zero: further left is a worse deal for the bettor. <strong>DKeX's RFQ-parlay row is net of DraftKings Predictions' all-in fee, which includes the DKeX taker charge.</strong> Crypto.com is net of the taker fee its help centre publishes for combos: 0.07 &times; price &times; (1 &minus; price) per contract from June 30, 2026, and 2&cent; a contract before. That schedule is the app's retail rate, and the direct-member rate after June 30 is not published. If direct members still paid a flat 2&cent;, the Crypto.com row would be more than 10 points lower. The precise fee, side and price-basis treatment for every row is disclosed above and in its tooltip.</div>
 
@@ -422,7 +422,7 @@ realised, but not an edge`,
 })
 ```
 
-## Where on the price axis the loss happens
+<h2 id="where-on-the-price-axis-the-loss-happens" tabindex="-1">Buyer P&amp;L per contract by price paid, across exchanges</h2>
 
 <div class="instruction-line">The favourite&ndash;longshot effect, in money. Cheap contracts are where bettors lose most per contract at nearly every venue &mdash; the same shape the calibration curves show, weighted by the contracts actually standing behind each bin.</div>
 
@@ -509,7 +509,7 @@ Inputs.table(rolled, {
 })
 ```
 
-## Calibration error by price
+<h2 id="calibration-error-by-price" tabindex="-1">Calibration error by price, across exchanges</h2>
 
 <p class="section-intro">Actual minus implied probability. Intervals are ±2 event-clustered standard errors; an interval crossing zero is not distinguishable from calibration.</p>
 

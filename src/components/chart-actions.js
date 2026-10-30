@@ -477,7 +477,7 @@
     const ruleY = top + height + 16;
     parts.push({kind: "box", x: PNG_MARGIN, y: ruleY, w: width, h: 1, fill: token("--theme-foreground-faintest", "#ddd"), border: null, radius: 0});
     const baseline = ruleY + 12 + useInk(ctx, brand).ascent;
-    const page = contextFor(root).pageTitle.replace(/\s*\|\s*Predict Charts\s*$/i, "");
+    const page = document.title.replace(/\s*\|\s*Predict Charts\s*$/i, "").trim();
     const pageText = page ? ` · ${page}` : "";
     const address = chartAddress(root);
     const brandWidth = widthOf(ctx, brand, "Predict Charts");

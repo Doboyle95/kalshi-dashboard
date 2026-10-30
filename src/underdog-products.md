@@ -30,7 +30,7 @@ const present = BUCKETS.filter(b => rows.some(d => d.category === b && +d.contra
 const totals = categoryTotals(rows);
 ```
 
-## The mix, day by day
+<h2 id="the-mix-day-by-day" tabindex="-1">Underdog Exchange: product mix, day by day</h2>
 
 <div class="control-strip">
 
@@ -50,7 +50,7 @@ display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: m
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
 
-## Non-parlay sports and parlays
+<h2 id="non-parlay-sports-and-parlays" tabindex="-1">Underdog Exchange: non-parlay sports vs parlays</h2>
 
 ```js
 const splitRange = view(dateBrush({data: split, valueAccessor: d => +d.contracts_total || (+d.contracts_sports || 0) + (+d.contracts_nonsports || 0), color: ACCENT, width}));
@@ -67,7 +67,7 @@ display(sportsSplit({
 display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Non-parlay sports is ${fmtPct(d3.sum(split, d => +d.contracts_sports || 0) / Math.max(1, d3.sum(split, d => +d.contracts_total || 0)))} of all contracts this venue has published; the remainder is parlays.</div>`);
 ```
 
-## Volume by category
+<h2 id="volume-by-category" tabindex="-1">Underdog Exchange: volume by category</h2>
 
 ```js
 display(categoryBars({rows, width, categories: present, colorOf: bucketColor}));

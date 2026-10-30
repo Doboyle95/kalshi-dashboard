@@ -28,7 +28,7 @@ const present = BUCKETS.filter(b => rows.some(d => d.category === b && +d.contra
 const totals = categoryTotals(rows);
 ```
 
-## The mix, day by day
+<h2 id="the-mix-day-by-day" tabindex="-1">ProphetX: product mix, day by day</h2>
 
 <div class="control-strip">
 
@@ -48,7 +48,7 @@ display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: m
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
 
-## Volume by category
+<h2 id="volume-by-category" tabindex="-1">ProphetX: volume by category</h2>
 
 ```js
 display(categoryBars({rows, width, categories: present, colorOf: bucketColor}));

@@ -62,7 +62,7 @@ const tapeContracts = d3.sum(size, d => +d.contracts || 0);
 display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>This page reads a different, shorter feed than the rest of the venue.</strong> ${fmtCount(tapePrints)} prints and ${fmtCount(tapeContracts)} contracts across ${tapeDays.length} sessions, ${fmtDate(new Date(`${tapeFirst}T00:00:00Z`))} to ${fmtDate(new Date(`${tapeLast}T00:00:00Z`))}. <a href="./rothera">Activity</a> and <a href="./rothera-products">Products</a> run back to May on end-of-day market data; anything before those trade records begin is permanently unavailable, which includes the whole 2026 World Cup.</div>`);
 ```
 
-## Trade size mix
+<h2 id="trade-size-mix" tabindex="-1">Rothera: trade size mix</h2>
 
 <div class="control-strip">
 
@@ -94,7 +94,7 @@ const bigShare = (() => {
 display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share of contracts, not of trade count — a book can be almost all small trades by count and still be majority block-traded by volume, and this one is: prints of 1,000 contracts and up are ${fmtPct(bigShare.prints)} of trades but ${fmtPct(bigShare.contracts)} of contracts.</div>`);
 ```
 
-## Volume by probability
+<h2 id="volume-by-probability" tabindex="-1">Rothera: volume by implied probability</h2>
 
 <div class="control-strip">
 
@@ -120,7 +120,7 @@ display(vapBins.length
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Where traders choose to put money on the probability axis. This is behaviour, not accuracy — <a href="./rothera">Activity</a> explains why this venue carries no calibration curve.</div>
 
-## When it trades
+<h2 id="when-it-trades" tabindex="-1">Rothera: trading by hour of day (Eastern Time)</h2>
 
 <p class="section-intro">Prints by hour of the Eastern day, summed across every recorded session. This is the one venue here whose feed carries a timestamp, so it is the only place on the site outside Kalshi where an intraday shape can be drawn at all.</p>
 

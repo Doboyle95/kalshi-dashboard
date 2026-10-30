@@ -73,7 +73,7 @@ const bucketColors = BUCKETS.map(d => d.color);
 const latestTradeSizeDate = d3.max(tradeSizeRaw, d => d.date);
 ```
 
-## Volume and size mix
+<h2 id="volume-and-size-mix" tabindex="-1">Volume by trade size, by exchange</h2>
 
 <p class="section-intro">How a venue&rsquo;s volume splits across trade sizes, and how much of it moves in large blocks. Pick a venue and a segment here &mdash; both controls govern every chart in this section.</p>
 
@@ -468,7 +468,7 @@ Plot.plot({
 
 </div>
 
-## Large-trade share radar
+<h2 id="large-trade-share-radar" tabindex="-1">Large-trade share by day, with unusual days flagged</h2>
 
 <p class="section-intro">Flags the days when the big-block share ran well above its recent normal — not just busy days, but unusually top-heavy ones.</p>
 
@@ -914,7 +914,7 @@ Inputs.table(knownBlockTrades, {
   ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Price, taker side and market share are not in this file, so they are not shown.`
   : html`No block-flagged trades are in the published file at the moment.`}</p>
 
-## Volume by probability
+<h2 id="volume-by-probability" tabindex="-1">Volume by implied probability, across exchanges</h2>
 
 <p class="section-intro">The share of each venue's observed volume traded in each five-cent price bin.</p>
 

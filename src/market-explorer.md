@@ -167,7 +167,7 @@ display(marketLeaderboard({
 
 <p class="chart-note"><strong>Current coverage gap:</strong> ProphetX and Novig publish per-market files but are not yet normalized into the shared finder. Their absence here is a finder limitation, not an absence of markets or trading.</p>
 
-## The same game, on two venues
+<h2 id="the-same-game-on-two-venues" tabindex="-1">Kalshi vs Polymarket US: volume on the same game</h2>
 
 <p class="section-intro">Every fixture both Kalshi and Polymarket US listed, one dot each. Kalshi trades more of the same game in all six sports, but the gap runs from about ${xvGapText}.</p>
 

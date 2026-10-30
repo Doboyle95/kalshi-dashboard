@@ -134,7 +134,7 @@ function makeBrush(data, color) {
 }
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">OG/Crypto.com: daily volume (contracts)</h2>
 
 <p class="section-intro">Daily event-contract volume from the exchange's daily bulletins.</p>
 
@@ -173,7 +173,7 @@ Plot.plot({
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">Event binary contracts only, read out of OG/Crypto.com's own daily bulletins. OG/Crypto.com redenominated twice — contracts were $100 through May 12, 2025, $10 through Aug 4, 2025 and $1 since — so a contract count is not comparable across those dates. Data starts Dec 23, 2024, the first bulletin carrying event-contract rows.</p>
 
-## Parlays: volume and stakes per day
+<h2 id="parlays-volume-and-stakes-per-day" tabindex="-1">OG/Crypto.com: parlay volume and stakes per day</h2>
 
 <p class="section-intro">The COMBOS parlay line from the daily bulletin, and the stake the settlement file records for the same day. Crypto.com/Nadex names no taker side, so the dollar figure is trade value.</p>
 
@@ -204,7 +204,7 @@ const ndParlayTot = parlayTotals(ndParlayDaily);
 
 <p class="chart-note">From ${fmtDate(ndParlayTot.from)} to ${fmtDate(ndParlayTot.to)}, COMBOS total ${fmtCount(ndParlayTot.contracts)} contracts and ${fmtUSD(ndParlayTot.stake)} of trade value. Days before the settlement file's coverage are not drawn rather than shown as zero stake.</p>
 
-## Top sport events (all time)
+<h2 id="top-sport-events-all-time" tabindex="-1">OG/Crypto.com: top sports events, all time</h2>
 
 _The biggest individual sports events on OG/Crypto.com by all-time contract volume, from the daily bulletin events feed._
 

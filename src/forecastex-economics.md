@@ -32,7 +32,7 @@ const totalContracts = d3.sum(rows, d => d.contracts);
 if (!rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>No fee data is published for this venue.</strong></div>`);
 ```
 
-## Fees per day
+<h2 id="fees-per-day" tabindex="-1">ForecastEx: fees per day</h2>
 
 ```js
 const feesDayRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, color: ACCENT, width}));
@@ -46,7 +46,7 @@ if (rows.length) display(feesDaily({rows: rows.filter(inDateRange(feesDayRange))
 if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">${fmtUSD(totalFees)} across ${fmtCount(totalContracts)} contracts, on ${rows.length.toLocaleString()} days carrying a reported fee.</div>`);
 ```
 
-## Cumulative
+<h2 id="cumulative" tabindex="-1">ForecastEx: cumulative fees to date</h2>
 
 ```js
 const feesCumRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, color: ACCENT, width}));
@@ -56,7 +56,7 @@ const feesCumRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, col
 if (rows.length) display(feesDaily({rows: rows.filter(inDateRange(feesCumRange)), width, color: ACCENT, cumulative: true}));
 ```
 
-## Effective rate
+<h2 id="effective-rate" tabindex="-1">ForecastEx: effective fee rate per $1 traded</h2>
 
 ```js
 const rateRange = view(dateBrush({data: rows, valueAccessor: d => d.centsPerContract, color: ACCENT, width}));

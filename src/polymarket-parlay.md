@@ -152,7 +152,7 @@ display(Plot.plot({
 }))
 ```
 
-## What they paid versus what they won
+<h2 id="what-they-paid-versus-what-they-won" tabindex="-1">Polymarket US parlays: price paid vs actual win rate</h2>
 
 _Each dot is a 5¢ price bin, sized by volume; below the dashed line means bettors paid more than the outcome turned out to be worth._
 
@@ -171,7 +171,7 @@ display(Plot.plot({
 }))
 ```
 
-## Where the money went
+<h2 id="where-the-money-went" tabindex="-1">Polymarket US parlays: P&amp;L by price paid</h2>
 
 _P&L by price bin, which separates the cheap-longshot end from everything else._
 
@@ -190,7 +190,7 @@ display(Plot.plot({
 }))
 ```
 
-## What bettors lost, by the price they paid
+<h2 id="what-bettors-lost-by-the-price-they-paid" tabindex="-1">Polymarket US parlays: share of stakes lost, by price paid</h2>
 
 ```js
 // Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest
@@ -207,7 +207,7 @@ const pmLoss = lossByPrice(lossRows, "Polymarket US", [], {minShare: 0.001});
 display(lossByPriceChart(pmLoss, {width}));
 ```
 
-## Daily stakes
+<h2 id="daily-stakes" tabindex="-1">Polymarket US parlays: daily stakes</h2>
 
 _Money bet on new parlays each day (cash-outs are not counted as bets); the hollow point is a day still being collected._
 
@@ -235,7 +235,7 @@ display(Plot.plot({
 }))
 ```
 
-## Parlays as a share of Polymarket volume
+<h2 id="parlays-as-a-share-of-polymarket-volume" tabindex="-1">Polymarket US: parlay share of contracts</h2>
 
 _Parlays went from nothing to a quarter of the contracts traded on the venue in under three weeks, and have since run at between about half and two-thirds of them._
 

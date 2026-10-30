@@ -315,7 +315,7 @@ return {rows, completeFeeDays};
 });
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">Kalshi: daily volume (contracts)</h2>
 
 <p class="section-intro">Kalshi's daily trading volume, with a 7-day trend line. Flip on event markers to line the spikes up with the days that caused them.</p>
 
@@ -404,7 +404,7 @@ const yScaleType = view(Inputs.radio(["Linear", "Log"], {value: "Linear", label:
   <span class="legend-chip is-active annotation-key">Event overlay</span>
 </div>
 
-## Daily trade count
+<h2 id="daily-trade-count" tabindex="-1">Kalshi: daily trade count</h2>
 
 <p class="section-intro">How many individual trades it took — a read on whether the action is coming from a crowd or a few big players.</p>
 
@@ -478,7 +478,7 @@ const volumeEventMode = view(Inputs.radio(["On", "Off"], {
 
 </div>
 
-## Sports vs. non-sports volume
+<h2 id="sports-vs-non-sports-volume" tabindex="-1">Kalshi: sports vs non-sports volume</h2>
 
 <p class="section-intro">What's driving the volume — sports, non-sports, and parlays. Switch to a sports-only or non-sports-only view to see the categories inside each.</p>
 
@@ -620,7 +620,7 @@ const sportsMetric = view(Inputs.radio(["Volume", "Fees"], {value: "Volume", lab
 
 </div>
 
-## Trading activity today
+<h2 id="trading-activity-today" tabindex="-1">Kalshi: trading activity today, by hour</h2>
 
 <p class="section-intro">Contracts by hour (Eastern Time) on the latest day in the feed, split into sports, parlays, and non-sports. The faded bar is still counting.</p>
 
@@ -678,7 +678,7 @@ if (!hourlyToday.length) {
 
 </div>
 
-## Typical trading week
+<h2 id="typical-trading-week" tabindex="-1">Kalshi: typical trading week, by hour</h2>
 
 <p class="section-intro">The average hour of the week across the selected window. Change both the metric and the segment; the current weekday also shows today's actual pace.</p>
 
@@ -794,7 +794,7 @@ display(Plot.plot({
   <p>Each bar averages one day-of-week × hour combination across the selected window. In-progress hours are excluded. Parlays remain their own segment, and the connected dots on today's row show the latest day's actual values.</p>
 </details>
 
-## Open interest
+<h2 id="open-interest" tabindex="-1">Kalshi: open interest (contracts)</h2>
 
 _Total contracts still open across Kalshi at the end of each day — bets placed but not yet settled. Volume is how much changes hands; open interest is how much money is currently riding on the exchange._
 

@@ -44,7 +44,7 @@ const openTrade = attachTradeInspector({source: "novig-trades", venue: VENUE, la
 const tradeCell = (value, index, data) => html`<button type="button" class="inspector-inline-button" onclick=${event => openTrade(data[index], event.currentTarget)} aria-label=${`Inspect trade in ${value}`}>${value}</button>`;
 ```
 
-## Trade size mix
+<h2 id="trade-size-mix" tabindex="-1">Novig: trade size mix</h2>
 
 <div class="control-strip">
 
@@ -126,7 +126,7 @@ display(smallRows.length
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">See also: <a href="./novig">Novig &middot; Activity</a>, and <a href="./trade-size">Trading behavior across venues</a> for the comparison.</div>
 
-## When it trades
+<h2 id="when-it-trades" tabindex="-1">Novig: when trades happen, by hour and weekday</h2>
 
 <div class="section-intro">Taker-side fills only. Each fill appears on both sides of Novig's tape, so one row per fill is kept.</div>
 

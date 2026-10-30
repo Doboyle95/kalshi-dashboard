@@ -322,7 +322,7 @@ Plot.plot({
 })
 ```
 
-## The daily filing behind it
+<h2 id="the-daily-filing-behind-it" tabindex="-1">Robinhood: daily open positions, as filed vs Kalshi only</h2>
 
 <p class="section-intro">CFTC line [8530] as Robinhood files it, and the Kalshi-only figure left after Rothera's positions are removed. The gap between the two lines opened in June 2026 and is the whole reason the correction exists.</p>
 
@@ -380,7 +380,7 @@ Plot.plot({
 })
 ```
 
-## The three FCMs side by side
+<h2 id="the-three-fcms-side-by-side" tabindex="-1">Robinhood: open positions at its three futures brokers</h2>
 
 ```js
 const fcmScale = view(Inputs.radio(["Linear", "Log"], {label: "Scale", value: "Linear"}));

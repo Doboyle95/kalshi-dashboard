@@ -155,7 +155,7 @@ Inputs.table(headline, {
 })
 ```
 
-## How much of each venue is parlays
+<h2 id="how-much-of-each-venue-is-parlays" tabindex="-1">Share of each exchange's contracts that are parlays</h2>
 
 <div class="instruction-line">Volume-weighted over each venue’s own window, shown beside the bar; the tick is its last ${RECENT_DAYS} days.</div>
 
@@ -196,7 +196,7 @@ Plot.plot({
 })
 ```
 
-## Parlay share over time
+<h2 id="parlay-share-over-time" tabindex="-1">Parlay share of contracts over time, by exchange</h2>
 
 <div class="instruction-line">Kalshi’s share is of its whole book, not just sport &mdash; every other venue here is a sportsbook.</div>
 
@@ -245,7 +245,7 @@ Plot.plot({
 })
 ```
 
-## Parlay volume and stakes by day
+<h2 id="parlay-volume-and-stakes-by-day" tabindex="-1">Parlay volume and stakes per day, by exchange</h2>
 
 ```js
 const dkParlay = await DataAttachment("data/dkex_parlay_daily.csv").csv({typed: true});
@@ -344,7 +344,7 @@ pvChart(pvSeries, "stake", "Parlay stake per day (USD)", d => `$${fmtCount(d)}`,
 pvChart(pvTaker, "taker", "Taker-side parlay stake per day (USD)", d => `$${fmtCount(d)}`, ["Kalshi", "Novig"])
 ```
 
-## How many legs
+<h2 id="how-many-legs" tabindex="-1">Parlay legs per ticket, by exchange</h2>
 
 ```js
 // Kalshi's own bucket vocabulary. Everyone else is mapped INTO it.
@@ -420,7 +420,7 @@ Plot.plot({
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">OG/Crypto.com, Underdog and Polymarket US publish no leg breakdown &mdash; absent here, not zero. DKeX publishes none either, but its settlement report names every leg, so the count is recovered rather than reported.</div>
 
-## Parlay stakes by exchange
+<h2 id="parlay-stakes-by-exchange" tabindex="-1">Parlay dollar stakes by exchange</h2>
 
 <div class="instruction-line">Dollars staked on parlays over the 30 days to 17 October 2026, by exchange. Each exchange reports its own stake: Kalshi's parlay handle, Polymarket US's bets with cash-outs left out, and the parlay stake each other exchange publishes. Novig counts only parlays of two or more legs.</div>
 

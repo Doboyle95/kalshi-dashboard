@@ -125,8 +125,8 @@ html.pc-embed .pc-embed-missing { padding: 20px 0 8px; font: 15px/1.5 var(--font
     const main = document.getElementById("observablehq-main");
     if (!main) return;
     const href = pageLink();
-    const pageTitle = (document.querySelector("#observablehq-main h1")?.textContent ||
-      document.title.replace(/\s*\|\s*Predict Charts\s*$/i, "")).trim();
+    // The page's own title names its venue ("Polymarket US · Economics"); its first heading may not ("What it charges").
+    const pageTitle = document.title.replace(/\s*\|\s*Predict Charts\s*$/i, "").trim();
 
     const credit = document.createElement("div");
     credit.className = "pc-embed-credit";

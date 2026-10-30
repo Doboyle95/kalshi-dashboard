@@ -54,7 +54,7 @@ const meanDaily = totalContracts / complete.length;
   <div class="card"><h2>Parlays</h2><span class="big">${(100 * parlayContracts / totalContracts).toFixed(1)}%</span><span class="muted">of volume, up to 12 legs</span></div>
 </div>
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">ProphetX: daily volume (contracts)</h2>
 
 <div class="instruction-line">Calendar days, not the venue's trading sessions. A ProphetX session runs 16:30&ndash;16:30 ET, so its own session labels straddle two dates; using the execution timestamp instead keeps this series comparable with every other venue on the site. ${partial.length ? html`The final bar is <strong>still being collected</strong> and is drawn hollow.` : ""}</div>
 
@@ -94,7 +94,7 @@ Plot.plot({
   ]
 })
 ```
-## How much of it is parlays
+<h2 id="how-much-of-it-is-parlays" tabindex="-1">ProphetX: parlay share of volume</h2>
 
 ```js
 const pxShareRange = view(dateBrush({data: complete, valueAccessor: d => d.pct_parlay, color: PX, width}));
@@ -133,7 +133,7 @@ const vap = await DataAttachment("data/prophetx_volume_at_price.csv").csv({typed
 const plegs = await DataAttachment("data/prophetx_parlay_legs.csv").csv({typed: true});
 ```
 
-## Parlay volume and stakes
+<h2 id="parlay-volume-and-stakes" tabindex="-1">ProphetX: parlay volume and stakes</h2>
 
 ```js
 import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
@@ -238,7 +238,7 @@ display(pxTypeVol.length
   : html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">The contract-type series is not being served yet, so this table is empty; nothing else on the page depends on it.</div>`);
 ```
 
-## Where the volume sits on the probability axis
+<h2 id="where-the-volume-sits-on-the-probability-axis" tabindex="-1">ProphetX: volume by home-side price (¢)</h2>
 
 ```js
 Plot.plot({
@@ -260,7 +260,7 @@ Plot.plot({
 })
 ```
 
-## Parlays by leg count
+<h2 id="parlays-by-leg-count" tabindex="-1">ProphetX: parlays by number of legs</h2>
 
 <div class="instruction-line">ProphetX calls them multi-event contracts. They run from 2 legs to <strong>12</strong>, and shorter parlays dominate &mdash; but the tail is real, and a 12-leg ticket is a very different product from a 2-leg one.</div>
 

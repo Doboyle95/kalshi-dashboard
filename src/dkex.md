@@ -137,7 +137,7 @@ function makeBrush(data, color, value = d => d.contracts_total ?? d.contracts ??
 }
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">DKeX: daily volume (contracts)</h2>
 
 <p class="section-intro">DKeX contract volume from the public time-and-sales reports.</p>
 
@@ -232,7 +232,7 @@ const bandTip = (d, bands) => [`${fmtDate(d.date)}  ${fmtCount(d.total)} contrac
   .join("\n");
 ```
 
-## Parlays: volume and stakes per day
+<h2 id="parlays-volume-and-stakes-per-day" tabindex="-1">DKeX: parlay volume and stakes per day</h2>
 
 <p class="section-intro">DKeX's parlay product (COMBO- contracts, since 2026-08-26) from its public trade reports. DKeX names no taker side, so the dollar figure is trade value: contracts times price.</p>
 
@@ -258,7 +258,7 @@ const dkParlayTot = parlayTotals(dkParlayDaily);
 
 <p class="chart-note">Since ${fmtDate(dkParlayTot.from)}, DKeX parlays total ${fmtCount(dkParlayTot.contracts)} contracts and ${fmtUSD(dkParlayTot.stake)} of trade value, an average of ${(100 * dkParlayTot.avgPrice).toFixed(1)}&cent; per contract.</p>
 
-## League mix
+<h2 id="league-mix" tabindex="-1">DKeX: league mix</h2>
 
 <p class="section-intro">Baseball split by its three leagues, everything else by category &mdash; the whole book, with nothing left unnamed.</p>
 
@@ -345,7 +345,7 @@ display(leagueGrand
   : html`<p class="section-intro">League columns arrive with the next competitor data refresh (~6h); this chart fills in then.</p>`);
 ```
 
-## Category mix
+<h2 id="category-mix" tabindex="-1">DKeX: category mix</h2>
 
 <p class="section-intro">Volume by parsed category, with market-report open interest available beside it.</p>
 
@@ -414,7 +414,7 @@ Plot.plot({
 })
 ```
 
-## Settlements
+<h2 id="settlements" tabindex="-1">DKeX: settled contracts and void rate</h2>
 
 <p class="section-intro">Daily settlement report counts by outcome. DKeX settles a contract at $1.00 (won), $0.00 (lost), or $0.50 &mdash; and $0.50 means the event was <strong>voided or postponed</strong>, so both sides refund at half. Voids are counted separately, not as wins. &ldquo;Other&rdquo; is the rare partial or pro-rated settlement.</p>
 

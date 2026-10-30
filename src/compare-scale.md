@@ -53,7 +53,7 @@ display(html`<table class="briefing-table scoreboard-table">
 
 </div>
 
-## Volume and market share
+<h2 id="volume-and-market-share" tabindex="-1">Volume and market share, across exchanges</h2>
 
 <div class="control-strip">
 
@@ -131,7 +131,7 @@ Plot.plot({
 })
 ```
 
-## Reported open interest
+<h2 id="reported-open-interest" tabindex="-1">Reported open interest, across exchanges</h2>
 
 <p class="section-intro">Open contracts at the reporting snapshot. Only directly published, comparable series are shown.</p>
 

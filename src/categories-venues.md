@@ -103,7 +103,7 @@ const restVenues = perVenue.map(d => d.venue).filter(v => v !== "Kalshi" && v !=
 const restNonSportMax = d3.max(restVenues, nonSport) ?? 0;
 ```
 
-## The mix, venue by venue
+<h2 id="the-mix-venue-by-venue" tabindex="-1">Share of each exchange's contracts, by category</h2>
 
 <div class="control-strip">
 

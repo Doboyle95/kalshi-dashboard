@@ -42,7 +42,7 @@ const volumeDays = competitorDaily.filter(d => d.platform === VENUE && +d.contra
 if (rows.length && volumeDays > rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--accent-warning)"><strong>Fees exist only for the days covered by trade records</strong> — ${rows.length} of this venue's ${volumeDays} trading days. Rothera's fee is a parabola in the price each trade actually printed at, and its end-of-day files carry no trade prices, so earlier days have no defensible fee and are absent rather than estimated. See <a href="./rothera-behavior">Trading behavior</a> for the same window.</div>`);
 ```
 
-## Fees per day
+<h2 id="fees-per-day" tabindex="-1">Rothera: fees per day</h2>
 
 ```js
 const feesDayRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, color: ACCENT, width}));
@@ -56,7 +56,7 @@ if (rows.length) display(feesDaily({rows: rows.filter(inDateRange(feesDayRange))
 if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">${fmtUSD(totalFees)} across ${fmtCount(totalContracts)} contracts, on ${rows.length.toLocaleString()} days carrying a reported fee.</div>`);
 ```
 
-## Who pays it
+<h2 id="who-pays-it" tabindex="-1">Rothera: daily fees by payer, retail vs counterparty</h2>
 
 <p class="section-intro">Rothera bills <em>both</em> sides of a matched trade, at different rates. This splits the exchange's daily take into the retail leg and the market-maker leg opposite it.</p>
 
@@ -129,7 +129,7 @@ if (split.length) display(html`<div class="instruction-line" style="border-left-
 }Over this window it kept ${fmtUSD(exchangeTake)} on ${fmtUSD(staked)} staked, or ${fmtPct(staked > 0 ? exchangeTake / staked : 0)} of the money at risk.</div>`);
 ```
 
-## Cumulative
+<h2 id="cumulative" tabindex="-1">Rothera: cumulative fees to date</h2>
 
 ```js
 const feesCumRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, color: ACCENT, width}));
@@ -139,7 +139,7 @@ const feesCumRange = view(dateBrush({data: rows, valueAccessor: d => d.fees, col
 if (rows.length) display(feesDaily({rows: rows.filter(inDateRange(feesCumRange)), width, color: ACCENT, cumulative: true}));
 ```
 
-## Effective rate
+<h2 id="effective-rate" tabindex="-1">Rothera: effective fee rate per $1 traded</h2>
 
 ```js
 const rateRange = view(dateBrush({data: rows, valueAccessor: d => d.centsPerContract, color: ACCENT, width}));

@@ -137,7 +137,7 @@ function makeDateBrush(yAcc = d => d.fees_total || 0, color = "var(--accent-seco
 }
 ```
 
-## Daily fee revenue
+<h2 id="daily-fee-revenue" tabindex="-1">Kalshi: daily fee revenue</h2>
 
 <p class="section-intro">The fees Kalshi collected each day, from the same trading behind the volume charts.</p>
 
@@ -194,7 +194,7 @@ Plot.plot({
   <span class="legend-chip is-active"><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--accent-tertiary)"></span>7-day average</span>
 </div>
 
-## Taker vs maker fees
+<h2 id="taker-vs-maker-fees" tabindex="-1">Kalshi: taker vs maker fees</h2>
 
 <p class="section-intro">Kalshi bills the aggressor on almost every market, but it also charges the <strong>resting</strong> side on a named subset — soccer, tennis, rate and inflation markets. This splits the daily total above into those two parts.</p>
 
@@ -299,7 +299,7 @@ const makerShare2026 = d3.sum(rows2026, d => d.fees_total) > 0
 
 <div class="chart-note"><strong>This page reports total fee revenue — everything Kalshi collects, from both sides.</strong> The Kalshi series on <a href="./compare-fees">Fees &amp; Economics</a> answers a different question: what <em>one trader</em> pays to execute. That number is the taker band alone, ${fmtUSD(takerAllTime)} against ${fmtUSD(splitTotal)} here, because a like-for-like comparison against venues that bill both sides has to count one side at each of them. The gap between the two pages is this maker band, and both figures are correct.</div>
 
-## Cumulative fee revenue
+<h2 id="cumulative-fee-revenue" tabindex="-1">Kalshi: cumulative fee revenue to date</h2>
 
 <p class="section-intro">Reported non-sports and sports fees, plus the parlay residual. The published components are mutually exclusive and add up to the headline fee total, so the bands are an exact decomposition of the chart above.</p>
 
@@ -394,7 +394,7 @@ Plot.plot({
 
 </div>
 
-## Fee revenue mix
+<h2 id="fee-revenue-mix" tabindex="-1">Kalshi: fee revenue mix by category</h2>
 
 <p class="section-intro">Where Kalshi's fee revenue came from over the selected dates, taker and maker fees combined.</p>
 
@@ -420,7 +420,7 @@ feeMix ? feeRevenueMixPie(feeMix, {d3}) : html`<p>No fee data for these dates.</
 
 <div class="chart-note">${feeMix ? `${fmtDate(feeMix.start)} – ${fmtDate(feeMix.end)}. ` : ""}Straight sports excludes parlays. 15-minute markets are crypto, commodity and financial price markets that each run for 15 minutes.</div>
 
-## Fee rate (cents per contract)
+<h2 id="fee-rate-cents-per-contract" tabindex="-1">Kalshi: fee rate, cents per contract</h2>
 
 <p class="section-intro">The realized average fee Kalshi kept on each contract traded.</p>
 
@@ -489,7 +489,7 @@ const feeRateView = view(Inputs.radio(["Overall", "Sports (excl. parlays)", "Non
 
 </div>
 
-## Fees by category over time
+<h2 id="fees-by-category-over-time" tabindex="-1">Kalshi: fees by category over time</h2>
 
 <p class="section-intro">The fees Kalshi <em>collected</em>, by category — on a trade-date basis (fees as charged when a trade executes, not when markets settle).</p>
 
@@ -734,7 +734,7 @@ Plot.plot({
 
 <div class="chart-note"><strong>Reading note:</strong> these are trade-date fees (charged when a trade executes), so they reconcile with the daily fee totals above. Parlay is one bucket — we don't have per-leg fee data to split it. Each day is added the morning after it ends.</div>
 
-### Daily view
+<h3 id="daily-view" tabindex="-1">Kalshi: daily fees by category</h3>
 
 ```js
 const dr6 = view(makeDateBrush(d => d.fees_total || 0, "#1a9641"));
@@ -769,7 +769,7 @@ Plot.plot({
 
 </div>
 
-### Fee rate by category
+<h3 id="fee-rate-by-category" tabindex="-1">Kalshi: fee rate by category</h3>
 
 <p class="section-intro">Effective fee rate (¢ per contract charged) by category — the same per-category split as the fees chart above, but as a rate instead of a dollar total, so a category can be flagged as expensive-per-contract even if its total fee dollars are small. Kalshi's fee formula peaks at the 50¢ strike and falls off toward 1¢/99¢, so this mostly reflects each category's typical contract price. Same toggle and colors as the fees charts above.</p>
 
@@ -872,7 +872,7 @@ Plot.plot({
 
 <div class="chart-note"><strong>Reading note:</strong> a month with zero contracts for a category is left as a gap in that line rather than a misleading 0¢ rate. <em>General</em>/<em>Detailed</em> match the toggle above; this chart ignores the <em>Normalized</em> scale control (a rate is already normalized).</div>
 
-## Non-sports fee revenue
+<h2 id="non-sports-fee-revenue" tabindex="-1">Kalshi: non-sports fee revenue</h2>
 
 <p class="section-intro">Kalshi's daily non-sports fees by category, with 15-minute markets shown on their own.</p>
 

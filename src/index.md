@@ -187,7 +187,7 @@ if (briefingSettled && briefingNarrated && Math.abs(briefingSettled.contracts / 
   </div>
 </div>
 
-<h2 class="briefing-scale-title" id="volume-across-exchanges">Volume across exchanges</h2>
+<h2 class="briefing-scale-title" id="volume-across-exchanges">Daily reported volume across US prediction-market exchanges</h2>
 
 <p class="section-intro">Reported daily contracts across every venue with a usable series. Linear preserves the real scale gap; log makes smaller venues readable.</p>
 
@@ -261,7 +261,7 @@ display(renderDateBrush({
 }));
 ```
 
-## Economics and outcomes
+<h2 id="economics-and-outcomes" tabindex="-1">Latest fees and outcomes by exchange</h2>
 
 <p class="section-intro">Latest reported measures. Coverage varies by venue and is shown on each item.</p>
 
@@ -393,7 +393,7 @@ display(html`<table class="briefing-table">
 
 </div>
 
-## What the industry trades
+<h2 id="what-the-industry-trades" tabindex="-1">Product mix across US prediction-market exchanges</h2>
 
 <p class="section-intro">The current mix, and how the sports share has moved.</p>
 

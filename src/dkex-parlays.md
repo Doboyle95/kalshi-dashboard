@@ -116,7 +116,7 @@ const settledShare = ALL.contracts ? ALL.settled_contracts / ALL.contracts : 0;
   <p><strong>The settlement-as-mark trap does not apply here, and it was checked.</strong> On Polymarket a settlement price is a running mark until the contract matured on a prior day, and treating same-day rows as final reports parlay buyers <em>profiting</em>. Every one of DKeX's combo tickers appears in the settlement reports exactly once, so no price ever moves, and 99.6% land on $0.00 or $1.00.</p>
 </details>
 
-## Where the money goes
+<h2 id="where-the-money-goes" tabindex="-1">DKeX parlays: daily stakes by number of legs</h2>
 
 <p class="section-intro">Stake per day, split by how many legs the combo carried.</p>
 
@@ -173,7 +173,7 @@ Plot.plot({
 
 <div class="instruction-line">${noLegs.stake_usd > 0 ? `${fmtUSD(noLegs.stake_usd)} staked on ${noLegs.trades.toLocaleString("en-US")} trades has no leg count. Those parlays settled from DraftKings' market report on days whose settlement report is missing. They count in every total on this page, but not in these leg breakdowns.` : ""}</div>
 
-## What a leg costs
+<h2 id="what-a-leg-costs" tabindex="-1">DKeX parlays: price paid vs win rate, by number of legs</h2>
 
 <p class="section-intro">Buyers pay the light bar and win the dark one; the gap between them is the house edge.</p>
 
@@ -214,7 +214,7 @@ Plot.plot({
 
 <div class="instruction-line">Priced chance falls from ${pct(byLegs[0].price, 1)} at ${byLegs[0].legs} legs to ${pct(byLegs.at(-1).price, 1)} at ${byLegs.at(-1).legs}; the win rate falls faster, from ${pct(byLegs[0].winRate, 1)} to ${pct(byLegs.at(-1).winRate, 1)}.</div>
 
-## Buyer P&amp;L by leg count
+<h2 id="buyer-p-and-l-by-leg-count" tabindex="-1">DKeX parlays: buyer P&amp;L by number of legs</h2>
 
 <p class="section-intro">The same gap expressed as a return on stake.</p>
 
@@ -236,7 +236,7 @@ Plot.plot({
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">⚠ ${days.length} days of trading. The aggregate is a large sample in contracts &mdash; ${fmtCount(ALL.settled_contracts)} resolved &mdash; but the per-leg-count bars are not stable yet, and the buckets showing buyers ahead are far more likely to be noise than a real edge. Read the shape, not the individual bars.</div>
 
-## What bettors lost, by the price they paid
+<h2 id="what-bettors-lost-by-the-price-they-paid" tabindex="-1">DKeX parlays: share of stakes lost, by price paid</h2>
 
 ```js
 // Loaded inside this section on purpose: build_chart_catalog.py credits a series to the nearest
@@ -341,7 +341,7 @@ markup._
 }
 ```
 
-## One sport or several
+<h2 id="one-sport-or-several" tabindex="-1">DKeX parlays: single-sport vs multi-sport combos</h2>
 
 <p class="section-intro">Whether a combo's legs sit in a single sport, and which sports get combined.</p>
 

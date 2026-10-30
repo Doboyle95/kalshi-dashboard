@@ -128,7 +128,7 @@ const dailyTotals = (rows, value) => Array.from(d3.rollup(rows, v => d3.sum(v, v
 const fmtAxisNum = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? Math.round(a/1e6)+"M" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(a)); };
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">Polymarket US: daily volume (contracts)</h2>
 
 <p class="section-intro">Polymarket US volume since it began reporting in late 2025.</p>
 
@@ -167,7 +167,7 @@ Plot.plot({
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">US-accessible Polymarket volume only (separate from global Polymarket). Data from the exchange's own daily bulletins, starting Oct 30, 2025. Almost entirely sports.</p>
 
-## Product mix
+<h2 id="product-mix" tabindex="-1">Polymarket US: product mix</h2>
 
 <p class="section-intro">Switch between the broad sports split, the daily sport mix, the all-time ranking, and the venue's own contract types without repeating the same product story in four separate sections.</p>
 
@@ -423,7 +423,7 @@ polymarketProductView === "Contract types" && mtFrom
   : null
 ```
 
-## Settlements
+<h2 id="settlements" tabindex="-1">Polymarket US: yes/no markets settled each day, by outcome</h2>
 
 <p class="section-intro">Most Polymarket US markets ask a yes/no question &mdash; will this player, team or line hit? Across ${fmtCount(ynSettled)} settled propositions the answer is yes just ${(100*ynYesRate).toFixed(1)}% of the time.</p>
 
@@ -494,7 +494,7 @@ Plot.plot({
 <p class="chart-note">Yes/no markets only. Moneylines, spreads and totals are excluded because their sides are two teams, two halves of a line, or Over/Under &mdash; all three settle "first side" 48&ndash;50% of the time, which is arithmetic, not a result. ${(100*ynVoidRate).toFixed(1)}% of these propositions were voided and refunded, against 2.1% at DKeX.</p>
 
 
-## Parlays
+<h2 id="parlays" tabindex="-1">Polymarket US: parlay volume and stakes</h2>
 
 <p class="section-intro">Multi-leg parlays &mdash; Polymarket&rsquo;s &ldquo;Combinatoric Athletic Outcome Contracts&rdquo;, or combos &mdash; first traded 2026-08-05 and opened to all users on 2026-08-20. The earlier activity reflects the limited-access rollout; data from August 20 onward reflects the public launch.</p>
 

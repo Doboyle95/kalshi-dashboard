@@ -224,7 +224,7 @@ const cumulativeTip = Array.from(
 ).sort((a, b) => a.date - b.date);
 ```
 
-## Cumulative Taker P&L
+<h2 id="cumulative-taker-p-and-l" tabindex="-1">Kalshi: cumulative taker P&amp;L</h2>
 
 <p class="section-intro">The gap between the gross and net lines is fee drag. If both lines fall, takers are losing to outcomes before fees even enter the picture.</p>
 
@@ -293,7 +293,7 @@ const makerCumulativeTip = Array.from(
 ).sort((a, b) => a.date - b.date);
 ```
 
-## Cumulative Maker P&L
+<h2 id="cumulative-maker-p-and-l" tabindex="-1">Kalshi: cumulative maker P&amp;L</h2>
 
 <p class="section-intro">Maker P&L is the other side of those same settled taker trades. The gap between the lines is maker fees, which only apply in maker-fee markets and changed from flat per-contract pricing to a price-curve fee in July 2025.</p>
 
@@ -365,7 +365,7 @@ const dailyBars = dailyWithTakerVolume
   }));
 ```
 
-## Daily Outcome Swings
+<h2 id="daily-outcome-swings" tabindex="-1">Kalshi: daily taker P&amp;L and return</h2>
 
 <p class="section-intro">Each day's net result for takers, colored by return on what they staked — so a big-dollar day isn't mistaken for a high-percentage one.</p>
 
@@ -446,7 +446,7 @@ const calibrationRows = normalizeCalibration(
 const calibrationSummary = calibrationVerdict(calibrationRows, {eventNoun: "effective events"});
 ```
 
-## Price Calibration
+<h2 id="price-calibration" tabindex="-1">Kalshi: taker calibration by price and category</h2>
 
 <p class="section-intro">For contracts bought at each price, how often the taker's chosen side actually won. The x-axis is the contract-weighted price paid inside each 5&cent; band, not the band midpoint; the diagonal is perfect calibration.</p>
 
@@ -536,7 +536,7 @@ const categoryTop = [...categoryRows]
   .slice(0, pnlCatDetail === "Detailed" ? 15 : 7);
 ```
 
-## Market Leaderboard
+<h2 id="market-leaderboard" tabindex="-1">Kalshi: taker P&amp;L by market</h2>
 
 <p class="section-intro">The individual settled markets — specific real-world events, not categories or recurring series — where takers made or lost the most money. Toggle to see the biggest taker wins (maker losses) or the biggest taker losses (maker wins).</p>
 
@@ -649,7 +649,7 @@ Inputs.table(marketPnlSearch, {
 })
 ```
 
-## Category Leaderboard
+<h2 id="category-leaderboard" tabindex="-1">Kalshi: taker P&amp;L by category</h2>
 
 <p class="section-intro">The categories where takers won or lost the most net dollars — sports broken out sport-by-sport rather than lumped into one Kalshi "Sports" bucket. Switch to Detailed for the sport-by-sport split.</p>
 

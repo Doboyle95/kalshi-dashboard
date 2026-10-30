@@ -218,7 +218,7 @@ const riseBasisNote = metric => {
 };
 ```
 
-## The rise of multi-leg betting
+<h2 id="the-rise-of-multi-leg-betting" tabindex="-1">Kalshi parlays: volume, stakes and legs since launch</h2>
 
 _From a standing start in late 2025 to billions of contracts a month. **Stakes** is the money bettors actually paid, and a long-shot ticket is a lot of contracts and very little of it${riseBasisNote(riseMetric)}._
 
@@ -361,7 +361,7 @@ const fmtSignedUSD = n => n < 0 ? "-$" + fmtCount(-n) : "$" + fmtCount(n);
 const fmtDay = d => (d instanceof Date ? d : new Date(d)).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric", timeZone: "UTC"});
 ```
 
-## Parlay volume: correlated vs non-correlated over time
+<h2 id="parlay-volume-correlated-vs-non-correlated-over-time" tabindex="-1">Kalshi parlays: monthly volume, correlated vs non-correlated</h2>
 
 _Monthly parlay volume (contracts), split by **leg-level** correlation — **same-game (correlated)** tickets versus **multi-game (independent)** ones. Classified from the actual legs, not the ticker name; brand-new tickers still awaiting leg-mapping sit in a small "unclassified" band._
 
@@ -400,7 +400,7 @@ display(Plot.plot({
 }))
 ```
 
-## Cumulative bettor P&L: correlated vs non-correlated
+<h2 id="cumulative-bettor-p-and-l-correlated-vs-non-correlated" tabindex="-1">Kalshi parlays: cumulative bettor P&amp;L, correlated vs non-correlated</h2>
 
 _How much money parlay bettors have transferred to Kalshi (and market-makers) over the period, net of fees. Classified using the same audited correlated/non-correlated split as the charts above._
 
@@ -447,7 +447,7 @@ Kalshi has launched new SGP-style series under varying ticker prefixes, and the 
 classification is what determines the pricing math.
 </div>
 
-## How much sports dominates parlays
+<h2 id="how-much-sports-dominates-parlays" tabindex="-1">Kalshi parlays: share of volume from sports</h2>
 
 <p class="section-intro">Almost every parlay contract is a pure-sports parlay. Each month's bar is split by mix — the green is all-sports, and the thin slivers on top are cross-category "mixed" and all-non-sports parlays.</p>
 
@@ -496,7 +496,7 @@ Plot.plot({
 
 <p class="chart-note">All-sports parlays are <strong>${sportsShareAll.toFixed(1)}%</strong> of all parlay contracts, and <strong>${sportsShareStake.toFixed(1)}%</strong> of the money staked. The chart below zooms into the rest — the cross-category and all-non-sports sliver.</p>
 
-## Mixed and non-sports parlays over time
+<h2 id="mixed-and-non-sports-parlays-over-time" tabindex="-1">Kalshi parlays: mixed and non-sports volume over time</h2>
 
 <p class="section-intro">The slice that isn't pure sports: parlays mixing sports with non-sports legs, and all-non-sports parlays. These only really appeared once Kalshi enabled cross-category combos.</p>
 
@@ -569,7 +569,7 @@ const games = gamesRaw
   .map(d => ({...d, parlay_vol: +d.parlay_vol, n_parlays: +d.n_parlays, label: prettyGame(d.game_key)}));
 ```
 
-## The games that drive parlay money
+<h2 id="the-games-that-drive-parlay-money" tabindex="-1">Kalshi parlays: games with the most parlay volume</h2>
 
 _Top 20 underlying games by parlay volume touching them. A parlay's volume is counted for every distinct game it includes, so totals are non-exclusive (a measure of how "parlayed" each game is). Raw game keys shown for non-dated/futures markets._
 
@@ -716,7 +716,7 @@ const misp = mispRaw.map(d => ({
 const bucketDomain = [...new Set(misp.map(d => d.bucket))];
 ```
 
-## The "lottery ticket" parlays
+<h2 id="the-lottery-ticket-parlays" tabindex="-1">Kalshi parlays: long shots, 8+ legs priced under 2¢</h2>
 
 _Trading on parlays with **8 or more legs**, priced under **2¢** to win — true longshots, not just "unlikely." A ticket only counts on the days it actually traded at that price, so the same parlay can appear here on one day and not another as its odds move; this is a snapshot of longshot trading activity, not a fixed list of tickets. **Taker stakes** (the money yes-takers put in) is shown starting **June 7, 2026**. **Volume** isn't affected and covers the full history back to Jan 2026._
 
@@ -771,7 +771,7 @@ parlays generally — these are, in fact, lottery tickets.
 </div>`);
 ```
 
-## Are parlays priced fairly?
+<h2 id="are-parlays-priced-fairly" tabindex="-1">Kalshi parlays: actual vs implied win rate</h2>
 
 _Calibration: implied probability (entry price) vs the win rate that actually occurred. Points below the dashed line = bettors **over**paid (actual worse than implied). Bubble size = parlay count._
 
@@ -816,7 +816,7 @@ Plot.plot({
 
 <!-- Raw HTML so the id stays the one the original title produced: ?embed= links address
      this section by it, and a retitle must not break them. -->
-<h2 id="what-a-parlay-costs-vs-multiplying-its-legs" tabindex="-1"><a class="observablehq-header-anchor" href="#what-a-parlay-costs-vs-multiplying-its-legs">What a multi-game parlay costs vs. multiplying its legs</a></h2>
+<h2 id="what-a-parlay-costs-vs-multiplying-its-legs" tabindex="-1"><a class="observablehq-header-anchor" href="#what-a-parlay-costs-vs-multiplying-its-legs">Kalshi parlays: price paid vs the legs multiplied together</a></h2>
 
 _A multi-game parlay is fairly priced at its legs' prices multiplied together, each taken at the
 moment the parlay traded. Over ${fmtFreshDate(pvlFrom)} – ${fmtFreshDate(pvlTo)} bettors paid
@@ -1063,7 +1063,7 @@ display(Plot.plot({
 }))
 ```
 
-## House edge climbs with parlay length
+<h2 id="house-edge-climbs-with-parlay-length" tabindex="-1">Kalshi parlays: house edge by number of legs</h2>
 
 _Cost to the bettor per \$100 staked (taker P&L, before fees — real cost is worse). Each added leg compounds the margin on same-game tickets; the multi-game series is noisier and dips at 7 legs before climbing again at 10+._
 
@@ -1084,7 +1084,7 @@ Plot.plot({
 })
 ```
 
-## Win rate collapses with length
+<h2 id="win-rate-collapses-with-length" tabindex="-1">Kalshi parlays: settled win rate by number of legs</h2>
 
 ```js
 Plot.plot({

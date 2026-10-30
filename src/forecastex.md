@@ -123,7 +123,7 @@ function makeBrush(data, color) {
 }
 ```
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">ForecastEx: daily volume</h2>
 
 <p class="section-intro">ForecastEx full exchange volume.</p>
 
@@ -160,7 +160,7 @@ Plot.plot({
 
 <p style="font-size:0.82em;color:#999;margin-top:0.5rem">ForecastEx full exchange volume from the exchange's own daily bulletins. Contract denominations vary by product; counts reflect individual contracts traded, not dollar value.</p>
 
-## Sports vs. non-sports
+<h2 id="sports-vs-non-sports" tabindex="-1">ForecastEx: sports vs non-sports volume</h2>
 
 <p class="section-intro">How much of ForecastEx is sports versus everything else — once a thin slice, now mostly gone.</p>
 
@@ -202,7 +202,7 @@ Plot.plot({
 })
 ```
 
-## Volume by category
+<h2 id="volume-by-category" tabindex="-1">ForecastEx: volume by category</h2>
 
 <p class="section-intro">The themes carrying ForecastEx's volume, and the shift from politics toward weather.</p>
 
@@ -254,7 +254,7 @@ Plot.plot({
 })
 ```
 
-## Category breakdown (2025 onward)
+<h2 id="category-breakdown-2025-onward" tabindex="-1">ForecastEx: category breakdown, 2025 onward</h2>
 
 ```js
 const catBar = [...catTotals.entries()]

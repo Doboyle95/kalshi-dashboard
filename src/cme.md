@@ -66,7 +66,7 @@ const totalAll = d3.sum(rows, d => d.total);
   </div>
 </div>
 
-## Daily volume · calls and puts
+<h2 id="daily-volume-calls-and-puts" tabindex="-1">CME: daily volume, calls and puts</h2>
 
 <p class="section-intro">Each bar is one CME Daily Bulletin, shown exactly as CME publishes it. <strong>Mondays look huge because they include the weekend.</strong> Gaps are days we couldn't collect, not zero-volume days.</p>
 

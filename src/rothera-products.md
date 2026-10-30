@@ -31,7 +31,7 @@ const present = BUCKETS.filter(b => rows.some(d => d.category === b && +d.contra
 const totals = categoryTotals(rows);
 ```
 
-## The mix, day by day
+<h2 id="the-mix-day-by-day" tabindex="-1">Rothera: product mix, day by day</h2>
 
 <div class="control-strip">
 
@@ -51,7 +51,7 @@ display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: m
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
 
-## Sports and everything else
+<h2 id="sports-and-everything-else" tabindex="-1">Rothera: sports vs everything else</h2>
 
 ```js
 const splitRange = view(dateBrush({data: split, valueAccessor: d => +d.contracts_total || (+d.contracts_sports || 0) + (+d.contracts_nonsports || 0), color: ACCENT, width}));
@@ -65,7 +65,7 @@ display(sportsSplit({rows: split.filter(inDateRange(splitRange)), width, color: 
 display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Sports is ${fmtPct(d3.sum(split, d => +d.contracts_sports || 0) / Math.max(1, d3.sum(split, d => +d.contracts_total || 0)))} of all contracts this venue has published.</div>`);
 ```
 
-## Days to expiration
+<h2 id="days-to-expiration" tabindex="-1">Rothera: contracts by days to expiration</h2>
 
 <p class="section-intro">How far ahead of settlement Rothera actually trades. Volume is where the money moves; open interest is where it sits.</p>
 
@@ -153,7 +153,7 @@ display(Inputs.table(totals, {
 }));
 ```
 
-## Every category, all time
+<h2 id="every-category-all-time" tabindex="-1">Rothera: every category, all time</h2>
 
 <p class="section-intro">Rothera's own categories, unbucketed, ranked by all-time volume.</p>
 

@@ -21,7 +21,7 @@ const catDaily = await DataAttachment("data/nadex_categories_daily.csv").csv({ty
 const fmtCount = n => { const a = Math.abs(n ?? 0), s = n < 0 ? "-" : ""; return s + (a >= 1e9 ? (a/1e9).toFixed(1)+"B" : a >= 1e6 ? (a/1e6).toFixed(1)+"M" : a >= 1e3 ? (a/1e3).toFixed(0)+"k" : String(Math.round(a))); };
 ```
 
-## Parlay adoption history
+<h2 id="parlay-adoption-history" tabindex="-1">OG/Crypto.com: parlay share of contracts over time</h2>
 
 <p class="section-intro">Monthly share shows the launch without placing a one-venue case study in the cross-venue comparison.</p>
 
@@ -78,7 +78,7 @@ Plot.plot({
 })
 ```
 
-## Parlay volume
+<h2 id="parlay-volume" tabindex="-1">OG/Crypto.com: parlay volume</h2>
 
 <p class="section-intro">The same product in contracts rather than as a share, so a busy month is visible as a busy month.</p>
 

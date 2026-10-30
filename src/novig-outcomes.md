@@ -66,7 +66,7 @@ if (!S) display(html`<div class="instruction-line" style="border-left-color:var(
 }
 ```
 
-## How straight-contract takers did
+<h2 id="how-straight-contract-takers-did" tabindex="-1">Novig: cumulative taker P&amp;L on straight contracts</h2>
 
 <div class="instruction-line">Cumulative gross taker P&amp;L on settled straight contracts; the shaded band is how much the live-straight fee could take off it.</div>
 
@@ -136,7 +136,7 @@ display(games.length
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Moneyline, straight, taker-side only, over the ~two-week window; P&amp;L is gross. The maker side made the mirror of each figure. This is the Novig counterpart of Kalshi's market leaderboard, which its nameless market ids used to make impossible.</div>
 
-## Are Novig's prices calibrated?
+<h2 id="are-novigs-prices-calibrated" tabindex="-1">Novig: actual win rate vs price paid</h2>
 
 <div class="instruction-line">Decisive contracts only; each dot is the price actually paid in a 5&cent; band against the realised win rate, so points on the diagonal are perfectly priced.</div>
 
@@ -167,7 +167,7 @@ if (calib.length) {
 if (calib.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Bars are ±2 fixture-clustered standard errors; a bar spanning the diagonal is not distinguishable from a fair price. The price paid is used, not the bin midpoint, so the tails are not flattered.</div>`);
 ```
 
-## Same game, two venues
+<h2 id="same-game-two-venues" tabindex="-1">Novig vs Kalshi: pre-game win probability, same game</h2>
 
 <div class="instruction-line">Pre-game moneyline price — the last trade before first pitch — for the same MLB game on Novig and Kalshi. Points on the diagonal mean the two books agreed.</div>
 

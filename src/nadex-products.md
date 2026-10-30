@@ -30,7 +30,7 @@ const present = BUCKETS.filter(b => rows.some(d => d.category === b && +d.contra
 const totals = categoryTotals(rows);
 ```
 
-## The mix, day by day
+<h2 id="the-mix-day-by-day" tabindex="-1">OG/Crypto.com: product mix, day by day</h2>
 
 <div class="control-strip">
 
@@ -50,7 +50,7 @@ display(categoryMix({rows: rows.filter(inDateRange(mixRange)), width, measure: m
 
 <div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)">Share answers what the venue is for; contracts answers how big it got. Same buckets as <a href="./categories-venues">Products across venues</a>.</div>
 
-## Non-parlay sports, parlays, and everything else
+<h2 id="non-parlay-sports-parlays-and-everything-else" tabindex="-1">OG/Crypto.com: sports, parlays and everything else</h2>
 
 ```js
 const splitRange = view(dateBrush({data: split, valueAccessor: d => +d.contracts_total || (+d.contracts_sports || 0) + (+d.contracts_nonsports || 0), color: ACCENT, width}));
@@ -85,7 +85,7 @@ display(Inputs.table(totals, {
   <p><strong>&ldquo;Other&rdquo; is not one thing.</strong> At Underdog it is the combo bucket; at OG/Crypto.com and DKeX it is a genuine residual, and OG/Crypto.com carries a separate explicit <em>Parlays</em> value. It is mapped per venue rather than globally.</p>
 </details>
 
-## Every category, all time
+<h2 id="every-category-all-time" tabindex="-1">OG/Crypto.com: every category, all time</h2>
 
 <p class="section-intro">The same all-time total as the bucket table above, broken out by the individual category label instead of folded into seven buckets — enough to see NFL next to Golf next to COMBOS. "Unparsed" is bulletin rows whose product column came through blank — real volume, unknown product.</p>
 

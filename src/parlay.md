@@ -115,7 +115,7 @@ const provNote = provDays.length
   : html``;
 ```
 
-## Daily P&L
+<h2 id="daily-p-and-l" tabindex="-1">Kalshi parlays: bettors' daily P&amp;L</h2>
 
 _What parlay bettors won or lost each day after fees and cash-outs, in dollars or as a share of what they staked._
 
@@ -167,7 +167,7 @@ pnlUnit === "Dollars"
 pnlUnit === "Dollars" ? html`<span></span>` : html`<p style="font-size:0.82em;color:#888">A 5¢ parlay that hits pays back about 19×, which is why one lucky day can send the bar far past +100%.</p>`
 ```
 
-## What parlay bettors actually lost (after cash-outs)
+<h2 id="what-parlay-bettors-actually-lost-after-cash-outs" tabindex="-1">Kalshi parlays: cumulative bettor P&amp;L after cash-outs</h2>
 
 _Realized P&L for parlay bettors — and **after** accounting for everyone who cashed out early. This is the real money won and lost, including positions sold back before settlement. The two lines show it **before** Kalshi's fees and **after** fees; the gap between them is the fee drag. Settled parlays only; recent days fill in as their markets resolve._
 
@@ -202,7 +202,7 @@ display(Plot.plot({
 display(provNote);
 ```
 
-## If every parlay were held to settlement
+<h2 id="if-every-parlay-were-held-to-settlement" tabindex="-1">Kalshi parlays: bettor P&amp;L if every parlay were held to settlement</h2>
 
 _The same bettors' P&L in the counterfactual where **nobody cashed out** — every yes-side position held to the end. The gap between this line and the one above is the net effect of cashing out._
 
@@ -225,7 +225,7 @@ Plot.plot({
 })
 ```
 
-## What bettors lost, by the price they paid
+<h2 id="what-bettors-lost-by-the-price-they-paid" tabindex="-1">Kalshi parlays: share of stakes lost, by price paid</h2>
 
 ```js
 // Loaded inside this section's own block on purpose: build_chart_catalog.py credits a series
@@ -298,7 +298,7 @@ display(pbp.length ? Plot.plot({
 }) : html`<p class="chart-note">The breakdown by price starts June 7, 2026 — widen the date range to include it.</p>`);
 ```
 
-## The other side of the trade
+<h2 id="the-other-side-of-the-trade" tabindex="-1">Kalshi parlays: cumulative market-maker P&amp;L</h2>
 
 ```js
 // Loaded inside this section's own block on purpose: build_chart_catalog.py credits a series
@@ -385,7 +385,7 @@ display(cumMakerVis.length ? Plot.plot({
 }) : html`<p class="chart-note">No settled parlay days in the selected range — this series starts ${fmtDate(mkFrom)}.</p>`);
 ```
 
-## Cash-outs
+<h2 id="cash-outs" tabindex="-1">Kalshi parlays: cumulative cash-out edge</h2>
 
 <p class="section-intro">Inferred cash-outs returned <strong>${cashReturnedPctKpi.toFixed(1)}¢ per dollar staked</strong> to parlay bettors. The trades account for ${cashoutFlowShareKpi.toFixed(1)}% of taker-side trading flow, but that flow share uses the complementary no buyer's cost — not the cash the exiting bettor received. This chart tracks whether cashing out beat holding to settlement.</p>
 
@@ -422,7 +422,7 @@ const dailyDetail = uniSorted.map(d => {
 });
 ```
 
-## Daily stakes & return
+<h2 id="daily-stakes-and-return" tabindex="-1">Kalshi parlays: daily stakes and return</h2>
 
 _Each bar is the money staked on parlays that day; its colour is how the day turned out for bettors — green for a win, red for a loss. The tallest bars are the heavy-action days around big games._
 

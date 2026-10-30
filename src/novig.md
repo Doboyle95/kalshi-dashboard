@@ -97,7 +97,7 @@ const parlayStakeTotal = d3.sum(parlay.filter(d => d.legs > 1), d => +d.taker_va
   <div class="card"><h2>Markets traded</h2><span class="big">${fmtCount(d3.max(daily, d => d.markets_traded) ?? 0)}</span><span class="muted">busiest day</span></div>
 </div>
 
-## Daily volume
+<h2 id="daily-volume" tabindex="-1">Novig: daily volume (contracts)</h2>
 
 ```js
 const nvVolRange = view(dateBrush({data: daily, valueAccessor: d => d.contracts, color: NV, width}));
@@ -127,7 +127,7 @@ Plot.plot({
 })
 ```
 
-## Categories by day
+<h2 id="categories-by-day" tabindex="-1">Novig: contracts by category, per day</h2>
 
 ```js
 // Novig's `league` column is a LEAGUE (MLB, ATP, WNBA), not a sport, and it is
@@ -231,7 +231,7 @@ display(gameVol.length
 
 <div id="what-novig-charges"></div>
 
-## What Novig charges
+<h2 id="what-novig-charges" tabindex="-1">Novig: taker fees by contract price</h2>
 
 <div class="instruction-line">The published schedule charges the taker a price-dependent fee on live straight bets and parlays. Pre-game straight trades are free.</div>
 
@@ -427,7 +427,7 @@ if (feeT) display(html`<div class="instruction-line" style="border-left-color:va
   ${takeRateNote}
 </details>
 
-## Parlay volume and stakes
+<h2 id="parlay-volume-and-stakes" tabindex="-1">Novig: parlay volume and stakes</h2>
 
 ```js
 import {GRANULARITIES, METRICS, metricLabel, parlayChart, toDailyParlay} from "./components/parlay-series.js";
@@ -461,7 +461,7 @@ display(parlayChart({
 
 <div class="instruction-line">Parlays are ${parlayAll ? `${(100 * parlayTotal / parlayAll).toFixed(1)}%` : "—"} of Novig's contracts, bought at ${(100 * parlayStakeTotal / parlayTotal).toFixed(1)}&cent; each &mdash; a price quoted all-in, so the parlay fee is already inside it.</div>
 
-## Parlays by leg count
+<h2 id="parlays-by-leg-count" tabindex="-1">Novig: parlays by number of legs</h2>
 
 ```js
 const legAgg = Array.from(d3.rollup(parlay, v => d3.sum(v, d => d.contracts), d => d.legs), ([legs, contracts]) => ({legs, contracts})).sort((a, b) => a.legs - b.legs);

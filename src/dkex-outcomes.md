@@ -51,7 +51,7 @@ const verdict = calibrationVerdict(rows, {eventNoun: "events"});
 const totalEvents = +(calib.find(d => d.group === "ALL" && +d.bin_width === bandWidth)?.n_events_total ?? 0);
 ```
 
-## Actual vs price paid
+<h2 id="actual-vs-price-paid" tabindex="-1">DKeX: actual win rate vs price paid</h2>
 
 <div class="instruction-line">The diagonal is a perfectly priced contract. Bars are &plusmn;2 event-clustered standard errors, so a bar crossing the diagonal is not measurably mispriced.</div>
 
@@ -63,7 +63,7 @@ if (rows.length) display(actualVsImplied({rows, color: DK, width}));
 if (rows.length) display(html`<div class="instruction-line" style="border-left-color:var(--theme-foreground-muted)"><strong>${verdict.clearing} of ${verdict.measurable}</strong> bands are distinguishable from a fair price across ${totalEvents.toLocaleString()} settled events. Circle area is proportional to events, not trades.</div>`);
 ```
 
-## Calibration error by price
+<h2 id="calibration-error-by-price" tabindex="-1">DKeX: calibration error by price</h2>
 
 <div class="instruction-line">Actual minus the price paid. <span style="color:var(--accent-positive);font-weight:600">Green</span> means the contract was underpriced, <span style="color:var(--accent-negative);font-weight:600">red</span> overpriced.</div>
 

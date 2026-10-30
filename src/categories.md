@@ -553,7 +553,7 @@ function clearPinnedCategories() {
 
 ```
 
-## Volume map
+<h2 id="volume-map" tabindex="-1">Kalshi: volume map by category</h2>
 
 <p class="section-intro">Start here. The treemap is the fastest read on which categories matter most in the window — click any tile to zoom into the biggest markets inside it.</p>
 
@@ -1766,7 +1766,7 @@ const tmActiveMarketRowsByTicker = d3.group(
   }
 }
 ```
-## Volume by category over time
+<h2 id="volume-by-category-over-time" tabindex="-1">Kalshi: volume by category over time</h2>
 
 <p class="section-intro">How Kalshi's category mix has shifted month to month. Pick a category in the treemap to break it out into its own line.</p>
 
@@ -2137,7 +2137,7 @@ Plot.plot({
 
 <div class="chart-note"><strong>Reading note:</strong> <em>General</em> compresses the market into Football, Basketball, Baseball, Soccer, Other sports, Parlay, and Non-sports. <em>Detailed</em> expands back into individual categories. <em>Normalized</em> shows share of monthly volume rather than dollars.</div>
 
-### Daily view
+<h3 id="daily-view" tabindex="-1">Kalshi: daily volume by category</h3>
 
 <p class="section-intro">The same category mix, day by day instead of month by month. Uses the category detail and scale controls above. Brush to a tighter window to read individual days.</p>
 
@@ -2510,7 +2510,7 @@ if (!compareSeries.length) {
 
 </div>
 
-## Sports market type breakdown
+<h2 id="sports-market-type-breakdown" tabindex="-1">Kalshi: sports volume by market type</h2>
 
 _How sports volume is split between market types across all sports tickers. Moneylines = individual game winners. Futures/Award = season champions, conference winners, awards, tournament brackets. **Parlay (correlated)** = at least two legs are in the same game, so the legs aren't independent and the odds aren't a simple product of the leg prices. **Parlay (independent)** = every leg is a different game. (Classified from the actual legs, not the ticker name.)_
 
@@ -2635,7 +2635,7 @@ Plot.plot({
 
 ---
 
-## All-time individual market leaderboard
+<h2 id="all-time-individual-market-leaderboard" tabindex="-1">Kalshi: all-time individual market leaderboard</h2>
 
 <p class="section-intro">The ${mktLeaderboard.length.toLocaleString()} largest individual markets by contracts — ${mktCoveragePct} of Kalshi's all-time volume; the smaller tail, including some categories entirely, is not in the table. Filter by theme with the legend chips, search for a specific market, or sort any column to see what's biggest by volume, fees, or trades.</p>
 
@@ -3023,7 +3023,7 @@ tbl.classList.add("mkt-table");
 display(tbl);
 ```
 
-## All-time leaderboard
+<h2 id="all-time-leaderboard" tabindex="-1">Kalshi: top markets by volume or fees</h2>
 
 <p class="section-intro">The quickest read on which markets dominate by volume or fees in the window you pick — the starting point before you drill into the map below.</p>
 
