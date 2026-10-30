@@ -8,15 +8,6 @@ title: Robinhood on Kalshi
   <p class="page-lead">Robinhood distributes event contracts through Kalshi, through its own exchange Rothera since June 2026, and through Crypto.com since September 2026. This page estimates how much goes to Kalshi.</p>
 </div>
 
-<details class="surface-card compact-details">
-  <summary>Methodology</summary>
-  <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient that converts a share of positions held into a share of volume traded: <strong>5.40</strong> through May 2026 and <strong>4.56</strong> from June, when Robinhood's own exchange, Rothera, launched and the relationship shifted.</p>
-  <p><strong>Rothera is subtracted first.</strong> It clears through the same firm, so from June 2026 its open positions sit inside the same filing. Left in, June 2026 estimates 66% high.</p>
-  <p><strong>What the estimate covers.</strong> It is fitted against Robinhood's announced total less Rothera, so it predicts everything Robinhood sends anywhere except Rothera, Crypto.com included. ForecastEx sports and weather volume, and Crypto.com's estimated football volume, are then taken off to leave Kalshi. Both are attributions of a total that is already fixed: they change the split, not the total.</p>
-  <p><strong>Accuracy.</strong> The coefficients are calibrated against the months where Robinhood published an actual figure, including September. Leave-one-out error across the Rothera-era months is <strong>6.7%</strong>.</p>
-  <p>Robinhood does not file at weekends. Weekend volume is already reflected in the open-interest level either side of it.</p>
-</details>
-
 ```js
 import {createRemoteDataAttachment} from "./components/remote-data.js";
 const DataAttachment = createRemoteDataAttachment(d3);
@@ -440,3 +431,12 @@ Plot.plot({
   ]
 })
 ```
+
+<details class="surface-card compact-details">
+  <summary>Methodology</summary>
+  <p>Robinhood Derivatives files a daily report with the CFTC. Line <em>[8530]</em> gives the market value of its customers' open positions. We take that as a share of Kalshi's total open interest, then multiply by a coefficient that converts a share of positions held into a share of volume traded: <strong>5.40</strong> through May 2026 and <strong>4.56</strong> from June, when Robinhood's own exchange, Rothera, launched and the relationship shifted.</p>
+  <p><strong>Rothera is subtracted first.</strong> It clears through the same firm, so from June 2026 its open positions sit inside the same filing. Left in, June 2026 estimates 66% high.</p>
+  <p><strong>What the estimate covers.</strong> It is fitted against Robinhood's announced total less Rothera, so it predicts everything Robinhood sends anywhere except Rothera, Crypto.com included. ForecastEx sports and weather volume, and Crypto.com's estimated football volume, are then taken off to leave Kalshi. Both are attributions of a total that is already fixed: they change the split, not the total.</p>
+  <p><strong>Accuracy.</strong> The coefficients are calibrated against the months where Robinhood published an actual figure, including September. Leave-one-out error across the Rothera-era months is <strong>6.7%</strong>.</p>
+  <p>Robinhood does not file at weekends. Weekend volume is already reflected in the open-interest level either side of it.</p>
+</details>
