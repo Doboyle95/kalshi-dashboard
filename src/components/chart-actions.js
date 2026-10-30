@@ -263,38 +263,257 @@
     return "#fff";
   }
 
-  async function downloadPng(root, button) {
-    const svg = mainSvg(root);
-    if (!svg) return setButtonStatus(button, "Unavailable");
-    const box = svg.getBoundingClientRect();
-    if (!box.width || !box.height) return setButtonStatus(button, "Unavailable");
-    const clone = svg.cloneNode(true);
+  // ── PNG ─────────────────────────────────────────────────────────────────────
+  // The download is the section as a reader sees it: its heading, the chart card where it
+  // stands on the page (legend, any title or caption, the svg), then the credit line the embed
+  // carries. Each svg is drawn as an image. The HTML around it is painted from its on-screen
+  // boxes and text, so a legend's labels land beside their swatches.
+
+  const PNG_MARGIN = 24;
+  const PNG_SKIP = `style, script, input, select, textarea, form, .data-inspector-ask, ${SKIP_SELECTOR}`;
+
+  // The canvas font, colour and line height of an element's computed style.
+  function inkOf(style) {
+    return {
+      font: `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`,
+      spacing: style.letterSpacing === "normal" ? "0px" : style.letterSpacing,
+      color: style.color,
+      lineHeight: parseFloat(style.lineHeight) || 1.2 * parseFloat(style.fontSize)
+    };
+  }
+
+  // Sets an ink on a context and returns the font's ascent and descent in CSS px.
+  function useInk(ctx, ink) {
+    ctx.font = ink.font;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = ink.spacing;
+    const metrics = ctx.measureText("Mg");
+    return {
+      ascent: metrics.fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent,
+      descent: metrics.fontBoundingBoxDescent ?? metrics.actualBoundingBoxDescent
+    };
+  }
+
+  function widthOf(ctx, ink, line) {
+    useInk(ctx, ink);
+    return ctx.measureText(line).width;
+  }
+
+  // Greedy word wrap to `width`, measured in the font the context has set.
+  function wrapWords(ctx, line, width) {
+    const lines = [];
+    for (const word of line.split(" ")) {
+      const last = lines.at(-1);
+      if (last !== undefined && ctx.measureText(`${last} ${word}`).width <= width) {
+        lines[lines.length - 1] = `${last} ${word}`;
+      } else {
+        lines.push(word);
+      }
+    }
+    return lines;
+  }
+
+  // A border drawn the same width on all four sides; anything else is left off.
+  function uniformBorder(style) {
+    const width = parseFloat(style.borderTopWidth);
+    const same = ["Right", "Bottom", "Left"].every((side) => parseFloat(style[`border${side}Width`]) === width);
+    if (!width || style.borderTopStyle === "none" || !same) return null;
+    return {width, color: style.borderTopColor};
+  }
+
+  // The box an element paints for its background and border, or null when it paints neither.
+  function boxPart(style, rect, at) {
+    const fill = style.backgroundColor === "rgba(0, 0, 0, 0)" ? null : style.backgroundColor;
+    const border = uniformBorder(style);
+    if (!(fill || border) || !rect.width || !rect.height) return null;
+    return {kind: "box", ...at(rect), w: rect.width, h: rect.height, fill, border, radius: parseFloat(style.borderTopLeftRadius) || 0};
+  }
+
+  // The parts of a chart in paint order: its boxes, its text and its svgs, each placed by `at`,
+  // which maps a viewport rect to canvas px. Toolbars, brushes, forms and scripts are left out.
+  function chartParts(node, at, ctx, parts) {
+    if (node.nodeType === Node.TEXT_NODE) return textParts(node, at, ctx, parts);
+    if (node instanceof SVGSVGElement) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width && rect.height) parts.push({kind: "svg", el: node, ...at(rect), w: rect.width, h: rect.height});
+      return;
+    }
+    if (!(node instanceof HTMLElement) || node.matches(PNG_SKIP)) return;
+    const style = getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden") return;
+    const box = boxPart(style, node.getBoundingClientRect(), at);
+    if (box) parts.push(box);
+    for (const child of node.childNodes) chartParts(child, at, ctx, parts);
+  }
+
+  // A text node's lines, each placed where its first character sits. Characters are measured one
+  // at a time, so a wrapped label keeps the breaks the page gives it.
+  function textParts(node, at, ctx, parts) {
+    const el = node.parentElement;
+    if (!el || !node.data.trim()) return;
+    const style = getComputedStyle(el);
+    const ink = inkOf(style);
+    const {ascent} = useInk(ctx, ink);
+    const range = document.createRange();
+    const lines = [];
+    for (let i = 0; i < node.length; i++) {
+      range.setStart(node, i);
+      range.setEnd(node, i + 1);
+      const rect = range.getBoundingClientRect();
+      if (!rect.width) continue; // collapsed white space takes no room
+      const char = style.textTransform === "uppercase" ? node.data[i].toUpperCase() : node.data[i];
+      const last = lines.at(-1);
+      if (last && Math.abs(rect.top - last.top) <= 1) last.text += char;
+      else lines.push({top: rect.top, left: rect.left, text: char});
+    }
+    for (const line of lines) {
+      const {x, y} = at({left: line.left, top: line.top});
+      parts.push({kind: "text", text: line.text.trimEnd(), x, baseline: y + ascent, ...ink});
+    }
+  }
+
+  // An svg as an image, with the theme's tokens inlined and sized to the box it is painted in.
+  async function svgImage(part) {
+    const clone = part.el.cloneNode(true);
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    clone.setAttribute("width", String(box.width));
-    clone.setAttribute("height", String(box.height));
+    clone.setAttribute("width", String(part.w));
+    clone.setAttribute("height", String(part.h));
     const computedRoot = getComputedStyle(document.documentElement);
     for (const name of themeTokenNames()) {
       const value = computedRoot.getPropertyValue(name);
       if (value) clone.style.setProperty(name, value);
     }
+    // currentColor (axis labels, most text) inherits from the page, which an image does not have.
+    clone.style.setProperty("color", getComputedStyle(part.el).color);
     const css = document.createElementNS("http://www.w3.org/2000/svg", "style");
     css.textContent = "text{font-family:'Inter Tight',Arial,sans-serif} .domain{stroke:currentColor}";
     clone.prepend(css);
     const source = new XMLSerializer().serializeToString(clone);
     const url = URL.createObjectURL(new Blob([source], {type: "image/svg+xml;charset=utf-8"}));
+    const image = new Image();
+    image.src = url;
     try {
-      const image = new Image();
-      image.src = url;
       await image.decode();
+    } catch (error) {
+      URL.revokeObjectURL(url);
+      throw error;
+    }
+    return {image, url};
+  }
+
+  // A box's outline as a path, with its corners rounded where the page rounds them.
+  function boxPath(ctx, x, y, w, h, radius) {
+    ctx.beginPath();
+    if (radius && ctx.roundRect) ctx.roundRect(x, y, w, h, radius);
+    else ctx.rect(x, y, w, h);
+  }
+
+  function paintPart(ctx, part) {
+    if (part.kind === "svg") return ctx.drawImage(part.image, part.x, part.y, part.w, part.h);
+    if (part.kind === "box") {
+      if (part.fill) {
+        ctx.fillStyle = part.fill;
+        boxPath(ctx, part.x, part.y, part.w, part.h, part.radius);
+        ctx.fill();
+      }
+      if (part.border) {
+        const half = part.border.width / 2;
+        ctx.strokeStyle = part.border.color;
+        ctx.lineWidth = part.border.width;
+        boxPath(ctx, part.x + half, part.y + half, part.w - 2 * half, part.h - 2 * half, Math.max(0, part.radius - half));
+        ctx.stroke();
+      }
+      return;
+    }
+    ctx.font = part.font;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = part.spacing;
+    ctx.fillStyle = part.color;
+    ctx.fillText(part.text, part.x, part.baseline);
+  }
+
+  // The chart's address on the public host, as the embed's "Full chart" link names it.
+  function chartAddress(root) {
+    const url = new URL(document.querySelector('link[rel="canonical"]')?.href || location.href);
+    url.search = "";
+    url.hash = anchorHeading(root)?.id || "";
+    return `${url.host}${url.pathname}${url.hash}`;
+  }
+
+  // The image in CSS px, top to bottom: the section heading, the chart card where it stands on
+  // the page, then the credit line. Returns the parts in paint order and the size of the image.
+  function pngLayout(root, ctx) {
+    const block = root.getBoundingClientRect();
+    const width = block.width;
+    const parts = [];
+    let y = PNG_MARGIN;
+    const heading = anchorHeading(root);
+    const title = heading ? text(heading.textContent) : "";
+    if (title) {
+      const ink = inkOf(getComputedStyle(heading));
+      const {ascent, descent} = useInk(ctx, ink);
+      for (const line of wrapWords(ctx, title, width)) {
+        const baseline = y + (ink.lineHeight - ascent - descent) / 2 + ascent;
+        parts.push({kind: "text", text: line, x: PNG_MARGIN, baseline, ...ink});
+        y += ink.lineHeight;
+      }
+      y += 14;
+    }
+    // The toolbar is not in the picture, so the space it holds above the chart goes with it.
+    const top = y;
+    const content = [...root.children].find((el) => !el.matches(".chart-tools"));
+    const padTop = parseFloat(getComputedStyle(root).paddingTop) || 0;
+    const cut = Math.max(0, (content ? content.getBoundingClientRect().top : block.top) - block.top - padTop);
+    const height = block.height - cut;
+    const card = boxPart(getComputedStyle(root), {width, height}, () => ({x: PNG_MARGIN, y: top}));
+    if (card) parts.push(card);
+    const at = (rect) => ({x: rect.left - block.left + PNG_MARGIN, y: rect.top - block.top - cut + top});
+    for (const child of root.childNodes) chartParts(child, at, ctx, parts);
+
+    // The credit line, in the embed's type: "Predict Charts · <page>", the address on the right.
+    const tokens = getComputedStyle(document.documentElement);
+    const token = (name, fallback) => tokens.getPropertyValue(name).trim() || fallback;
+    const base = {fontStyle: "normal", fontSize: "12px", fontFamily: getComputedStyle(document.body).fontFamily, letterSpacing: "normal", lineHeight: "17px"};
+    const brand = inkOf({...base, fontWeight: "650", color: token("--theme-foreground", "#111")});
+    const credit = inkOf({...base, fontWeight: "500", color: token("--theme-foreground-muted", "#666")});
+    const ruleY = top + height + 16;
+    parts.push({kind: "box", x: PNG_MARGIN, y: ruleY, w: width, h: 1, fill: token("--theme-foreground-faintest", "#ddd"), border: null, radius: 0});
+    const baseline = ruleY + 12 + useInk(ctx, brand).ascent;
+    const page = contextFor(root).pageTitle.replace(/\s*\|\s*Predict Charts\s*$/i, "");
+    const pageText = page ? ` · ${page}` : "";
+    const address = chartAddress(root);
+    const brandWidth = widthOf(ctx, brand, "Predict Charts");
+    const pageWidth = widthOf(ctx, credit, pageText);
+    const addressWidth = widthOf(ctx, credit, address);
+    parts.push({kind: "text", text: "Predict Charts", x: PNG_MARGIN, baseline, ...brand});
+    parts.push({kind: "text", text: pageText, x: PNG_MARGIN + brandWidth, baseline, ...credit});
+    let bottom = ruleY + 12 + brand.lineHeight;
+    if (brandWidth + pageWidth + addressWidth + 16 <= width) {
+      parts.push({kind: "text", text: address, x: PNG_MARGIN + width - addressWidth, baseline, ...credit});
+    } else {
+      parts.push({kind: "text", text: address, x: PNG_MARGIN, baseline: baseline + brand.lineHeight, ...credit});
+      bottom += brand.lineHeight;
+    }
+    return {parts, width: width + 2 * PNG_MARGIN, height: bottom + PNG_MARGIN};
+  }
+
+  async function downloadPng(root, button) {
+    const svg = mainSvg(root);
+    if (!svg) return setButtonStatus(button, "Unavailable");
+    const box = svg.getBoundingClientRect();
+    if (!box.width || !box.height) return setButtonStatus(button, "Unavailable");
+    let images = [];
+    try {
+      const layout = pngLayout(root, document.createElement("canvas").getContext("2d"));
+      images = layout.parts.filter((part) => part.kind === "svg");
+      await Promise.all(images.map(async (part) => Object.assign(part, await svgImage(part))));
       const scale = 2;
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(box.width * scale);
-      canvas.height = Math.round(box.height * scale);
+      canvas.width = Math.round(layout.width * scale);
+      canvas.height = Math.round(layout.height * scale);
       const ctx = canvas.getContext("2d");
       ctx.scale(scale, scale);
       ctx.fillStyle = pageBackground();
-      ctx.fillRect(0, 0, box.width, box.height);
-      ctx.drawImage(image, 0, 0, box.width, box.height);
+      ctx.fillRect(0, 0, layout.width, layout.height);
+      for (const part of layout.parts) paintPart(ctx, part);
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) throw new Error("PNG encoding failed");
       const link = document.createElement("a");
@@ -306,7 +525,7 @@
     } catch {
       setButtonStatus(button, "Unavailable");
     } finally {
-      URL.revokeObjectURL(url);
+      for (const part of images) if (part.url) URL.revokeObjectURL(part.url);
     }
   }
 
