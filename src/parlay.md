@@ -18,7 +18,6 @@ const DataAttachment = createRemoteDataAttachment(d3);
 display(DataAttachment.marker);
 // No await: each file is its own promise, which Framework awaits in every cell that reads it.
 const uni = DataAttachment("data/parlay_pnl_unified_daily.csv").csv({typed: true});
-const cashoutDaily = DataAttachment("data/parlay_cashout_daily.csv").csv({typed: true});
 const freshness = DataAttachment("data/freshness_manifest.json").json();
 import {askPageLink, fileUpdatedAt, freshnessPanel, latestDate} from "./components/freshness.js";
 import {dateBrush, inDateRange} from "./components/date-brush.js";
@@ -33,7 +32,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
-  context: "Parlay P&L page using parlay_pnl_unified_daily.csv, parlay_cashout_daily.csv and parlay_pnl_by_price_daily.csv (bettor P&L by the price paid)."
+  context: "Parlay P&L page using parlay_pnl_unified_daily.csv and parlay_pnl_by_price_daily.csv (bettor P&L by the price paid)."
 }));
 ```
 
@@ -75,12 +74,10 @@ const overallPct     = totalNet / totalHandle * 100;
 ```js
 // d3.autoType leaves "true"/"false" as strings — coerce robustly.
 const isProv = d => d.is_provisional === true || String(d.is_provisional).toLowerCase() === "true";
-// Cumulative realized, held-to-settlement, and cash-out edge series.
+// Cumulative realized and held-to-settlement series.
 const uniSorted = uni.slice().sort((a, b) => a.date - b.date);
-let _r = 0, _h = 0, _e = 0, _rg = 0;
+let _r = 0, _h = 0, _rg = 0;
 const cumU = uniSorted.map(d => { _r += d.realized_net; _h += d.hold_to_settlement_net; _rg += d.realized_net + d.fees_total; return {date: d.date, realized: _r, realized_gross: _rg, hold: _h, prov: isProv(d)}; });
-const coSorted = cashoutDaily.slice().sort((a, b) => a.date - b.date);
-const cumCo = coSorted.map(d => { _e += d.cashout_edge_net; return {date: d.date, edge: _e, prov: isProv(d)}; });
 // Provisional (unsealed) days — settlements still arriving; shown distinctly.
 const provDays = cumU.filter(d => d.prov);
 const provSpan = provDays.length === 1
@@ -147,6 +144,19 @@ pnlUnit === "Dollars" ? html`<span></span>` : html`<p style="font-size:0.82em;co
 
 _Cumulative bettor P&amp;L before and after fees._
 
+Use the toggle to add the counterfactual line for every position held to settlement.
+
+<span id="cash-outs"></span>
+<span id="if-every-parlay-were-held-to-settlement"></span>
+
+```js
+const heldEmbed = new URLSearchParams(location.search).get("embed");
+const showHeldToSettlement = view(Inputs.toggle({
+  label: "Show if held to settlement",
+  value: heldEmbed === "cash-outs" || heldEmbed === "if-every-parlay-were-held-to-settlement"
+}));
+```
+
 ```js
 const lostRange = view(dateBrush({data: uni, valueAccessor: d => Math.abs(d.realized_net) || 0, color: "#0A7B6C", width}));
 ```
@@ -157,67 +167,36 @@ const cumRealized = cumU.flatMap(d => [
   {date: d.date, v: d.realized_gross, s: "Before fees", prov: d.prov},
   {date: d.date, v: d.realized,       s: "After fees",  prov: d.prov}
 ]);
+const heldLines = showHeldToSettlement
+  ? cumU.map(d => ({date: d.date, v: d.hold, s: "If held to settlement", prov: d.prov}))
+  : [];
+const cumulativeLines = [...cumRealized, ...heldLines].filter(inLostRange);
+const cumulativeSeries = showHeldToSettlement
+  ? ["Before fees", "After fees", "If held to settlement"]
+  : ["Before fees", "After fees"];
+const cumulativeColors = showHeldToSettlement
+  ? ["#5FD0C2", "#0A7B6C", "var(--accent-secondary)"]
+  : ["#5FD0C2", "#0A7B6C"];
 display(Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
   x: {type: "utc", label: null},
-  y: {label: "Cumulative realized P&L (USD)", grid: true, tickFormat: fmtUSD},
-  color: {legend: true, domain: ["Before fees", "After fees"], range: ["#5FD0C2", "#0A7B6C"]},
+  y: {label: "Cumulative bettor P&L (USD)", grid: true, tickFormat: fmtUSD},
+  color: {legend: true, domain: cumulativeSeries, range: cumulativeColors},
   marks: [
     Plot.areaY(cumU.filter(inLostRange), {x: "date", y: "realized", fill: "#0A7B6C", fillOpacity: 0.1, curve: "monotone-x"}),
-    Plot.lineY(cumRealized.filter(inLostRange), {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
+    Plot.lineY(cumulativeLines, {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
     // Provisional (unsealed) tail: hollow markers so it reads as "not final yet".
     Plot.dot(provDays.filter(inLostRange), {x: "date", y: "realized_gross", r: 4, fill: "var(--theme-background)", stroke: "#5FD0C2", strokeWidth: 2}),
     Plot.dot(provDays.filter(inLostRange), {x: "date", y: "realized", r: 4, fill: "var(--theme-background)", stroke: "#0A7B6C", strokeWidth: 2}),
+    ...(showHeldToSettlement ? [Plot.dot(provDays.filter(inLostRange), {x: "date", y: "hold", r: 4, fill: "var(--theme-background)", stroke: "var(--accent-secondary)", strokeWidth: 2})] : []),
     Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(cumU.filter(inLostRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
+    Plot.tip(cumU.filter(inLostRange), Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nBefore fees: ${fmtUSD(d.realized_gross)}\nAfter fees: ${fmtUSD(d.realized)}${showHeldToSettlement ? `\nIf held to settlement: ${fmtUSD(d.hold)}` : ""}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
   ]
 }))
 ```
 
 ```js
 display(provNote);
-```
-
-<span id="cash-outs"></span>
-
-<h2 id="if-every-parlay-were-held-to-settlement" tabindex="-1">Kalshi parlays: bettor P&amp;L if every parlay were held to settlement</h2>
-
-_Compare realized P&amp;L with the counterfactual where every position is held to settlement._
-
-```js
-const heldRange = view(dateBrush({data: uni, valueAccessor: d => Math.abs(d.hold_to_settlement_net) || 0, color: "#0A7B6C", width}));
-```
-
-```js
-const legacyCashoutEmbed = new URLSearchParams(location.search).get("embed") === "cash-outs";
-const showCashoutEdge = view(Inputs.checkbox(["Cash-out edge"], {label: "Add", value: legacyCashoutEmbed ? ["Cash-out edge"] : []}));
-const comparisonRows = cumU.filter(inDateRange(heldRange));
-const comparisonLines = comparisonRows.flatMap(d => [
-  {date: d.date, v: d.realized, s: "Realized"},
-  {date: d.date, v: d.hold, s: "Held to settlement"}
-]);
-const edgeLines = showCashoutEdge.includes("Cash-out edge")
-  ? cumCo.filter(inDateRange(heldRange)).map(d => ({date: d.date, v: d.edge, s: "Cash-out edge"}))
-  : [];
-const comparisonSeries = showCashoutEdge.includes("Cash-out edge")
-  ? ["Realized", "Held to settlement", "Cash-out edge"]
-  : ["Realized", "Held to settlement"];
-const comparisonColors = showCashoutEdge.includes("Cash-out edge")
-  ? ["#0A7B6C", "#5FD0C2", "var(--accent-negative)"]
-  : ["#0A7B6C", "#5FD0C2"];
-const cumCashoutEdgeByDate = new Map(cumCo.map(d => [+d.date, d.edge]));
-Plot.plot({
-  style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
-  x: {type: "utc", label: null},
-  y: {label: "Cumulative P&L (USD)", grid: true, tickFormat: fmtUSD},
-  color: {legend: true, domain: comparisonSeries, range: comparisonColors},
-  marks: [
-    Plot.lineY([...comparisonLines, ...edgeLines],
-      {x: "date", y: "v", stroke: "s", strokeWidth: 2, curve: "monotone-x"}),
-    Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
-    Plot.tip(comparisonRows, Plot.pointerX({x: "date", y: "realized", title: d => `${fmtDate(d.date)}\nRealized: ${fmtUSD(d.realized)}\nHeld to settlement: ${fmtUSD(d.hold)}${showCashoutEdge.includes("Cash-out edge") ? `\nCash-out edge: ${fmtUSD(cumCashoutEdgeByDate.get(+d.date) ?? d.realized - d.hold)}` : ""}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`}))
-  ]
-})
 ```
 
 <h2 id="what-bettors-lost-by-the-price-they-paid" tabindex="-1">Kalshi parlays: share of stakes lost, by price paid</h2>
