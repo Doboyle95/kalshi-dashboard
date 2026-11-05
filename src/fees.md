@@ -374,8 +374,10 @@ Plot.plot({
   },
   color: {legend: true, domain: FEE_BANDS, range: FEE_BAND_COLORS},
   marks: [
+    // z gives one band per category. Without it, Plot draws every row as its own
+    // zero-width sliver, so each date reads as a thin hairline bar instead of an area.
     Plot.areaY(cumFeesSplit, {
-      x: "date", y1: "y0", y2: "y1", fill: "category",
+      x: "date", y1: "y0", y2: "y1", fill: "category", z: "category",
       fillOpacity: 0.85, curve: "monotone-x"
     }),
     Plot.ruleX(cumFeesTipData, Plot.pointerX({x: "date", stroke: "currentColor", strokeOpacity: 0.2})),
