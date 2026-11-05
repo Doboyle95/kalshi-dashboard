@@ -704,9 +704,9 @@ const knownBlockTrades = blockRows
     return {
       date: d.date,
       market: d.ticker_name,
-      side: d.taker_side ? (takerYes ? "Yes" : "No") : null,
+      side: d.taker_side ? (takerYes ? "Yes" : "No") : "-",
       contracts: d.contracts_traded,
-      odds: yesPrice == null ? null : takerYes ? yesPrice : 100 - yesPrice,
+      odds: yesPrice == null ? "-" : takerYes ? yesPrice : 100 - yesPrice,
       source: d.source
     };
   });
@@ -727,7 +727,7 @@ Inputs.table(knownBlockTrades, {
     date: fmtDate,
     side: value => value ?? "-",
     contracts: fmtCount,
-    odds: value => fmtPrice(value),
+    odds: value => value === "-" ? "-" : fmtPrice(value),
     source: value => value === "api_backfill" ? "API backfill" : "Trade store"
   },
   align: {contracts: "right", odds: "right"},
