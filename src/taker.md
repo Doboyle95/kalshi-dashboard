@@ -736,7 +736,7 @@ Inputs.table(knownBlockTrades, {
 ```
 
 <p class="chart-note">${knownBlockTrades.length
-  ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Odds is the price the taker paid for the side they took, read as the chance that side wins. Taker side and odds come from our daily raw trade files, which reach back to 18 September 2026, so a dash means we do not have that trade's side and price yet; market share is not shown.`
+  ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Odds is the price the taker paid for the side they took, read as the chance that side wins. Taker side and odds come from Kalshi's own trade records, looked up once for each trade; a dash means that lookup has not found the trade yet. Market share is not shown.`
   : html`No block-flagged trades are in the published file at the moment.`}</p>
 
 
