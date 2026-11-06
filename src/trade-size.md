@@ -883,35 +883,46 @@ const blockTrades = await DataAttachment("data/block_trades.csv").csv({typed: tr
 const knownBlockTrades = blockTrades
   .slice()
   .sort((a, b) => new Date(b.date) - new Date(a.date) || b.contracts_traded - a.contracts_traded)
-  .map(d => ({
-    date: d.date,
-    market: d.ticker_name,
-    contracts: d.contracts_traded,
-    source: d.source
-  }));
+  .map(d => {
+    // The file's yes_price is the YES price. A taker who bought NO paid 100 minus it.
+    const yesPrice = d.yes_price == null || d.yes_price === "" ? null : Number(d.yes_price);
+    const takerYes = String(d.taker_side).toLowerCase() === "yes";
+    return {
+      date: d.date,
+      market: d.ticker_name,
+      side: d.taker_side ? (takerYes ? "Yes" : "No") : "-",
+      contracts: d.contracts_traded,
+      odds: yesPrice == null ? "-" : takerYes ? yesPrice : 100 - yesPrice,
+      source: d.source
+    };
+  });
 ```
 
 ```js
 Inputs.table(knownBlockTrades, {
-  columns: ["date", "market", "contracts", "source"],
+  columns: ["date", "market", "side", "contracts", "odds", "source"],
   header: {
     date: "Date",
     market: "Contract ticker",
+    side: "Taker side",
     contracts: "Contracts",
+    odds: "Odds",
     source: "Source"
   },
   format: {
     date: fmtDate,
+    side: value => value ?? "-",
     contracts: fmtCount,
+    odds: value => value === "-" ? "-" : fmtPrice(value),
     source: value => value === "api_backfill" ? "API backfill" : "Trade store"
   },
-  align: {contracts: "right"},
+  align: {contracts: "right", odds: "right"},
   rows: knownBlockTrades.length
 })
 ```
 
 <p class="chart-note">${knownBlockTrades.length
-  ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Price, taker side and market share are not in this file, so they are not shown.`
+  ? html`Every trade Kalshi flags as a block trade in our trade data, from <strong>${fmtDate(new Date(knownBlockTrades[knownBlockTrades.length - 1].date))}</strong> onward, newest first. Trades before that date are not covered by the flag history, so this is not a record of every block trade Kalshi has ever had. Odds is the price the taker paid for the side they took, read as the chance that side wins. Taker side and odds come from Kalshi's own trade records, looked up once for each trade; a dash means that lookup has not found the trade yet. Market share is not shown.`
   : html`No block-flagged trades are in the published file at the moment.`}</p>
 
 <h2 id="volume-by-probability" tabindex="-1">Volume by implied probability, across exchanges</h2>
