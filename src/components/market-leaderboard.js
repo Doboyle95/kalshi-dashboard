@@ -915,3 +915,6 @@ export function marketLeaderboard({
   render();
   return root;
 }
+
+// Revision marker. Changing it changes this module's compiled output, so the build emits a new hashed URL and CDN copies of the old URL are not reused.
+export const MARKET_LEADERBOARD_REVISION = "2026-11-06";

@@ -177,3 +177,6 @@ export function attachTradeInspector({source, venue, largeTrades, metrics}) {
       : null);
   return (row, element) => api.open(tradeDetail(row, source), {replace: true, source: element});
 }
+
+// Revision marker. Changing it changes this module's compiled output, so the build emits a new hashed URL and CDN copies of the old URL are not reused.
+export const INSPECT_TABLES_REVISION = "2026-11-06";
