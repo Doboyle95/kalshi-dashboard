@@ -32,7 +32,7 @@ display(freshnessPanel({
 }));
 display(askPageLink({
   question: "Analyze parlay taker P&L and fee drag, noting whether recent dates may be settlement-incomplete.",
-  context: "Parlay P&L page using parlay_pnl_unified_daily.csv and parlay_pnl_by_price_daily.csv (bettor P&L by the price paid)."
+  context: "Parlay P&L page using parlay_pnl_unified_daily.csv, parlay_pnl_by_price_daily.csv (bettor P&L by the price paid) and parlay_pnl_daily_by_sportmix_v2.csv (non-sports and mixed P&L)."
 }));
 ```
 
@@ -198,6 +198,112 @@ display(Plot.plot({
 ```js
 display(provNote);
 ```
+
+<h2 id="non-sports-and-mixed-parlays" tabindex="-1">Kalshi parlays: non-sports and mixed P&amp;L</h2>
+
+_Taker P&amp;L after fees, kept apart: parlays with no sports legs, and mixed parlays with both sports and non-sports legs._
+
+```js
+// Loaded inside this section's own block on purpose: build_chart_catalog.py credits a series
+// to the nearest ## heading PRECEDING its DataAttachment call. A failed load falls back to the
+// empty-state note below rather than taking the rest of the page with it.
+const sportmixDaily = await DataAttachment("data/parlay_pnl_daily_by_sportmix_v2.csv").csv({typed: true}).catch(() => []);
+```
+
+```js
+const SM_CATS  = ["all-nonsports", "mixed"];
+const SM_LABEL = {"all-nonsports": "All non-sports", "mixed": "Mixed (sports + non-sports legs)"};
+const SM_COLOR = {"all-nonsports": "#00C2A8", "mixed": "#7048e8"};
+// Provisional days come from the unified file, so these fade on the same days as the charts above.
+const smProvDay = new Map(uni.map(d => [+d.date, isProv(d)]));
+const smRows = sportmixDaily
+  .filter(d => SM_CATS.includes(String(d.sportmix)))
+  .map(d => ({date: d.date, cat: String(d.sportmix), parlays: +d.n_parlays, stake: +d.taker_stake,
+              gross: +d.gross_pnl, fees: +d.fee, net: +d.net_pnl, prov: smProvDay.get(+d.date) === true}))
+  .sort((a, b) => a.date - b.date);
+const smDates = [...new Set(smRows.map(d => +d.date))].sort((a, b) => a - b).map(t => new Date(t));
+// One row per family per day, zero where a family had no parlays that day, so each line is unbroken.
+const smDaily = SM_CATS.flatMap(cat => {
+  const byDay = new Map(smRows.filter(d => d.cat === cat).map(d => [+d.date, d]));
+  return smDates.map(date => {
+    const r = byDay.get(+date);
+    return {date, cat,
+            net: r ? r.net : 0, gross: r ? r.gross : 0, fees: r ? r.fees : 0,
+            parlays: r ? r.parlays : 0, stake: r ? r.stake : 0,
+            prov: r ? r.prov : smProvDay.get(+date) === true};
+  });
+});
+const smCum = SM_CATS.flatMap(cat => {
+  let run = 0;
+  return smDaily.filter(d => d.cat === cat).map(d => { run += d.net; return {...d, cum: run}; });
+});
+const smCumAt = new Map(smCum.map(d => [`${d.cat}|${+d.date}`, d]));
+```
+
+```js
+const smView = view(Inputs.radio(["Cumulative", "Day by day"], {value: "Cumulative", label: "View"}));
+```
+
+```js
+const smRange = view(dateBrush({data: smRows, dateAccessor: d => d.date, valueAccessor: d => d.stake, color: "#0A7B6C", width}));
+```
+
+```js
+const smInRange = inDateRange(smRange);
+const smCumVis  = smCum.filter(smInRange);
+const smDayVis  = smDaily.filter(smInRange);
+const smTip     = smDates.map(date => ({date, ns: smCumAt.get(`all-nonsports|${+date}`), mx: smCumAt.get(`mixed|${+date}`)})).filter(smInRange);
+// Both families share one day-by-day scale, so their bars compare in size; each still gets its own chart.
+const smYMax = d3.max(smDayVis, d => Math.abs(d.net)) || 1;
+const smDayChart = cat => Plot.plot({
+  style: {fontFamily: "var(--font-sans)"}, width, height: 220, marginLeft: 76,
+  x: {type: "utc", label: null, domain: smRange},
+  y: {label: `${SM_LABEL[cat]}: daily P&L (USD)`, domain: [-smYMax, smYMax], grid: true, tickFormat: fmtUSD},
+  marks: [
+    Plot.rectY(smDayVis.filter(d => d.cat === cat), {
+      x1: d => d.date, x2: d => new Date(d.date.getTime() + 864e5), y: "net",
+      fill: d => d.net >= 0 ? "var(--accent-positive)" : "var(--accent-negative)",
+      fillOpacity: d => d.prov ? 0.35 : 0.75,
+      tip: true,
+      title: d => `${fmtDate(d.date)}\nNet P&L: ${fmtUSD(d.net)}\nBefore fees: ${fmtUSD(d.gross)}\nFees: ${fmtUSD(d.fees)}\nParlays: ${d.parlays.toLocaleString()}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`
+    }),
+    Plot.ruleY([0])
+  ]
+});
+```
+
+```js
+smRows.length === 0
+  ? html`<p class="chart-note">The non-sports and mixed split has no days to show yet.</p>`
+  : smView === "Cumulative"
+    ? Plot.plot({
+        style: {fontFamily: "var(--font-sans)"}, width, height: 320, marginLeft: 76,
+        x: {type: "utc", label: null, domain: smRange},
+        y: {label: "Cumulative taker P&L after fees (USD)", grid: true, tickFormat: fmtUSD},
+        color: {legend: true, domain: SM_CATS, range: SM_CATS.map(c => SM_COLOR[c]), tickFormat: c => SM_LABEL[c]},
+        marks: [
+          Plot.ruleY([0], {stroke: "var(--theme-foreground-fainter)"}),
+          Plot.lineY(smCumVis, {x: "date", y: "cum", stroke: "cat", strokeWidth: 2.5, curve: "monotone-x"}),
+          // Provisional days: hollow points, as on the cumulative chart above.
+          Plot.dot(smCumVis.filter(d => d.prov), {x: "date", y: "cum", r: 4, fill: "var(--theme-background)", stroke: "cat", strokeWidth: 2}),
+          Plot.tip(smTip, Plot.pointerX({x: "date", y: d => d.mx?.cum ?? 0, title: d =>
+            `${fmtDate(d.date)}\n${SM_LABEL["all-nonsports"]}: ${fmtUSD(d.ns?.cum ?? 0)}\n${SM_LABEL["mixed"]}: ${fmtUSD(d.mx?.cum ?? 0)}`}))
+        ]
+      })
+    : html`<div>${smDayChart("all-nonsports")}${smDayChart("mixed")}</div>`
+```
+
+```js
+smRows.length
+  ? html`<p class="chart-note">First non-sports or mixed parlay day: ${fmtDate(smDates[0])}.</p>`
+  : html`<span></span>`
+```
+
+<details class="surface-card compact-details">
+  <summary>How this is measured</summary>
+  <p><em>Mixed</em> parlays have both sports and non-sports legs. <em>All non-sports</em> parlays have no sports legs. All-sports parlays are not in this view.</p>
+  <p>P&amp;L is the same trade-level, after-cash-out basis as the charts above, split by family. Recent days are provisional: faded bars and hollow points, until more settlements arrive.</p>
+</details>
 
 <h2 id="what-bettors-lost-by-the-price-they-paid" tabindex="-1">Kalshi parlays: share of stakes lost, by price paid</h2>
 
