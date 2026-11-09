@@ -255,6 +255,14 @@ const smDayVis  = smDaily.filter(smInRange);
 const smTip     = smDates.map(date => ({date, ns: smCumAt.get(`all-nonsports|${+date}`), mx: smCumAt.get(`mixed|${+date}`)})).filter(smInRange);
 // Both families share one day-by-day scale, so their bars compare in size; each still gets its own chart.
 const smYMax = d3.max(smDayVis, d => Math.abs(d.net)) || 1;
+// Staked is taker_stake: what the bettors paid for their contracts, before fees. The loss (or gain)
+// is that day's net P&L after fees as a share of the stake. Nothing is shown where nothing was staked.
+const smDayTip = d => {
+  const share = d.stake > 0 && d.net
+    ? `\n${d.net < 0 ? "Loss" : "Gain"}: ${(100 * Math.abs(d.net) / d.stake).toFixed(1)}% of stake`
+    : "";
+  return `${fmtDate(d.date)}\nNet P&L: ${fmtUSD(d.net)}\nStaked: ${fmtUSD(d.stake)}${share}\nBefore fees: ${fmtUSD(d.gross)}\nFees: ${fmtUSD(d.fees)}\nParlays: ${d.parlays.toLocaleString()}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`;
+};
 const smDayChart = cat => Plot.plot({
   style: {fontFamily: "var(--font-sans)"}, width, height: 220, marginLeft: 76,
   x: {type: "utc", label: null, domain: smRange},
@@ -265,7 +273,7 @@ const smDayChart = cat => Plot.plot({
       fill: d => d.net >= 0 ? "var(--accent-positive)" : "var(--accent-negative)",
       fillOpacity: d => d.prov ? 0.35 : 0.75,
       tip: true,
-      title: d => `${fmtDate(d.date)}\nNet P&L: ${fmtUSD(d.net)}\nBefore fees: ${fmtUSD(d.gross)}\nFees: ${fmtUSD(d.fees)}\nParlays: ${d.parlays.toLocaleString()}${d.prov ? "\n(provisional — settlements still arriving)" : ""}`
+      title: smDayTip
     }),
     Plot.ruleY([0])
   ]
