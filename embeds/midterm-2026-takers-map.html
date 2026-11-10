@@ -31,6 +31,10 @@ body { margin: 0; background: var(--page); color: var(--ink); font-family: syste
 .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 28px; }
 h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; }
 .sub { margin: 0 0 12px; color: var(--ink2); font-size: 14px; }
+.head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 4px; }
+.head h1 { margin: 0; }
+.brand { color: var(--ink2); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; text-decoration: none; white-space: nowrap; }
+.brand:hover { color: var(--ink); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink2); margin: 0 0 12px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
@@ -76,7 +80,7 @@ footer a { color: var(--ink2); }
 </head>
 <body>
 <div class="wrap">
-  <h1>2026 midterms: takers' results</h1>
+  <div class="head"><h1>2026 midterms: takers' results</h1><a class="brand" href="https://predict-charts.com" target="_blank" rel="noopener">Predict Charts</a></div>
   <p class="sub">Takers' result after fees. Hover the map or the bars.</p>
   <div class="legend">
     <span><i class="dot won"></i>takers won</span>
