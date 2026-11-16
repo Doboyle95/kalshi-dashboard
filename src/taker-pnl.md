@@ -38,7 +38,7 @@ display(freshnessPanel({
     {label: "Settled taker P&L", date: latestDate(daily), updatedAt: fileUpdatedAt(freshness, "taker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Settled maker P&L", date: latestDate(makerDaily), updatedAt: fileUpdatedAt(freshness, "maker_pnl_daily.csv"), meta: "Settlement-dependent; recent-window refreshable", tone: "settlement"},
     {label: "Taker-side volume", date: latestDate(takerVolumeDaily), updatedAt: fileUpdatedAt(freshness, "taker_notional_daily.csv"), meta: "Can be within minutes locally"},
-    {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv"), meta: "Settlement-dependent category split", tone: "settlement"},
+    {label: "Category P&L", date: latestDate(pnlByTicker), updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_ticker_daily.csv.gz"), meta: "Settlement-dependent category split", tone: "settlement"},
     {label: "Market P&L leaderboard", date: null, value: `${pnlByMarket.length.toLocaleString()} markets`, updatedAt: fileUpdatedAt(freshness, "taker_pnl_by_market_leaderboard.csv"), meta: "All-time, refreshed once daily (not the settlement-cycle cadence above)", tone: "settlement"},
     {label: "Price calibration", date: null, value: "Settlement cycle", updatedAt: fileUpdatedAt(freshness, "calibration_three_way_clusters.csv"), meta: "Event-clustered outcomes", tone: "settlement"}
   ],
