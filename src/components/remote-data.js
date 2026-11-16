@@ -353,6 +353,13 @@ async function sha256Hex(bytes) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
+// Gzip copies are published as <name>.csv.gz. Decompression runs only after the hash has matched.
+async function gunzipBytes(bytes) {
+  if (typeof DecompressionStream !== "function") throw new Error("gzip decoding is unavailable in this browser");
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
 async function verifiedRemoteText(filename, options = {}) {
   if (!SAFE_FILENAME.test(filename)) throw new Error("unsafe dashboard data filename");
   const endpoint = options.endpoint ?? browserEndpoint();
@@ -402,7 +409,9 @@ async function verifiedRemoteText(filename, options = {}) {
   if (!response.ok) throw new Error(`dashboard data file returned ${response.status}`);
   if (bytes.byteLength !== record.size_bytes) throw new Error(`dashboard data size mismatch for ${filename}`);
   if ((await sha256Hex(bytes)) !== record.sha256) throw new Error(`dashboard data hash mismatch for ${filename}`);
-  const text = new TextDecoder("utf-8", {fatal: true}).decode(bytes);
+  // The size and hash checks above ran on the bytes the manifest describes. Only the decode is new.
+  const plain = filename.endsWith(".gz") ? await gunzipBytes(bytes) : bytes;
+  const text = new TextDecoder("utf-8", {fatal: true}).decode(plain);
   return {text, generation: manifest.generation, publishedAt: manifest.published_at ?? null};
 }
 
